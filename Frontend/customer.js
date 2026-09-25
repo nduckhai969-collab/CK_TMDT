@@ -192,7 +192,7 @@ function renderCustomerNavbar(activePage = 'home') {
               <div style="font-weight:700; font-size:13px; color:#0F172A; line-height:1.2;">${user.name}</div>
               <div style="font-size:11px; color:#16A34A; font-weight:600;"><i class="fa-solid fa-wallet"></i> ${formatVND(user.balance || 0)}</div>
             </div>
-            <a href="customer_login.html" title="Đổi tài khoản" style="color:#94A3B8; margin-left:4px; font-size:13px;"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+            <button type="button" onclick="openCustomerAuthModal('login')" title="Đổi tài khoản / Đăng nhập" style="background:none; border:none; color:#94A3B8; margin-left:4px; font-size:13px; cursor:pointer;"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
           </div>
         </div>
 
@@ -251,3 +251,241 @@ function renderCustomerFooter() {
     </footer>
   `;
 }
+
+// =========================================================================
+// GLOBAL AUTH MODAL OVERLAY (ĐÈ LÊN TRANG HIỆN TẠI, KHÔNG CHUYỂN TAB)
+// =========================================================================
+function injectGlobalAuthModal() {
+  if (document.getElementById('globalAuthModalOverlay')) return;
+
+  const modalHtml = `
+  <div id="globalAuthModalOverlay" style="position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(5px); z-index:99999; display:none; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#FFF; border-radius:16px; width:100%; max-width:480px; box-shadow:0 20px 40px -10px rgba(15,23,42,0.35); border:1px solid #E2E8F0; overflow:hidden; position:relative;">
+      <!-- Close Button -->
+      <button type="button" onclick="closeGlobalAuthModal()" style="position:absolute; top:16px; right:16px; width:32px; height:32px; border-radius:50%; background:#F1F5F9; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#64748B; z-index:10;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <!-- Header Banner -->
+      <div style="background:linear-gradient(135deg, #0F172A 0%, #15803D 100%); color:#FFF; padding:24px 28px;">
+        <h4 id="gamTitle" style="font-size:20px; font-weight:800; margin:0 0 4px;">Chào Mừng Đến Với SkillRental</h4>
+        <p id="gamSubtitle" style="font-size:13px; color:#DCFCE7; margin:0;">Đăng nhập để thuê kỹ năng hoặc quản lý dịch vụ</p>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex; border-bottom:1px solid #E2E8F0; background:#F8FAFC;">
+        <button type="button" id="gamTabLogin" onclick="switchGlobalAuthTab('login')" style="flex:1; padding:14px; text-align:center; font-size:14px; font-weight:700; color:#16A34A; border:none; background:#FFF; border-bottom:2px solid #16A34A; cursor:pointer;">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng Nhập
+        </button>
+        <button type="button" id="gamTabRegister" onclick="switchGlobalAuthTab('register')" style="flex:1; padding:14px; text-align:center; font-size:14px; font-weight:700; color:#64748B; border:none; background:transparent; border-bottom:2px solid transparent; cursor:pointer;">
+          <i class="fa-solid fa-user-plus"></i> Đăng Ký
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div style="padding:24px 28px;">
+        <!-- Login Form -->
+        <form id="gamLoginForm" onsubmit="handleGlobalLogin(event)">
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#0F172A; margin-bottom:6px;">Email / Tài khoản</label>
+            <input type="email" id="gamLoginEmail" required placeholder="long.le@example.com" style="width:100%; height:42px; padding:0 14px; border:1px solid #E2E8F0; border-radius:8px; font-size:14px; font-family:inherit; box-sizing:border-box;">
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#0F172A; margin-bottom:6px;">Mật khẩu</label>
+            <input type="password" id="gamLoginPassword" required placeholder="••••••••" style="width:100%; height:42px; padding:0 14px; border:1px solid #E2E8F0; border-radius:8px; font-size:14px; font-family:inherit; box-sizing:border-box;">
+          </div>
+          <button type="submit" id="gamLoginSubmit" style="width:100%; height:44px; background:#16A34A; color:#FFF; border:none; border-radius:8px; font-weight:700; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng Nhập Ngay
+          </button>
+
+          <!-- 1-Click Quick Demo -->
+          <div style="margin-top:18px; padding-top:16px; border-top:1px dashed #E2E8F0;">
+            <div style="font-size:12px; font-weight:700; color:#64748B; margin-bottom:10px; text-transform:uppercase;">⚡ Đăng nhập nhanh mẫu (1-Click Demo)</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <button type="button" onclick="gamQuickLogin('long.le@example.com', '123')" style="padding:8px 10px; border:1px solid #E2E8F0; border-radius:6px; background:#F8FAFC; font-size:12px; font-weight:600; color:#0F172A; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-user" style="color:#16A34A;"></i> Khách: Lê Hoàng Long
+              </button>
+              <button type="button" onclick="gamQuickLogin('an.nguyen@example.com', '123')" style="padding:8px 10px; border:1px solid #E2E8F0; border-radius:6px; background:#F8FAFC; font-size:12px; font-weight:600; color:#0F172A; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-briefcase" style="color:#0F172A;"></i> Provider: Nguyễn Văn An
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Register Form -->
+        <form id="gamRegisterForm" onsubmit="handleGlobalRegister(event)" style="display:none;">
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#0F172A; margin-bottom:4px;">Họ và tên</label>
+            <input type="text" id="gamRegName" required placeholder="Nguyễn Văn A" style="width:100%; height:40px; padding:0 12px; border:1px solid #E2E8F0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#0F172A; margin-bottom:4px;">Email</label>
+            <input type="email" id="gamRegEmail" required placeholder="name@example.com" style="width:100%; height:40px; padding:0 12px; border:1px solid #E2E8F0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#0F172A; margin-bottom:4px;">Số điện thoại</label>
+            <input type="tel" id="gamRegPhone" required placeholder="0912 345 678" style="width:100%; height:40px; padding:0 12px; border:1px solid #E2E8F0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#0F172A; margin-bottom:4px;">Mật khẩu</label>
+            <input type="password" id="gamRegPassword" required placeholder="Ít nhất 6 ký tự" style="width:100%; height:40px; padding:0 12px; border:1px solid #E2E8F0; border-radius:8px; font-size:14px; box-sizing:border-box;">
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#0F172A; margin-bottom:4px;">Vai trò tham gia</label>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <label style="border:1px solid #E2E8F0; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; font-weight:600;">
+                <input type="radio" name="gamRegRole" value="Customer" checked> <span>Khách hàng</span>
+              </label>
+              <label style="border:1px solid #E2E8F0; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; font-weight:600;">
+                <input type="radio" name="gamRegRole" value="Provider"> <span>Provider</span>
+              </label>
+            </div>
+          </div>
+          <button type="submit" id="gamRegSubmit" style="width:100%; height:44px; background:#16A34A; color:#FFF; border:none; border-radius:8px; font-weight:700; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i class="fa-solid fa-user-plus"></i> Hoàn Tất Đăng Ký
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  document.getElementById('globalAuthModalOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'globalAuthModalOverlay') closeGlobalAuthModal();
+  });
+}
+
+function openCustomerAuthModal(tab = 'login') {
+  injectGlobalAuthModal();
+  const overlay = document.getElementById('globalAuthModalOverlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  switchGlobalAuthTab(tab);
+}
+
+function closeGlobalAuthModal() {
+  const overlay = document.getElementById('globalAuthModalOverlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+}
+
+function switchGlobalAuthTab(tab) {
+  const loginForm = document.getElementById('gamLoginForm');
+  const registerForm = document.getElementById('gamRegisterForm');
+  const tabLogin = document.getElementById('gamTabLogin');
+  const tabRegister = document.getElementById('gamTabRegister');
+  const title = document.getElementById('gamTitle');
+  const subtitle = document.getElementById('gamSubtitle');
+
+  if (tab === 'login') {
+    loginForm.style.display = 'block';
+    registerForm.style.display = 'none';
+    tabLogin.style.color = '#16A34A';
+    tabLogin.style.background = '#FFF';
+    tabLogin.style.borderBottomColor = '#16A34A';
+    tabRegister.style.color = '#64748B';
+    tabRegister.style.background = 'transparent';
+    tabRegister.style.borderBottomColor = 'transparent';
+    title.innerText = 'Chào Mừng Đến Với SkillRental';
+    subtitle.innerText = 'Đăng nhập để thuê kỹ năng hoặc quản lý dịch vụ';
+  } else {
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'block';
+    tabLogin.style.color = '#64748B';
+    tabLogin.style.background = 'transparent';
+    tabLogin.style.borderBottomColor = 'transparent';
+    tabRegister.style.color = '#16A34A';
+    tabRegister.style.background = '#FFF';
+    tabRegister.style.borderBottomColor = '#16A34A';
+    title.innerText = 'Tạo Tài Khoản Mới';
+    subtitle.innerText = 'Bắt đầu kết nối với hàng ngàn cơ hội kỹ năng và thu nhập';
+  }
+}
+
+function gamQuickLogin(email, password) {
+  document.getElementById('gamLoginEmail').value = email;
+  document.getElementById('gamLoginPassword').value = password;
+  document.getElementById('gamLoginForm').dispatchEvent(new Event('submit'));
+}
+
+async function handleGlobalLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('gamLoginEmail').value.trim();
+  const password = document.getElementById('gamLoginPassword').value;
+  const btn = document.getElementById('gamLoginSubmit');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...';
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (data.success && data.user) {
+      setCurrentCustomer(data.user);
+      showToast('Đăng Nhập Thành Công', `Chào mừng ${data.user.name} đã quay trở lại.`, 'success');
+      closeGlobalAuthModal();
+      setTimeout(() => window.location.reload(), 500);
+    } else {
+      showToast('Đăng Nhập Thất Bại', data.message || 'Sai thông tin tài khoản!', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    const demoUser = { id: 'USR_LOCAL', name: email.split('@')[0], email, role: 'Customer' };
+    setCurrentCustomer(demoUser);
+    showToast('Đăng Nhập Thành Công', `Đã lưu phiên làm việc của ${demoUser.name}.`, 'success');
+    closeGlobalAuthModal();
+    setTimeout(() => window.location.reload(), 500);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng Nhập Ngay';
+  }
+}
+
+async function handleGlobalRegister(e) {
+  e.preventDefault();
+  const name = document.getElementById('gamRegName').value.trim();
+  const email = document.getElementById('gamRegEmail').value.trim();
+  const phone = document.getElementById('gamRegPhone').value.trim();
+  const password = document.getElementById('gamRegPassword').value;
+  const role = document.querySelector('input[name="gamRegRole"]:checked').value;
+  const btn = document.getElementById('gamRegSubmit');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, phone, password, role })
+    });
+    const data = await res.json();
+    if (data.success && data.user) {
+      setCurrentCustomer(data.user);
+      showToast('Đăng Ký Thành Công', `Chào mừng bạn đến với SkillRental (${role}).`, 'success');
+      closeGlobalAuthModal();
+      setTimeout(() => window.location.reload(), 500);
+    } else {
+      showToast('Đăng Ký Thất Bại', data.message || 'Không thể tạo tài khoản!', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    const newUser = { id: 'USR_' + Date.now(), name, email, phone, role };
+    setCurrentCustomer(newUser);
+    showToast('Đăng Ký Thành Công', `Tài khoản ${name} đã được tạo.`, 'success');
+    closeGlobalAuthModal();
+    setTimeout(() => window.location.reload(), 500);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Hoàn Tất Đăng Ký';
+  }
+}
+
+window.openCustomerAuthModal = openCustomerAuthModal;
+window.openAuthModal = openCustomerAuthModal;

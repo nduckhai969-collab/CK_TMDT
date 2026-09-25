@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xác Thực Email — SkillRental Platform</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background-color: var(--bg-page);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .auth-header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--text-heading);
+    }
+    .auth-logo i {
+      color: var(--primary);
+    }
+    .auth-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .auth-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      width: 100%;
+      max-width: 460px;
+      padding: 40px 32px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+      text-align: center;
+    }
+    .verify-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 32px;
+    }
+    .verify-icon.loading {
+      background: #DBEAFE;
+      color: #3B82F6;
+    }
+    .verify-icon.success {
+      background: #DCFCE7;
+      color: #16A34A;
+    }
+    .verify-icon.error {
+      background: #FEE2E2;
+      color: #EF4444;
+    }
+    .auth-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-heading);
+      margin-bottom: 10px;
+    }
+    .auth-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .btn-auth-submit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 28px;
+      background: var(--primary);
+      color: #FFFFFF;
+      border-radius: var(--radius-btn);
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      transition: background 0.2s ease;
+    }
+    .btn-auth-submit:hover {
+      background: var(--primary-dark);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="auth-header">
+    <a href="index.html" class="auth-logo">
+      <i class="fa-solid fa-briefcase"></i> SkillRental
+    </a>
+  </header>
+
+  <main class="auth-container">
+    <div class="auth-card">
+      <div id="verify-icon" class="verify-icon loading">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+      </div>
+      <h1 id="verify-title" class="auth-title">Đang xác thực Email...</h1>
+      <p id="verify-desc" class="auth-subtitle">Vui lòng chờ trong giây lát, hệ thống đang kết nối để xác nhận tài khoản của bạn.</p>
+
+      <div id="action-btn-container" style="display: none;">
+        <a href="login.html" class="btn-auth-submit">
+          <span>Chuyển Đến Trang Đăng Nhập</span>
+          <i class="fa-solid fa-right-to-bracket"></i>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+
+      const iconEl = document.getElementById('verify-icon');
+      const titleEl = document.getElementById('verify-title');
+      const descEl = document.getElementById('verify-desc');
+      const actionBtnContainer = document.getElementById('action-btn-container');
+
+      if (!token) {
+        iconEl.className = 'verify-icon error';
+        iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        titleEl.textContent = 'Thiếu mã xác thực';
+        descEl.textContent = 'Liên kết xác minh email của bạn không đầy đủ hoặc bị hỏng.';
+        actionBtnContainer.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await verifyEmailToken(token);
+        if (res.success) {
+          iconEl.className = 'verify-icon success';
+          iconEl.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+          titleEl.textContent = 'Xác thực thành công!';
+          descEl.textContent = res.message || 'Tài khoản của bạn đã được kích hoạt. Bạn có thể sử dụng đầy đủ các tính năng của nền tảng.';
+          actionBtnContainer.style.display = 'block';
+          showToast('Xác thực Email', 'Tài khoản đã sẵn sàng đăng nhập!', 'success');
+        }
+      } catch (err) {
+        iconEl.className = 'verify-icon error';
+        iconEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+        titleEl.textContent = 'Xác thực không thành công';
+        descEl.textContent = err.message || 'Mã xác thực không hợp lệ hoặc đã hết hạn.';
+        actionBtnContainer.style.display = 'block';
+        showToast('Lỗi xác thực', err.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

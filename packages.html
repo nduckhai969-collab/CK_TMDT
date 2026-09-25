@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Rental - Quản lý Gói Đăng Tin (UC-70)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">S</div>
+        <div class="brand-text">
+          <strong>SKILL RENTAL</strong>
+          <span>Admin Portal (B4)</span>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <div class="menu-label">TỔNG QUAN</div>
+        <a class="menu-item" href="admin.html">
+          <span class="menu-icon">⌂</span>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ NGƯỜI DÙNG (UC-52, 53)</div>
+        <a class="menu-item" href="users.html">
+          <span class="menu-icon">♙</span>
+          <span>Người dùng</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=locked">
+          <span class="menu-icon">▣</span>
+          <span>Khóa tài khoản</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=unlock-requests">
+          <span class="menu-icon">🔓</span>
+          <span>Mở khóa tài khoản</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ PROVIDER (UC-54, 55, 56)</div>
+        <a class="menu-item" href="providers.html">
+          <span class="menu-icon">♙</span>
+          <span>Tất cả Provider</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt Provider & Hồ sơ</span>
+          <span class="badge-count" id="badge-provider-pending">4</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=skills">
+          <span class="menu-icon">✦</span>
+          <span>Duyệt kỹ năng & CC</span>
+          <span class="badge-count" id="badge-skill-pending">3</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ DỊCH VỤ (UC-57, 58, 59)</div>
+        <a class="menu-item" href="services.html">
+          <span class="menu-icon">▤</span>
+          <span>Dịch vụ</span>
+        </a>
+        <a class="menu-item" href="services.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt dịch vụ & giá</span>
+          <span class="badge-count" id="badge-service-pending">5</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ GIAO DỊCH & ĐÁNH GIÁ</div>
+        <a class="menu-item" href="orders.html">
+          <span class="menu-icon">▤</span>
+          <span>Đơn hàng (UC-60, 61)</span>
+        </a>
+        <a class="menu-item" href="reviews.html">
+          <span class="menu-icon">★</span>
+          <span>Đánh giá (UC-62, 63)</span>
+        </a>
+        <a class="menu-item" href="complaints.html">
+          <span class="menu-icon">⚑</span>
+          <span>Khiếu nại (UC-64, 65)</span>
+          <span class="badge-count" id="badge-complaint-count">2</span>
+        </a>
+
+        <div class="menu-label">THỐNG KÊ & BÁO CÁO</div>
+        <a class="menu-item" href="reports.html">
+          <span class="menu-icon">▥</span>
+          <span>Báo cáo & Xuất file (UC-66, 67)</span>
+        </a>
+        <a class="menu-item" href="statistics.html">
+          <span class="menu-icon">◫</span>
+          <span>Thống kê hệ thống (UC-68)</span>
+        </a>
+        <a class="menu-item" href="cashflow.html">
+          <span class="menu-icon">◷</span>
+          <span>Thống kê dòng tiền (UC-69)</span>
+        </a>
+
+        <div class="menu-label">CẤU HÌNH & GÓI</div>
+        <a class="menu-item active" href="packages.html">
+          <span class="menu-icon">▢</span>
+          <span>Gói đăng tin (UC-70)</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="online-dot"></div>
+        <span>Hệ thống B4 đang hoạt động</span>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="breadcrumb-tag">CẤU HÌNH / GÓI ĐĂNG TIN (UC-70)</span>
+        </div>
+
+        <div class="topbar-right">
+          <a href="dashboard.html" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:12px;">
+            <span>💼</span>
+            <span>Cổng Provider ↗</span>
+          </a>
+          <button class="icon-badge-btn" onclick="showToast('Thông báo', 'Hệ thống gói đăng tin hoạt động ổn định', 'info')">
+            <span>♢</span>
+            <span class="badge-dot">3</span>
+          </button>
+          <div class="admin-profile">
+            <div class="admin-avatar">A</div>
+            <div class="admin-info">
+              <strong>Nguyễn Văn Admin</strong>
+              <span>Quản trị viên hệ thống</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-header">
+          <div class="page-title-group">
+            <h1><span class="green-pill"></span> Quản lý Gói Đăng Tin & Hội viên VIP (UC-70)</h1>
+            <p>Thiết lập các gói quyền lợi tài khoản, số lượt đăng tin dịch vụ và thời hạn đẩy tin nổi bật cho Provider</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="openPackageForm()">
+              <span>+</span> Thêm gói mới
+            </button>
+          </div>
+        </div>
+
+        <!-- Packages Pricing Cards -->
+        <div class="pricing-grid" id="packages-cards"></div>
+
+        <!-- Purchases History Table -->
+        <div class="card">
+          <div class="panel-header">
+            <h2>Lịch sử Provider mua gói đăng tin</h2>
+            <p>Danh sách các giao dịch mua gói hội viên VIP gần đây</p>
+          </div>
+          <div class="table-wrap">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã đơn gói</th>
+                    <th>Provider mua</th>
+                    <th>Gói dịch vụ</th>
+                    <th>Số tiền thanh toán</th>
+                    <th>Ngày kích hoạt</th>
+                    <th>Ngày hết hạn</th>
+                    <th>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="purchases-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Package Form (UC-70) -->
+  <div class="modal-overlay" id="modal-package-form">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-package-title">Cấu hình Gói Đăng Tin (UC-70)</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-package-form')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="pkg-id-input">
+        <div class="form-group">
+          <label class="form-label">Tên gói đăng tin / hội viên</label>
+          <input type="text" class="form-control" id="pkg-name-input" placeholder="Ví dụ: Gói Tăng Tốc Pro">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mức giá niêm yết (VNĐ)</label>
+          <input type="number" class="form-control" id="pkg-price-input" placeholder="Ví dụ: 199000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Thời hạn hiệu lực (Ngày)</label>
+          <input type="number" class="form-control" id="pkg-duration-input" value="30">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số lượt đăng bài tối đa</label>
+          <input type="number" class="form-control" id="pkg-posts-input" value="15">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Các tính năng đặc quyền (phân cách bằng dấu phẩy)</label>
+          <textarea class="form-control" id="pkg-features-input" placeholder="Huy hiệu Pro, Đẩy tin top 3 lần/tháng, Ưu tiên hỗ trợ 24/7"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-package-form')">Hủy</button>
+        <button class="btn btn-primary btn-sm" id="btn-save-package">Lưu cấu hình gói</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPackagesGrid();
+      renderPurchasesTable();
+      setupPackageEvents();
+    });
+
+    function renderPackagesGrid() {
+      const state = getAppState();
+      const container = document.getElementById('packages-cards');
+      if (!container) return;
+
+      container.innerHTML = state.packages.map(pkg => `
+        <div class="package-card ${pkg.highlight ? 'highlight' : ''}">
+          ${pkg.badgeText ? `<span class="package-tag">${pkg.badgeText}</span>` : ''}
+          <div class="package-header">
+            <h3>${pkg.name}</h3>
+            <p>Thời hạn: ${pkg.duration} ngày • Tối đa ${pkg.postsCount} bài đăng</p>
+          </div>
+          <div class="package-price">
+            <strong>${pkg.price === 0 ? 'Miễn phí' : pkg.price.toLocaleString('vi-VN') + 'đ'}</strong>
+            ${pkg.price > 0 ? '<span>/ tháng</span>' : ''}
+          </div>
+          <ul class="package-features">
+            ${pkg.features.map(f => `<li><span class="check-icon">✓</span> ${f}</li>`).join('')}
+          </ul>
+          <button class="btn ${pkg.highlight ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="openPackageForm('${pkg.id}')">
+            Cấu hình quyền lợi
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderPurchasesTable() {
+      const state = getAppState();
+      const tbody = document.getElementById('purchases-tbody');
+      if (!tbody) return;
+
+      tbody.innerHTML = state.packagePurchases.map(p => `
+        <tr>
+          <td><strong>${p.id}</strong></td>
+          <td>${p.provider}</td>
+          <td><span class="badge badge-purple">${p.packageName}</span></td>
+          <td><strong style="color:var(--secondary)">${p.amount}</strong></td>
+          <td>${p.activeDate}</td>
+          <td>${p.expireDate}</td>
+          <td><span class="badge badge-success">${p.status}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function openPackageForm(id = null) {
+      document.getElementById('pkg-id-input').value = id || '';
+      if (id) {
+        const state = getAppState();
+        const pkg = state.packages.find(p => p.id === id);
+        if (pkg) {
+          document.getElementById('modal-package-title').textContent = 'Chỉnh sửa Gói Đăng Tin (UC-70)';
+          document.getElementById('pkg-name-input').value = pkg.name;
+          document.getElementById('pkg-price-input').value = pkg.price;
+          document.getElementById('pkg-duration-input').value = pkg.duration;
+          document.getElementById('pkg-posts-input').value = pkg.postsCount;
+          document.getElementById('pkg-features-input').value = pkg.features.join(', ');
+        }
+      } else {
+        document.getElementById('modal-package-title').textContent = 'Thêm Gói Đăng Tin Mới (UC-70)';
+        document.getElementById('pkg-name-input').value = '';
+        document.getElementById('pkg-price-input').value = '';
+        document.getElementById('pkg-duration-input').value = 30;
+        document.getElementById('pkg-posts-input').value = 10;
+        document.getElementById('pkg-features-input').value = 'Huy hiệu chuyên nghiệp, Đẩy tin Top tuần';
+      }
+      openModal('modal-package-form');
+    }
+
+    function setupPackageEvents() {
+      document.getElementById('btn-save-package').addEventListener('click', () => {
+        const id = document.getElementById('pkg-id-input').value;
+        const name = document.getElementById('pkg-name-input').value.trim();
+        const price = parseInt(document.getElementById('pkg-price-input').value) || 0;
+        const duration = parseInt(document.getElementById('pkg-duration-input').value) || 30;
+        const postsCount = parseInt(document.getElementById('pkg-posts-input').value) || 10;
+        const featuresStr = document.getElementById('pkg-features-input').value.trim();
+        const features = featuresStr.split(',').map(f => f.trim()).filter(Boolean);
+
+        if (!name) {
+          alert('Vui lòng nhập tên gói');
+          return;
+        }
+
+        const state = getAppState();
+        if (id) {
+          const pkg = state.packages.find(p => p.id === id);
+          if (pkg) {
+            pkg.name = name;
+            pkg.price = price;
+            pkg.duration = duration;
+            pkg.postsCount = postsCount;
+            pkg.features = features;
+          }
+        } else {
+          state.packages.push({
+            id: 'PKG_' + Date.now(),
+            name,
+            price,
+            duration,
+            postsCount,
+            features,
+            highlight: false
+          });
+        }
+
+        saveAppState(state);
+        closeModal('modal-package-form');
+        renderPackagesGrid();
+        showToast('Cập nhật gói thành công (UC-70)', `Đã lưu cấu hình gói: ${name}`, 'success');
+      });
+    }
+  </script>
+</body>
+</html>

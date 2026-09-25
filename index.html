@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental — Nền Tảng Cho Thuê Kỹ Năng Chuyên Nghiệp (Multi-Page Architecture)</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hub-hero {
+      background: linear-gradient(135deg, #0F172A 0%, #064E3B 60%, #15803D 100%);
+      color: #FFFFFF;
+      padding: 56px 32px 48px;
+      text-align: center;
+      border-radius: var(--radius-card);
+      margin-bottom: 32px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+    .hub-hero::after {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(34, 197, 94, 0.2) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .portal-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+    .portal-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px -4px rgba(22, 163, 74, 0.15);
+    }
+    .feature-group-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 14px;
+    }
+    .feature-link-list {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .feature-link-list li a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-main);
+      text-decoration: none;
+      padding: 6px 10px;
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    .feature-link-list li a:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #DCFCE7;
+      transform: translateX(2px);
+    }
+    .spec-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.15);
+      font-size: 12px;
+      font-weight: 500;
+      margin: 4px;
+    }
+  </style>
+</head>
+<body style="background:#F8FAFC; color:#1E293B;">
+
+  <div style="max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px;">
+    
+    <!-- TOP NAVIGATION BAR -->
+    <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #E2E8F0;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:42px; height:42px; background:var(--primary); color:#FFF; font-weight:800; font-size:20px; border-radius:10px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(22,163,74,0.3);">SR</div>
+        <div>
+          <div style="font-weight:800; font-size:18px; color:var(--secondary); letter-spacing:-0.5px;">SKILL RENTAL</div>
+          <div style="font-size:12px; color:var(--text-muted);">Hệ Thống Đa Trang (Multi-Page Application Architecture)</div>
+        </div>
+      </div>
+      
+      <div style="display:flex; gap:12px; align-items:center;">
+        <div id="auth-nav-container">
+          <a href="login.html" class="btn btn-outline" style="border-color:var(--border-color); color:var(--text-main); font-weight:600; padding: 8px 16px;">
+            <i class="fa-solid fa-right-to-bracket"></i> Đăng Nhập
+          </a>
+          <a href="register.html" class="btn btn-primary" style="font-weight:600; padding: 8px 16px;">
+            <i class="fa-solid fa-user-plus"></i> Đăng Ký
+          </a>
+        </div>
+        <a href="dashboard.html" class="btn btn-outline" style="border-color:var(--primary); color:var(--primary-dark); font-weight:600;">
+          <i class="fa-solid fa-briefcase"></i> Kênh Provider
+        </a>
+        <a href="admin.html" class="btn btn-primary" style="font-weight:600;">
+          <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin
+        </a>
+      </div>
+    </header>
+
+    <!-- HERO INTRO -->
+    <div class="hub-hero">
+      <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+        <span class="spec-pill"><i class="fa-solid fa-palette"></i> SKILL RENTAL DESIGN SYSTEM</span>
+        <span class="spec-pill"><i class="fa-solid fa-layer-group"></i> MPA MULTI-PAGE APPLICATION</span>
+        <span class="spec-pill"><i class="fa-solid fa-shield-halved"></i> 100% ESCROW PROTECTED</span>
+      </div>
+      <h1 style="font-size:32px; font-weight:800; letter-spacing:-0.5px; margin-bottom:12px;">
+        Nền Tảng Cho Thuê Kỹ Năng Chuyên Nghiệp
+      </h1>
+      <p style="font-size:15px; color:#E2E8F0; max-width:760px; margin:0 auto 24px; line-height:1.6;">
+        Hệ thống tích hợp hoàn chỉnh 2 không gian làm việc chuyên biệt: <strong>Kênh Nhà Cung Cấp (Provider Workspace)</strong> và <strong>Cổng Quản Trị Hệ Thống (Admin Portal B4)</strong> với đầy đủ 22 trang con chức năng.
+      </p>
+
+      <div style="display:flex; justify-content:center; gap:16px;">
+        <a href="dashboard.html" class="btn btn-primary btn-lg" style="box-shadow:0 4px 14px rgba(22,163,74,0.4); font-size:15px;">
+          <i class="fa-solid fa-rocket"></i> Vào Kênh Provider
+        </a>
+        <a href="admin.html" class="btn btn-secondary btn-lg" style="background:rgba(255,255,255,0.15); color:#FFF; border:1px solid rgba(255,255,255,0.3); font-size:15px;">
+          <i class="fa-solid fa-lock"></i> Vào Cổng Admin B4
+        </a>
+      </div>
+    </div>
+
+    <!-- 2 MAIN PORTAL CARDS -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:28px;">
+      
+      <!-- ===================================================================
+           PORTAL 1: PROVIDER WORKSPACE
+           =================================================================== -->
+      <div class="portal-card">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:48px; height:48px; border-radius:12px; background:var(--primary-light); color:var(--primary-dark); display:flex; align-items:center; justify-content:center; font-size:22px;">
+                <i class="fa-solid fa-user-tie"></i>
+              </div>
+              <div>
+                <h2 style="font-size:20px; font-weight:800; color:var(--secondary);">Kênh Nhà Cung Cấp (Provider)</h2>
+                <div style="font-size:12px; color:var(--text-muted);">Quản lý hồ sơ, nhận dự án, đặt lịch &amp; nhận thanh toán ví</div>
+              </div>
+            </div>
+            <span class="badge badge-success"><span class="badge-dot"></span> Sẵn sàng nhận việc</span>
+          </div>
+
+          <!-- Group 1: Provider Profile & Service -->
+          <div class="feature-group-box">
+            <div style="font-weight:700; font-size:13px; color:var(--secondary); display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-id-card-clip" style="color:var(--primary);"></i> 1. Hồ Sơ &amp; Dịch Vụ (Profile &amp; Services)
+            </div>
+            <ul class="feature-link-list">
+              <li><a href="profile.html"><i class="fa-solid fa-user-check"></i> Hồ sơ Provider</a></li>
+              <li><a href="profile.html"><i class="fa-solid fa-bolt"></i> Kỹ năng (Skill)</a></li>
+              <li><a href="profile.html"><i class="fa-solid fa-briefcase"></i> Dịch vụ (Service)</a></li>
+              <li><a href="profile.html"><i class="fa-solid fa-tag"></i> Đơn giá (Price)</a></li>
+              <li style="grid-column: span 2;"><a href="profile.html"><i class="fa-solid fa-calendar-check"></i> Lịch rảnh &amp; Trạng thái (Availability)</a></li>
+            </ul>
+          </div>
+
+          <!-- Group 2: Provider Job -->
+          <div class="feature-group-box">
+            <div style="font-weight:700; font-size:13px; color:var(--secondary); display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-briefcase" style="color:var(--primary);"></i> 2. Việc Làm &amp; Đơn Hàng (Provider Job)
+            </div>
+            <ul class="feature-link-list">
+              <li><a href="jobs.html"><i class="fa-solid fa-wand-magic-sparkles"></i> Nhận đề xuất</a></li>
+              <li><a href="jobs.html"><i class="fa-solid fa-file-lines"></i> Xem Request</a></li>
+              <li><a href="jobs.html"><i class="fa-solid fa-paper-plane"></i> Ứng tuyển (Apply)</a></li>
+              <li><a href="jobs.html"><i class="fa-solid fa-clock-rotate-left"></i> Theo dõi Apply</a></li>
+              <li><a href="bookings.html"><i class="fa-solid fa-calendar-check"></i> Đặt lịch (Booking)</a></li>
+              <li><a href="bookings.html"><i class="fa-solid fa-file-contract"></i> Đơn hàng (Order)</a></li>
+              <li><a href="bookings.html"><i class="fa-solid fa-bars-progress"></i> Tiến độ (Job Progress)</a></li>
+              <li><a href="bookings.html"><i class="fa-solid fa-circle-check"></i> Hoàn tất (Complete Job)</a></li>
+            </ul>
+          </div>
+
+          <!-- Group 3: Provider Business -->
+          <div class="feature-group-box">
+            <div style="font-weight:700; font-size:13px; color:var(--secondary); display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-chart-line" style="color:var(--primary);"></i> 3. Kinh Doanh &amp; Tài Chính (Provider Business)
+            </div>
+            <ul class="feature-link-list">
+              <li><a href="dashboard.html"><i class="fa-solid fa-chart-pie"></i> Partner Dashboard</a></li>
+              <li><a href="chat.html"><i class="fa-solid fa-comments"></i> Chat Khách hàng</a></li>
+              <li><a href="payment.html"><i class="fa-solid fa-credit-card"></i> Thanh toán phí sàn</a></li>
+              <li><a href="income.html"><i class="fa-solid fa-wallet"></i> Nhận tiền (Ví Provider)</a></li>
+              <li><a href="review.html"><i class="fa-solid fa-star"></i> Đánh giá (Review)</a></li>
+              <li><a href="complaint.html"><i class="fa-solid fa-shield-halved"></i> Khiếu nại (Complaint)</a></li>
+              <li><a href="package.html"><i class="fa-solid fa-box-archive"></i> Gói dịch vụ (Package)</a></li>
+              <li><a href="post.html"><i class="fa-solid fa-newspaper"></i> Bài viết (Post)</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;">
+          <a href="dashboard.html" class="btn btn-primary btn-block btn-lg" style="text-align:center; font-weight:700;">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Mở Kênh Nhà Cung Cấp (Provider Workspace) →
+          </a>
+        </div>
+      </div>
+
+
+      <!-- ===================================================================
+           PORTAL 2: ADMIN MANAGEMENT
+           =================================================================== -->
+      <div class="portal-card">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:48px; height:48px; border-radius:12px; background:#0F172A; color:#22C55E; display:flex; align-items:center; justify-content:center; font-size:22px;">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <div>
+                <h2 style="font-size:20px; font-weight:800; color:var(--secondary);">Cổng Quản Trị Hệ Thống (B4 Admin)</h2>
+                <div style="font-size:12px; color:var(--text-muted);">Quản trị người dùng, duyệt hồ sơ, kiểm soát ký quỹ Escrow &amp; tranh chấp</div>
+              </div>
+            </div>
+            <span class="badge badge-info">Quản Trị Toàn Sàn</span>
+          </div>
+
+          <!-- Admin Core Features -->
+          <div class="feature-group-box">
+            <div style="font-weight:700; font-size:13px; color:var(--secondary); display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-users-gear" style="color:var(--primary);"></i> Người Dùng &amp; Duyệt Hồ Sơ
+            </div>
+            <ul class="feature-link-list">
+              <li><a href="users.html"><i class="fa-solid fa-user"></i> Quản lý Người dùng</a></li>
+              <li><a href="providers.html"><i class="fa-solid fa-id-card"></i> Duyệt Provider &amp; CCCD</a></li>
+              <li style="grid-column: span 2;"><a href="providers.html?tab=skill-certs"><i class="fa-solid fa-certificate"></i> Duyệt Chứng chỉ Kỹ năng</a></li>
+            </ul>
+          </div>
+
+          <div class="feature-group-box">
+            <div style="font-weight:700; font-size:13px; color:var(--secondary); display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-bolt" style="color:var(--primary);"></i> Dịch Vụ, Đơn Hàng &amp; Escrow
+            </div>
+            <ul class="feature-link-list">
+              <li><a href="services.html"><i class="fa-solid fa-briefcase"></i> Duyệt Dịch vụ &amp; Giá</a></li>
+              <li><a href="orders.html"><i class="fa-solid fa-file-invoice-dollar"></i> Đơn hàng &amp; Escrow</a></li>
+              <li><a href="reviews.html"><i class="fa-solid fa-star-half-stroke"></i> Kiểm duyệt Đánh giá</a></li>
+              <li><a href="complaints.html"><i class="fa-solid fa-scale-balanced"></i> Xử lý Tranh chấp</a></li>
+            </ul>
+          </div>
+
+          <div class="feature-group-box">
+            <div style="font-weight:700; font-size:13px; color:var(--secondary); display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-chart-pie" style="color:var(--primary);"></i> Báo Cáo, Dòng Tiền &amp; Gói VIP
+            </div>
+            <ul class="feature-link-list">
+              <li><a href="reports.html"><i class="fa-solid fa-flag"></i> Báo cáo vi phạm</a></li>
+              <li><a href="statistics.html"><i class="fa-solid fa-chart-line"></i> Thống kê KPI sàn</a></li>
+              <li><a href="cashflow.html"><i class="fa-solid fa-money-bill-transfer"></i> Dòng tiền &amp; Rút tiền</a></li>
+              <li><a href="packages.html"><i class="fa-solid fa-box-open"></i> Gói dịch vụ VIP</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;">
+          <a href="admin.html" class="btn btn-secondary btn-block btn-lg" style="text-align:center; font-weight:700; background:#0F172A; color:#FFF;">
+            <i class="fa-solid fa-lock-open"></i> Mở Cổng Quản Trị Hệ Thống (Admin Portal) →
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER DESIGN SYSTEM COMPLIANCE -->
+    <footer style="margin-top:40px; padding:20px; border-top:1px solid #E2E8F0; text-align:center; font-size:12px; color:var(--text-muted);">
+      <div>
+        <strong>SkillRental Platform Architecture:</strong> Multi-Page Application (MPA) • Inter Typography • Card Radius 12px • Button Height 44px
+      </div>
+      <div style="margin-top:4px;">
+        Màu thương hiệu: Primary <code>#16A34A</code> • Secondary <code>#0F172A</code> • Background <code>#F8FAFC</code> • Border <code>#E2E8F0</code>
+      </div>
+    </footer>
+
+  </div>
+
+  <script src="common.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

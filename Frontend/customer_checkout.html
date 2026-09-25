@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Ký Quỹ Escrow & Xác Nhận Đơn Đặt Lịch</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
+    .step-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #94A3B8;
+    }
+    .step-pill.active {
+      color: #16A34A;
+    }
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #E2E8F0;
+      color: #64748B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .step-pill.active .step-number {
+      background: #16A34A;
+      color: #FFFFFF;
+    }
+    .payment-method-card {
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      background: #FFFFFF;
+      transition: all 0.2s ease;
+    }
+    .payment-method-card:hover, .payment-method-card.selected {
+      border-color: #16A34A;
+      background: #F0FDF4;
+      box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <div id="navbar-placeholder"></div>
+
+  <main style="max-width: 1100px; margin: 32px auto 60px; padding: 0 24px;">
+
+    <!-- CHECKOUT STEP WIZARD -->
+    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:18px 32px; margin-bottom:28px; display:flex; justify-content:space-between; align-items:center;">
+      <div class="step-pill">
+        <div class="step-number"><i class="fa-solid fa-check"></i></div>
+        <span>1. Chọn Dịch Vụ & Lịch</span>
+      </div>
+      <div style="flex:1; height:2px; background:#E2E8F0; margin:0 20px;"></div>
+      <div class="step-pill active">
+        <div class="step-number">2</div>
+        <span>2. Thanh Toán Ký Quỹ Escrow</span>
+      </div>
+      <div style="flex:1; height:2px; background:#E2E8F0; margin:0 20px;"></div>
+      <div class="step-pill">
+        <div class="step-number">3</div>
+        <span>3. Nghiệm Thu & Giải Ngân</span>
+      </div>
+    </div>
+
+    <!-- MAIN TWO COLUMN CHECKOUT -->
+    <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:28px; align-items:start;">
+
+      <!-- LEFT: CUSTOMER INFO & PAYMENT METHODS -->
+      <div>
+        
+        <!-- Box 1: Thông tin khách hàng đặt lịch -->
+        <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:24px; margin-bottom:24px;">
+          <h2 style="font-size:16px; font-weight:800; color:#0F172A; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+            <i class="fa-solid fa-user-check" style="color:#16A34A;"></i> Thông Tin Khách Hàng Thuê
+          </h2>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div>
+              <label style="font-size:12.5px; font-weight:700; color:#0F172A; display:block; margin-bottom:6px;">Họ và Tên</label>
+              <input type="text" id="custName" value="Lê Hoàng Long" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
+            </div>
+            <div>
+              <label style="font-size:12.5px; font-weight:700; color:#0F172A; display:block; margin-bottom:6px;">Số Điện Thoại</label>
+              <input type="text" id="custPhone" value="0988 776 655" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <label style="font-size:12.5px; font-weight:700; color:#0F172A; display:block; margin-bottom:6px;">Địa Chỉ / Ghi Chú Liên Lạc</label>
+            <input type="text" id="custAddress" value="Quận 1, TP. Hồ Chí Minh (Hoặc trao đổi qua Google Meet / Zoom)" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
+          </div>
+        </div>
+
+        <!-- Box 2: Chọn phương thức thanh toán ký quỹ -->
+        <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 style="font-size:16px; font-weight:800; color:#0F172A; margin:0; display:flex; align-items:center; gap:8px;">
+              <i class="fa-solid fa-credit-card" style="color:#16A34A;"></i> Phương Thức Ký Quỹ Escrow
+            </h2>
+            <span class="badge-escrow"><i class="fa-solid fa-lock"></i> Ký Quỹ Trung Gian</span>
+          </div>
+
+          <!-- Method 1: VietQR -->
+          <div class="payment-method-card selected" onclick="selectPaymentMethod('vietqr', this)">
+            <input type="radio" name="payMethod" checked style="accent-color:#16A34A;">
+            <div style="width:36px; height:36px; border-radius:8px; background:#EFF6FF; color:#1D4ED8; display:flex; align-items:center; justify-content:center; font-size:18px;">
+              <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:14px; color:#0F172A;">Chuyển Khoản Nhanh VietQR (24/7)</div>
+              <div style="font-size:12px; color:#64748B;">Quét mã QR từ mọi ứng dụng ngân hàng, tiền vào ký quỹ tức thì</div>
+            </div>
+          </div>
+
+          <!-- Method 2: VNPay / MoMo -->
+          <div class="payment-method-card" onclick="selectPaymentMethod('vnpay', this)">
+            <input type="radio" name="payMethod" style="accent-color:#16A34A;">
+            <div style="width:36px; height:36px; border-radius:8px; background:#FDF2F8; color:#BE185D; display:flex; align-items:center; justify-content:center; font-size:18px;">
+              <i class="fa-solid fa-wallet"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:14px; color:#0F172A;">Ví Điện Tử VNPay / MoMo</div>
+              <div style="font-size:12px; color:#64748B;">Thanh toán 1 chạm qua ứng dụng ví điện tử</div>
+            </div>
+          </div>
+
+          <!-- Method 3: Ví Số Dư Khách Hàng -->
+          <div class="payment-method-card" onclick="selectPaymentMethod('balance', this)">
+            <input type="radio" name="payMethod" style="accent-color:#16A34A;">
+            <div style="width:36px; height:36px; border-radius:8px; background:#DCFCE7; color:#15803D; display:flex; align-items:center; justify-content:center; font-size:18px;">
+              <i class="fa-solid fa-building-columns"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:14px; color:#0F172A;">Số Dư Khách Hàng SkillRental</div>
+              <div style="font-size:12px; color:#64748B;" id="custBalanceText">Số dư khả dụng: 15.000.000đ (Trừ trực tiếp)</div>
+            </div>
+          </div>
+
+          <!-- Method 4: Thẻ Tín Dụng Quốc Tế -->
+          <div class="payment-method-card" onclick="selectPaymentMethod('card', this)">
+            <input type="radio" name="payMethod" style="accent-color:#16A34A;">
+            <div style="width:36px; height:36px; border-radius:8px; background:#FEF3C7; color:#B45309; display:flex; align-items:center; justify-content:center; font-size:18px;">
+              <i class="fa-brands fa-cc-visa"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:14px; color:#0F172A;">Thẻ Tín Dụng Quốc Tế (Visa / Mastercard)</div>
+              <div style="font-size:12px; color:#64748B;">Bảo mật chuẩn 3D-Secure 2.0</div>
+            </div>
+          </div>
+
+          <!-- Dynamic QR Code Box for VietQR -->
+          <div id="qrBox" style="background:#F8FAFC; border:1px dashed #CBD5E1; border-radius:12px; padding:20px; text-align:center; margin-top:16px;">
+            <div style="font-weight:700; font-size:13.5px; color:#0F172A; margin-bottom:8px;">
+              Mã VietQR Ký Quỹ Escrow Tự Động
+            </div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=SKILLRENTAL_ESCROW_DEPOSIT_4725000" alt="VietQR" style="width:160px; height:160px; border-radius:8px; border:2px solid #E2E8F0; background:#FFF; padding:6px;">
+            <div style="font-size:12px; color:#64748B; margin-top:8px;">
+              Quét mã bằng app ngân hàng bất kỳ để hoàn tất ký quỹ tức thời
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- RIGHT: ORDER SUMMARY & ESCROW GUARANTEE (Figma dark box) -->
+      <div>
+        <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.06); position:sticky; top:90px;">
+          
+          <!-- Dark Header Box (Figma Style) -->
+          <div style="background:#0F172A; color:#FFFFFF; padding:20px 24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:12px; font-weight:700; color:#22C55E; letter-spacing:0.5px; text-transform:uppercase;">
+                Hóa Đơn Ký Quỹ
+              </span>
+              <span style="background:rgba(255,255,255,0.15); font-size:11px; padding:2px 8px; border-radius:9999px;">
+                Escrow Protected
+              </span>
+            </div>
+            <h3 id="summaryServiceTitle" style="font-size:16px; font-weight:800; margin:0; line-height:1.4;">
+              Thiết kế website chuẩn SEO & Tối ưu tốc độ
+            </h3>
+            <div style="font-size:13px; color:#94A3B8; margin-top:4px;">
+              Chuyên gia: <strong id="summaryProviderName" style="color:#FFF;">Nguyễn Văn An</strong>
+            </div>
+          </div>
+
+          <!-- Body Breakdown -->
+          <div style="padding:24px;">
+            <div style="font-size:13px; color:#475569; display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+              <div style="display:flex; justify-content:space-between;">
+                <span>Ngày hẹn làm việc:</span>
+                <strong id="summaryDate" style="color:#0F172A;">28/04/2025</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span>Khung giờ:</span>
+                <strong id="summaryTime" style="color:#0F172A;">14:00 - 17:00</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span>Khối lượng:</span>
+                <strong id="summaryQty" style="color:#0F172A;">1 Gói hoàn thiện</strong>
+              </div>
+            </div>
+
+            <hr style="border:none; border-top:1px solid #E2E8F0; margin-bottom:16px;">
+
+            <!-- Pricing Details -->
+            <div style="display:flex; flex-direction:column; gap:10px; font-size:13.5px; margin-bottom:20px;">
+              <div style="display:flex; justify-content:space-between;">
+                <span style="color:#64748B;">Giá tiền dịch vụ:</span>
+                <strong id="summaryPrice" style="color:#0F172A;">4.500.000đ</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span style="color:#64748B;">Phí bảo lãnh ký quỹ Escrow (5%):</span>
+                <strong id="summaryFee" style="color:#0F172A;">225.000đ</strong>
+              </div>
+              <div style="border-top:2px dashed #E2E8F0; padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:800; font-size:15px; color:#0F172A;">Tổng Ký Quỹ Đóng Băng:</span>
+                <span id="summaryTotal" style="font-size:22px; font-weight:800; color:#16A34A;">4.725.000đ</span>
+              </div>
+            </div>
+
+            <!-- Escrow Trust Box -->
+            <div style="background:#DCFCE7; border:1px solid #86EFAC; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#15803D; line-height:1.5; margin-bottom:24px;">
+              <i class="fa-solid fa-shield-halved" style="font-size:14px; margin-right:4px;"></i>
+              <strong>Cam kết bảo vệ 100%:</strong> Số tiền trên sẽ được lưu giữ tại tài khoản trung gian ký quỹ của SkillRental. Bạn có toàn quyền duyệt nghiệm thu hoặc khiếu nại hoàn tiền.
+            </div>
+
+            <!-- Submit Button -->
+            <button id="btnSubmitEscrow" onclick="submitEscrowOrder()" class="btn btn-primary btn-block btn-lg" style="width:100%; font-weight:800; font-size:15px; padding:14px 0; box-shadow:0 4px 14px rgba(22,163,74,0.35);">
+              <i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- SUCCESS MODAL (Figma Compliance) -->
+  <div id="successModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#FFFFFF; border-radius:16px; max-width:480px; width:90%; padding:36px; text-align:center; box-shadow:0 20px 35px -5px rgba(0,0,0,0.2); animation:modalIn 0.3s ease-out;">
+      <div style="width:68px; height:68px; border-radius:50%; background:#DCFCE7; color:#16A34A; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 18px;">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <h2 style="font-size:20px; font-weight:800; color:#0F172A; margin-bottom:8px;">Ký Quỹ Escrow Thành Công!</h2>
+      <p style="font-size:13.5px; color:#64748B; line-height:1.5; margin-bottom:20px;">
+        Đơn hàng <strong id="modalOrderId" style="color:#16A34A;">DH001234</strong> đã được kích hoạt bảo vệ 100%. Tiền được giữ an toàn tại sàn và chuyên gia đã nhận được thông báo để triển khai công việc.
+      </p>
+
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px; text-align:left; font-size:13px; margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Trạng thái ký quỹ:</span>
+          <span style="color:#15803D; font-weight:700;"><i class="fa-solid fa-lock"></i> Đã giữ ký quỹ an toàn</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:#64748B;">Tiến độ:</span>
+          <span style="color:#3B82F6; font-weight:700;"><i class="fa-solid fa-bars-progress"></i> Chuyên gia đang thực hiện</span>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <a href="customer_orders.html" class="btn btn-primary" style="font-weight:700; padding:12px 0; text-align:center;">
+          <i class="fa-solid fa-bars-progress"></i> Theo Dõi Đơn Hàng
+        </a>
+        <a href="customer_chat.html" class="btn btn-outline" style="border-color:#CBD5E1; color:#0F172A; font-weight:600; padding:12px 0; text-align:center;">
+          <i class="fa-solid fa-comments"></i> Nhắn Với Chuyên Gia
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="customer.js"></script>
+  <script>
+    let draft = null;
+    let selectedMethod = 'vietqr';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+
+      // Read draft from localStorage
+      try {
+        const raw = localStorage.getItem('SKILLRENTAL_CHECKOUT_DRAFT');
+        if (raw) {
+          draft = JSON.parse(raw);
+        }
+      } catch (e) {
+        console.warn('Cannot read draft:', e);
+      }
+
+      if (!draft) {
+        draft = {
+          providerId: 'PRV001',
+          providerName: 'Nguyễn Văn An',
+          serviceTitle: 'Thiết kế website chuẩn SEO & Tối ưu tốc độ',
+          price: 4500000,
+          date: '28/04/2025',
+          time: '14:00 - 17:00',
+          quantity: '1 Gói hoàn thiện',
+          notes: ''
+        };
+      }
+
+      // Populate UI
+      document.getElementById('summaryServiceTitle').textContent = draft.serviceTitle;
+      document.getElementById('summaryProviderName').textContent = draft.providerName;
+      document.getElementById('summaryDate').textContent = draft.date || 'Linh hoạt';
+      document.getElementById('summaryTime').textContent = draft.time || 'Theo thỏa thuận';
+      document.getElementById('summaryQty').textContent = draft.quantity || '1 Gói';
+
+      const price = Number(draft.price) || 4500000;
+      const fee = Math.round(price * 0.05);
+      const total = price + fee;
+
+      document.getElementById('summaryPrice').textContent = formatVND(price);
+      document.getElementById('summaryFee').textContent = formatVND(fee);
+      document.getElementById('summaryTotal').textContent = formatVND(total);
+
+      const user = getCurrentCustomer();
+      if (user) {
+        document.getElementById('custName').value = user.name || 'Lê Hoàng Long';
+        document.getElementById('custPhone').value = user.phone || '0988 776 655';
+        document.getElementById('custBalanceText').textContent = `Số dư khả dụng: ${formatVND(user.balance || 0)} (Trừ trực tiếp)`;
+      }
+    });
+
+    function selectPaymentMethod(method, el) {
+      selectedMethod = method;
+      document.querySelectorAll('.payment-method-card').forEach(c => {
+        c.classList.remove('selected');
+        c.querySelector('input[type="radio"]').checked = false;
+      });
+      el.classList.add('selected');
+      el.querySelector('input[type="radio"]').checked = true;
+
+      // Toggle VietQR box
+      const qrBox = document.getElementById('qrBox');
+      qrBox.style.display = method === 'vietqr' ? 'block' : 'none';
+    }
+
+    async function submitEscrowOrder() {
+      const btn = document.getElementById('btnSubmitEscrow');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Ký Quỹ Escrow...`;
+
+      const user = getCurrentCustomer();
+      const payload = {
+        customerId: user.id,
+        customerName: document.getElementById('custName').value,
+        customerPhone: document.getElementById('custPhone').value,
+        providerId: draft.providerId,
+        providerName: draft.providerName,
+        serviceTitle: draft.serviceTitle,
+        price: draft.price,
+        deadline: draft.date,
+        notes: draft.notes,
+        paymentMethod: selectedMethod === 'vietqr' ? 'Chuyển khoản VietQR' : (selectedMethod === 'vnpay' ? 'Ví VNPay / MoMo' : 'Số dư tài khoản')
+      };
+
+      const res = await apiRequest('/api/orders', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.success && res.order) {
+        // Clear draft
+        localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
+        document.getElementById('modalOrderId').textContent = res.order.id;
+        document.getElementById('successModal').style.display = 'flex';
+      } else {
+        showToast('Lỗi Ký Quỹ', res.message || 'Không thể tạo đơn ký quỹ. Vui lòng thử lại!', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow`;
+      }
+    }
+  </script>
+</body>
+</html>

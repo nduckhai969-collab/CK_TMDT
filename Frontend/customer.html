@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Khám Phá & Đặt Lịch Chuyên Gia Kỹ Năng (Customer Portal)</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Customer Page Styles */
+    body {
+      background-color: #F8FAFC;
+      color: #1E293B;
+      font-family: 'Inter', sans-serif;
+    }
+    .hero-banner {
+      background: linear-gradient(135deg, #0F172A 0%, #064E3B 55%, #15803D 100%);
+      color: #FFFFFF;
+      border-radius: 16px;
+      padding: 48px 36px;
+      margin: 24px auto 32px;
+      max-width: 1280px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12);
+    }
+    .hero-banner::after {
+      content: "";
+      position: absolute;
+      top: -40%;
+      right: -10%;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(34, 197, 94, 0.25) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .search-box-container {
+      background: #FFFFFF;
+      padding: 8px 12px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      max-width: 760px;
+      margin-top: 24px;
+    }
+    .search-input-field {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      padding: 8px 12px;
+      color: #0F172A;
+      font-family: inherit;
+    }
+    .category-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: #0F172A;
+    }
+    .category-card:hover, .category-card.active {
+      border-color: #16A34A;
+      background: #F0FDF4;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.12);
+    }
+    .provider-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 22px;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    .provider-card:hover {
+      border-color: #16A34A;
+      box-shadow: 0 8px 24px -4px rgba(22, 163, 74, 0.14);
+      transform: translateY(-3px);
+    }
+    .badge-escrow {
+      background: #DCFCE7;
+      color: #15803D;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .skill-pill {
+      background: #F1F5F9;
+      color: #475569;
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      margin: 2px 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <div id="navbar-placeholder"></div>
+
+  <main style="max-width: 1280px; margin: 0 auto; padding: 0 24px 60px;">
+
+    <!-- HERO DISCOVERY BANNER (Bám sát layout Figma) -->
+    <section class="hero-banner">
+      <div style="max-width: 720px; position:relative; z-index:2;">
+        <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.15); padding:6px 14px; border-radius:9999px; font-size:12.5px; font-weight:600; margin-bottom:14px; backdrop-filter:blur(4px);">
+          <i class="fa-solid fa-shield-halved" style="color:#22C55E;"></i> GIAO DỊCH AN TOÀN VỚI KÝ QUỸ ESCROW 100%
+        </div>
+        <h1 style="font-size: 34px; font-weight: 800; line-height: 1.25; margin-bottom: 12px; letter-spacing: -0.5px;">
+          Tìm Kiếm & Thuê Chuyên Gia Kỹ Năng Hàng Đầu
+        </h1>
+        <p style="font-size: 15px; color: #CBD5E1; line-height: 1.6; margin-bottom: 20px;">
+          Kết nối trực tiếp hơn 5.000+ thợ tay nghề, lập trình viên, gia sư và designer đã xác minh CCCD/chứng chỉ. Tiền của bạn được giữ an toàn tại sàn cho đến khi bạn hoàn toàn hài lòng.
+        </p>
+
+        <!-- Search Bar in Hero -->
+        <div class="search-box-container">
+          <i class="fa-solid fa-magnifying-glass" style="color:#94A3B8; font-size:16px; margin-left:8px;"></i>
+          <input type="text" id="searchInput" class="search-input-field" placeholder="Tìm theo kỹ năng, tên chuyên gia hoặc dịch vụ (VD: React, Thiết kế Logo, Sửa máy lạnh...)" onkeyup="if(event.key==='Enter') filterData()">
+          <button class="btn btn-primary" onclick="filterData()" style="padding: 10px 22px; font-weight: 600; border-radius: 8px;">
+            <i class="fa-solid fa-search"></i> Tìm Kiếm
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK CATEGORY SELECTOR -->
+    <section style="margin-bottom: 36px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="font-size: 19px; font-weight: 800; color: #0F172A; display:flex; align-items:center; gap:8px;">
+          <i class="fa-solid fa-layer-group" style="color:#16A34A;"></i> Danh Mục Kỹ Năng Phổ Biến
+        </h2>
+        <span style="font-size:13px; color:#64748B;">Lọc nhanh theo nhu cầu</span>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:14px;" id="categoryList">
+        <a href="javascript:void(0)" class="category-card active" onclick="selectCategory('all', this)">
+          <div style="width:40px; height:40px; border-radius:10px; background:#DCFCE7; color:#15803D; display:flex; align-items:center; justify-content:center; font-size:18px;">
+            <i class="fa-solid fa-grid-2"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:14px;">Tất Cả Lĩnh Vực</div>
+            <div style="font-size:11.5px; color:#64748B;">Toàn bộ dịch vụ</div>
+          </div>
+        </a>
+
+        <a href="javascript:void(0)" class="category-card" onclick="selectCategory('IT', this)">
+          <div style="width:40px; height:40px; border-radius:10px; background:#EFF6FF; color:#1D4ED8; display:flex; align-items:center; justify-content:center; font-size:18px;">
+            <i class="fa-solid fa-code"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:14px;">Lập Trình & IT</div>
+            <div style="font-size:11.5px; color:#64748B;">Web, App, DevOps</div>
+          </div>
+        </a>
+
+        <a href="javascript:void(0)" class="category-card" onclick="selectCategory('Design', this)">
+          <div style="width:40px; height:40px; border-radius:10px; background:#FDF2F8; color:#BE185D; display:flex; align-items:center; justify-content:center; font-size:18px;">
+            <i class="fa-solid fa-palette"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:14px;">Thiết Kế Đồ Họa</div>
+            <div style="font-size:11.5px; color:#64748B;">UI/UX, Logo, Banner</div>
+          </div>
+        </a>
+
+        <a href="javascript:void(0)" class="category-card" onclick="selectCategory('Tutor', this)">
+          <div style="width:40px; height:40px; border-radius:10px; background:#FEF3C7; color:#B45309; display:flex; align-items:center; justify-content:center; font-size:18px;">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:14px;">Gia Sư & Luyện Thi</div>
+            <div style="font-size:11.5px; color:#64748B;">IELTS, Ngoại ngữ, Kèm 1-1</div>
+          </div>
+        </a>
+
+        <a href="javascript:void(0)" class="category-card" onclick="selectCategory('Repair', this)">
+          <div style="width:40px; height:40px; border-radius:10px; background:#FEF2F2; color:#B91C1C; display:flex; align-items:center; justify-content:center; font-size:18px;">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:14px;">Sửa Chữa Kỹ Thuật</div>
+            <div style="font-size:11.5px; color:#64748B;">Điện lạnh, Máy móc 24/7</div>
+          </div>
+        </a>
+
+        <a href="javascript:void(0)" class="category-card" onclick="selectCategory('Home', this)">
+          <div style="width:40px; height:40px; border-radius:10px; background:#ECFDF5; color:#047857; display:flex; align-items:center; justify-content:center; font-size:18px;">
+            <i class="fa-solid fa-broom"></i>
+          </div>
+          <div>
+            <div style="font-weight:700; font-size:14px;">Dọn Dẹp & Đời Sống</div>
+            <div style="font-size:11.5px; color:#64748B;">Vệ sinh nhà cửa theo giờ</div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- FILTER & SORT TOOLBAR -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #E2E8F0;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-weight:700; font-size:16px; color:#0F172A;" id="resultCountTitle">Danh Sách Chuyên Gia Sẵn Sàng Nhận Việc</span>
+        <span class="badge-escrow"><i class="fa-solid fa-shield-check"></i> Escrow Bảo Vệ</span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; align-items:center; gap:6px; font-size:13px; color:#64748B;">
+          <i class="fa-solid fa-arrow-down-short-wide"></i> Sắp xếp:
+        </div>
+        <select id="sortSelect" onchange="filterData()" style="padding:8px 12px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; background:#FFF; color:#0F172A; outline:none;">
+          <option value="rating">Đánh giá cao nhất (★)</option>
+          <option value="price-asc">Đơn giá: Thấp đến Cao</option>
+          <option value="price-desc">Đơn giá: Cao đến Thấp</option>
+        </select>
+        <a href="customer_requests.html" class="btn btn-outline" style="border-color:#16A34A; color:#15803D; font-weight:600; font-size:13px; padding:8px 14px;">
+          <i class="fa-solid fa-plus-circle"></i> Đăng Việc Thuê Riêng
+        </a>
+      </div>
+    </div>
+
+    <!-- PROVIDER CARDS GRID (Container) -->
+    <div id="providerGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap:24px;">
+      <!-- Loaded dynamically via JS -->
+      <div style="grid-column: 1/-1; text-align:center; padding:40px; color:#64748B;">
+        <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+        <div style="margin-top:10px;">Đang tải danh sách chuyên gia...</div>
+      </div>
+    </div>
+
+    <!-- ESCROW TRUST BANNER (Figma compliance) -->
+    <section style="margin-top:56px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:32px; display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px; box-shadow:0 4px 16px -2px rgba(15,23,42,0.04);">
+      <div style="display:flex; gap:16px; align-items:flex-start;">
+        <div style="width:48px; height:48px; border-radius:12px; background:#DCFCE7; color:#15803D; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:15px; color:#0F172A; margin-bottom:4px;">Ký Quỹ Escrow An Toàn 100%</div>
+          <div style="font-size:13px; color:#64748B; line-height:1.5;">Tiền thanh toán được sàn giữ bảo lãnh an toàn. Chỉ mở khóa chi trả khi bạn nghiệm thu đạt yêu cầu.</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:16px; align-items:flex-start;">
+        <div style="width:48px; height:48px; border-radius:12px; background:#EFF6FF; color:#1D4ED8; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">
+          <i class="fa-solid fa-id-card"></i>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:15px; color:#0F172A; margin-bottom:4px;">Chuyên Gia Xác Minh Nghiêm Ngặt</div>
+          <div style="font-size:13px; color:#64748B; line-height:1.5;">Hồ sơ Provider đều được Ban Quản Trị thẩm định căn cước CCCD, chứng chỉ chuyên môn và lý lịch nghề nghiệp.</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:16px; align-items:flex-start;">
+        <div style="width:48px; height:48px; border-radius:12px; background:#FEF3C7; color:#B45309; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">
+          <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+        <div>
+          <div style="font-weight:700; font-size:15px; color:#0F172A; margin-bottom:4px;">Bảo Vệ Quyền Lợi & Tranh Chấp</div>
+          <div style="font-size:13px; color:#64748B; line-height:1.5;">Đội ngũ Admin B4 hỗ trợ can thiệp 24/7. Hoàn tiền 100% nếu chuyên gia không thực hiện đúng cam kết ban đầu.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer placeholder -->
+  <div id="footer-placeholder"></div>
+
+  <!-- Customer Library JS -->
+  <script src="customer.js"></script>
+  <script>
+    let currentCategory = 'all';
+    let allProviders = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('home');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+
+      // Check URL params for category
+      const urlParams = new URLSearchParams(window.location.search);
+      const catParam = urlParams.get('cat');
+      if (catParam) {
+        currentCategory = catParam;
+        document.querySelectorAll('.category-card').forEach(c => c.classList.remove('active'));
+        const matched = Array.from(document.querySelectorAll('.category-card')).find(c => c.getAttribute('onclick')?.includes(`'${catParam}'`));
+        if (matched) matched.classList.add('active');
+      }
+
+      loadProviders();
+    });
+
+    async function loadProviders() {
+      const res = await apiRequest('/api/providers');
+      if (res.success && res.providers) {
+        allProviders = res.providers;
+        filterData();
+      } else {
+        document.getElementById('providerGrid').innerHTML = `
+          <div style="grid-column: 1/-1; text-align:center; padding:40px; color:#EF4444;">
+            <i class="fa-solid fa-triangle-exclamation fa-2x"></i>
+            <div style="margin-top:10px;">Không thể tải dữ liệu chuyên gia. Vui lòng thử lại!</div>
+          </div>
+        `;
+      }
+    }
+
+    function selectCategory(cat, el) {
+      currentCategory = cat;
+      document.querySelectorAll('.category-card').forEach(c => c.classList.remove('active'));
+      if (el) el.classList.add('active');
+      filterData();
+    }
+
+    function filterData() {
+      const keyword = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+      const sort = document.getElementById('sortSelect').value;
+
+      let list = allProviders.filter(p => {
+        const matchCat = currentCategory === 'all' || p.category.toLowerCase() === currentCategory.toLowerCase();
+        const matchKeyword = !keyword ||
+          p.name.toLowerCase().includes(keyword) ||
+          p.specialty.toLowerCase().includes(keyword) ||
+          (p.skills && p.skills.some(s => s.toLowerCase().includes(keyword)));
+        return matchCat && matchKeyword;
+      });
+
+      if (sort === 'rating') {
+        list.sort((a, b) => b.rating - a.rating);
+      } else if (sort === 'price-asc') {
+        list.sort((a, b) => a.hourlyRate - b.hourlyRate);
+      } else if (sort === 'price-desc') {
+        list.sort((a, b) => b.hourlyRate - a.hourlyRate);
+      }
+
+      renderGrid(list);
+    }
+
+    function renderGrid(list) {
+      const container = document.getElementById('providerGrid');
+      const countTitle = document.getElementById('resultCountTitle');
+      countTitle.textContent = `Tìm Thấy ${list.length} Chuyên Gia Phù Hợp`;
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column:1/-1; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:48px; text-align:center;">
+            <i class="fa-solid fa-user-slash" style="font-size:40px; color:#94A3B8; margin-bottom:14px;"></i>
+            <h3 style="font-size:17px; color:#0F172A; margin-bottom:6px;">Chưa tìm thấy chuyên gia phù hợp</h3>
+            <p style="font-size:14px; color:#64748B; margin-bottom:16px;">Hãy thử tìm kiếm với từ khóa khác hoặc đăng ngay yêu cầu tuyển dụng để các chuyên gia chủ động ứng tuyển!</p>
+            <a href="customer_requests.html" class="btn btn-primary" style="font-weight:600;"><i class="fa-solid fa-plus-circle"></i> Đăng Yêu Cầu Thuê Ngay</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map(p => `
+        <div class="provider-card">
+          <!-- Card Header -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+              <div style="display:flex; gap:14px; align-items:center;">
+                <div style="position:relative;">
+                  <img src="${p.avatar}" alt="${p.name}" style="width:58px; height:58px; border-radius:14px; object-fit:cover; border:2px solid #E2E8F0;">
+                  ${p.verified ? '<div style="position:absolute; bottom:-4px; right:-4px; width:20px; height:20px; background:#16A34A; color:#FFF; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; border:2px solid #FFF;" title="Đã xác thực CCCD & Chứng chỉ"><i class="fa-solid fa-check"></i></div>' : ''}
+                </div>
+                <div>
+                  <div style="font-weight:800; font-size:16px; color:#0F172A; display:flex; align-items:center; gap:6px;">
+                    ${p.name}
+                    ${p.badge ? `<span style="background:#DCFCE7; color:#15803D; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;">${p.badge}</span>` : ''}
+                  </div>
+                  <div style="font-size:12.5px; color:#64748B; margin-top:2px; display:flex; align-items:center; gap:8px;">
+                    <span><i class="fa-solid fa-location-dot" style="color:#94A3B8;"></i> ${p.location}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rating Badge -->
+              <div style="background:#FEF3C7; color:#B45309; padding:4px 8px; border-radius:8px; font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px;">
+                <i class="fa-solid fa-star" style="color:#F59E0B;"></i> ${p.rating}
+                <span style="font-size:11px; color:#92400E; font-weight:500;">(${p.reviewCount})</span>
+              </div>
+            </div>
+
+            <!-- Specialty & Bio -->
+            <div style="font-weight:600; font-size:13.5px; color:#1E293B; margin-bottom:8px; line-height:1.4;">
+              ${p.specialty}
+            </div>
+            <p style="font-size:13px; color:#64748B; line-height:1.5; margin-bottom:14px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+              ${p.bio}
+            </p>
+
+            <!-- Skill Pills -->
+            <div style="margin-bottom:16px;">
+              ${(p.skills || []).slice(0, 4).map(s => `<span class="skill-pill">${s}</span>`).join('')}
+              ${(p.skills || []).length > 4 ? `<span class="skill-pill" style="color:#16A34A; font-weight:600;">+${p.skills.length - 4}</span>` : ''}
+            </div>
+          </div>
+
+          <!-- Card Footer (Price & Actions) -->
+          <div style="border-top:1px solid #F1F5F9; padding-top:14px; margin-top:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+              <div>
+                <div style="font-size:11px; color:#64748B; text-transform:uppercase; font-weight:600;">Đơn giá từ</div>
+                <div style="font-size:18px; font-weight:800; color:#16A34A;">
+                  ${formatVND(p.hourlyRate)} <span style="font-size:12px; font-weight:500; color:#64748B;">/ giờ</span>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px; color:#64748B; font-weight:600;">Đã hoàn thành</div>
+                <div style="font-size:13px; font-weight:700; color:#0F172A;">
+                  <i class="fa-solid fa-circle-check" style="color:#16A34A;"></i> ${p.completedOrders || 30}+ đơn
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+              <a href="customer_chat.html?with=${p.id}" class="btn btn-outline" style="border-color:#CBD5E1; color:#0F172A; font-size:13px; font-weight:600; text-align:center; padding:9px 0;">
+                <i class="fa-solid fa-comments" style="color:#16A34A;"></i> Nhắn Tin
+              </a>
+              <a href="customer_provider.html?id=${p.id}" class="btn btn-primary" style="font-size:13px; font-weight:700; text-align:center; padding:9px 0; box-shadow:0 2px 8px rgba(22,163,74,0.25);">
+                <i class="fa-solid fa-calendar-check"></i> Đặt Lịch
+              </a>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

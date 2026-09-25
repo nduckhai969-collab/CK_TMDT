@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Mở Khiếu Nại & Tranh Chấp Escrow (Customer Complaint)</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
+    .dispute-alert {
+      background: #FEF2F2;
+      border: 1px solid #FCA5A5;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      color: #991B1B;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <div id="navbar-placeholder"></div>
+
+  <main style="max-width: 820px; margin: 36px auto 70px; padding: 0 24px;">
+
+    <!-- Complaint Form Card (Figma r2_c5) -->
+    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:36px; box-shadow:0 4px 20px -2px rgba(15,23,42,0.06);">
+      
+      <!-- Header -->
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
+        <div style="width:52px; height:52px; border-radius:14px; background:#FEE2E2; color:#DC2626; display:flex; align-items:center; justify-content:center; font-size:24px;">
+          <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+        <div>
+          <h1 style="font-size:22px; font-weight:800; color:#0F172A; margin:0;">
+            Khiếu Nại Tranh Chấp & Yêu Cầu Hoàn Tiền Escrow
+          </h1>
+          <div style="font-size:13.5px; color:#64748B; margin-top:2px;">
+            Bảo vệ quyền lợi khách hàng theo cam kết Escrow 100% của SkillRental
+          </div>
+        </div>
+      </div>
+
+      <!-- Warning Alert Box -->
+      <div class="dispute-alert">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:20px; margin-top:2px;"></i>
+        <div style="font-size:13px; line-height:1.5;">
+          <strong>Cơ Chế Bảo Vệ Đóng Băng Ký Quỹ:</strong> Khi bạn gửi khiếu nại, toàn bộ số tiền thanh toán của đơn hàng sẽ bị đóng băng ngay lập tức và chuyên gia <strong>không thể rút tiền</strong>. Ban Quản Trị Admin B4 sẽ thẩm định chứng cứ từ 2 bên và hoàn trả 100% tiền ký quỹ vào ví của bạn nếu chuyên gia vi phạm hợp đồng.
+        </div>
+      </div>
+
+      <!-- Complaint Form -->
+      <form id="complaintForm" onsubmit="submitComplaint(event)">
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
+          <div>
+            <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Mã Đơn Hàng Cần Khiếu Nại <span style="color:#EF4444;">*</span></label>
+            <input type="text" id="orderIdInput" required placeholder="VD: DH001234" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+          </div>
+          <div>
+            <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Số Tiền Yêu Cầu Hoàn Lại (VNĐ) <span style="color:#EF4444;">*</span></label>
+            <input type="text" id="refundAmountInput" required placeholder="VD: 4.500.000đ hoặc 100%" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+          </div>
+        </div>
+
+        <div style="margin-bottom:18px;">
+          <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Lý Do Khiếu Nại Chính <span style="color:#EF4444;">*</span></label>
+          <select id="complaintReason" required style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; background:#FFF;">
+            <option value="Chuyên gia không hoàn thành đúng chất lượng cam kết">Chuyên gia không hoàn thành đúng chất lượng cam kết ban đầu</option>
+            <option value="Trễ hạn nghiêm trọng không lý do chính đáng">Trễ hạn hoàn thành quá nhiều ngày và không phản hồi</option>
+            <option value="Bỏ dở công việc giữa chừng">Bỏ dở dự án giữa chừng, không tiếp tục thực hiện</option>
+            <option value="Có dấu hiệu gian lận hoặc yêu cầu giao dịch ngoài sàn">Có dấu hiệu gian lận hoặc yêu cầu chuyển tiền ngoài sàn</option>
+            <option value="Thái độ bất lịch sự, xúc phạm khách hàng">Thái độ làm việc bất lịch sự, thiếu chuyên nghiệp</option>
+            <option value="Khác">Lý do khác</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Mô Tả Chi Tiết Diễn Biến & Thiệt Hại <span style="color:#EF4444;">*</span></label>
+          <textarea id="complaintDetail" rows="5" required placeholder="Vui lòng nêu rõ các mốc thời gian, nội dung thỏa thuận bị vi phạm và tổn thất phát sinh để Admin có căn cứ xử phạt và hoàn tiền..." style="width:100%; padding:12px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; resize:vertical;"></textarea>
+        </div>
+
+        <div style="margin-bottom:24px;">
+          <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Tải Lên Bằng Chứng / Ảnh Chụp Màn Hình</label>
+          <div style="border:2px dashed #CBD5E1; border-radius:10px; padding:20px; text-align:center; background:#F8FAFC; cursor:pointer;" onclick="showToast('Đã Đính Kèm', 'Đã tải lên tệp ảnh chụp bằng chứng giao việc', 'info')">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size:28px; color:#94A3B8; margin-bottom:6px;"></i>
+            <div style="font-size:13px; font-weight:600; color:#0F172A;">Bấm để tải ảnh chụp lỗi hoặc tài liệu chứng minh</div>
+            <div style="font-size:11.5px; color:#64748B;">Hỗ trợ PNG, JPG, PDF (tối đa 15MB)</div>
+          </div>
+        </div>
+
+        <!-- Buttons with Red Figma Submit Button -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #E2E8F0; padding-top:20px;">
+          <a href="customer_orders.html" class="btn btn-outline" style="font-weight:600; padding:11px 22px;">
+            Quay Lại Đơn Hàng
+          </a>
+          <button type="submit" id="btnSubmitComplaint" class="btn btn-danger" style="background:#DC2626; color:#FFF; border:none; font-weight:700; font-size:14px; padding:12px 28px; border-radius:8px; cursor:pointer; box-shadow:0 4px 12px rgba(220,38,38,0.3);">
+            <i class="fa-solid fa-shield-halved"></i> Gửi Khiếu Nại Tranh Chấp Ngay
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+
+  </main>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="customer.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('orderId');
+      if (orderId) {
+        document.getElementById('orderIdInput').value = orderId;
+      }
+    });
+
+    async function submitComplaint(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitComplaint');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi Khiếu Nại...`;
+
+      const user = getCurrentCustomer();
+      const payload = {
+        orderId: document.getElementById('orderIdInput').value,
+        complainantId: user.id,
+        complainant: `${user.name} (Khách hàng)`,
+        reason: document.getElementById('complaintReason').value,
+        amount: document.getElementById('refundAmountInput').value,
+        userClaim: document.getElementById('complaintDetail').value,
+        priority: 'high'
+      };
+
+      const res = await apiRequest('/api/complaints', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.success) {
+        showToast('Đã Mở Tranh Chấp', res.message, 'success');
+        setTimeout(() => {
+          window.location.href = 'customer_orders.html';
+        }, 1500);
+      } else {
+        showToast('Lỗi', res.message || 'Không thể gửi khiếu nại', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Gửi Khiếu Nại Tranh Chấp Ngay`;
+      }
+    }
+  </script>
+</body>
+</html>

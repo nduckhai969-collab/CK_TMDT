@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Đăng Tin Tuyển Việc & Quản Lý Đề Xuất (Customer Portal)</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
+    .tab-btn {
+      padding: 10px 20px;
+      font-weight: 700;
+      font-size: 14px;
+      color: #64748B;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn.active {
+      color: #16A34A;
+      border-bottom-color: #16A34A;
+    }
+    .request-row-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 14px;
+      transition: all 0.2s ease;
+    }
+    .request-row-card:hover {
+      border-color: #16A34A;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.08);
+    }
+    .applicant-box {
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 16px;
+      background: #FFFFFF;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <div id="navbar-placeholder"></div>
+
+  <main style="max-width: 1240px; margin: 32px auto 60px; padding: 0 24px;">
+
+    <!-- HEADER TITLE -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+      <div>
+        <h1 style="font-size:24px; font-weight:800; color:#0F172A; margin:0;">
+          Đăng Tin Tuyển Việc & Quản Lý Yêu Cầu Thuê
+        </h1>
+        <p style="font-size:14px; color:#64748B; margin-top:4px;">
+          Đăng yêu cầu công việc cụ thể để nhận báo giá cạnh tranh từ các chuyên gia tay nghề cao trên sàn.
+        </p>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button onclick="switchTab('create')" class="btn btn-primary" style="font-weight:700;">
+          <i class="fa-solid fa-plus-circle"></i> Đăng Yêu Cầu Mới
+        </button>
+      </div>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div style="border-bottom: 1px solid #E2E8F0; margin-bottom: 28px; display:flex; gap:12px;">
+      <button id="tabManage" class="tab-btn active" onclick="switchTab('manage')">
+        <i class="fa-solid fa-list-check"></i> Các Yêu Cầu Đã Đăng (<span id="jobCountBadge">0</span>)
+      </button>
+      <button id="tabCreate" class="tab-btn" onclick="switchTab('create')">
+        <i class="fa-solid fa-pen-to-square"></i> Tạo Yêu Cầu Tuyển Dụng Mới
+      </button>
+    </div>
+
+    <!-- VIEW 1: MANAGE POSTED JOBS & APPLICANTS (Figma r1_c4) -->
+    <div id="viewManage">
+      <div id="jobsListContainer">
+        <div style="text-align:center; padding:40px; color:#64748B;">
+          <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+          <div style="margin-top:10px;">Đang tải danh sách yêu cầu tuyển...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: CREATE NEW JOB FORM (Figma r1_c3) -->
+    <div id="viewCreate" style="display:none; max-width:860px; margin:0 auto;">
+      <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:32px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
+        <h2 style="font-size:18px; font-weight:800; color:#0F172A; margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+          <i class="fa-solid fa-file-pen" style="color:#16A34A;"></i> Nhập Chi Tiết Yêu Cầu Tuyển Việc
+        </h2>
+
+        <form id="jobForm" onsubmit="handleCreateJob(event)">
+          <div style="margin-bottom:18px;">
+            <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Tiêu Đề Yêu Cầu / Tên Dự Án <span style="color:#EF4444;">*</span></label>
+            <input type="text" id="jobTitle" required placeholder="VD: Cần lập trình viên làm website bán hàng hoặc thợ sửa máy lạnh..." style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
+            <div>
+              <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Lĩnh Vực Chuyên Môn <span style="color:#EF4444;">*</span></label>
+              <select id="jobCategory" required style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; background:#FFF;">
+                <option value="IT">Lập trình & CNTT (Web, Mobile, App)</option>
+                <option value="Design">Thiết kế Đồ họa & UI/UX</option>
+                <option value="Tutor">Gia sư & Đào tạo Kỹ năng</option>
+                <option value="Repair">Sửa chữa Kỹ thuật & Điện lạnh</option>
+                <option value="Home">Dọn dẹp & Dịch vụ Đời sống</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Ngân Sách Dự Kiến (VNĐ) <span style="color:#EF4444;">*</span></label>
+              <input type="number" id="jobBudget" required placeholder="VD: 5000000" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
+            <div>
+              <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Hạn Chót Hoàn Thành</label>
+              <input type="date" id="jobDeadline" style="width:100%; padding:9px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit; outline:none;">
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Hình Thức Làm Việc</label>
+              <select id="jobLocation" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; background:#FFF;">
+                <option value="Online / Từ xa">Làm việc Online / Từ xa</option>
+                <option value="Tại nhà (TP. Hồ Chí Minh)">Gặp trực tiếp tại nhà (TP.HCM)</option>
+                <option value="Tại nhà (Hà Nội)">Gặp trực tiếp tại nhà (Hà Nội)</option>
+                <option value="Thỏa thuận sau">Thỏa thuận linh hoạt</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Mô Tả Chi Tiết Yêu Cầu Công Việc <span style="color:#EF4444;">*</span></label>
+            <textarea id="jobDesc" rows="5" required placeholder="Ghi rõ khối lượng công việc, tính năng mong muốn, yêu cầu chất lượng, bàn giao source code/file kết quả..." style="width:100%; padding:12px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; resize:vertical;"></textarea>
+          </div>
+
+          <!-- Escrow Protection Note in Form -->
+          <div style="background:#DCFCE7; border:1px solid #86EFAC; border-radius:10px; padding:14px; margin-bottom:24px; display:flex; gap:12px; align-items:flex-start;">
+            <i class="fa-solid fa-shield-halved" style="color:#15803D; font-size:20px; margin-top:2px;"></i>
+            <div style="font-size:12.5px; color:#15803D; line-height:1.5;">
+              <strong>Bảo lãnh an toàn sàn:</strong> Khi bạn chọn được chuyên gia ưng ý từ danh sách ứng tuyển, bạn sẽ nạp ký quỹ Escrow. Tiền chỉ được sàn chuyển cho chuyên gia sau khi bạn nghiệm thu đạt chất lượng.
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:12px;">
+            <button type="button" onclick="switchTab('manage')" class="btn btn-outline" style="font-weight:600; padding:11px 22px;">Hủy Bỏ</button>
+            <button type="submit" id="btnSubmitJob" class="btn btn-primary" style="font-weight:700; padding:11px 26px; box-shadow:0 4px 12px rgba(22,163,74,0.3);">
+              <i class="fa-solid fa-paper-plane"></i> Đăng Yêu Cầu Tuyển Dụng
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- APPLICANTS MODAL -->
+  <div id="applicantsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#FFFFFF; border-radius:16px; max-width:700px; width:92%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 20px 35px -5px rgba(0,0,0,0.2); animation:modalIn 0.3s ease-out;">
+      
+      <!-- Modal Header -->
+      <div style="padding:20px 24px; border-bottom:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h3 id="modalJobTitle" style="font-size:17px; font-weight:800; color:#0F172A; margin:0;">Danh Sách Chuyên Gia Ứng Tuyển</h3>
+          <div id="modalJobBudget" style="font-size:12.5px; color:#16A34A; font-weight:600; margin-top:2px;">Ngân sách: 8.000.000đ</div>
+        </div>
+        <button onclick="closeApplicantsModal()" style="border:none; background:transparent; font-size:18px; color:#94A3B8; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Modal Body (Applicants list) -->
+      <div id="applicantsListContainer" style="padding:24px; overflow-y:auto; flex:1;">
+        <!-- Loaded via JS -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="padding:16px 24px; border-top:1px solid #E2E8F0; text-align:right; background:#F8FAFC; border-bottom-left-radius:16px; border-bottom-right-radius:16px;">
+        <button onclick="closeApplicantsModal()" class="btn btn-outline btn-sm" style="font-weight:600;">Đóng Lại</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="customer.js"></script>
+  <script>
+    let myJobs = [];
+    let currentModalJob = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('requests');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+
+      // Set default deadline date (7 days later)
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      document.getElementById('jobDeadline').value = d.toISOString().split('T')[0];
+
+      loadJobs();
+    });
+
+    function switchTab(tab) {
+      if (tab === 'manage') {
+        document.getElementById('viewManage').style.display = 'block';
+        document.getElementById('viewCreate').style.display = 'none';
+        document.getElementById('tabManage').classList.add('active');
+        document.getElementById('tabCreate').classList.remove('active');
+      } else {
+        document.getElementById('viewManage').style.display = 'none';
+        document.getElementById('viewCreate').style.display = 'block';
+        document.getElementById('tabManage').classList.remove('active');
+        document.getElementById('tabCreate').classList.add('active');
+      }
+    }
+
+    async function loadJobs() {
+      const user = getCurrentCustomer();
+      const res = await apiRequest(`/api/jobs`);
+      if (res.success && res.jobs) {
+        myJobs = res.jobs;
+        document.getElementById('jobCountBadge').textContent = myJobs.length;
+        renderJobsList();
+      }
+    }
+
+    function renderJobsList() {
+      const container = document.getElementById('jobsListContainer');
+      if (myJobs.length === 0) {
+        container.innerHTML = `
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:48px; text-align:center;">
+            <i class="fa-solid fa-bullhorn" style="font-size:44px; color:#94A3B8; margin-bottom:14px;"></i>
+            <h3 style="font-size:17px; font-weight:700; color:#0F172A; margin-bottom:6px;">Bạn chưa đăng yêu cầu tuyển việc nào</h3>
+            <p style="font-size:13.5px; color:#64748B; margin-bottom:18px;">Hãy đăng tin ngay để tiếp cận hàng trăm chuyên gia giỏi trên nền tảng.</p>
+            <button onclick="switchTab('create')" class="btn btn-primary" style="font-weight:600;"><i class="fa-solid fa-plus-circle"></i> Đăng Yêu Cầu Đầu Tiên</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = myJobs.map(j => {
+        const applicantCount = (j.applicants || []).length;
+        const isOpen = j.status === 'open';
+
+        return `
+          <div class="request-row-card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                  <span style="font-weight:800; font-size:16px; color:#0F172A;">${j.title}</span>
+                  ${getCategoryBadge(j.category)}
+                  <span style="background:${isOpen ? '#DCFCE7' : '#E2E8F0'}; color:${isOpen ? '#15803D' : '#64748B'}; font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:9999px;">
+                    ${isOpen ? '● Đang nhận hồ sơ' : '● Đã chốt ứng viên'}
+                  </span>
+                </div>
+                <div style="font-size:13px; color:#64748B;">
+                  Mã tin: <strong>${j.id}</strong> • Đăng lúc: ${j.createdAt} • Hạn chót: <strong>${j.deadline}</strong> • Địa điểm: ${j.location}
+                </div>
+              </div>
+
+              <div style="text-align:right;">
+                <div style="font-size:11px; color:#64748B; text-transform:uppercase; font-weight:600;">Ngân sách đề xuất</div>
+                <div style="font-size:20px; font-weight:800; color:#16A34A;">${j.budget}</div>
+              </div>
+            </div>
+
+            <p style="font-size:13.5px; color:#475569; line-height:1.5; margin-bottom:16px; background:#F8FAFC; padding:12px; border-radius:8px;">
+              ${j.desc}
+            </p>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div style="font-size:13px; color:#0F172A; display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-users" style="color:#16A34A;"></i>
+                <strong>${applicantCount}</strong> chuyên gia đã gửi đề xuất ứng tuyển
+              </div>
+
+              <div style="display:flex; gap:10px;">
+                <button onclick="openApplicantsModal('${j.id}')" class="btn ${applicantCount > 0 ? 'btn-primary' : 'btn-outline'}" style="font-size:13px; font-weight:700; padding:8px 16px;">
+                  <i class="fa-solid fa-eye"></i> Xem Đề Xuất Ứng Tuyển (${applicantCount})
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function handleCreateJob(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitJob');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Đăng Tin...`;
+
+      const user = getCurrentCustomer();
+      const payload = {
+        customerId: user.id,
+        customerName: user.name,
+        title: document.getElementById('jobTitle').value,
+        category: document.getElementById('jobCategory').value,
+        budgetNum: Number(document.getElementById('jobBudget').value),
+        deadline: document.getElementById('jobDeadline').value,
+        location: document.getElementById('jobLocation').value,
+        desc: document.getElementById('jobDesc').value
+      };
+
+      const res = await apiRequest('/api/jobs', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.success) {
+        showToast('Thành Công', 'Yêu cầu tuyển dụng của bạn đã được đăng công khai trên sàn!', 'success');
+        document.getElementById('jobForm').reset();
+        await loadJobs();
+        switchTab('manage');
+      } else {
+        showToast('Lỗi', res.message || 'Không thể đăng yêu cầu', 'error');
+      }
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Đăng Yêu Cầu Tuyển Dụng`;
+    }
+
+    function openApplicantsModal(jobId) {
+      currentModalJob = myJobs.find(j => j.id === jobId);
+      if (!currentModalJob) return;
+
+      document.getElementById('modalJobTitle').textContent = `Ứng Viên Cho: ${currentModalJob.title}`;
+      document.getElementById('modalJobBudget').textContent = `Ngân sách dự kiến: ${currentModalJob.budget}`;
+
+      const container = document.getElementById('applicantsListContainer');
+      const applicants = currentModalJob.applicants || [];
+
+      if (applicants.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:32px; color:#64748B;">
+            <i class="fa-solid fa-inbox" style="font-size:36px; color:#CBD5E1; margin-bottom:10px;"></i>
+            <div>Chưa có chuyên gia nào gửi đề xuất. Tin của bạn đang được hiển thị cho các Provider phù hợp!</div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = applicants.map(a => `
+          <div class="applicant-box">
+            <div style="display:flex; gap:14px; align-items:center;">
+              <img src="${a.avatar}" alt="${a.providerName}" style="width:50px; height:50px; border-radius:12px; object-fit:cover; border:2px solid #E2E8F0;">
+              <div>
+                <div style="font-weight:800; font-size:15px; color:#0F172A;">${a.providerName}</div>
+                <div style="font-size:12.5px; color:#64748B;">${a.specialty}</div>
+                <div style="font-size:12.5px; color:#475569; margin-top:6px; background:#F8FAFC; padding:8px 10px; border-radius:6px; border:1px solid #E2E8F0;">
+                  "${a.proposalText}"
+                </div>
+              </div>
+            </div>
+
+            <div style="text-align:right; flex-shrink:0;">
+              <div style="font-size:11px; color:#64748B;">Báo giá chào thầu:</div>
+              <div style="font-size:17px; font-weight:800; color:#16A34A; margin-bottom:8px;">${a.proposedPrice}</div>
+              
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <button onclick="acceptApplicant('${currentModalJob.id}', '${a.providerId}', '${a.providerName}', '${a.proposedPrice}')" class="btn btn-primary btn-sm" style="font-weight:700;">
+                  <i class="fa-solid fa-handshake"></i> Chọn & Ký Quỹ Escrow
+                </button>
+                <a href="customer_chat.html?with=${a.providerId}" class="btn btn-outline btn-sm" style="border-color:#CBD5E1; font-weight:600; text-align:center;">
+                  <i class="fa-solid fa-comments"></i> Chat Báo Giá
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('applicantsModal').style.display = 'flex';
+    }
+
+    function closeApplicantsModal() {
+      document.getElementById('applicantsModal').style.display = 'none';
+      currentModalJob = null;
+    }
+
+    async function acceptApplicant(jobId, providerId, providerName, priceFormatted) {
+      const priceNum = Number(priceFormatted.replace(/[^0-9]/g, '')) || 5000000;
+      
+      const res = await apiRequest(`/api/jobs/${jobId}/accept-applicant`, {
+        method: 'POST',
+        body: JSON.stringify({ providerId })
+      });
+
+      if (res.success) {
+        showToast('Đã Chọn Chuyên Gia!', res.message, 'success');
+        closeApplicantsModal();
+
+        // Save draft and redirect to checkout for escrow deposit
+        const draft = {
+          providerId,
+          providerName,
+          serviceTitle: currentModalJob ? currentModalJob.title : 'Hợp đồng theo yêu cầu',
+          price: priceNum,
+          date: currentModalJob ? currentModalJob.deadline : '7 ngày',
+          time: 'Theo thỏa thuận dự án',
+          quantity: '1 Hợp đồng trọn gói',
+          notes: `Tuyển từ yêu cầu: ${currentModalJob ? currentModalJob.id : ''}`
+        };
+        localStorage.setItem('SKILLRENTAL_CHECKOUT_DRAFT', JSON.stringify(draft));
+        setTimeout(() => {
+          window.location.href = 'customer_checkout.html';
+        }, 1000);
+      } else {
+        showToast('Lỗi', res.message || 'Không thể chấp thuận ứng viên', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tổng quan - SkillRental Partner Dashboard</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="brand-icon">S</div>
+        <span>SkillRental</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Tổng quan</div>
+        <a href="dashboard.html" class="nav-link active"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+
+        <div class="nav-section-title">Hồ sơ & Dịch vụ</div>
+        <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-card-clip"></i><span>Hồ Sơ & Dịch Vụ</span></a>
+
+        <div class="nav-section-title">Công việc & Đơn hàng</div>
+        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);">6</span></a>
+        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);">2</span></a>
+
+        <div class="nav-section-title">Kinh doanh & Khách hàng</div>
+        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count">3</span></a>
+        <a href="payment.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Thanh toán & Phí sàn</span></a>
+        <a href="income.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Ví & Thu nhập</span></a>
+        <a href="review.html" class="nav-link"><i class="fa-solid fa-star"></i><span>Đánh giá & Uy tín</span></a>
+        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);">1</span></a>
+
+        <div class="nav-section-title">Dịch vụ hệ thống</div>
+        <a href="package.html" class="nav-link"><i class="fa-solid fa-box-archive"></i><span>Mua dịch vụ</span></a>
+        <a href="post.html" class="nav-link"><i class="fa-solid fa-newspaper"></i><span>Bài viết & Portfolio</span></a>
+      </nav>
+
+      <div class="sidebar-profile">
+        <div class="avatar">NV</div>
+        <div class="profile-info">
+          <div class="profile-name">Nguyễn Văn Pro</div>
+          <div class="profile-role">Senior UI/UX & Web Dev</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-wrapper">
+      <header class="top-header">
+        <div class="header-title">Tổng Quan Kênh Nhà Cung Cấp</div>
+        <div class="header-actions">
+          <span class="badge badge-success"><span class="badge-dot"></span> Đang Sẵn Sàng Nhận Việc</span>
+          <!-- Switcher to Customer Portal -->
+          <a href="customer.html" class="btn btn-outline btn-sm" style="border-color: var(--primary); color: var(--primary); font-weight: 600;">
+            <i class="fa-solid fa-user"></i> Kênh Khách Hàng ↗
+          </a>
+          <!-- Switcher to Admin Portal -->
+          <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
+            <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
+          </a>
+          <a href="chat.html" class="btn btn-secondary btn-sm"><i class="fa-solid fa-envelope"></i> Tin nhắn mới (3)</a>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <div class="grid-4" style="margin-bottom: 24px;">
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">Doanh Thu Tháng Bảy</div>
+              <div class="stat-value">35.500.000đ</div>
+            </div>
+            <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary-accent);">
+              <i class="fa-solid fa-money-bill-wave"></i>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">Dự Án Đang Thực Hiện</div>
+              <div class="stat-value">12 Dự án</div>
+            </div>
+            <div class="stat-icon" style="background-color: var(--info-light); color: var(--info);">
+              <i class="fa-solid fa-briefcase"></i>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">Đánh Giá Trung Bình</div>
+              <div class="stat-value">4.9 ⭐</div>
+            </div>
+            <div class="stat-icon" style="background-color: var(--warning-light); color: #B45309;">
+              <i class="fa-solid fa-star"></i>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div>
+              <div class="stat-label">Khiếu Nại Cần Xử Lý</div>
+              <div class="stat-value">1 Yêu cầu</div>
+            </div>
+            <div class="stat-icon" style="background-color: var(--danger-light); color: var(--danger);">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Truy Cập Nhanh Trung Tâm Quản Lý</div>
+              <div class="card-subtitle">Điều hướng đến các khu vực làm việc của Nhà cung cấp</div>
+            </div>
+          </div>
+          <div class="grid-4">
+            <a href="profile.html" class="btn btn-outline" style="height: 56px; justify-content: flex-start; gap: 12px;">
+              <i class="fa-solid fa-id-card-clip" style="font-size: 18px; color: var(--primary-accent);"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Hồ Sơ & Dịch Vụ</div>
+                <div style="font-size: 11px;">Kỹ năng, Giá dịch vụ, Lịch rảnh</div>
+              </div>
+            </a>
+
+            <a href="chat.html" class="btn btn-outline" style="height: 56px; justify-content: flex-start; gap: 12px;">
+              <i class="fa-solid fa-comments" style="font-size: 18px; color: var(--primary-accent);"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Tin nhắn Khách hàng</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Trao đổi và bàn giao sản phẩm</div>
+              </div>
+            </a>
+
+            <a href="payment.html" class="btn btn-outline" style="height: 56px; justify-content: flex-start; gap: 12px;">
+              <i class="fa-solid fa-credit-card" style="font-size: 18px; color: var(--primary-accent);"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Thanh toán & Phí sàn</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Gói tài khoản & Duy trì sàn</div>
+              </div>
+            </a>
+
+            <a href="income.html" class="btn btn-outline" style="height: 56px; justify-content: flex-start; gap: 12px;">
+              <i class="fa-solid fa-wallet" style="font-size: 18px; color: var(--primary-accent);"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Ví & Thu nhập</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Số dư và yêu cầu rút tiền</div>
+              </div>
+            </a>
+
+            <a href="review.html" class="btn btn-outline" style="height: 56px; justify-content: flex-start; gap: 12px;">
+              <i class="fa-solid fa-star" style="font-size: 18px; color: var(--primary-accent);"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Đánh giá & Uy tín</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Phản hồi ý kiến khách hàng</div>
+              </div>
+            </a>
+
+            <a href="complaint.html" class="btn btn-outline" style="height: 56px; justify-content: flex-start; gap: 12px;">
+              <i class="fa-solid fa-shield-halved" style="font-size: 18px; color: var(--danger);"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Khiếu nại & Tranh chấp</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Giải trình đơn hàng sự cố</div>
+              </div>
+            </a>
+
+            <a href="package.html" class="btn btn-outline" style="height: 56px; justify-content: flex-start; gap: 12px;">
+              <i class="fa-solid fa-box-archive" style="font-size: 18px; color: var(--primary-accent);"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Gói Dịch Vụ</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Thiết lập bảng giá & thời gian</div>
+              </div>
+            </a>
+
+            <a href="post.html" class="btn btn-outline" style="height: 56px; justify-content: flex-start; gap: 12px;">
+              <i class="fa-solid fa-newspaper" style="font-size: 18px; color: var(--primary-accent);"></i>
+              <div style="text-align: left;">
+                <div style="font-weight: 600;">Bài viết & Portfolio</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Quảng bá sản phẩm kỹ năng</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>

@@ -1837,6 +1837,12 @@
     // Khởi tạo trạng thái navbar khi tải trang
     document.addEventListener('DOMContentLoaded', () => {
       checkAuthNav();
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('auth') === 'login') {
+        openAuthModal('login');
+      } else if (params.get('auth') === 'register') {
+        openAuthModal('register');
+      }
     });
   </script>
 </body>

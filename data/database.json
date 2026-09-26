@@ -35,7 +35,7 @@
       "password": "123",
       "joinDate": "15/03/2024",
       "spentOrEarned": "24.600.000đ",
-      "balance": 10275000,
+      "balance": 5550000,
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
       "address": "",
@@ -265,8 +265,8 @@
       "name": "Phạm Hữu Cường",
       "specialty": "Thạc Sĩ Ngôn Ngữ & Chuyên Gia Luyện Thi IELTS 8.0+",
       "category": "Tutor",
-      "rating": 4.8,
-      "reviewCount": 29,
+      "rating": 3,
+      "reviewCount": 2,
       "hourlyRate": 350000,
       "completedOrders": 35,
       "location": "Hải Châu, Đà Nẵng (Hỗ trợ Online)",
@@ -565,6 +565,49 @@
   ],
   "orders": [
     {
+      "id": "DH006380",
+      "customerId": "USR003",
+      "customerName": "Lê Hoàng Long",
+      "customerPhone": "0988 776 655",
+      "providerId": "PRV001",
+      "providerName": "Nguyễn Văn An",
+      "providerPhone": "0901 234 567",
+      "serviceId": "SVC_CUSTOM",
+      "serviceTitle": "Tiêu chuẩn - Thiết kế Web Landing Page",
+      "price": 4500000,
+      "priceFormatted": "4.500.000đ",
+      "platformFee": 225000,
+      "escrowDeposit": 4725000,
+      "escrowStatus": "disputed",
+      "orderStatus": "disputed",
+      "paymentMethod": "Chuyển khoản VietQR",
+      "date": "26/09/2026 17:33",
+      "deadline": "2026-09-28",
+      "notes": "",
+      "milestones": [
+        {
+          "title": "Ký quỹ Escrow bảo vệ 100% thành công",
+          "done": true,
+          "time": "26/09/2026 17:33"
+        },
+        {
+          "title": "Provider tiếp nhận yêu cầu & triển khai công việc",
+          "done": true,
+          "time": "26/09/2026 17:33"
+        },
+        {
+          "title": "Bàn giao sản phẩm / hoàn thành dịch vụ",
+          "done": false,
+          "time": "Đang triển khai"
+        },
+        {
+          "title": "Khách hàng nghiệm thu & Giải ngân Escrow",
+          "done": false,
+          "time": "Chờ nghiệm thu"
+        }
+      ]
+    },
+    {
       "id": "DH002964",
       "customerId": "USR003",
       "customerName": "Lê Hoàng Long",
@@ -622,7 +665,7 @@
       "platformFee": 225000,
       "escrowDeposit": 4725000,
       "escrowStatus": "escrow_held",
-      "orderStatus": "processing",
+      "orderStatus": "delivered",
       "paymentMethod": "Ví VNPay (Ký quỹ Escrow)",
       "date": "28/04/2025 10:30",
       "deadline": "05/05/2025",
@@ -636,19 +679,22 @@
         {
           "title": "Provider bắt đầu triển khai kiến trúc & UI",
           "done": true,
-          "time": "28/04/2025 14:00"
+          "time": "26/09/2026 17:58"
         },
         {
           "title": "Bàn giao bản demo chạy thử (Alpha Release)",
-          "done": false,
-          "time": "Dự kiến 02/05/2025"
+          "done": true,
+          "time": "26/09/2026 18:00"
         },
         {
           "title": "Khách hàng nghiệm thu & Giải ngân Escrow",
           "done": false,
           "time": "Dự kiến 05/05/2025"
         }
-      ]
+      ],
+      "progressPercent": 100,
+      "deliveredAt": "26/09/2026 18:00",
+      "handoverNotes": "Đã bàn giao toàn bộ sản phẩm hoàn thiện và tài liệu hướng dẫn."
     },
     {
       "id": "DH001233",
@@ -734,6 +780,19 @@
   ],
   "reviews": [
     {
+      "id": "REV004",
+      "orderId": "DH001231",
+      "customerId": "USR003",
+      "customerName": "Lê Hoàng Long",
+      "providerId": "PRV003",
+      "providerName": "Phạm Hữu Cường",
+      "serviceTitle": "Khóa học IELTS Speaking 1 kèm 1 cấp tốc",
+      "rating": 1,
+      "content": "tại web lỏ",
+      "date": "26/09/2026",
+      "criteria": []
+    },
+    {
       "id": "REV003",
       "orderId": "DH002964",
       "customerId": "USR003",
@@ -784,6 +843,21 @@
     }
   ],
   "complaints": [
+    {
+      "id": "KN-2026-03",
+      "orderId": "DH006380",
+      "complainantId": "USR003",
+      "complainant": "Lê Hoàng Long (Khách hàng)",
+      "defendantId": "PRV001",
+      "defendant": "Nguyễn Văn An (Provider)",
+      "reason": "Chuyên gia không hoàn thành đúng chất lượng cam kết",
+      "amount": "2.500.000",
+      "priority": "high",
+      "status": "pending",
+      "createdAt": "26/09/2026 17:38",
+      "userClaim": "web",
+      "providerClaim": "Chờ Provider phản hồi giải trình"
+    },
     {
       "id": "KN-2026-02",
       "orderId": "DH002964",
@@ -843,6 +917,27 @@
       "toUserId": "USR001",
       "text": "Xin chào anh An!",
       "time": "25/09/2026 14:27"
+    },
+    {
+      "id": "MSG005",
+      "fromUserId": "USR003",
+      "toUserId": "USR001",
+      "text": "hello",
+      "time": "26/09/2026 17:22"
+    },
+    {
+      "id": "MSG006",
+      "fromUserId": "USR003",
+      "toUserId": "USR001",
+      "text": "heelo",
+      "time": "26/09/2026 17:22"
+    },
+    {
+      "id": "MSG007",
+      "fromUserId": "USR001",
+      "toUserId": "USR003",
+      "text": "chào bạn nha",
+      "time": "26/09/2026 18:00"
     }
   ],
   "pendingProviders": [

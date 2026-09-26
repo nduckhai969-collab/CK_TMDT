@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkillRental - Khám Phá & Đặt Lịch Chuyên Gia Kỹ Năng (Customer Portal)</title>
-  <!-- Google Fonts Inter -->
+  <title>SkillRental - Khám Phá & Thuê Dịch Vụ Chuyên Gia</title>  <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -298,17 +297,30 @@
     let allProviders = [];
 
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('home');
-      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+      document.getElementById('navbar-placeholder').innerHTML =
+              renderCustomerNavbar('home');
 
-      // Check URL params for category
+      document.getElementById('footer-placeholder').innerHTML =
+              renderCustomerFooter();
+
       const urlParams = new URLSearchParams(window.location.search);
       const catParam = urlParams.get('cat');
+
       if (catParam) {
         currentCategory = catParam;
-        document.querySelectorAll('.category-card').forEach(c => c.classList.remove('active'));
-        const matched = Array.from(document.querySelectorAll('.category-card')).find(c => c.getAttribute('onclick')?.includes(`'${catParam}'`));
-        if (matched) matched.classList.add('active');
+
+        document.querySelectorAll('.category-card')
+                .forEach(c => c.classList.remove('active'));
+
+        const matched = Array.from(
+                document.querySelectorAll('.category-card')
+        ).find(c =>
+                c.getAttribute('onclick')?.includes(`'${catParam}'`)
+        );
+
+        if (matched) {
+          matched.classList.add('active');
+        }
       }
 
       loadProviders();

@@ -945,7 +945,7 @@ function renderCustomerNavbar(
 
 
                 <a
-                    href="profile.html"
+                    href="customer_profile.html"
                     style="
                         display:flex;
                         align-items:center;
@@ -1213,33 +1213,15 @@ function customerLogout() {
 
   clearCurrentCustomer();
 
-
   showToast(
       'Đã Đăng Xuất',
       'Bạn đã đăng xuất khỏi phiên làm việc.',
       'success'
   );
 
-
   setTimeout(() => {
 
-    /*
-     * Không chuyển sang login.html.
-     * Vẫn ở customer.html.
-     */
-
-    const navbar =
-        document.getElementById(
-            'navbar-placeholder'
-        );
-
-    if (navbar) {
-
-      navbar.innerHTML =
-          renderCustomerNavbar(
-              'home'
-          );
-    }
+    window.location.href = 'index.html?auth=login';
 
   }, 300);
 }
@@ -1759,19 +1741,6 @@ function injectGlobalAuthModal() {
                     <i class="fa-solid fa-arrow-right-to-bracket"></i>
                     Đăng Nhập Ngay
                 </button>
-
-                <!-- 1-Click Quick Demo Login -->
-                <div style="margin-top:18px; padding-top:16px; border-top:1px dashed #E2E8F0;">
-                    <div style="font-size:12px; font-weight:700; color:#64748B; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">⚡ Đăng Nhập Nhanh Mẫu (1-Click Demo)</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                        <button type="button" onclick="quickFillAndLogin('long.le@example.com', '123')" style="padding:8px 10px; border:1px solid #E2E8F0; border-radius:6px; background:#F8FAFC; font-size:12px; font-weight:600; color:#0F172A; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-user" style="color:#16A34A;"></i> Khách: Lê Hoàng Long
-                        </button>
-                        <button type="button" onclick="quickFillAndLogin('an.nguyen@example.com', '123')" style="padding:8px 10px; border:1px solid #E2E8F0; border-radius:6px; background:#F8FAFC; font-size:12px; font-weight:600; color:#0F172A; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                            <i class="fa-solid fa-briefcase" style="color:#0F172A;"></i> Provider: Nguyễn Văn An
-                        </button>
-                    </div>
-                </div>
 
             </form>
 

@@ -37,7 +37,8 @@
       "spentOrEarned": "24.600.000đ",
       "balance": 10275000,
       "status": "active",
-      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150"
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+      "address": ""
     },
     {
       "id": "USR004",
@@ -412,6 +413,21 @@
   ],
   "jobRequests": [
     {
+      "id": "JOB-2026-04",
+      "customerId": "USR003",
+      "customerName": "Lê Hoàng Long",
+      "title": "Thiết kế Frontend Web Thương mại điện tử",
+      "category": "IT",
+      "budget": "5.000.000đ",
+      "budgetNum": 5000000,
+      "deadline": "2026-10-03",
+      "location": "Online / Từ xa",
+      "status": "open",
+      "createdAt": "26/09/2026 11:57",
+      "desc": "online 100%",
+      "applicants": []
+    },
+    {
       "id": "JOB-2026-03",
       "customerId": "USR003",
       "customerName": "Lê Hoàng Long",
@@ -421,7 +437,7 @@
       "budgetNum": 5000000,
       "deadline": "30/05/2025",
       "location": "Online",
-      "status": "open",
+      "status": "closed",
       "createdAt": "25/09/2026 14:27",
       "desc": "Yêu cầu làm giao diện HTML CSS chuẩn theo Figma",
       "applicants": [
@@ -433,7 +449,7 @@
           "proposedPrice": "4.800.000đ",
           "appliedAt": "25/09/2026 14:27",
           "proposalText": "Tôi nhận làm dự án này trong 3 ngày.",
-          "status": "pending"
+          "status": "accepted"
         }
       ]
     },

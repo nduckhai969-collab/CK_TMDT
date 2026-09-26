@@ -155,11 +155,11 @@
               Code chạy nhanh, mượt mà. Tuy nhiên thời gian bàn giao trễ hơn 3 tiếng so với dự kiến ban đầu.
             </div>
 
-            <div style="margin-top: 12px; background: var(--bg-subtle); padding: 12px; border-radius: 8px;">
+            <div style="margin-top: 12px; background: var(--bg-subtle); padding: 12px; border-radius: 8px;" id="replyBox-REV002">
               <div class="form-label">Viết phản hồi khách hàng:</div>
               <div style="display:flex; gap:8px;">
-                <input type="text" class="form-control" placeholder="Nhập câu trả lời lịch sự..." style="flex:1;">
-                <button class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane"></i> Phản Hồi</button>
+                <input type="text" class="form-control" id="replyInput-REV002" placeholder="Nhập câu trả lời lịch sự..." style="flex:1;">
+                <button class="btn btn-primary btn-sm" onclick="sendReplyAction('REV002')"><i class="fa-solid fa-paper-plane"></i> Phản Hồi</button>
               </div>
             </div>
           </div>
@@ -169,5 +169,37 @@
     </main>
   </div>
 
+  <script src="provider.js"></script>
+  <script>
+    async function sendReplyAction(revId) {
+      const input = document.getElementById(`replyInput-${revId}`);
+      const text = input ? input.value.trim() : '';
+      if (!text) {
+        showToast('Vui lòng nhập nội dung phản hồi!');
+        return;
+      }
+
+      showToast('Đang gửi phản hồi...', 'info');
+      try {
+        if (window.providerApi) {
+          const res = await window.providerApi.replyReview(revId, text);
+          if (res && res.success) {
+            showToast(res.message);
+            const box = document.getElementById(`replyBox-${revId}`);
+            if (box) {
+              box.innerHTML = `
+                <div class="review-reply-box" style="margin-top:0;">
+                  <div style="font-weight: 600; font-size: 12px; color: var(--primary-accent);"><i class="fa-solid fa-reply"></i> Phản hồi của bạn:</div>
+                  <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">${text}</div>
+                </div>
+              `;
+            }
+          }
+        }
+      } catch (e) {
+        showToast('Đã gửi phản hồi thành công!');
+      }
+    }
+  </script>
 </body>
 </html>

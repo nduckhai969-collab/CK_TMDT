@@ -546,6 +546,7 @@ Em cam kết hỗ trợ giải đáp thắc mắc và chỉnh sửa nhỏ miễn
     <span id="toastMessage">Thông báo</span>
   </div>
 
+  <script src="provider.js"></script>
   <script>
     function showToast(msg) {
       const toast = document.getElementById('toastBox');
@@ -563,7 +564,15 @@ Em cam kết hỗ trợ giải đáp thắc mắc và chỉnh sửa nhỏ miễn
       window.scrollTo(0, 0);
     }
 
-    function confirmBookingToOrder() {
+    async function confirmBookingToOrder() {
+      showToast('Đang xác nhận lịch hẹn...');
+      try {
+        if (window.providerApi) {
+          await window.providerApi.acceptOrder('DH001234');
+        }
+      } catch (e) {
+        console.warn('Booking confirm error:', e);
+      }
       showToast('Đã xác nhận lịch hẹn! Đơn hàng #ORD-8834 đang được bắt đầu.');
       setTimeout(() => {
         switchOrderTab('tab-uc38', document.querySelectorAll('.tab-item')[1]);
@@ -579,7 +588,7 @@ Em cam kết hỗ trợ giải đáp thắc mắc và chỉnh sửa nhỏ miễn
     }
 
     let currentPercent = 65;
-    function toggleTask(box, weight) {
+    async function toggleTask(box, weight) {
       box.classList.toggle('done');
       if (box.classList.contains('done')) {
         box.textContent = '✓';
@@ -595,9 +604,24 @@ Em cam kết hỗ trợ giải đáp thắc mắc và chỉnh sửa nhỏ miễn
         document.getElementById('statusBadgeProgress').innerHTML = '<span class="badge-dot"></span> Sẵn sàng bàn giao (100%)';
         showToast('Tuyệt vời! Tất cả các đầu việc đã hoàn tất 100%.');
       }
+
+      try {
+        if (window.providerApi) {
+          await window.providerApi.updateOrderProgress('DH001234', currentPercent);
+        }
+      } catch (e) {
+        console.warn('Progress update error:', e);
+      }
     }
 
-    function deliverCompleteJobAction() {
+    async function deliverCompleteJobAction() {
+      try {
+        if (window.providerApi) {
+          await window.providerApi.deliverOrder('DH001234', 'Đã bàn giao toàn bộ sản phẩm hoàn thiện và tài liệu hướng dẫn.');
+        }
+      } catch (e) {
+        console.warn('Deliver order error:', e);
+      }
       showToast('Đã gửi tài liệu bàn giao và yêu cầu nghiệm thu thành công!');
       document.getElementById('completeSuccessBanner').style.display = 'block';
     }

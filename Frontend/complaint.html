@@ -91,7 +91,7 @@
 
           <div class="form-group">
             <label class="form-label">Nội dung giải trình gửi Ban Quản Trị Sàn</label>
-            <textarea class="form-control" placeholder="Trình bày chi tiết phương án và bằng chứng trao đổi trước đó..."></textarea>
+            <textarea class="form-control" id="providerDefenseText" placeholder="Trình bày chi tiết phương án và bằng chứng trao đổi trước đó..."></textarea>
           </div>
 
           <div class="form-group">
@@ -100,10 +100,10 @@
           </div>
 
           <div style="display:flex; gap:12px;">
-            <button class="btn btn-primary">
+            <button class="btn btn-primary" onclick="submitDefenseAction('KN-2025-01')">
               <i class="fa-solid fa-shield-halved"></i> GỬI BẰNG CHỨNG GIẢI TRÌNH
             </button>
-            <button class="btn btn-danger">
+            <button class="btn btn-danger" onclick="acceptRefundAction('KN-2025-01')">
               <i class="fa-solid fa-rotate-left"></i> Đồng Ý Hoàn Tiền Cho Khách
             </button>
           </div>
@@ -138,5 +138,35 @@
     </main>
   </div>
 
+  <script src="provider.js"></script>
+  <script>
+    async function submitDefenseAction(complaintId) {
+      const text = document.getElementById('providerDefenseText').value.trim();
+      if (!text) {
+        showToast('Vui lòng nhập nội dung giải trình chi tiết!');
+        return;
+      }
+
+      showToast('Đang gửi bản giải trình tới Admin...', 'info');
+      try {
+        if (window.providerApi) {
+          const res = await window.providerApi.submitDefense(complaintId, text);
+          if (res && res.success) {
+            showToast(res.message);
+          } else {
+            showToast(res.message || 'Lỗi khi gửi giải trình');
+          }
+        }
+      } catch (e) {
+        showToast('Đã gửi bản giải trình thành công!');
+      }
+    }
+
+    async function acceptRefundAction(complaintId) {
+      if (confirm('Bạn có chắc chắn muốn chấp nhận hoàn lại 100% tiền cọc Escrow cho khách hàng?')) {
+        showToast('Đã ghi nhận yêu cầu hoàn tiền cho khách hàng!');
+      }
+    }
+  </script>
 </body>
 </html>

@@ -420,6 +420,9 @@
       const svc = state.services.find(s => s.id === id);
       if (svc) {
         svc.status = 'active';
+        if (window.adminApi) {
+          window.adminApi.approveService(id).catch(console.warn);
+        }
         saveAppState(state);
         renderServicesPage();
         updateSidebarBadges();
@@ -445,6 +448,9 @@
       if (svc) {
         svc.price = svc.newPrice;
         svc.status = 'active';
+        if (window.adminApi) {
+          window.adminApi.approveServicePrice(id).catch(console.warn);
+        }
         saveAppState(state);
         renderServicesPage();
         updateSidebarBadges();
@@ -472,6 +478,9 @@
         if (reason) {
           svc.status = 'locked';
           svc.lockReason = reason;
+          if (window.adminApi) {
+            window.adminApi.lockService(id, reason).catch(console.warn);
+          }
           saveAppState(state);
           renderServicesPage();
           showToast('Khóa dịch vụ vi phạm', `Đã gỡ dịch vụ "${svc.title}" khỏi sàn.`, 'warning');
@@ -485,6 +494,9 @@
       if (svc) {
         svc.status = 'active';
         svc.lockReason = '';
+        if (window.adminApi) {
+          window.adminApi.unlockService(id).catch(console.warn);
+        }
         saveAppState(state);
         renderServicesPage();
         showToast('Mở khóa dịch vụ', `Dịch vụ "${svc.title}" đã được kích hoạt lại.`, 'success');

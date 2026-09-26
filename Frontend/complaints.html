@@ -342,6 +342,10 @@
             order.escrowStatus = 'Đã hoàn tất bồi thường';
           }
         }
+        if (window.adminApi) {
+          const resolution = decisionText.includes('Hoàn tiền 100%') ? 'refund_customer' : (decisionText.includes('Giải ngân') ? 'pay_provider' : 'partial_refund');
+          window.adminApi.resolveComplaint(activeCompId, resolution, 50, decisionText).catch(console.warn);
+        }
         saveAppState(state);
         closeModal('modal-complaint-detail');
         renderComplaintsTable();

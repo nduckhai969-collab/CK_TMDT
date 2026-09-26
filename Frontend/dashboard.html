@@ -70,8 +70,8 @@
         <div class="grid-4" style="margin-bottom: 24px;">
           <div class="stat-card">
             <div>
-              <div class="stat-label">Doanh Thu Tháng Bảy</div>
-              <div class="stat-value">35.500.000đ</div>
+              <div class="stat-label">Doanh Thu Tích Lũy</div>
+              <div class="stat-value" id="stat-revenue">35.500.000đ</div>
             </div>
             <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary-accent);">
               <i class="fa-solid fa-money-bill-wave"></i>
@@ -81,7 +81,7 @@
           <div class="stat-card">
             <div>
               <div class="stat-label">Dự Án Đang Thực Hiện</div>
-              <div class="stat-value">12 Dự án</div>
+              <div class="stat-value" id="stat-projects">12 Dự án</div>
             </div>
             <div class="stat-icon" style="background-color: var(--info-light); color: var(--info);">
               <i class="fa-solid fa-briefcase"></i>
@@ -91,7 +91,7 @@
           <div class="stat-card">
             <div>
               <div class="stat-label">Đánh Giá Trung Bình</div>
-              <div class="stat-value">4.9 ⭐</div>
+              <div class="stat-value" id="stat-rating">4.9 ⭐</div>
             </div>
             <div class="stat-icon" style="background-color: var(--warning-light); color: #B45309;">
               <i class="fa-solid fa-star"></i>
@@ -101,7 +101,7 @@
           <div class="stat-card">
             <div>
               <div class="stat-label">Khiếu Nại Cần Xử Lý</div>
-              <div class="stat-value">1 Yêu cầu</div>
+              <div class="stat-value" id="stat-complaints">1 Yêu cầu</div>
             </div>
             <div class="stat-icon" style="background-color: var(--danger-light); color: var(--danger);">
               <i class="fa-solid fa-triangle-exclamation"></i>
@@ -186,5 +186,21 @@
     </main>
   </div>
 
+  <script src="provider.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const res = await window.providerApi.getDashboardStats();
+        if (res && res.success && res.stats) {
+          const s = res.stats;
+          if (s.monthlyEarningsFormatted) document.getElementById('stat-revenue').textContent = s.monthlyEarningsFormatted;
+          if (s.activeProjectsCount !== undefined) document.getElementById('stat-projects').textContent = s.activeProjectsCount + ' Dự án';
+          if (s.averageRating) document.getElementById('stat-rating').textContent = s.averageRating + ' ⭐';
+        }
+      } catch (err) {
+        console.log('Dashboard live stats: Cached mode');
+      }
+    });
+  </script>
 </body>
 </html>

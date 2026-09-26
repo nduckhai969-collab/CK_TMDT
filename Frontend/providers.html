@@ -449,6 +449,9 @@
             status: 'active',
             lockReason: ''
           });
+          if (window.adminApi) {
+            window.adminApi.approveProvider(activeApprovalId).catch(console.warn);
+          }
           saveAppState(state);
           closeModal('modal-provider-detail');
           renderPendingProviders();
@@ -465,6 +468,9 @@
         const prov = state.pendingProviders.find(p => p.id === activeApprovalId);
         if (prov) {
           prov.status = 'rejected';
+          if (window.adminApi) {
+            window.adminApi.rejectProvider(activeApprovalId).catch(console.warn);
+          }
           saveAppState(state);
           closeModal('modal-provider-detail');
           renderPendingProviders();
@@ -479,6 +485,9 @@
       const skill = state.skillApprovals.find(s => s.id === skillId);
       if (skill) {
         skill.status = 'approved';
+        if (window.adminApi) {
+          window.adminApi.approveSkill(skillId).catch(console.warn);
+        }
         saveAppState(state);
         renderSkillApprovals();
         updateSidebarBadges();
@@ -491,6 +500,9 @@
       const skill = state.skillApprovals.find(s => s.id === skillId);
       if (skill) {
         skill.status = 'rejected';
+        if (window.adminApi) {
+          window.adminApi.rejectSkill(skillId).catch(console.warn);
+        }
         saveAppState(state);
         renderSkillApprovals();
         updateSidebarBadges();

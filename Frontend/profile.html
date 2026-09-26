@@ -1114,6 +1114,7 @@ Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
   </div>
 
   <!-- Interactive JavaScript Logic -->
+  <script src="provider.js"></script>
   <script>
     // Tab switching between profile sub-views
     function switchSection(targetId, tabEl) {
@@ -1156,8 +1157,8 @@ Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
       }
     }
 
-    // Save profile changes
-    function saveProfileChanges() {
+    // Save profile changes (Backend connected)
+    async function saveProfileChanges() {
       const name = document.getElementById('inputName').value;
       const headline = document.getElementById('inputHeadline').value;
       const location = document.getElementById('inputLocation').value;
@@ -1168,12 +1169,20 @@ Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
       if (location) document.getElementById('viewLocation').innerText = location;
       if (bio) document.getElementById('viewBio').innerHTML = '<p>' + bio.replace(/\n/g, '<br>') + '</p>';
 
+      try {
+        if (window.providerApi) {
+          await window.providerApi.updateProfile({ name, specialty: headline, location, bio });
+        }
+      } catch (e) {
+        console.warn('Backend sync warning:', e);
+      }
+
       closeModal('editProfileModal');
       showToast('Đã lưu thông tin hồ sơ Provider thành công!');
     }
 
-    // Add new skill
-    function addNewSkill() {
+    // Add new skill (Backend connected)
+    async function addNewSkill() {
       const name = document.getElementById('inputSkillName').value.trim();
       const group = document.getElementById('inputSkillGroup').value;
       const level = document.getElementById('inputSkillLevel').value;
@@ -1203,38 +1212,61 @@ Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
             <span class="badge badge-neutral" style="font-size: 10px;">Vừa thêm</span>
           </div>
         </div>
-        <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)">
+        <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this, '${name}')">
           <i class="fa-solid fa-trash"></i>
         </button>
       `;
 
       targetList.prepend(item);
       document.getElementById('inputSkillName').value = '';
+
+      try {
+        if (window.providerApi) {
+          await window.providerApi.addSkill(name, level, group);
+        }
+      } catch (e) {
+        console.warn('Backend skill add error:', e);
+      }
+
       closeModal('addSkillModal');
       showToast(`Đã thêm thành công kỹ năng "${name}"!`);
     }
 
-    function deleteSkill(btn) {
+    async function deleteSkill(btn, skillName) {
       if (confirm('Bạn có chắc chắn muốn xóa kỹ năng này khỏi hồ sơ?')) {
         const card = btn.closest('.skill-card-item');
         if (card) card.remove();
+        if (skillName && window.providerApi) {
+          try {
+            await window.providerApi.deleteSkill(skillName);
+          } catch (e) {
+            console.warn('Backend skill delete error:', e);
+          }
+        }
         showToast('Đã gỡ bỏ kỹ năng thành công!');
       }
     }
 
-    // Save hourly rate
-    function saveHourlyRate() {
+    // Save hourly rate (Backend connected)
+    async function saveHourlyRate() {
       const val = document.getElementById('inputHourlyRateVal').value;
       if (val) {
         const formatted = Number(val).toLocaleString('vi-VN') + 'đ';
         document.getElementById('displayHourlyRate').innerHTML = `${formatted} <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;">/ giờ làm việc</span>`;
+        try {
+          if (window.providerApi) {
+            await window.providerApi.updateHourlyRate(val);
+          }
+        } catch (e) {
+          console.warn('Backend hourly rate update error:', e);
+        }
       }
       closeModal('editHourlyModal');
       showToast('Đã cập nhật đơn giá theo giờ mới!');
     }
 
-    // Availability status switcher
-    function setStatusMode(mode) {
+    // Availability status switcher (Backend connected)
+    async function setStatusMode(mode) {
       const btnReady = document.getElementById('statusReady');
       const btnLimited = document.getElementById('statusLimited');
       const btnPaused = document.getElementById('statusPaused');
@@ -1263,6 +1295,14 @@ Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
         headerBadge.className = 'badge badge-danger';
         headerBadge.innerHTML = '<span class="badge-dot"></span> Đang Tạm Dừng / Nghỉ Phép';
         showToast('Trạng thái: Tạm dừng nhận đơn!');
+      }
+
+      try {
+        if (window.providerApi) {
+          await window.providerApi.updateAvailability(mode);
+        }
+      } catch (e) {
+        console.warn('Backend availability status error:', e);
       }
     }
 

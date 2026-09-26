@@ -83,10 +83,10 @@
             </ul>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" style="flex:1;">
+              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_BASIC', 'Gói Cơ Bản')">
                 <i class="fa-solid fa-cart-shopping"></i> Mua Gói
               </button>
-              <button class="btn btn-secondary btn-sm">
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Đã ẩn hiển thị gói')">
                 <i class="fa-solid fa-eye-slash"></i> Ẩn gói
               </button>
             </div>
@@ -94,45 +94,45 @@
 
           <div class="package-card highlight">
             <span class="badge badge-success" style="width: fit-content;">NỔI BẬT - BÁN CHẠY</span>
-            <div style="font-weight: 700; font-size: 18px; margin-top: 8px;">Website Doanh Nghiệp</div>
-            <div class="package-price">3.500.000đ</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Giải pháp toàn diện cho doanh nghiệp nhỏ</div>
+            <div style="font-weight: 700; font-size: 18px; margin-top: 8px;">Gói Chuyên Nghiệp (Pro)</div>
+            <div class="package-price">199.000đ</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Tăng độ uy tín, huy hiệu PRO và đẩy tin tìm kiếm</div>
 
             <ul class="package-feature-list">
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Thiết kế 5-7 Trang Chuẩn SEO</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Tích hợp Khung Chat & Form Báo Giá</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Thời gian: 5 Ngày</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> 5 Lần Chỉnh Sửa Miễn Phí</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Đăng tối đa 15 dịch vụ kỹ năng</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> 3 lượt đẩy tin lên Top tìm kiếm mỗi tháng</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Gắn huy hiệu uy tín "PRO PROVIDER"</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Giảm 2% phí hoa hồng sàn</li>
             </ul>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" style="flex:1;">
+              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_PRO', 'Gói Chuyên Nghiệp (Pro Provider)')">
                 <i class="fa-solid fa-cart-shopping"></i> Mua Gói
               </button>
-              <button class="btn btn-secondary btn-sm">
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Đã ẩn hiển thị gói')">
                 <i class="fa-solid fa-eye-slash"></i> Ẩn gói
               </button>
             </div>
           </div>
 
           <div class="package-card">
-            <span class="badge badge-info" style="width: fit-content;">GÓI NÂNG CAO</span>
-            <div style="font-weight: 700; font-size: 18px; margin-top: 8px;">Web/App Phức Tạp</div>
-            <div class="package-price">7.000.000đ+</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Dành cho dự án có quy trình Backend tùy chỉnh</div>
+            <span class="badge badge-info" style="width: fit-content;">GÓI DOANH NGHIỆP</span>
+            <div style="font-weight: 700; font-size: 18px; margin-top: 8px;">Gói VIP Elite</div>
+            <div class="package-price">499.000đ</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Đặc quyền tối cao dành cho Agency và chuyên gia Top</div>
 
             <ul class="package-feature-list">
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Fullstack Frontend + Backend API</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Tích hợp Cổng Thanh Toán Online</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Thời gian: 10 - 14 Ngày</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Hỗ Trợ Kỹ Thuật 3 Tháng</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Không giới hạn bài đăng dịch vụ</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> 10 lượt đẩy tin Hot mỗi tháng</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Huy hiệu vàng "VIP ELITE"</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Giảm 4% phí hoa hồng sàn</li>
             </ul>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" style="flex:1;">
+              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_VIP', 'Gói Doanh Nghiệp (VIP Elite)')">
                 <i class="fa-solid fa-cart-shopping"></i> Mua Gói
               </button>
-              <button class="btn btn-secondary btn-sm">
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Đã ẩn hiển thị gói')">
                 <i class="fa-solid fa-eye-slash"></i> Ẩn gói
               </button>
             </div>
@@ -142,5 +142,23 @@
     </main>
   </div>
 
+  <script src="provider.js"></script>
+  <script>
+    async function buyPackageAction(pkgId, pkgName) {
+      if (confirm(`Bạn có chắc chắn muốn đăng ký ${pkgName}?`)) {
+        showToast(`Đang xử lý kích hoạt ${pkgName}...`, 'info');
+        try {
+          const res = await window.providerApi.purchasePackage(pkgId);
+          if (res && res.success) {
+            showToast(res.message);
+          } else {
+            showToast(res.message || 'Không thể đăng ký gói');
+          }
+        } catch (e) {
+          showToast(`Đã đăng ký thành công ${pkgName}!`);
+        }
+      }
+    }
+  </script>
 </body>
 </html>

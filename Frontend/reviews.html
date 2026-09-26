@@ -265,6 +265,9 @@
         rev.status = hide ? 'hidden' : 'published';
         if (hide) rev.note = 'Đã bị ẩn bởi Quản trị viên do vi phạm thuần phong mỹ tục';
         else rev.note = '';
+        if (window.adminApi) {
+          window.adminApi.moderateReview(id, rev.status, rev.note).catch(console.warn);
+        }
         saveAppState(state);
         renderReviewsTable();
         showToast(hide ? 'Đã ẩn đánh giá vi phạm' : 'Đã khôi phục đánh giá', hide ? 'Đánh giá đã được gỡ khỏi trang dịch vụ.' : 'Đánh giá đã hiển thị trở lại bình thường.', hide ? 'warning' : 'success');

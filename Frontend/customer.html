@@ -89,7 +89,6 @@
       flex-direction: column;
       justify-content: space-between;
       position: relative;
-      cursor: pointer;
     }
     .provider-card:hover {
       border-color: #16A34A;
@@ -373,10 +372,6 @@
       renderGrid(list);
     }
 
-    function viewProvider(providerId) {
-      window.location.href = `customer_provider.html?id=${providerId}`;
-    }
-
     function renderGrid(list) {
       const container = document.getElementById('providerGrid');
       const countTitle = document.getElementById('resultCountTitle');
@@ -395,7 +390,7 @@
       }
 
       container.innerHTML = list.map(p => `
-        <div class="provider-card" onclick="viewProvider('${p.id}')">
+        <div class="provider-card">
           <!-- Card Header -->
           <div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
@@ -456,10 +451,10 @@
 
             <!-- Action Buttons -->
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-              <a href="customer_chat.html?with=${p.id}" onclick="event.stopPropagation()" class="btn btn-outline" style="border-color:#CBD5E1; color:#0F172A; font-size:13px; font-weight:600; text-align:center; padding:9px 0;">
+              <a href="customer_chat.html?with=${p.id}" class="btn btn-outline" style="border-color:#CBD5E1; color:#0F172A; font-size:13px; font-weight:600; text-align:center; padding:9px 0;">
                 <i class="fa-solid fa-comments" style="color:#16A34A;"></i> Nhắn Tin
               </a>
-              <a href="customer_provider.html?id=${p.id}" onclick="event.stopPropagation()" class="btn btn-primary" style="font-size:13px; font-weight:700; text-align:center; padding:9px 0; box-shadow:0 2px 8px rgba(22,163,74,0.25);">
+              <a href="customer_provider.html?id=${p.id}" class="btn btn-primary" style="font-size:13px; font-weight:700; text-align:center; padding:9px 0; box-shadow:0 2px 8px rgba(22,163,74,0.25);">
                 <i class="fa-solid fa-calendar-check"></i> Đặt Lịch
               </a>
             </div>

@@ -254,6 +254,9 @@
       const p = state.payouts.find(x => x.id === id);
       if (p) {
         p.status = 'paid';
+        if (window.adminApi) {
+          window.adminApi.approvePayout(id).catch(console.warn);
+        }
         saveAppState(state);
         renderPayoutsTable();
         showToast('Duyệt lệnh rút tiền', `Đã giải ngân ${p.amount} tới STK ${p.account} (${p.bank}) của ${p.provider}!`, 'success');
@@ -265,6 +268,9 @@
       const p = state.payouts.find(x => x.id === id);
       if (p) {
         p.status = 'rejected';
+        if (window.adminApi) {
+          window.adminApi.rejectPayout(id, 'Admin từ chối').catch(console.warn);
+        }
         saveAppState(state);
         renderPayoutsTable();
         showToast('Từ chối lệnh rút tiền', `Lệnh rút ${p.id} đã bị từ chối và hoàn tiền về ví Provider.`, 'error');

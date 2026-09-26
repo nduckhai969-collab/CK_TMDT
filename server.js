@@ -10,6 +10,7 @@ const jobRoutes = require('./routes/jobRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +31,7 @@ app.use(express.static(path.join(__dirname, 'Frontend')));
 
 // 4. API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/complaints', complaintRoutes);

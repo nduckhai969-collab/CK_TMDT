@@ -39,7 +39,23 @@ const INITIAL_DATABASE = {
         { name: 'Cơ bản - Fix bug & Tối ưu', price: 800000, deliveryDays: 1, desc: 'Sửa lỗi giao diện CSS/JS, tối ưu tốc độ tải trang Core Web Vitals.' },
         { name: 'Tiêu chuẩn - Thiết kế Web Landing Page', price: 4500000, deliveryDays: 4, desc: 'Website chuẩn SEO, responsive 100% mobile/desktop kèm CMS quản trị.' },
         { name: 'Nâng cao - Web App & Tích hợp Ký quỹ', price: 12000000, deliveryDays: 10, desc: 'Xây dựng toàn diện Web App, cổng thanh toán VNPay/MoMo, cơ chế Escrow.' }
-      ]
+      ],
+      availabilityStatus: 'ready',
+      bankAccount: { bank: 'MB Bank', account: '0987.654.321', holder: 'NGUYEN VAN PRO' },
+      monthlyEarnings: 35500000,
+      activeProjectsCount: 12,
+      schedule: {
+        mode: 'ready',
+        slots: [
+          { day: 'T2', morning: true, afternoon: true, evening: false },
+          { day: 'T3', morning: true, afternoon: true, evening: false },
+          { day: 'T4', morning: true, afternoon: true, evening: true },
+          { day: 'T5', morning: true, afternoon: true, evening: false },
+          { day: 'T6', morning: true, afternoon: true, evening: false },
+          { day: 'T7', morning: true, afternoon: false, evening: false },
+          { day: 'CN', morning: false, afternoon: false, evening: false }
+        ]
+      }
     },
     {
       id: 'PRV002',
@@ -401,6 +417,176 @@ const INITIAL_DATABASE = {
       text: 'Vâng, em đã tạo đơn và thanh toán ký quỹ Escrow bảo vệ sàn rồi ạ. Anh triển khai giúp em nhé!',
       time: '28/04/2025 10:32'
     }
+  ],
+
+  pendingProviders: [
+    {
+      id: 'APP001',
+      name: 'Võ Minh Trí',
+      email: 'tri.vo@example.com',
+      phone: '0908 112 233',
+      specialty: 'Lập trình viên Fullstack React / Node.js',
+      cccd: '079095012345',
+      experience: '5 năm kinh nghiệm tại TechCorp',
+      date: '28/04/2025',
+      status: 'pending',
+      bio: 'Chuyên xây dựng hệ thống thương mại điện tử, API tối ưu cao và tích hợp thanh toán.',
+      cert: 'AWS Certified Solutions Architect, Meta Front-End Specialization'
+    },
+    {
+      id: 'APP002',
+      name: 'Nguyễn Thị Bích',
+      email: 'bich.nguyen@example.com',
+      phone: '0919 445 566',
+      specialty: 'Thiết kế Đồ họa & UI/UX Figma',
+      cccd: '080198004567',
+      experience: '3 năm Freelance',
+      date: '27/04/2025',
+      status: 'pending',
+      bio: 'Thiết kế giao diện mobile app, bộ nhận diện thương hiệu công ty và ấn phẩm quảng cáo.',
+      cert: 'Google UX Design Professional Certificate'
+    },
+    {
+      id: 'APP003',
+      name: 'Trần Đình Trọng',
+      email: 'trong.tran@example.com',
+      phone: '0937 889 911',
+      specialty: 'Sửa chữa điện lạnh & điện gia dụng',
+      cccd: '001092003322',
+      experience: '7 năm kỹ thuật viên',
+      date: '27/04/2025',
+      status: 'pending',
+      bio: 'Bảo trì điều hòa inverter, máy giặt công nghiệp, tủ lạnh các hãng Daikin, Panasonic.',
+      cert: 'Chứng chỉ nghề Kỹ thuật Điện lạnh Bậc 3/7'
+    },
+    {
+      id: 'APP004',
+      name: 'Lê Thùy Dung',
+      email: 'dung.le@example.com',
+      phone: '0981 223 344',
+      specialty: 'Gia sư Tiếng Anh & Luyện thi IELTS',
+      cccd: '038197009876',
+      experience: '4 năm giảng dạy',
+      date: '26/04/2025',
+      status: 'pending',
+      bio: 'Chuyên luyện thi cấp tốc IELTS 6.5 - 7.5, kèm phát âm chuẩn Anh - Mỹ cho người đi làm.',
+      cert: 'IELTS Overall 8.0, TESOL 120h'
+    }
+  ],
+
+  skillApprovals: [
+    { id: 'SKL001', providerId: 'PRV001', providerName: 'Nguyễn Văn An', skillName: 'Kubernetes & DevOps CI/CD', certTitle: 'CKA (Certified Kubernetes Administrator)', issuer: 'Cloud Native Computing Foundation (CNCF)', date: '27/04/2025', status: 'pending' },
+    { id: 'SKL002', providerId: 'PRV002', providerName: 'Trần Thị Lan', skillName: '3D Blender Product Rendering', certTitle: 'Blender Certified Professional', issuer: 'Blender Foundation', date: '26/04/2025', status: 'pending' },
+    { id: 'SKL003', providerId: 'PRV003', providerName: 'Phạm Hữu Cường', skillName: 'Tiếng Nhật N1 Business', certTitle: 'JLPT N1 Certificate', issuer: 'Japan Foundation & JEES', date: '25/04/2025', status: 'pending' }
+  ],
+
+  reports: [
+    { id: 'RP001', target: 'Tài khoản: Đặng Quốc Huy', violationType: 'Lừa đảo & phát tán virus', details: 'Provider nhận cọc ngoài sàn và gửi link có chứa mã độc', reporter: 'Lê Hoàng Long', date: '28/04/2025', status: 'resolved' },
+    { id: 'RP002', target: 'Dịch vụ: Cài đặt tool hack game', violationType: 'Nội dung vi phạm pháp luật', details: 'Bài đăng quảng cáo phần mềm can thiệp trái phép', reporter: 'Nguyễn Văn An', date: '27/04/2025', status: 'resolved' },
+    { id: 'RP003', target: 'Tài khoản: Hoàng Văn Nam', violationType: 'Spam & Boom đơn hàng', details: 'Tạo đơn ảo sau đó hủy nhiều lần gây thiệt hại cho Provider', reporter: 'Trần Đình Trọng', date: '26/04/2025', status: 'resolved' },
+    { id: 'RP004', target: 'Đánh giá REV004', violationType: 'Ngôn từ kích động thù địch', details: 'Bình luận chứa từ ngữ xúc phạm danh dự nhân phẩm', reporter: 'Đặng Quốc Huy', date: '25/04/2025', status: 'resolved' }
+  ],
+
+  payouts: [
+    { id: 'WD-0912', providerId: 'PRV001', provider: 'Nguyễn Văn An', bank: 'Vietcombank', account: '0071001234567', amount: '25.000.000đ', amountNum: 25000000, date: '28/04/2025 09:15', status: 'pending' },
+    { id: 'WD-0911', providerId: 'PRV002', provider: 'Trần Thị Lan', bank: 'Techcombank', account: '19034567890123', amount: '18.500.000đ', amountNum: 18500000, date: '27/04/2025 15:30', status: 'pending' },
+    { id: 'WD-0910', providerId: 'PRV003', provider: 'Phạm Hữu Cường', bank: 'MB Bank', account: '08889999222', amount: '12.000.000đ', amountNum: 12000000, date: '26/04/2025 11:20', status: 'paid' },
+    { id: 'WD-0909', providerId: 'PRV005', provider: 'Lê Thị Duyên', bank: 'BIDV', account: '3141000123888', amount: '4.200.000đ', amountNum: 4200000, date: '25/04/2025 14:00', status: 'paid' }
+  ],
+
+  packages: [
+    {
+      id: 'PKG_BASIC',
+      name: 'Gói Cơ Bản (Mặc định)',
+      price: 0,
+      duration: 30,
+      postsCount: 3,
+      features: ['Đăng tối đa 3 dịch vụ kỹ năng', 'Thời hạn hiển thị 30 ngày', 'Nhận đơn hàng & thanh toán Escrow', 'Hỗ trợ khách hàng tiêu chuẩn'],
+      highlight: false
+    },
+    {
+      id: 'PKG_PRO',
+      name: 'Gói Chuyên Nghiệp (Pro Provider)',
+      price: 199000,
+      duration: 30,
+      postsCount: 15,
+      features: ['Đăng tối đa 15 dịch vụ kỹ năng', '3 lượt đẩy tin lên Top tìm kiếm mỗi tháng', 'Gắn huy hiệu uy tín "PRO PROVIDER"', 'Giảm 2% phí hoa hồng nền tảng', 'Ưu tiên hiển thị kết quả tìm kiếm'],
+      highlight: true,
+      badgeText: 'PHỔ BIẾN NHẤT'
+    },
+    {
+      id: 'PKG_VIP',
+      name: 'Gói Doanh Nghiệp (VIP Elite)',
+      price: 499000,
+      duration: 30,
+      postsCount: 50,
+      features: ['Không giới hạn bài đăng dịch vụ', '10 lượt đẩy tin Hot mỗi tháng', 'Huy hiệu vàng "VIP ELITE"', 'Giảm 4% phí hoa hồng nền tảng', 'Quản lý tài khoản riêng biệt 24/7', 'Báo cáo số liệu chuyên sâu hàng tuần'],
+      highlight: false
+    }
+  ],
+
+  packagePurchases: [
+    { id: 'PKG-ORD-01', providerId: 'PRV001', provider: 'Nguyễn Văn An', packageName: 'Gói Chuyên Nghiệp (Pro Provider)', amount: '199.000đ', activeDate: '01/04/2025', expireDate: '01/05/2025', status: 'Đang hoạt động' },
+    { id: 'PKG-ORD-02', providerId: 'PRV002', provider: 'Trần Thị Lan', packageName: 'Gói Doanh Nghiệp (VIP Elite)', amount: '499.000đ', activeDate: '15/04/2025', expireDate: '15/05/2025', status: 'Đang hoạt động' },
+    { id: 'PKG-ORD-03', providerId: 'PRV003', provider: 'Phạm Hữu Cường', packageName: 'Gói Chuyên Nghiệp (Pro Provider)', amount: '199.000đ', activeDate: '10/04/2025', expireDate: '10/05/2025', status: 'Đang hoạt động' }
+  ],
+
+  unlockRequests: [
+    {
+      id: 'USR004',
+      name: 'Hoàng Văn Nam',
+      email: 'nam.hoang@example.com',
+      phone: '0933 221 100',
+      role: 'Customer',
+      badgeTag: 'Chờ Admin xem xét',
+      badgeClass: 'badge-warning',
+      originalReason: 'Hủy đơn hàng liên tục 5 lần không lý do (Thời hạn khóa: 7 ngày).',
+      appealText: 'Tôi xin thành thật nhận lỗi vì thời gian qua gia đình có việc khẩn cấp nên không kịp trao đổi với thợ. Tôi cam kết tuân thủ 100% quy chế giao dịch và thanh toán cọc đầy đủ qua sàn.',
+      appealMeta: 'Thời gian gửi yêu cầu: 28/04/2025 08:30 (Lần khiếu nại thứ 1)',
+      status: 'pending',
+      type: 'standard'
+    },
+    {
+      id: 'USR007',
+      name: 'Đặng Quốc Huy',
+      email: 'huy.dang@example.com',
+      phone: '0911 334 455',
+      role: 'Provider',
+      badgeTag: 'Vi phạm nghiêm trọng',
+      badgeClass: 'badge-danger',
+      originalReason: 'Gian lận đánh giá và sử dụng tài khoản ảo để trục lợi sàn (Khóa Vĩnh viễn).',
+      appealText: 'Tôi xin cam đoan không tái phạm hành vi cài link phần mềm hay tạo nick ảo. Đề nghị ban quản trị cho tôi cơ hội tiếp tục làm việc.',
+      appealMeta: 'Thời gian gửi yêu cầu: 27/04/2025 15:45 • Báo cáo An ninh mạng liên quan',
+      status: 'pending',
+      type: 'severe'
+    }
+  ],
+
+  posts: [
+    {
+      id: 'POST001',
+      providerId: 'PRV001',
+      providerName: 'Nguyễn Văn An',
+      title: 'Tối ưu hóa kiến trúc Microservices và giảm 70% chi phí AWS Cloud',
+      category: 'IT',
+      date: '20/04/2025',
+      readTime: '5 phút đọc',
+      likes: 42,
+      summary: 'Chia sẻ kinh nghiệm thực tế triển khai Docker container và autoscaling group giúp hệ thống chịu tải 100k requests/s mượt mà.',
+      image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600'
+    },
+    {
+      id: 'POST002',
+      providerId: 'PRV001',
+      providerName: 'Nguyễn Văn An',
+      title: 'Dự án Showcase: Hệ thống thương mại điện tử đa kênh hoàn thành trong 14 ngày',
+      category: 'IT',
+      date: '15/04/2025',
+      readTime: '7 phút đọc',
+      likes: 68,
+      summary: 'Chi tiết quá trình thiết kế UX/UI trên Figma, code Next.js frontend và Node.js microservices tích hợp Escrow payment.',
+      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600'
+    }
   ]
 };
 
@@ -417,6 +603,52 @@ class Database {
     }
     if (!fs.existsSync(DB_FILE)) {
       fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DATABASE, null, 2), 'utf8');
+      return;
+    }
+
+    // Schema sync & migration check
+    try {
+      const content = fs.readFileSync(DB_FILE, 'utf8');
+      const data = JSON.parse(content);
+      let updated = false;
+
+      // Ensure all collections exist
+      for (const [key, val] of Object.entries(INITIAL_DATABASE)) {
+        if (!data[key] || !Array.isArray(data[key])) {
+          data[key] = JSON.parse(JSON.stringify(val));
+          updated = true;
+        }
+      }
+
+      // Ensure PRV001 has provider fields
+      if (Array.isArray(data.providers)) {
+        const p1 = data.providers.find(p => p.id === 'PRV001');
+        if (p1 && (!p1.bankAccount || !p1.schedule)) {
+          p1.availabilityStatus = p1.availabilityStatus || 'ready';
+          p1.bankAccount = p1.bankAccount || { bank: 'MB Bank', account: '0987.654.321', holder: 'NGUYEN VAN PRO' };
+          p1.monthlyEarnings = p1.monthlyEarnings || 35500000;
+          p1.activeProjectsCount = p1.activeProjectsCount || 12;
+          p1.schedule = p1.schedule || {
+            mode: 'ready',
+            slots: [
+              { day: 'T2', morning: true, afternoon: true, evening: false },
+              { day: 'T3', morning: true, afternoon: true, evening: false },
+              { day: 'T4', morning: true, afternoon: true, evening: true },
+              { day: 'T5', morning: true, afternoon: true, evening: false },
+              { day: 'T6', morning: true, afternoon: true, evening: false },
+              { day: 'T7', morning: true, afternoon: false, evening: false },
+              { day: 'CN', morning: false, afternoon: false, evening: false }
+            ]
+          };
+          updated = true;
+        }
+      }
+
+      if (updated) {
+        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+      }
+    } catch (e) {
+      console.error('Error ensuring initialized DB:', e);
     }
   }
 

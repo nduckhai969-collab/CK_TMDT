@@ -1080,7 +1080,15 @@
       <div class="logo-badge">SR</div>
       <div>
         <div class="logo-text-title">SKILL RENTAL</div>
-        <div class="logo-text-sub">Sàn Thuê Kỹ Năng &amp; Ký Quỹ Escrow</div>
+        <div style="
+                    font-size:10px;
+                    color:#16A34A;
+                    font-weight:600;
+                    text-transform:uppercase;
+                    letter-spacing:.4px;
+                ">
+          Dịch vụ & Kỹ năng
+        </div>
       </div>
     </a>
 
@@ -2069,10 +2077,14 @@
               SKILL RENTAL
             </div>
 
-            <div
-                    class="logo-text-sub"
-                    style="color:#94A3B8;">
-              Sàn Thuê Kỹ Năng &amp; Ký Quỹ Escrow
+            <div style="
+                    font-size:10px;
+                    color:#16A34A;
+                    font-weight:600;
+                    text-transform:uppercase;
+                    letter-spacing:.4px;
+                ">
+              Dịch vụ & Kỹ năng
             </div>
 
           </div>
@@ -2570,6 +2582,10 @@
 
     if (!user) {
       return 'index.html';
+    }
+
+    if (user.role === 'Admin') {
+      return 'admin.html';
     }
 
     if (user.role === 'Provider') {

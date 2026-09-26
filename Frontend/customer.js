@@ -547,28 +547,34 @@ function renderCustomerNavbar(
   return `
 
 <header
-    class="customer-navbar"
+    class="customer-navbar landing-header"
     style="
-        background:#FFFFFF;
-        border-bottom:1px solid #E2E8F0;
         position:sticky;
         top:0;
         z-index:1000;
-        box-shadow:0 1px 3px rgba(0,0,0,.03);
+        background:rgba(255,255,255,.96);
+        backdrop-filter:blur(10px);
+        -webkit-backdrop-filter:blur(10px);
+        border-bottom:1px solid #E2E8F0;
+        box-shadow:0 1px 3px rgba(15,23,42,.04);
     "
 >
 
     <div style="
-        max-width:1280px;
+        max-width:1240px;
         margin:0 auto;
-        padding:12px 24px;
+        padding:14px 24px;
         display:flex;
         align-items:center;
+        justify-content:space-between;
         gap:24px;
+        box-sizing:border-box;
     ">
 
 
-        <!-- LOGO -->
+        <!-- ==================================================
+             LOGO
+        =================================================== -->
 
         <a
             href="customer.html"
@@ -582,22 +588,18 @@ function renderCustomerNavbar(
         >
 
             <div style="
-                width:38px;
-                height:38px;
+                width:42px;
+                height:42px;
                 border-radius:10px;
-                background:linear-gradient(
-                    135deg,
-                    #16A34A 0%,
-                    #15803D 100%
-                );
-                color:#FFF;
+                background:#16A34A;
+                color:#FFFFFF;
                 display:flex;
                 align-items:center;
                 justify-content:center;
                 font-weight:800;
-                font-size:18px;
-                box-shadow:
-                    0 2px 8px rgba(22,163,74,.3);
+                font-size:20px;
+                box-shadow:0 2px 8px rgba(22,163,74,.25);
+                box-sizing:border-box;
             ">
                 SR
             </div>
@@ -607,11 +609,13 @@ function renderCustomerNavbar(
 
                 <div style="
                     font-weight:800;
-                    font-size:17px;
+                    font-size:19px;
                     color:#0F172A;
-                    letter-spacing:-.5px;
+                    line-height:1.1;
+                    letter-spacing:0;
+                    white-space:nowrap;
                 ">
-                    SkillRental
+                    SKILL RENTAL
                 </div>
 
                 <div style="
@@ -620,6 +624,7 @@ function renderCustomerNavbar(
                     font-weight:600;
                     text-transform:uppercase;
                     letter-spacing:.4px;
+                    margin-top:2px;
                 ">
                     Dịch vụ & Kỹ năng
                 </div>
@@ -629,14 +634,16 @@ function renderCustomerNavbar(
         </a>
 
 
-        <!-- MAIN MENU -->
+        <!-- ==================================================
+             MAIN MENU
+        =================================================== -->
 
         <nav style="
             flex:1;
             display:flex;
             align-items:center;
             justify-content:center;
-            gap:4px;
+            gap:26px;
         ">
 
 
@@ -645,26 +652,30 @@ function renderCustomerNavbar(
             <a
                 href="customer.html"
                 style="
-                    padding:9px 14px;
-                    border-radius:8px;
+                    display:flex;
+                    align-items:center;
+                    gap:6px;
+                    padding:0;
+                    border-radius:0;
+                    font-size:14px;
                     font-weight:600;
-                    font-size:13.5px;
+                    line-height:1.5;
                     text-decoration:none;
                     color:${
       activePage === 'home'
           ? '#16A34A'
-          : '#475569'
+          : '#64748B'
   };
-                    background:${
-      activePage === 'home'
-          ? '#DCFCE7'
-          : 'transparent'
-  };
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
+                    background:transparent;
                     white-space:nowrap;
+                    transition:color .2s ease;
                 "
+                onmouseover="this.style.color='#16A34A'"
+                onmouseout="this.style.color='${
+      activePage === 'home'
+          ? '#16A34A'
+          : '#64748B'
+  }'"
             >
                 <i class="fa-solid fa-compass"></i>
                 Khám Phá
@@ -681,26 +692,30 @@ function renderCustomerNavbar(
                     }
                 "
                 style="
-                    padding:9px 14px;
-                    border-radius:8px;
+                    display:flex;
+                    align-items:center;
+                    gap:6px;
+                    padding:0;
+                    border-radius:0;
+                    font-size:14px;
                     font-weight:600;
-                    font-size:13.5px;
+                    line-height:1.5;
                     text-decoration:none;
                     color:${
       activePage === 'requests'
           ? '#16A34A'
-          : '#475569'
+          : '#64748B'
   };
-                    background:${
-      activePage === 'requests'
-          ? '#DCFCE7'
-          : 'transparent'
-  };
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
+                    background:transparent;
                     white-space:nowrap;
+                    transition:color .2s ease;
                 "
+                onmouseover="this.style.color='#16A34A'"
+                onmouseout="this.style.color='${
+      activePage === 'requests'
+          ? '#16A34A'
+          : '#64748B'
+  }'"
             >
                 <i class="fa-solid fa-bullhorn"></i>
                 Đăng Yêu Cầu
@@ -717,26 +732,30 @@ function renderCustomerNavbar(
                     }
                 "
                 style="
-                    padding:9px 14px;
-                    border-radius:8px;
+                    display:flex;
+                    align-items:center;
+                    gap:6px;
+                    padding:0;
+                    border-radius:0;
+                    font-size:14px;
                     font-weight:600;
-                    font-size:13.5px;
+                    line-height:1.5;
                     text-decoration:none;
                     color:${
       activePage === 'orders'
           ? '#16A34A'
-          : '#475569'
+          : '#64748B'
   };
-                    background:${
-      activePage === 'orders'
-          ? '#DCFCE7'
-          : 'transparent'
-  };
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
+                    background:transparent;
                     white-space:nowrap;
+                    transition:color .2s ease;
                 "
+                onmouseover="this.style.color='#16A34A'"
+                onmouseout="this.style.color='${
+      activePage === 'orders'
+          ? '#16A34A'
+          : '#64748B'
+  }'"
             >
                 <i class="fa-solid fa-receipt"></i>
                 Đơn Hàng
@@ -753,26 +772,30 @@ function renderCustomerNavbar(
                     }
                 "
                 style="
-                    padding:9px 14px;
-                    border-radius:8px;
+                    display:flex;
+                    align-items:center;
+                    gap:6px;
+                    padding:0;
+                    border-radius:0;
+                    font-size:14px;
                     font-weight:600;
-                    font-size:13.5px;
+                    line-height:1.5;
                     text-decoration:none;
                     color:${
       activePage === 'chat'
           ? '#16A34A'
-          : '#475569'
+          : '#64748B'
   };
-                    background:${
-      activePage === 'chat'
-          ? '#DCFCE7'
-          : 'transparent'
-  };
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
+                    background:transparent;
                     white-space:nowrap;
+                    transition:color .2s ease;
                 "
+                onmouseover="this.style.color='#16A34A'"
+                onmouseout="this.style.color='${
+      activePage === 'chat'
+          ? '#16A34A'
+          : '#64748B'
+  }'"
             >
                 <i class="fa-solid fa-comments"></i>
                 Tin Nhắn
@@ -781,7 +804,9 @@ function renderCustomerNavbar(
         </nav>
 
 
-        <!-- ACCOUNT -->
+        <!-- ==================================================
+             ACCOUNT
+        =================================================== -->
 
         ${
       user
@@ -808,6 +833,7 @@ function renderCustomerNavbar(
                     border-radius:10px;
                     background:#FFFFFF;
                     cursor:pointer;
+                    box-sizing:border-box;
                 "
             >
 
@@ -881,8 +907,7 @@ function renderCustomerNavbar(
                     background:#FFFFFF;
                     border:1px solid #E2E8F0;
                     border-radius:12px;
-                    box-shadow:
-                        0 12px 30px rgba(15,23,42,.12);
+                    box-shadow:0 12px 30px rgba(15,23,42,.12);
                     padding:8px;
                     z-index:2000;
                 "
@@ -1084,7 +1109,7 @@ function renderCustomerNavbar(
         <div style="
             display:flex;
             align-items:center;
-            gap:8px;
+            gap:12px;
             flex-shrink:0;
         ">
 
@@ -1092,18 +1117,21 @@ function renderCustomerNavbar(
                 type="button"
                 onclick="openAuthModal('login')"
                 style="
-                    display:flex;
+                    display:inline-flex;
                     align-items:center;
+                    justify-content:center;
                     gap:8px;
-                    padding:9px 14px;
+                    padding:10px 20px;
                     border:1px solid #E2E8F0;
                     border-radius:8px;
                     background:#FFFFFF;
                     color:#0F172A;
-                    font-size:13px;
-                    font-weight:700;
+                    font-size:14px;
+                    font-weight:600;
+                    line-height:1;
                     cursor:pointer;
                     white-space:nowrap;
+                    box-sizing:border-box;
                 "
             >
                 <i class="fa-solid fa-arrow-right-to-bracket"></i>
@@ -1115,19 +1143,21 @@ function renderCustomerNavbar(
                 type="button"
                 onclick="openAuthModal('register')"
                 style="
-                    display:flex;
+                    display:inline-flex;
                     align-items:center;
+                    justify-content:center;
                     gap:8px;
-                    padding:9px 14px;
+                    padding:10px 20px;
                     border:1px solid #16A34A;
                     border-radius:8px;
                     background:#16A34A;
                     color:#FFFFFF;
-                    font-size:13px;
-                    font-weight:700;
+                    font-size:14px;
+                    font-weight:600;
+                    line-height:1;
                     cursor:pointer;
                     white-space:nowrap;
-                    box-shadow:0 2px 8px rgba(22,163,74,.2);
+                    box-sizing:border-box;
                 "
             >
                 <i class="fa-solid fa-user-plus"></i>
@@ -1135,6 +1165,7 @@ function renderCustomerNavbar(
             </button>
 
         </div>
+
         `
   }
 

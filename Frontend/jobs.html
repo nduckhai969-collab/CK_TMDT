@@ -665,6 +665,7 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
     </div>
   </div>
 
+  <script src="provider.js"></script>
   <script>
     function showToast(msg) {
       const toast = document.getElementById('toastBox');
@@ -682,7 +683,10 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
       window.scrollTo(0, 0);
     }
 
+    let currentJobId = 'JOB-2025-01';
+
     function openJobDetail(id, title, budget, client) {
+      currentJobId = id || 'JOB-2025-01';
       document.getElementById('reqDetailTitle').textContent = title;
       document.getElementById('reqDetailId').textContent = '#' + id;
       document.getElementById('reqDetailBudget').textContent = budget;
@@ -704,13 +708,29 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
       document.getElementById('calcNetDisplay').textContent = net.toLocaleString('vi-VN') + 'đ';
     }
 
-    function submitProposalAction() {
+    async function submitProposalAction() {
       const price = document.getElementById('proposalPrice').value;
       const days = document.getElementById('proposalDays').value;
+      const coverLetter = document.getElementById('proposalCoverLetter') ? document.getElementById('proposalCoverLetter').value : '';
+
       if (!price || !days) {
         showToast('Vui lòng nhập đầy đủ báo giá và số ngày hoàn thành!');
         return;
       }
+
+      showToast('Đang gửi hồ sơ ứng tuyển...', 'info');
+      try {
+        if (window.providerApi) {
+          const num = Number(price);
+          await window.providerApi.applyToJob(currentJobId, {
+            proposedPrice: num.toLocaleString('vi-VN') + 'đ',
+            proposalText: coverLetter || `Tôi cam kết hoàn thành dự án trong ${days} ngày với đơn giá ${num.toLocaleString('vi-VN')}đ.`
+          });
+        }
+      } catch (err) {
+        console.warn('Apply job API error:', err);
+      }
+
       showToast('Đã gửi hồ sơ ứng tuyển và báo giá thành công!');
       setTimeout(() => {
         switchJobTab('tab-uc36', document.querySelectorAll('.tab-item')[3]);

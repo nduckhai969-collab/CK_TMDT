@@ -118,14 +118,14 @@
               </div>
             </div>
 
-            <div class="chat-messages">
+            <div class="chat-messages" id="chatMessagesContainer">
               <div class="msg-bubble msg-incoming">
-                Chào anh Pro, bên em cần chỉnh sửa lại font chữ logo theo màu thương hiệu #16A34A nhé.
+                Chào anh An, bên em cần chỉnh sửa lại font chữ logo theo màu thương hiệu #16A34A nhé.
                 <div class="msg-time">10:35 AM</div>
               </div>
 
               <div class="msg-bubble msg-outgoing">
-                Chào An, mình đã nhận yêu cầu. Đã cập nhật xong bộ nhận diện font chữ và xuất file Vector SVG/PNG cho bạn rồi nhé.
+                Chào bạn, mình đã nhận yêu cầu. Đã cập nhật xong bộ nhận diện font chữ và xuất file Vector SVG/PNG cho bạn rồi nhé.
                 <div style="margin-top: 8px; background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
                   <i class="fa-solid fa-file-pdf" style="font-size: 20px;"></i>
                   <div style="font-size: 12px; text-align: left;">
@@ -144,8 +144,8 @@
 
             <div class="chat-footer">
               <button class="btn btn-outline" style="width: 44px; padding: 0;"><i class="fa-solid fa-paperclip"></i></button>
-              <input type="text" class="form-control" placeholder="Nhập tin nhắn trao đổi với khách hàng..." style="flex:1;">
-              <button class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Gửi</button>
+              <input type="text" class="form-control" id="chatInputText" placeholder="Nhập tin nhắn trao đổi với khách hàng..." style="flex:1;">
+              <button class="btn btn-primary" id="btnSendChat" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> Gửi</button>
             </div>
           </div>
         </div>
@@ -153,5 +153,72 @@
     </main>
   </div>
 
+  <script src="provider.js"></script>
+  <script>
+    const currentPartnerId = 'USR003'; // Lê Hoàng Long
+    const myId = 'USR001';             // Nguyễn Văn An
+
+    async function loadChatMessages() {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat?user1=${myId}&user2=${currentPartnerId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.messages && data.messages.length > 0) {
+            const container = document.getElementById('chatMessagesContainer');
+            container.innerHTML = data.messages.map(m => `
+              <div class="msg-bubble ${m.fromUserId === myId ? 'msg-outgoing' : 'msg-incoming'}">
+                ${m.text}
+                <div class="msg-time">${m.time}</div>
+              </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+          }
+        }
+      } catch (e) {
+        console.log('Chat offline mode');
+      }
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chatInputText');
+      const text = input ? input.value.trim() : '';
+      if (!text) return;
+
+      input.value = '';
+      const container = document.getElementById('chatMessagesContainer');
+      const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+      // Immediate UI append
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'msg-bubble msg-outgoing';
+      msgDiv.innerHTML = `${text}<div class="msg-time">${timeStr}</div>`;
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+
+      try {
+        await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fromUserId: myId,
+            toUserId: currentPartnerId,
+            text
+          })
+        });
+      } catch (e) {
+        console.warn('Failed to send chat to backend:', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadChatMessages();
+      const input = document.getElementById('chatInputText');
+      if (input) {
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') sendChatMessage();
+        });
+      }
+    });
+  </script>
 </body>
 </html>

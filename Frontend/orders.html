@@ -295,6 +295,9 @@
         if (order) {
           order.orderStatus = 'cancelled';
           order.escrowStatus = 'Đã hoàn tiền';
+          if (window.adminApi) {
+            window.adminApi.forceRefundOrder(activeOrderId).catch(console.warn);
+          }
           saveAppState(state);
           closeModal('modal-order-detail');
           renderOrdersTable();

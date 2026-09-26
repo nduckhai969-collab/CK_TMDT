@@ -199,8 +199,10 @@ const DEFAULT_STATE = {
 };
 
 // ============================================================================
-// LOCALSTORAGE SYNC & RETRIEVAL
+// BACKEND API BASE & LOCALSTORAGE SYNC & RETRIEVAL
 // ============================================================================
+const API_BASE = (typeof window !== 'undefined' && window.location.protocol.startsWith('http') && (window.location.port === '3000' || window.location.port === '')) ? '' : 'http://localhost:3000';
+
 function getAppState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -218,10 +220,60 @@ function getAppState() {
 function saveAppState(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Asynchronously push changes to backend
+    fetch(`${API_BASE}/api/admin/state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    }).catch(err => {
+      console.warn('Backend state sync warning:', err);
+    });
   } catch (err) {
     console.error('Error saving state to localStorage:', err);
   }
 }
+
+// Auto-sync state with backend server
+async function syncStateWithServer() {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/state`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.state) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+        updateSidebarBadges();
+        if (typeof window.onServerStateSynced === 'function') {
+          window.onServerStateSynced(data.state);
+        }
+      }
+    }
+  } catch (err) {
+    console.log('Server sync: Running offline or cached mode');
+  }
+}
+
+// Admin API client methods
+window.adminApi = {
+  getDashboard: () => fetch(`${API_BASE}/api/admin/dashboard`).then(r => r.json()),
+  lockUser: (id, reason, duration) => fetch(`${API_BASE}/api/admin/users/${id}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, duration }) }).then(r => r.json()),
+  unlockUser: (id) => fetch(`${API_BASE}/api/admin/users/${id}/unlock`, { method: 'POST' }).then(r => r.json()),
+  decideUnlock: (id, decision) => fetch(`${API_BASE}/api/admin/unlock-requests/${id}/decide`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }) }).then(r => r.json()),
+  approveProvider: (id) => fetch(`${API_BASE}/api/admin/providers/${id}/approve`, { method: 'POST' }).then(r => r.json()),
+  rejectProvider: (id, reason) => fetch(`${API_BASE}/api/admin/providers/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
+  approveSkill: (id) => fetch(`${API_BASE}/api/admin/skills/${id}/approve`, { method: 'POST' }).then(r => r.json()),
+  rejectSkill: (id, reason) => fetch(`${API_BASE}/api/admin/skills/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
+  approveService: (id) => fetch(`${API_BASE}/api/admin/services/${id}/approve`, { method: 'POST' }).then(r => r.json()),
+  approveServicePrice: (id) => fetch(`${API_BASE}/api/admin/services/${id}/approve-price`, { method: 'POST' }).then(r => r.json()),
+  lockService: (id, reason) => fetch(`${API_BASE}/api/admin/services/${id}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
+  unlockService: (id) => fetch(`${API_BASE}/api/admin/services/${id}/unlock`, { method: 'POST' }).then(r => r.json()),
+  resolveComplaint: (id, resolution, refundPercentage, note) => fetch(`${API_BASE}/api/admin/complaints/${id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resolution, refundPercentage, note }) }).then(r => r.json()),
+  resolveReport: (id, action, note) => fetch(`${API_BASE}/api/admin/reports/${id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, note }) }).then(r => r.json()),
+  approvePayout: (id) => fetch(`${API_BASE}/api/admin/payouts/${id}/approve`, { method: 'POST' }).then(r => r.json()),
+  rejectPayout: (id, reason) => fetch(`${API_BASE}/api/admin/payouts/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
+  forceReleaseOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-release`, { method: 'POST' }).then(r => r.json()),
+  forceRefundOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-refund`, { method: 'POST' }).then(r => r.json()),
+  moderateReview: (id, status, note) => fetch(`${API_BASE}/api/admin/reviews/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, note }) }).then(r => r.json())
+};
 
 // Reset state helper
 function resetAppStateToDefault() {
@@ -236,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
   highlightActiveMenu();
   updateSidebarBadges();
   bindSubtabEvents();
+  syncStateWithServer();
 });
 
 function highlightActiveMenu() {

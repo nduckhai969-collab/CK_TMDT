@@ -172,7 +172,7 @@
               <span class="stat-title">TỔNG NGƯỜI DÙNG</span>
               <span class="stat-icon" style="background:#F1F5F9; color:var(--secondary);">👥</span>
             </div>
-            <div class="stat-value">3,420</div>
+            <div class="stat-value" id="kpi-total-users">3,420</div>
             <div class="stat-change positive">
               <span>↑ +12.5%</span> so với tháng trước (2.150 Customer, 1.270 Provider)
             </div>
@@ -184,7 +184,7 @@
               <span class="stat-icon" style="background:var(--warning-light); color:var(--warning);">⏳</span>
             </div>
             <div class="stat-value" id="kpi-pending-providers" style="color:var(--warning);">7</div>
-            <div class="stat-change" style="color:var(--text-secondary);">
+            <div class="stat-change" style="color:var(--text-secondary);" id="kpi-pending-desc">
               <span>4 Provider mới, 3 chứng chỉ kỹ năng đang chờ duyệt</span>
             </div>
           </div>
@@ -194,7 +194,7 @@
               <span class="stat-title">DOANH THU HOA HỒNG (5%)</span>
               <span class="stat-icon" style="background:var(--primary-light); color:var(--primary);">💰</span>
             </div>
-            <div class="stat-value" style="color:var(--primary);">84,500,000đ</div>
+            <div class="stat-value" id="kpi-revenue" style="color:var(--primary);">84,500,000đ</div>
             <div class="stat-change positive">
               <span>↑ +18.2%</span> tổng giá trị giao dịch GMV đạt 1.69 Tỷ VNĐ
             </div>
@@ -205,9 +205,9 @@
               <span class="stat-title">ĐANG KÝ QUỸ ESCROW</span>
               <span class="stat-icon" style="background:var(--info-light); color:var(--info);">🛡️</span>
             </div>
-            <div class="stat-value" style="color:var(--info);">42,600,000đ</div>
-            <div class="stat-change" style="color:var(--text-secondary);">
-              <span>Bảo vệ an toàn cho 68 đơn hàng đang thực hiện</span>
+            <div class="stat-value" id="kpi-escrow" style="color:var(--info);">42,600,000đ</div>
+            <div class="stat-change" style="color:var(--text-secondary);" id="kpi-escrow-desc">
+              <span>Bảo vệ an toàn cho các đơn hàng đang thực hiện</span>
             </div>
           </div>
         </div>
@@ -368,5 +368,37 @@
   </div>
 
   <script src="common.js"></script>
+  <script>
+    async function loadAdminDashboard() {
+      try {
+        if (window.adminApi) {
+          const res = await window.adminApi.getDashboard();
+          if (res && res.success && res.data) {
+            const { stats, badges } = res.data;
+            if (stats.totalUsers !== undefined) {
+              document.getElementById('kpi-total-users').textContent = stats.totalUsers.toLocaleString('vi-VN');
+            }
+            if (badges.pendingProviders !== undefined || badges.pendingSkills !== undefined) {
+              const totalPending = (badges.pendingProviders || 0) + (badges.pendingSkills || 0);
+              document.getElementById('kpi-pending-providers').textContent = totalPending;
+              document.getElementById('kpi-pending-desc').innerHTML = `<span>${badges.pendingProviders || 0} Provider mới, ${badges.pendingSkills || 0} chứng chỉ đang chờ duyệt</span>`;
+            }
+            if (stats.totalRevenueFormatted) {
+              document.getElementById('kpi-revenue').textContent = stats.totalRevenueFormatted;
+            }
+            if (stats.escrowHeldFormatted) {
+              document.getElementById('kpi-escrow').textContent = stats.escrowHeldFormatted;
+            }
+          }
+        }
+      } catch (err) {
+        console.log('Dashboard live stats: Cached mode');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAdminDashboard();
+    });
+  </script>
 </body>
 </html>

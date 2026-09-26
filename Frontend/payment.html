@@ -106,7 +106,7 @@
               </div>
             </div>
 
-            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="confirmPartnerPayment()">
               <i class="fa-solid fa-lock"></i> XÁC NHẬN THANH TOÁN 299.000đ
             </button>
           </div>
@@ -171,5 +171,21 @@
     </main>
   </div>
 
+  <script src="provider.js"></script>
+  <script>
+    document.querySelectorAll('.payment-card-method').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.payment-card-method').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+      });
+    });
+
+    async function confirmPartnerPayment() {
+      showToast('Đang kết nối cổng thanh toán Escrow...', 'info');
+      setTimeout(() => {
+        showToast('Thanh toán duy trì phí sàn 299.000đ thành công!');
+      }, 800);
+    }
+  </script>
 </body>
 </html>

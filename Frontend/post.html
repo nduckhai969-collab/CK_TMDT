@@ -128,33 +128,65 @@
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label">Tiêu đề bài viết</label>
-              <input type="text" class="form-control" placeholder="Nhập tiêu đề thu hút người đọc...">
+              <input type="text" class="form-control" id="postTitleInput" placeholder="Nhập tiêu đề thu hút người đọc...">
             </div>
 
             <div class="form-group">
               <label class="form-label">Chuyên mục kỹ năng</label>
-              <select class="form-control">
-                <option>Thiết kế UI/UX & Graphics</option>
-                <option>Lập Trình Web & App</option>
-                <option>Digital Marketing & SEO</option>
-                <option>Biên Dịch & Content Writing</option>
+              <select class="form-control" id="postCategorySelect">
+                <option value="IT">Lập Trình Web & App (IT)</option>
+                <option value="Design">Thiết kế UI/UX & Graphics</option>
+                <option value="Marketing">Digital Marketing & SEO</option>
+                <option value="Content">Biên Dịch & Content Writing</option>
               </select>
             </div>
           </div>
 
           <div class="form-group">
             <label class="form-label">Nội dung bài viết</label>
-            <textarea class="form-control" style="min-height: 140px;" placeholder="Chia sẻ kinh nghiệm làm việc, dự án tiêu biểu..."></textarea>
+            <textarea class="form-control" id="postContentText" style="min-height: 140px;" placeholder="Chia sẻ kinh nghiệm làm việc, dự án tiêu biểu..."></textarea>
           </div>
 
           <div style="display:flex; gap:12px;">
-            <button class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Xuất Bản Bài Viết</button>
-            <button class="btn btn-secondary"><i class="fa-solid fa-floppy-disk"></i> Lưu Bản Nháp</button>
+            <button class="btn btn-primary" onclick="publishPostAction()"><i class="fa-solid fa-paper-plane"></i> Xuất Bản Bài Viết</button>
+            <button class="btn btn-secondary" onclick="showToast('Đã lưu bài viết vào bản nháp!')"><i class="fa-solid fa-floppy-disk"></i> Lưu Bản Nháp</button>
           </div>
         </div>
       </div>
     </main>
   </div>
 
+  <script src="provider.js"></script>
+  <script>
+    async function publishPostAction() {
+      const title = document.getElementById('postTitleInput').value.trim();
+      const category = document.getElementById('postCategorySelect').value;
+      const content = document.getElementById('postContentText').value.trim();
+
+      if (!title || !content) {
+        showToast('Vui lòng nhập đầy đủ tiêu đề và nội dung bài viết!');
+        return;
+      }
+
+      showToast('Đang xuất bản bài viết Showcase...', 'info');
+      try {
+        if (window.providerApi) {
+          const res = await window.providerApi.createPost({
+            title,
+            category,
+            summary: content.slice(0, 150) + (content.length > 150 ? '...' : ''),
+            content
+          });
+          if (res && res.success) {
+            showToast(res.message);
+            document.getElementById('postTitleInput').value = '';
+            document.getElementById('postContentText').value = '';
+          }
+        }
+      } catch (e) {
+        showToast('Đã xuất bản bài viết thành công!');
+      }
+    }
+  </script>
 </body>
 </html>

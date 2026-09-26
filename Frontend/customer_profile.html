@@ -1,0 +1,3147 @@
+<!DOCTYPE html>
+
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SkillRental - Hồ Sơ Cá Nhân</title>
+
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+    >
+
+    <!-- FontAwesome -->
+    <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    >
+
+    <!-- Design System -->
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+
+        /* =========================================
+           CUSTOMER PROFILE - DESIGN SYSTEM
+        ========================================= */
+
+        :root {
+            --primary: #16A34A;
+            --primary-dark: #15803D;
+            --primary-deep: #064E3B;
+
+            --navy: #0F172A;
+
+            --green-light: #DCFCE7;
+            --green-bg: #F0FDF4;
+
+            --background: #F8FAFC;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+
+            --border: #E2E8F0;
+            --border-light: #F1F5F9;
+
+            --blue: #1D4ED8;
+            --blue-bg: #EFF6FF;
+
+            --yellow: #B45309;
+            --yellow-bg: #FEF3C7;
+
+            --red: #B91C1C;
+            --red-bg: #FEF2F2;
+        }
+
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+            display: none;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* =========================================
+           PAGE
+        ========================================= */
+
+        .profile-page {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px 60px;
+        }
+
+        /* =========================================
+           PROFILE HERO
+        ========================================= */
+
+        .profile-hero {
+            position: relative;
+            overflow: hidden;
+
+            margin: 24px auto 24px;
+
+            background: linear-gradient(
+                    135deg,
+                    #0F172A 0%,
+                    #064E3B 55%,
+                    #15803D 100%
+            );
+
+            color: #FFFFFF;
+
+            border-radius: 16px;
+            padding: 32px;
+
+            box-shadow:
+                    0 10px 25px -5px rgba(15, 23, 42, 0.12);
+        }
+
+        .profile-hero::after {
+            content: "";
+
+            position: absolute;
+
+            width: 420px;
+            height: 420px;
+
+            top: -220px;
+            right: -80px;
+
+            border-radius: 50%;
+
+            background:
+                    radial-gradient(
+                            circle,
+                            rgba(34, 197, 94, 0.28) 0%,
+                            transparent 70%
+                    );
+
+            pointer-events: none;
+        }
+
+        .profile-hero-content {
+            position: relative;
+            z-index: 2;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 24px;
+        }
+
+        .profile-main {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Avatar */
+
+        .profile-avatar-wrapper {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .profile-avatar {
+            width: 92px;
+            height: 92px;
+
+            border-radius: 18px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: rgba(255, 255, 255, 0.16);
+
+            border: 3px solid rgba(255, 255, 255, 0.85);
+
+            color: #FFFFFF;
+
+            font-size: 30px;
+            font-weight: 800;
+
+            overflow: hidden;
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .verified-icon {
+            position: absolute;
+
+            width: 24px;
+            height: 24px;
+
+            right: -5px;
+            bottom: -5px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: var(--primary);
+            color: #FFFFFF;
+
+            border: 2px solid #FFFFFF;
+
+            border-radius: 50%;
+
+            font-size: 11px;
+        }
+
+        .profile-info h1 {
+            margin: 0 0 7px;
+
+            font-size: 26px;
+            line-height: 1.2;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+        }
+
+        .profile-email {
+            color: #CBD5E1;
+            font-size: 13.5px;
+            margin-bottom: 10px;
+        }
+
+        .profile-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .profile-role {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+
+            padding: 5px 9px;
+
+            background: rgba(255, 255, 255, 0.14);
+
+            border-radius: 9999px;
+
+            font-size: 11.5px;
+            font-weight: 600;
+        }
+
+        .profile-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+
+            padding: 5px 9px;
+
+            background: rgba(220, 252, 231, 0.16);
+
+            color: #BBF7D0;
+
+            border-radius: 9999px;
+
+            font-size: 11.5px;
+            font-weight: 600;
+        }
+
+        /* =========================================
+           HERO BALANCE
+        ========================================= */
+
+        .profile-balance {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            margin-top: 12px;
+        }
+
+        .profile-balance-label {
+            color: #D1FAE5;
+
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .profile-balance-value {
+            color: #FFFFFF;
+
+            font-size: 17px;
+            font-weight: 800;
+
+            letter-spacing: -0.2px;
+        }
+
+        .balance-toggle {
+            width: 28px;
+            height: 28px;
+
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 7px;
+
+            background: rgba(255, 255, 255, 0.10);
+            color: #FFFFFF;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            cursor: pointer;
+
+            transition: all 0.2s ease;
+        }
+
+        .balance-toggle:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .balance-toggle i {
+            font-size: 12px;
+        }
+
+        .profile-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .hero-btn {
+            border: none;
+            cursor: pointer;
+
+            padding: 10px 16px;
+
+            border-radius: 8px;
+
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+
+            transition: all 0.2s ease;
+        }
+
+        .hero-btn-light {
+            background: #FFFFFF;
+            color: var(--primary-dark);
+        }
+
+        .hero-btn-light:hover {
+            background: #F0FDF4;
+            transform: translateY(-1px);
+        }
+
+        .hero-btn-outline {
+            background: rgba(255, 255, 255, 0.08);
+            color: #FFFFFF;
+
+            border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        .hero-btn-outline:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* =========================================
+           STATS
+        ========================================= */
+
+        .stats-grid {
+            display: grid;
+
+            grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+            gap: 14px;
+
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: #FFFFFF;
+
+            border: 1px solid var(--border);
+
+            border-radius: 14px;
+
+            padding: 18px 20px;
+
+            display: flex;
+            align-items: center;
+
+            gap: 14px;
+
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+
+            box-shadow:
+                    0 6px 18px rgba(22, 163, 74, 0.08);
+
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+
+            border-radius: 11px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 18px;
+
+            flex-shrink: 0;
+        }
+
+        .stat-icon.green {
+            background: var(--green-light);
+            color: var(--primary-dark);
+        }
+
+        .stat-icon.blue {
+            background: var(--blue-bg);
+            color: var(--blue);
+        }
+
+        .stat-icon.yellow {
+            background: var(--yellow-bg);
+            color: var(--yellow);
+        }
+
+        .stat-icon.red {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+
+            font-size: 11.5px;
+            font-weight: 500;
+
+            margin-bottom: 3px;
+        }
+
+        .stat-value {
+            color: var(--navy);
+
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        /* =========================================
+           CONTENT GRID
+        ========================================= */
+
+        .content-grid {
+            display: grid;
+
+            grid-template-columns:
+        minmax(0, 1.5fr)
+        minmax(320px, 1fr);
+
+            gap: 24px;
+
+            align-items: start;
+        }
+
+        .left-column,
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* =========================================
+           CARD
+        ========================================= */
+
+        .profile-card {
+            background: #FFFFFF;
+
+            border: 1px solid var(--border);
+
+            border-radius: 14px;
+
+            overflow: hidden;
+
+            box-shadow:
+                    0 4px 16px -2px rgba(15, 23, 42, 0.04);
+        }
+
+        .card-header {
+            padding: 20px 22px 16px;
+
+            border-bottom: 1px solid var(--border-light);
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 16px;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            color: var(--navy);
+
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .card-title-icon {
+            width: 34px;
+            height: 34px;
+
+            border-radius: 9px;
+
+            background: var(--green-light);
+            color: var(--primary-dark);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 14px;
+        }
+
+        .card-description {
+            margin: 3px 0 0 44px;
+
+            color: var(--text-secondary);
+
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .card-body {
+            padding: 22px;
+        }
+
+        /* =========================================
+           FORM
+        ========================================= */
+
+        .form-grid {
+            display: grid;
+
+            grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+            gap: 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            color: var(--navy);
+
+            font-size: 12.5px;
+            font-weight: 700;
+        }
+
+        .form-input {
+            width: 100%;
+
+            padding: 10px 12px;
+
+            border: 1px solid #CBD5E1;
+
+            border-radius: 8px;
+
+            outline: none;
+
+            background: #FFFFFF;
+            color: var(--navy);
+
+            font-family: inherit;
+            font-size: 13px;
+
+            transition:
+                    border-color 0.2s ease,
+                    box-shadow 0.2s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+
+            box-shadow:
+                    0 0 0 3px rgba(22, 163, 74, 0.10);
+        }
+
+        .form-input:disabled {
+            background: #F8FAFC;
+            color: #64748B;
+            cursor: not-allowed;
+        }
+
+        .form-note {
+            color: #94A3B8;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .form-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+
+            gap: 10px;
+
+            margin-top: 20px;
+
+            padding-top: 18px;
+
+            border-top: 1px solid var(--border-light);
+        }
+
+        .btn-profile {
+            border: none;
+            cursor: pointer;
+
+            padding: 10px 16px;
+
+            border-radius: 8px;
+
+            font-family: inherit;
+
+            font-size: 13px;
+            font-weight: 700;
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            gap: 7px;
+
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary-profile {
+            background: var(--primary);
+            color: #FFFFFF;
+
+            box-shadow:
+                    0 2px 8px rgba(22, 163, 74, 0.20);
+        }
+
+        .btn-primary-profile:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-profile {
+            background: #FFFFFF;
+            color: var(--navy);
+
+            border: 1px solid #CBD5E1;
+        }
+
+        .btn-outline-profile:hover {
+            border-color: var(--primary);
+            color: var(--primary-dark);
+            background: var(--green-bg);
+        }
+
+        /* =========================================
+           ACCOUNT INFO
+        ========================================= */
+
+        .info-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 20px;
+
+            padding: 13px 0;
+
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .info-row:first-child {
+            padding-top: 0;
+        }
+
+        .info-row:last-child {
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .info-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            color: var(--text-secondary);
+
+            font-size: 12px;
+        }
+
+        .info-label i {
+            width: 17px;
+            text-align: center;
+            color: #94A3B8;
+        }
+
+        .info-value {
+            color: var(--navy);
+
+            font-size: 12.5px;
+            font-weight: 700;
+
+            text-align: right;
+
+            word-break: break-word;
+        }
+
+        .status-active {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+
+            padding: 4px 8px;
+
+            border-radius: 9999px;
+
+            background: var(--green-light);
+            color: var(--primary-dark);
+
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+
+        /* =========================================
+           SECURITY
+        ========================================= */
+
+        .security-item {
+            display: flex;
+            align-items: center;
+
+            gap: 12px;
+
+            padding: 12px 0;
+
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .security-item:last-of-type {
+            border-bottom: none;
+        }
+
+        .security-icon {
+            width: 38px;
+            height: 38px;
+
+            border-radius: 9px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: var(--green-light);
+            color: var(--primary-dark);
+
+            flex-shrink: 0;
+        }
+
+        .security-info {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .security-title {
+            color: var(--navy);
+
+            font-size: 12.5px;
+            font-weight: 700;
+
+            margin-bottom: 3px;
+        }
+
+        .security-text {
+            color: var(--text-secondary);
+
+            font-size: 11px;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .security-status {
+            color: var(--primary-dark);
+
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+
+        /* =========================================
+           QUICK ACTIONS
+        ========================================= */
+
+        .quick-actions {
+            display: grid;
+
+            grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+            gap: 10px;
+        }
+
+        .quick-action {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+
+            padding: 11px 12px;
+
+            border: 1px solid var(--border);
+
+            border-radius: 9px;
+
+            text-decoration: none;
+
+            color: var(--navy);
+
+            font-size: 11.5px;
+            font-weight: 600;
+
+            background: #FFFFFF;
+
+            transition: all 0.2s ease;
+        }
+
+        .quick-action i {
+            color: var(--primary);
+        }
+
+        .quick-action:hover {
+            border-color: var(--primary);
+
+            background: var(--green-bg);
+
+            color: var(--primary-dark);
+
+            transform: translateY(-1px);
+        }
+
+        /* =========================================
+           FLOW
+        ========================================= */
+
+        .flow-card {
+            margin-top: 24px;
+        }
+
+        .flow-wrapper {
+            display: grid;
+
+            grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+            gap: 12px;
+
+            align-items: center;
+        }
+
+        .flow-step {
+            position: relative;
+
+            background: #FFFFFF;
+
+            border: 1px solid var(--border);
+
+            border-radius: 12px;
+
+            padding: 18px 14px;
+
+            text-align: center;
+
+            transition: all 0.2s ease;
+        }
+
+        .flow-step:hover {
+            border-color: var(--primary);
+
+            background: var(--green-bg);
+
+            transform: translateY(-2px);
+        }
+
+        .flow-number {
+            width: 34px;
+            height: 34px;
+
+            margin: 0 auto 10px;
+
+            border-radius: 50%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background: var(--green-light);
+            color: var(--primary-dark);
+
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .flow-step-title {
+            color: var(--navy);
+
+            font-size: 12.5px;
+            font-weight: 700;
+
+            margin-bottom: 4px;
+        }
+
+        .flow-step-text {
+            color: var(--text-secondary);
+
+            font-size: 10.5px;
+            line-height: 1.4;
+        }
+
+        .flow-arrow {
+            position: absolute;
+
+            top: 50%;
+            right: -19px;
+
+            width: 25px;
+
+            color: var(--primary);
+
+            transform: translateY(-50%);
+
+            z-index: 3;
+
+            text-align: center;
+        }
+
+        .flow-step:last-child .flow-arrow {
+            display: none;
+        }
+
+        /* =========================================
+           SECURITY NOTE
+        ========================================= */
+
+        .security-note {
+            margin-top: 14px;
+
+            padding: 12px 14px;
+
+            border-radius: 9px;
+
+            background: var(--green-bg);
+
+            border: 1px solid #BBF7D0;
+
+            color: var(--primary-dark);
+
+            display: flex;
+            align-items: flex-start;
+
+            gap: 9px;
+
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .security-note i {
+            margin-top: 2px;
+        }
+
+        /* =========================================
+           PASSWORD MODAL
+        ========================================= */
+
+        .modal-overlay {
+            position: fixed;
+
+            inset: 0;
+
+            background: rgba(15, 23, 42, 0.55);
+
+            display: none;
+
+            align-items: center;
+            justify-content: center;
+
+            padding: 20px;
+
+            z-index: 9999;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .password-modal {
+            width: 100%;
+            max-width: 460px;
+
+            background: #FFFFFF;
+
+            border-radius: 16px;
+
+            box-shadow:
+                    0 25px 60px rgba(15, 23, 42, 0.20);
+
+            overflow: hidden;
+
+            animation: modalShow 0.2s ease;
+        }
+
+        @keyframes modalShow {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 18px 20px;
+
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .modal-title {
+            display: flex;
+            align-items: center;
+
+            gap: 9px;
+
+            color: var(--navy);
+
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .modal-title i {
+            color: var(--primary);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+
+            border: none;
+
+            border-radius: 8px;
+
+            background: #F1F5F9;
+
+            color: #64748B;
+
+            cursor: pointer;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .password-form-group {
+            margin-bottom: 16px;
+        }
+
+        .password-form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .password-input-wrapper {
+            position: relative;
+        }
+
+        .password-input-wrapper .form-input {
+            padding-right: 42px;
+        }
+
+        .toggle-password {
+            position: absolute;
+
+            right: 10px;
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            border: none;
+            background: transparent;
+
+            color: #94A3B8;
+
+            cursor: pointer;
+
+            padding: 5px;
+        }
+
+        .toggle-password:hover {
+            color: var(--primary);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+
+            gap: 10px;
+
+            padding: 16px 20px;
+
+            background: #F8FAFC;
+
+            border-top: 1px solid var(--border-light);
+        }
+
+        /* =========================================
+           TOAST
+        ========================================= */
+
+        .toast {
+            position: fixed;
+
+            right: 24px;
+            bottom: 24px;
+
+            min-width: 300px;
+            max-width: 420px;
+
+            background: #FFFFFF;
+
+            border: 1px solid #BBF7D0;
+
+            border-left: 4px solid var(--primary);
+
+            border-radius: 10px;
+
+            padding: 13px 16px;
+
+            display: flex;
+            align-items: center;
+
+            gap: 10px;
+
+            box-shadow:
+                    0 10px 30px rgba(15, 23, 42, 0.14);
+
+            transform: translateY(120px);
+
+            opacity: 0;
+
+            pointer-events: none;
+
+            transition: all 0.25s ease;
+
+            z-index: 10000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            border-color: #FECACA;
+            border-left-color: #DC2626;
+        }
+
+        .toast i {
+            color: var(--primary);
+        }
+
+        .toast.error i {
+            color: #DC2626;
+        }
+
+        .toast-message {
+            color: var(--navy);
+
+            font-size: 12.5px;
+            font-weight: 600;
+
+            line-height: 1.4;
+        }
+
+        /* =========================================
+           RESPONSIVE
+        ========================================= */
+
+        @media (max-width: 1000px) {
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+            }
+
+            .flow-wrapper {
+                grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+            }
+
+            .flow-arrow {
+                display: none;
+            }
+
+        }
+
+        @media (max-width: 700px) {
+
+            .profile-page {
+                padding: 0 14px 40px;
+            }
+
+            .profile-hero {
+                padding: 24px 20px;
+            }
+
+            .profile-hero-content {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .profile-main {
+                align-items: flex-start;
+            }
+
+            .profile-avatar {
+                width: 72px;
+                height: 72px;
+
+                font-size: 23px;
+            }
+
+            .profile-info h1 {
+                font-size: 21px;
+            }
+
+            .profile-actions {
+                width: 100%;
+            }
+
+            .hero-btn {
+                flex: 1;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group.full {
+                grid-column: auto;
+            }
+
+            .flow-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .toast {
+                right: 14px;
+                left: 14px;
+                min-width: auto;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<!-- =========================================
+     NAVBAR
+========================================= -->
+
+<div id="navbar-placeholder"></div>
+
+<main class="profile-page">
+
+    <!-- =========================================
+         PROFILE HERO
+    ========================================== -->
+
+    <section class="profile-hero">
+
+        <div class="profile-hero-content">
+
+            <div class="profile-main">
+
+                <div class="profile-avatar-wrapper">
+
+                    <div
+                            class="profile-avatar"
+                            id="profileAvatar"
+                    >
+                        KH
+                    </div>
+
+                    <div
+                            class="verified-icon"
+                            title="Tài khoản đang hoạt động"
+                    >
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+
+                </div>
+
+                <div class="profile-info">
+
+                    <h1 id="profileName">
+                        Khách hàng
+                    </h1>
+
+                    <div
+                            class="profile-email"
+                            id="profileEmail"
+                    >
+                        Chưa cập nhật email
+                    </div>
+
+                    <div class="profile-meta">
+
+                    <span class="profile-role">
+                        <i class="fa-solid fa-user"></i>
+                        Khách hàng
+                    </span>
+
+                        <span class="profile-status">
+                        <i class="fa-solid fa-circle"></i>
+                        Tài khoản đang hoạt động
+                    </span>
+
+                    </div>
+
+                    <div class="profile-balance">
+
+                    <span class="profile-balance-label">
+                        Số dư tài khoản:
+                    </span>
+
+                        <span
+                                class="profile-balance-value"
+                                id="profileBalance"
+                        >
+                        *****
+                    </span>
+
+                        <button
+                                type="button"
+                                class="balance-toggle"
+                                onclick="toggleBalanceVisibility()"
+                                title="Ẩn/hiện số dư"
+                        >
+                            <i
+                                    class="fa-solid fa-eye"
+                                    id="balanceToggleIcon"
+                            ></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="profile-actions">
+
+                <button
+                        type="button"
+                        class="hero-btn hero-btn-light"
+                        onclick="scrollToSection('personalInfo')"
+                >
+                    <i class="fa-solid fa-pen"></i>
+                    Chỉnh Sửa
+                </button>
+
+                <button
+                        type="button"
+                        class="hero-btn hero-btn-outline"
+                        onclick="openPasswordModal()"
+                >
+                    <i class="fa-solid fa-lock"></i>
+                    Đổi Mật Khẩu
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- =========================================
+         STATISTICS
+    ========================================== -->
+
+    <section class="stats-grid">
+
+        <div class="stat-card">
+
+            <div class="stat-icon green">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+
+            <div>
+                <div class="stat-label">
+                    Tổng đơn hàng
+                </div>
+
+                <div
+                        class="stat-value"
+                        id="totalOrders"
+                >
+                    0
+                </div>
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-icon blue">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+
+            <div>
+                <div class="stat-label">
+                    Đang xử lý
+                </div>
+
+                <div
+                        class="stat-value"
+                        id="processingOrders"
+                >
+                    0
+                </div>
+            </div>
+
+        </div>
+
+        <div class="stat-card">
+
+            <div class="stat-icon green">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+
+            <div>
+                <div class="stat-label">
+                    Đã hoàn thành
+                </div>
+
+                <div
+                        class="stat-value"
+                        id="completedOrders"
+                >
+                    0
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- =========================================
+         MAIN CONTENT
+    ========================================== -->
+
+    <div class="content-grid">
+
+        <!-- =====================================
+             LEFT COLUMN
+        ====================================== -->
+
+        <div class="left-column">
+
+            <!-- PERSONAL INFORMATION -->
+
+            <section
+                    class="profile-card"
+                    id="personalInfo"
+            >
+
+                <div class="card-header">
+
+                    <div>
+
+                        <div class="card-title">
+
+                            <div class="card-title-icon">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+
+                            Thông Tin Cá Nhân
+
+                        </div>
+
+                        <div class="card-description">
+                            Cập nhật thông tin để sử dụng dịch vụ thuận tiện hơn.
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="card-body">
+
+                    <form id="profileForm">
+
+                        <div class="form-grid">
+
+                            <!-- NAME -->
+
+                            <div class="form-group">
+
+                                <label
+                                        class="form-label"
+                                        for="inputName"
+                                >
+                                    Họ và tên
+                                </label>
+
+                                <input
+                                        type="text"
+                                        id="inputName"
+                                        class="form-input"
+                                        placeholder="Nhập họ và tên"
+                                >
+
+                            </div>
+
+                            <!-- EMAIL -->
+
+                            <div class="form-group">
+
+                                <label
+                                        class="form-label"
+                                        for="inputEmail"
+                                >
+                                    Email
+                                </label>
+
+                                <input
+                                        type="email"
+                                        id="inputEmail"
+                                        class="form-input"
+                                        disabled
+                                >
+
+                                <div class="form-note">
+                                    Email đăng nhập không thể thay đổi tại đây.
+                                </div>
+
+                            </div>
+
+                            <!-- PHONE -->
+
+                            <div class="form-group">
+
+                                <label
+                                        class="form-label"
+                                        for="inputPhone"
+                                >
+                                    Số điện thoại
+                                </label>
+
+                                <input
+                                        type="tel"
+                                        id="inputPhone"
+                                        class="form-input"
+                                        placeholder="Nhập số điện thoại"
+                                >
+
+                            </div>
+
+                            <!-- ROLE -->
+
+                            <div class="form-group">
+
+                                <label
+                                        class="form-label"
+                                        for="inputRole"
+                                >
+                                    Vai trò
+                                </label>
+
+                                <input
+                                        type="text"
+                                        id="inputRole"
+                                        class="form-input"
+                                        value="Khách hàng"
+                                        disabled
+                                >
+
+                            </div>
+
+                            <!-- ADDRESS -->
+
+                            <div class="form-group full">
+
+                                <label
+                                        class="form-label"
+                                        for="inputAddress"
+                                >
+                                    Địa chỉ
+                                </label>
+
+                                <input
+                                        type="text"
+                                        id="inputAddress"
+                                        class="form-input"
+                                        placeholder="Nhập địa chỉ của bạn"
+                                >
+
+                            </div>
+
+                        </div>
+
+                        <div class="form-actions">
+
+                            <button
+                                    type="button"
+                                    class="btn-profile btn-outline-profile"
+                                    onclick="resetProfileForm()"
+                            >
+                                <i class="fa-solid fa-rotate-left"></i>
+                                Khôi Phục
+                            </button>
+
+                            <button
+                                    type="submit"
+                                    class="btn-profile btn-primary-profile"
+                            >
+                                <i class="fa-solid fa-floppy-disk"></i>
+                                Lưu Thay Đổi
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </section>
+
+            <!-- FLOW -->
+
+            <section class="profile-card flow-card">
+
+                <div class="card-header">
+
+                    <div>
+
+                        <div class="card-title">
+
+                            <div class="card-title-icon">
+                                <i class="fa-solid fa-route"></i>
+                            </div>
+
+                            Quy Trình Sử Dụng SkillRental
+
+                        </div>
+
+                        <div class="card-description">
+                            Quản lý toàn bộ hành trình thuê dịch vụ ngay trên tài khoản của bạn.
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="flow-wrapper">
+
+                        <div class="flow-step">
+
+                            <div class="flow-number">
+                                1
+                            </div>
+
+                            <div class="flow-step-title">
+                                Hồ Sơ
+                            </div>
+
+                            <div class="flow-step-text">
+                                Cập nhật thông tin cá nhân
+                            </div>
+
+                            <div class="flow-arrow">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </div>
+
+                        </div>
+
+                        <div class="flow-step">
+
+                            <div class="flow-number">
+                                2
+                            </div>
+
+                            <div class="flow-step-title">
+                                Khám Phá
+                            </div>
+
+                            <div class="flow-step-text">
+                                Tìm chuyên gia phù hợp
+                            </div>
+
+                            <div class="flow-arrow">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </div>
+
+                        </div>
+
+                        <div class="flow-step">
+
+                            <div class="flow-number">
+                                3
+                            </div>
+
+                            <div class="flow-step-title">
+                                Đặt Dịch Vụ
+                            </div>
+
+                            <div class="flow-step-text">
+                                Chọn dịch vụ và thanh toán
+                            </div>
+
+                            <div class="flow-arrow">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </div>
+
+                        </div>
+
+                        <div class="flow-step">
+
+                            <div class="flow-number">
+                                4
+                            </div>
+
+                            <div class="flow-step-title">
+                                Quản Lý Apply
+                            </div>
+
+                            <div class="flow-step-text">
+                                Theo dõi và nghiệm thu đơn hàng
+                            </div>
+
+                            <div class="flow-arrow">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="security-note">
+
+                        <i class="fa-solid fa-shield-halved"></i>
+
+                        <span>
+                        Giao dịch được bảo vệ bằng cơ chế ký quỹ Escrow.
+                        Tiền chỉ được giải ngân sau khi bạn nghiệm thu dịch vụ.
+                    </span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+        <!-- =====================================
+             RIGHT COLUMN
+        ====================================== -->
+
+        <div class="right-column">
+
+            <!-- ACCOUNT INFORMATION - CHỈ CÒN 1 CARD -->
+
+            <section class="profile-card">
+
+                <div class="card-header">
+
+                    <div>
+
+                        <div class="card-title">
+
+                            <div class="card-title-icon">
+                                <i class="fa-solid fa-id-card"></i>
+                            </div>
+
+                            Tài Khoản
+
+                        </div>
+
+                        <div class="card-description">
+                            Thông tin định danh và bảo mật của tài khoản.
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="info-list">
+
+                        <!-- ACCOUNT ID -->
+
+                        <div class="info-row">
+
+                            <div class="info-label">
+
+                                <i class="fa-solid fa-hashtag"></i>
+
+                                Mã tài khoản
+
+                            </div>
+
+                            <div
+                                    class="info-value"
+                                    id="accountId"
+                            >
+                                -
+                            </div>
+
+                        </div>
+
+                        <!-- EMAIL -->
+
+                        <div class="info-row">
+
+                            <div class="info-label">
+
+                                <i class="fa-solid fa-envelope"></i>
+
+                                Email
+
+                            </div>
+
+                            <div
+                                    class="info-value"
+                                    id="accountEmail"
+                            >
+                                -
+                            </div>
+
+                        </div>
+
+                        <!-- ROLE -->
+
+                        <div class="info-row">
+
+                            <div class="info-label">
+
+                                <i class="fa-solid fa-user-tag"></i>
+
+                                Vai trò
+
+                            </div>
+
+                            <div class="info-value">
+                                Khách hàng
+                            </div>
+
+                        </div>
+
+                        <!-- STATUS -->
+
+                        <div class="info-row">
+
+                            <div class="info-label">
+
+                                <i class="fa-solid fa-circle-check"></i>
+
+                                Trạng thái
+
+                            </div>
+
+                            <div class="info-value">
+
+                            <span class="status-active">
+                                <i class="fa-solid fa-circle"></i>
+                                Đang hoạt động
+                            </span>
+
+                            </div>
+
+                        </div>
+
+                        <!-- PASSWORD -->
+
+                        <div class="info-row">
+
+                            <div class="info-label">
+
+                                <i class="fa-solid fa-lock"></i>
+
+                                Mật khẩu
+
+                            </div>
+
+                            <div
+                                    style="
+                                display:flex;
+                                align-items:center;
+                                gap:10px;
+                            "
+                            >
+
+                            <span
+                                    class="info-value"
+                                    style="letter-spacing:2px;"
+                            >
+                                ••••••••
+                            </span>
+
+                                <button
+                                        type="button"
+                                        class="btn-profile btn-outline-profile"
+                                        style="
+                                    padding:6px 10px;
+                                    font-size:11px;
+                                "
+                                        onclick="openPasswordModal()"
+                                >
+                                    <i class="fa-solid fa-key"></i>
+                                    Đổi
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- QUICK ACTION -->
+
+            <section class="profile-card">
+
+                <div class="card-header">
+
+                    <div>
+
+                        <div class="card-title">
+
+                            <div class="card-title-icon">
+                                <i class="fa-solid fa-bolt"></i>
+                            </div>
+
+                            Thao Tác Nhanh
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div class="quick-actions">
+
+                        <a
+                                href="customer.html"
+                                class="quick-action"
+                        >
+                            <i class="fa-solid fa-compass"></i>
+                            Khám Phá Dịch Vụ
+                        </a>
+
+                        <a
+                                href="customer_orders.html"
+                                class="quick-action"
+                        >
+                            <i class="fa-solid fa-file-invoice"></i>
+                            Đơn Hàng Của Tôi
+                        </a>
+
+                        <a
+                                href="customer_requests.html"
+                                class="quick-action"
+                        >
+                            <i class="fa-solid fa-plus-circle"></i>
+                            Đăng Yêu Cầu
+                        </a>
+
+                        <a
+                                href="customer_chat.html"
+                                class="quick-action"
+                        >
+                            <i class="fa-solid fa-comments"></i>
+                            Tin Nhắn
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </div>
+
+
+</main>
+
+<!-- =========================================
+     FOOTER
+========================================= -->
+
+<div id="footer-placeholder"></div>
+
+<!-- =========================================
+     PASSWORD MODAL
+========================================= -->
+
+<div
+        class="modal-overlay"
+        id="passwordModal"
+        onclick="handleModalBackdrop(event)"
+>
+
+
+    <div class="password-modal">
+
+        <div class="modal-header">
+
+            <div class="modal-title">
+
+                <i class="fa-solid fa-lock"></i>
+
+                Đổi Mật Khẩu
+
+            </div>
+
+            <button
+                    type="button"
+                    class="modal-close"
+                    onclick="closePasswordModal()"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+        <form id="passwordForm">
+
+            <div class="modal-body">
+
+                <div class="password-form-group">
+
+                    <label
+                            class="form-label"
+                            for="currentPassword"
+                    >
+                        Mật khẩu hiện tại
+                    </label>
+
+                    <div class="password-input-wrapper">
+
+                        <input
+                                type="password"
+                                id="currentPassword"
+                                class="form-input"
+                                placeholder="Nhập mật khẩu hiện tại"
+                        >
+
+                        <button
+                                type="button"
+                                class="toggle-password"
+                                onclick="togglePassword('currentPassword', this)"
+                        >
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="password-form-group">
+
+                    <label
+                            class="form-label"
+                            for="newPassword"
+                    >
+                        Mật khẩu mới
+                    </label>
+
+                    <div class="password-input-wrapper">
+
+                        <input
+                                type="password"
+                                id="newPassword"
+                                class="form-input"
+                                placeholder="Nhập mật khẩu mới"
+                        >
+
+                        <button
+                                type="button"
+                                class="toggle-password"
+                                onclick="togglePassword('newPassword', this)"
+                        >
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+
+                    </div>
+
+                    <div class="form-note">
+                        Mật khẩu mới phải có ít nhất 6 ký tự.
+                    </div>
+
+                </div>
+
+                <div class="password-form-group">
+
+                    <label
+                            class="form-label"
+                            for="confirmPassword"
+                    >
+                        Xác nhận mật khẩu mới
+                    </label>
+
+                    <div class="password-input-wrapper">
+
+                        <input
+                                type="password"
+                                id="confirmPassword"
+                                class="form-input"
+                                placeholder="Nhập lại mật khẩu mới"
+                        >
+
+                        <button
+                                type="button"
+                                class="toggle-password"
+                                onclick="togglePassword('confirmPassword', this)"
+                        >
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                        type="button"
+                        class="btn-profile btn-outline-profile"
+                        onclick="closePasswordModal()"
+                >
+                    Hủy
+                </button>
+
+                <button
+                        type="submit"
+                        class="btn-profile btn-primary-profile"
+                >
+                    <i class="fa-solid fa-check"></i>
+                    Đổi Mật Khẩu
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+</div>
+
+<!-- =========================================
+     TOAST
+========================================= -->
+
+<div
+        class="toast"
+        id="toast"
+>
+    <i id="toastIcon" class="fa-solid fa-circle-check"></i>
+
+    <span
+            class="toast-message"
+            id="toastMessage"
+    ></span>
+</div>
+
+<!-- =========================================
+     CUSTOMER LIBRARY
+========================================= -->
+
+<script src="customer.js"></script>
+
+<script>
+
+    /* =========================================
+       SESSION
+    ========================================= */
+
+    let currentUser = null;
+    let balanceVisible = false;
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        async function() {
+
+            currentUser =
+                getCurrentCustomer();
+
+            if (!currentUser) {
+
+                window.location.href =
+                    'index.html?auth=login';
+
+                return;
+            }
+
+            // Navbar
+
+            document
+                .getElementById('navbar-placeholder')
+                .innerHTML =
+                renderCustomerNavbar('profile');
+
+            // Footer
+
+            document
+                .getElementById('footer-placeholder')
+                .innerHTML =
+                renderCustomerFooter();
+
+            // Load profile
+
+            await loadProfile();
+
+            // Load order statistics
+
+            await loadOrderStatistics();
+
+        }
+    );
+
+    /* =========================================
+       LOAD PROFILE
+       GET /api/auth/me
+    ========================================= */
+
+    async function loadProfile() {
+
+        try {
+
+            const response =
+                await apiRequest(
+                    '/api/auth/me'
+                );
+
+            if (
+                response &&
+                response.success &&
+                response.user
+            ) {
+
+                currentUser = {
+                    ...currentUser,
+                    ...response.user
+                };
+
+                setCurrentCustomer(
+                    currentUser
+                );
+
+            }
+
+        } catch (error) {
+
+            console.error(
+                'Không thể tải thông tin hồ sơ:',
+                error
+            );
+
+        }
+
+        renderProfile();
+
+    }
+
+    /* =========================================
+       RENDER PROFILE
+    ========================================= */
+
+    function renderProfile() {
+
+        if (!currentUser) {
+            return;
+        }
+
+        const name =
+            currentUser.name ||
+            'Khách hàng';
+
+        const email =
+            currentUser.email ||
+            'Chưa cập nhật email';
+
+        const phone =
+            currentUser.phone ||
+            '';
+
+        const address =
+            currentUser.address ||
+            '';
+
+        /* =========================
+           HEADER
+        ========================= */
+
+        document
+            .getElementById('profileName')
+            .textContent =
+            name;
+
+        document
+            .getElementById('profileEmail')
+            .textContent =
+            email;
+
+        /* =========================
+           AVATAR
+        ========================= */
+
+        const initials =
+            getInitials(name);
+
+        const profileAvatar =
+            document.getElementById(
+                'profileAvatar'
+            );
+
+        if (
+            currentUser.avatar &&
+            currentUser.avatar.trim() !== ''
+        ) {
+
+            profileAvatar.innerHTML = `
+                <img
+                    src="${currentUser.avatar}"
+                    alt="${name}"
+                    onerror="this.parentElement.textContent='${initials}'"
+                >
+            `;
+
+        } else {
+
+            profileAvatar.textContent =
+                initials;
+
+        }
+
+        /* =========================
+           FORM
+        ========================= */
+
+        document
+            .getElementById('inputName')
+            .value =
+            name;
+
+        document
+            .getElementById('inputEmail')
+            .value =
+            email;
+
+        document
+            .getElementById('inputPhone')
+            .value =
+            phone;
+
+        document
+            .getElementById('inputAddress')
+            .value =
+            address;
+
+        /* =========================
+           ACCOUNT
+        ========================= */
+
+        document
+            .getElementById('accountId')
+            .textContent =
+            currentUser.id || '-';
+
+        document
+            .getElementById('accountEmail')
+            .textContent =
+            email;
+
+        /* =========================
+           BALANCE
+        ========================= */
+
+        const balance =
+            Number(
+                currentUser.balance || 0
+            );
+
+        const balanceText =
+            balanceVisible
+                ? formatCurrency(balance)
+                : '*****';
+
+        document
+            .getElementById('profileBalance')
+            .textContent =
+            balanceText;
+
+    }
+
+    /* =========================================
+       INITIALS
+    ========================================= */
+
+    function getInitials(name) {
+
+        if (!name) {
+            return 'KH';
+        }
+
+        const words =
+            name
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean);
+
+        if (words.length === 1) {
+
+            return words[0]
+                .substring(0, 2)
+                .toUpperCase();
+
+        }
+
+        return (
+            words[0][0] +
+            words[words.length - 1][0]
+        ).toUpperCase();
+
+    }
+
+    /* =========================================
+       CURRENCY
+    ========================================= */
+
+    function formatCurrency(value) {
+
+        return new Intl.NumberFormat(
+            'vi-VN',
+            {
+                style: 'currency',
+                currency: 'VND'
+            }
+        ).format(
+            Number(value) || 0
+        );
+
+    }
+
+    /* =========================================
+       TOGGLE BALANCE
+    ========================================= */
+
+    function toggleBalanceVisibility() {
+
+        balanceVisible =
+            !balanceVisible;
+
+        const balance =
+            Number(
+                currentUser?.balance || 0
+            );
+
+        const balanceText =
+            balanceVisible
+                ? formatCurrency(balance)
+                : '*****';
+
+        const profileBalance =
+            document.getElementById(
+                'profileBalance'
+            );
+
+        if (profileBalance) {
+
+            profileBalance.textContent =
+                balanceText;
+
+        }
+
+        const balanceToggleIcon =
+            document.getElementById(
+                'balanceToggleIcon'
+            );
+
+        if (balanceToggleIcon) {
+
+            balanceToggleIcon.className =
+                balanceVisible
+                    ? 'fa-solid fa-eye-slash'
+                    : 'fa-solid fa-eye';
+
+        }
+
+    }
+
+    /* =========================================
+       LOAD ORDER STATISTICS
+    ========================================= */
+
+    async function loadOrderStatistics() {
+
+        try {
+
+            const response =
+                await apiRequest(
+                    `/api/orders?customerId=${encodeURIComponent(currentUser.id)}`
+                );
+
+            if (
+                !response ||
+                !response.success
+            ) {
+                return;
+            }
+
+            const orders =
+                Array.isArray(
+                    response.orders
+                )
+                    ? response.orders
+                    : [];
+
+            const total =
+                orders.length;
+
+            const processing =
+                orders.filter(order =>
+                    [
+                        'processing',
+                        'confirmed'
+                    ].includes(
+                        String(
+                            order.orderStatus || ''
+                        ).toLowerCase()
+                    )
+                ).length;
+
+            const completed =
+                orders.filter(order =>
+                    String(
+                        order.orderStatus || ''
+                    ).toLowerCase() ===
+                    'completed'
+                ).length;
+
+            document
+                .getElementById('totalOrders')
+                .textContent =
+                total;
+
+            document
+                .getElementById('processingOrders')
+                .textContent =
+                processing;
+
+            document
+                .getElementById('completedOrders')
+                .textContent =
+                completed;
+
+        } catch (error) {
+
+            console.error(
+                'Không thể tải thống kê đơn hàng:',
+                error
+            );
+
+        }
+
+    }
+
+    /* =========================================
+       UPDATE PROFILE
+       PUT /api/auth/profile
+    ========================================= */
+
+    document
+        .getElementById('profileForm')
+        .addEventListener(
+            'submit',
+            async function(event) {
+
+                event.preventDefault();
+
+                const name =
+                    document
+                        .getElementById('inputName')
+                        .value
+                        .trim();
+
+                const phone =
+                    document
+                        .getElementById('inputPhone')
+                        .value
+                        .trim();
+
+                const address =
+                    document
+                        .getElementById('inputAddress')
+                        .value
+                        .trim();
+
+                if (!name) {
+
+                    showToast(
+                        'Vui lòng nhập họ và tên.',
+                        true
+                    );
+
+                    return;
+                }
+
+                try {
+
+                    const response =
+                        await apiRequest(
+                            '/api/auth/profile',
+                            {
+                                method: 'PUT',
+
+                                body: JSON.stringify({
+                                    name,
+                                    phone,
+                                    address
+                                })
+                            }
+                        );
+
+                    if (
+                        !response ||
+                        !response.success
+                    ) {
+
+                        showToast(
+                            response?.message ||
+                            'Không thể cập nhật thông tin.',
+                            true
+                        );
+
+                        return;
+                    }
+
+                    currentUser = {
+                        ...currentUser,
+                        ...response.user
+                    };
+
+                    setCurrentCustomer(
+                        currentUser
+                    );
+
+                    renderProfile();
+
+                    showToast(
+                        'Cập nhật thông tin cá nhân thành công.'
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        'Lỗi cập nhật hồ sơ:',
+                        error
+                    );
+
+                    showToast(
+                        'Không thể kết nối đến máy chủ.',
+                        true
+                    );
+
+                }
+
+            }
+        );
+
+    /* =========================================
+       RESET FORM
+    ========================================= */
+
+    function resetProfileForm() {
+
+        renderProfile();
+
+        showToast(
+            'Đã khôi phục thông tin hiện tại.'
+        );
+
+    }
+
+    /* =========================================
+       PASSWORD MODAL
+    ========================================= */
+
+    function openPasswordModal() {
+
+        document
+            .getElementById('passwordModal')
+            .classList.add('active');
+
+        document.body.style.overflow =
+            'hidden';
+
+        setTimeout(() => {
+
+            document
+                .getElementById('currentPassword')
+                .focus();
+
+        }, 100);
+
+    }
+
+    function closePasswordModal() {
+
+        document
+            .getElementById('passwordModal')
+            .classList.remove('active');
+
+        document.body.style.overflow =
+            '';
+
+        document
+            .getElementById('passwordForm')
+            .reset();
+
+        document
+            .querySelectorAll(
+                '.toggle-password i'
+            )
+            .forEach(icon => {
+
+                icon.className =
+                    'fa-solid fa-eye';
+
+            });
+
+        document
+            .getElementById('currentPassword')
+            .type = 'password';
+
+        document
+            .getElementById('newPassword')
+            .type = 'password';
+
+        document
+            .getElementById('confirmPassword')
+            .type = 'password';
+
+    }
+
+    function handleModalBackdrop(event) {
+
+        if (
+            event.target.id ===
+            'passwordModal'
+        ) {
+
+            closePasswordModal();
+
+        }
+
+    }
+
+    /* =========================================
+       TOGGLE PASSWORD
+    ========================================= */
+
+    function togglePassword(
+        inputId,
+        button
+    ) {
+
+        const input =
+            document.getElementById(
+                inputId
+            );
+
+        const icon =
+            button.querySelector('i');
+
+        if (
+            input.type ===
+            'password'
+        ) {
+
+            input.type =
+                'text';
+
+            icon.className =
+                'fa-solid fa-eye-slash';
+
+        } else {
+
+            input.type =
+                'password';
+
+            icon.className =
+                'fa-solid fa-eye';
+
+        }
+
+    }
+
+    /* =========================================
+       CHANGE PASSWORD
+       PUT /api/auth/change-password
+    ========================================= */
+
+    document
+        .getElementById('passwordForm')
+        .addEventListener(
+            'submit',
+            async function(event) {
+
+                event.preventDefault();
+
+                const currentPassword =
+                    document
+                        .getElementById(
+                            'currentPassword'
+                        )
+                        .value;
+
+                const newPassword =
+                    document
+                        .getElementById(
+                            'newPassword'
+                        )
+                        .value;
+
+                const confirmPassword =
+                    document
+                        .getElementById(
+                            'confirmPassword'
+                        )
+                        .value;
+
+                if (
+                    !currentPassword ||
+                    !newPassword ||
+                    !confirmPassword
+                ) {
+
+                    showToast(
+                        'Vui lòng nhập đầy đủ thông tin.',
+                        true
+                    );
+
+                    return;
+                }
+
+                if (
+                    newPassword.length < 6
+                ) {
+
+                    showToast(
+                        'Mật khẩu mới phải có ít nhất 6 ký tự.',
+                        true
+                    );
+
+                    return;
+                }
+
+                if (
+                    newPassword !==
+                    confirmPassword
+                ) {
+
+                    showToast(
+                        'Mật khẩu xác nhận không khớp.',
+                        true
+                    );
+
+                    return;
+                }
+
+                try {
+
+                    const response =
+                        await apiRequest(
+                            '/api/auth/change-password',
+                            {
+                                method: 'PUT',
+
+                                body: JSON.stringify({
+                                    currentPassword,
+                                    newPassword
+                                })
+                            }
+                        );
+
+                    if (
+                        !response ||
+                        !response.success
+                    ) {
+
+                        showToast(
+                            response?.message ||
+                            'Không thể đổi mật khẩu.',
+                            true
+                        );
+
+                        return;
+                    }
+
+                    closePasswordModal();
+
+                    showToast(
+                        'Đổi mật khẩu thành công.'
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        'Lỗi đổi mật khẩu:',
+                        error
+                    );
+
+                    showToast(
+                        'Không thể kết nối đến máy chủ.',
+                        true
+                    );
+
+                }
+
+            }
+        );
+
+    /* =========================================
+       SCROLL
+    ========================================= */
+
+    function scrollToSection(id) {
+
+        const element =
+            document.getElementById(id);
+
+        if (!element) {
+            return;
+        }
+
+        element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+
+    }
+
+    /* =========================================
+       TOAST
+    ========================================= */
+
+    let toastTimer = null;
+
+    function showToast(
+        message,
+        error = false
+    ) {
+
+        const toast =
+            document.getElementById(
+                'toast'
+            );
+
+        const icon =
+            document.getElementById(
+                'toastIcon'
+            );
+
+        const text =
+            document.getElementById(
+                'toastMessage'
+            );
+
+        text.textContent =
+            message;
+
+        toast.classList.toggle(
+            'error',
+            error
+        );
+
+        icon.className =
+            error
+                ? 'fa-solid fa-circle-exclamation'
+                : 'fa-solid fa-circle-check';
+
+        toast.classList.add('show');
+
+        clearTimeout(
+            toastTimer
+        );
+
+        toastTimer =
+            setTimeout(() => {
+
+                toast.classList.remove(
+                    'show'
+                );
+
+            }, 3500);
+
+    }
+
+    /* =========================================
+       ESC KEY
+    ========================================= */
+
+    document.addEventListener(
+        'keydown',
+        function(event) {
+
+            if (
+                event.key === 'Escape'
+            ) {
+
+                closePasswordModal();
+
+            }
+
+        }
+    );
+
+    /* =========================================
+   LOGOUT
+========================================= */
+
+    document.addEventListener(
+        'click',
+        function(event) {
+
+            const logoutElement =
+                event.target.closest(
+                    '[onclick*="logout"], a[href*="logout"], button'
+                );
+
+            if (!logoutElement) {
+                return;
+            }
+
+            const text =
+                logoutElement.textContent
+                    .trim()
+                    .toLowerCase();
+
+            if (
+                text.includes('đăng xuất') ||
+                text.includes('logout')
+            ) {
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                clearCurrentCustomer();
+
+                window.location.href =
+                    'index.html?auth=login';
+
+            }
+
+        },
+        true
+    );
+</script>
+
+</body>
+</html>

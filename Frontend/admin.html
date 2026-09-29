@@ -122,15 +122,17 @@
             <input type="text" placeholder="Tìm kiếm nhanh đơn hàng, provider, khiếu nại...">
           </div>
         </div>
-          <a href="customer.html" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:10px; background:#16A34A; color:#FFF;">
+
+        <div class="topbar-right">
+          <a href="customer.html" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:6px; background:#16A34A; color:#FFF;">
             <span>👤</span>
             <span>Kênh Khách Hàng ↗</span>
           </a>
-          <a href="dashboard.html" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:10px;">
+          <a href="dashboard.html" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:6px;">
             <span>💼</span>
             <span>Cổng Provider ↗</span>
           </a>
-          <button class="btn btn-outline btn-sm" style="margin-right:10px; border-color:rgba(255,255,255,0.4); color:#FFF;" onclick="exportDataSimulation('Bao_Cao_Tong_Quan_Admin')">
+          <button class="btn btn-secondary btn-sm" style="margin-right:6px;" onclick="exportDataSimulation('Bao_Cao_Tong_Quan_Admin')">
             <span>📥 Xuất Báo Cáo</span>
           </button>
           <button class="icon-badge-btn" onclick="showToast('Thông báo hệ thống', 'Bạn có 4 hồ sơ và 2 khiếu nại cần xử lý', 'info')">
@@ -150,16 +152,16 @@
       <!-- CONTENT AREA -->
       <div class="content-area">
         <!-- HEADER -->
-        <div class="view-header">
-          <div>
-            <h1 class="view-title">Dashboard Tổng Quan Sàn SkillRental</h1>
-            <p class="view-subtitle">Giám sát toàn diện người dùng, phê duyệt hồ sơ Provider, ký quỹ Escrow và xử lý tranh chấp</p>
+        <div class="page-header">
+          <div class="page-title-group">
+            <h1><span class="green-pill"></span> Dashboard Tổng Quan Sàn SkillRental</h1>
+            <p>Giám sát toàn diện người dùng, phê duyệt hồ sơ Provider, ký quỹ Escrow và xử lý tranh chấp</p>
           </div>
-          <div class="view-actions">
-            <button class="btn btn-outline" onclick="resetAppStateToDefault()">
+          <div class="header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="resetAppStateToDefault()">
               <span>↺ Đặt lại dữ liệu gốc</span>
             </button>
-            <a href="cashflow.html" class="btn btn-primary">
+            <a href="cashflow.html" class="btn btn-primary btn-sm">
               <span>♨ Kiểm tra Dòng Tiền Escrow</span>
             </a>
           </div>
@@ -168,46 +170,46 @@
         <!-- 4 KPI CARDS -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-title">TỔNG NGƯỜI DÙNG</span>
-              <span class="stat-icon" style="background:#F1F5F9; color:var(--secondary);">👥</span>
-            </div>
-            <div class="stat-value" id="kpi-total-users">3,420</div>
-            <div class="stat-change positive">
-              <span>↑ +12.5%</span> so với tháng trước (2.150 Customer, 1.270 Provider)
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-title">HỒ SƠ CHỜ PHÊ DUYỆT</span>
-              <span class="stat-icon" style="background:var(--warning-light); color:var(--warning);">⏳</span>
-            </div>
-            <div class="stat-value" id="kpi-pending-providers" style="color:var(--warning);">7</div>
-            <div class="stat-change" style="color:var(--text-secondary);" id="kpi-pending-desc">
-              <span>4 Provider mới, 3 chứng chỉ kỹ năng đang chờ duyệt</span>
+            <div class="stat-icon green">👥</div>
+            <div class="stat-info">
+              <span class="stat-label">TỔNG NGƯỜI DÙNG</span>
+              <div class="stat-value" id="kpi-total-users">3,420</div>
+              <div class="stat-trend">
+                <span class="trend-up">↑ +12.5%</span> <span class="trend-sub">so với tháng trước</span>
+              </div>
             </div>
           </div>
 
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-title">DOANH THU HOA HỒNG (5%)</span>
-              <span class="stat-icon" style="background:var(--primary-light); color:var(--primary);">💰</span>
-            </div>
-            <div class="stat-value" id="kpi-revenue" style="color:var(--primary);">84,500,000đ</div>
-            <div class="stat-change positive">
-              <span>↑ +18.2%</span> tổng giá trị giao dịch GMV đạt 1.69 Tỷ VNĐ
+            <div class="stat-icon orange">⏳</div>
+            <div class="stat-info">
+              <span class="stat-label">HỒ SƠ CHỜ PHÊ DUYỆT</span>
+              <div class="stat-value" id="kpi-pending-providers" style="color:var(--warning);">7</div>
+              <div class="stat-trend" id="kpi-pending-desc">
+                <span class="trend-sub">4 Provider mới, 3 chứng chỉ</span>
+              </div>
             </div>
           </div>
 
           <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-title">ĐANG KÝ QUỸ ESCROW</span>
-              <span class="stat-icon" style="background:var(--info-light); color:var(--info);">🛡️</span>
+            <div class="stat-icon green">💰</div>
+            <div class="stat-info">
+              <span class="stat-label">DOANH THU HOA HỒNG (5%)</span>
+              <div class="stat-value" id="kpi-revenue" style="color:var(--primary);">84,500,000đ</div>
+              <div class="stat-trend">
+                <span class="trend-up">↑ +18.2%</span> <span class="trend-sub">GMV đạt 1.69 Tỷ</span>
+              </div>
             </div>
-            <div class="stat-value" id="kpi-escrow" style="color:var(--info);">42,600,000đ</div>
-            <div class="stat-change" style="color:var(--text-secondary);" id="kpi-escrow-desc">
-              <span>Bảo vệ an toàn cho các đơn hàng đang thực hiện</span>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon blue">🛡️</div>
+            <div class="stat-info">
+              <span class="stat-label">ĐANG KÝ QUỸ ESCROW</span>
+              <div class="stat-value" id="kpi-escrow" style="color:var(--info);">42,600,000đ</div>
+              <div class="stat-trend" id="kpi-escrow-desc">
+                <span class="trend-sub">Bảo vệ đơn hàng đang chạy</span>
+              </div>
             </div>
           </div>
         </div>
@@ -216,12 +218,12 @@
         <div class="dashboard-grid-row" style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; margin-bottom:24px;">
           <!-- Left: Cash flow Chart -->
           <div class="card">
-            <div class="card-header">
+            <div class="panel-header">
               <div>
-                <h3 class="card-title">Biểu Đồ Dòng Tiền Ký Quỹ Escrow (30 Ngày Qua)</h3>
-                <p class="card-subtitle">Đối soát dòng tiền Khách nạp ký quỹ vs Tiền giải ngân cho Provider</p>
+                <h2>Biểu Đồ Dòng Tiền Ký Quỹ Escrow (30 Ngày Qua)</h2>
+                <p>Đối soát dòng tiền Khách nạp ký quỹ vs Tiền giải ngân cho Provider</p>
               </div>
-              <span class="badge badge-success">Cân bằng 100%</span>
+              <span class="badge badge-success"><span class="badge-dot-indicator"></span>Cân bằng 100%</span>
             </div>
             <div style="padding:10px 0;">
               <svg viewBox="0 0 700 200" style="width:100%; height:auto; overflow:visible;">
@@ -272,9 +274,9 @@
 
           <!-- Right: System Alerts & Priority Queue -->
           <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">Cảnh Báo Cần Xử Lý Ngay</h3>
-              <span class="badge badge-error">Khẩn cấp</span>
+            <div class="panel-header">
+              <h2>Cảnh Báo Cần Xử Lý Ngay</h2>
+              <span class="badge badge-danger"><span class="badge-dot-indicator"></span>Khẩn cấp</span>
             </div>
             <div style="display:flex; flex-direction:column; gap:12px;">
               <div style="padding:12px; background:#FEF2F2; border-left:4px solid var(--error); border-radius:var(--radius-sm);">
@@ -300,66 +302,68 @@
 
         <!-- RECENT PENDING PROVIDERS & ORDERS TABLE -->
         <div class="card">
-          <div class="card-header">
+          <div class="panel-header">
             <div>
-              <h3 class="card-title">Hồ Sơ Đăng Ký Provider Chờ Phê Duyệt</h3>
-              <p class="card-subtitle">Kiểm tra thông tin căn cước công dân (CCCD), chuyên môn và chứng chỉ hành nghề</p>
+              <h2>Hồ Sơ Đăng Ký Provider Chờ Phê Duyệt</h2>
+              <p>Kiểm tra thông tin căn cước công dân (CCCD), chuyên môn và chứng chỉ hành nghề</p>
             </div>
-            <a href="providers.html" class="btn btn-outline btn-sm">Xem tất cả 4 hồ sơ →</a>
+            <a href="providers.html" class="btn btn-secondary btn-sm">Xem tất cả 4 hồ sơ →</a>
           </div>
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Mã đơn</th>
-                  <th>Họ và tên Provider</th>
-                  <th>Chuyên môn / Lĩnh vực</th>
-                  <th>Số CCCD / Định danh</th>
-                  <th>Kinh nghiệm</th>
-                  <th>Ngày nộp</th>
-                  <th>Trạng thái</th>
-                  <th style="text-align:right;">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>APP001</strong></td>
-                  <td><strong>Võ Minh Trí</strong><br><span style="font-size:11px; color:var(--text-secondary);">tri.vo@example.com</span></td>
-                  <td><span class="chip" style="background:#DCFCE7; color:#15803D;">Lập trình Web React / Node.js</span></td>
-                  <td><code>079095012345</code> <span style="color:var(--success);">✓</span></td>
-                  <td>5 năm TechCorp</td>
-                  <td>28/04/2025</td>
-                  <td><span class="badge badge-warning">Chờ duyệt</span></td>
-                  <td style="text-align:right;">
-                    <a href="providers.html" class="btn btn-primary btn-sm">Xem &amp; Phê duyệt</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>APP002</strong></td>
-                  <td><strong>Nguyễn Thị Bích</strong><br><span style="font-size:11px; color:var(--text-secondary);">bich.nguyen@example.com</span></td>
-                  <td><span class="chip" style="background:#EDE9FE; color:#6D28D9;">Thiết kế Đồ họa &amp; UI/UX Figma</span></td>
-                  <td><code>080198004567</code> <span style="color:var(--success);">✓</span></td>
-                  <td>3 năm Freelance</td>
-                  <td>27/04/2025</td>
-                  <td><span class="badge badge-warning">Chờ duyệt</span></td>
-                  <td style="text-align:right;">
-                    <a href="providers.html" class="btn btn-primary btn-sm">Xem &amp; Phê duyệt</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>APP003</strong></td>
-                  <td><strong>Trần Đình Trọng</strong><br><span style="font-size:11px; color:var(--text-secondary);">trong.tran@example.com</span></td>
-                  <td><span class="chip" style="background:#FEF3C7; color:#B45309;">Sửa chữa điện lạnh &amp; gia dụng</span></td>
-                  <td><code>001092003322</code> <span style="color:var(--success);">✓</span></td>
-                  <td>7 năm kỹ thuật</td>
-                  <td>27/04/2025</td>
-                  <td><span class="badge badge-warning">Chờ duyệt</span></td>
-                  <td style="text-align:right;">
-                    <a href="providers.html" class="btn btn-primary btn-sm">Xem &amp; Phê duyệt</a>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="table-wrap">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã đơn</th>
+                    <th>Họ và tên Provider</th>
+                    <th>Chuyên môn / Lĩnh vực</th>
+                    <th>Số CCCD / Định danh</th>
+                    <th>Kinh nghiệm</th>
+                    <th>Ngày nộp</th>
+                    <th>Trạng thái</th>
+                    <th style="text-align:right;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>APP001</strong></td>
+                    <td><strong>Võ Minh Trí</strong><br><span style="font-size:11px; color:var(--text-secondary);">tri.vo@example.com</span></td>
+                    <td><span class="badge badge-success">Lập trình Web React / Node.js</span></td>
+                    <td><code>079095012345</code> <span style="color:var(--success);">✓</span></td>
+                    <td>5 năm TechCorp</td>
+                    <td>28/04/2025</td>
+                    <td><span class="badge badge-warning"><span class="badge-dot-indicator"></span>Chờ duyệt</span></td>
+                    <td style="text-align:right;">
+                      <a href="providers.html" class="btn btn-primary btn-sm">Xem &amp; Phê duyệt</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>APP002</strong></td>
+                    <td><strong>Nguyễn Thị Bích</strong><br><span style="font-size:11px; color:var(--text-secondary);">bich.nguyen@example.com</span></td>
+                    <td><span class="badge badge-purple">Thiết kế Đồ họa &amp; UI/UX Figma</span></td>
+                    <td><code>080198004567</code> <span style="color:var(--success);">✓</span></td>
+                    <td>3 năm Freelance</td>
+                    <td>27/04/2025</td>
+                    <td><span class="badge badge-warning"><span class="badge-dot-indicator"></span>Chờ duyệt</span></td>
+                    <td style="text-align:right;">
+                      <a href="providers.html" class="btn btn-primary btn-sm">Xem &amp; Phê duyệt</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>APP003</strong></td>
+                    <td><strong>Trần Đình Trọng</strong><br><span style="font-size:11px; color:var(--text-secondary);">trong.tran@example.com</span></td>
+                    <td><span class="badge badge-neutral">Sửa chữa điện lạnh &amp; gia dụng</span></td>
+                    <td><code>001092003322</code> <span style="color:var(--success);">✓</span></td>
+                    <td>7 năm kỹ thuật</td>
+                    <td>27/04/2025</td>
+                    <td><span class="badge badge-warning"><span class="badge-dot-indicator"></span>Chờ duyệt</span></td>
+                    <td style="text-align:right;">
+                      <a href="providers.html" class="btn btn-primary btn-sm">Xem &amp; Phê duyệt</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 

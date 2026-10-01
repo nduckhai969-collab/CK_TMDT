@@ -252,6 +252,8 @@
     .hero-search-box {
       max-width: 680px;
       margin: 0 auto 48px;
+      position: relative;
+      z-index: 20;
       background: #FFF;
       border-radius: 12px;
       padding: 6px;
@@ -287,6 +289,18 @@
     .hero-search-box button:hover {
       background: var(--primary-dark);
     }
+
+    .hero-search-suggestions { position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:30;display:none;overflow:hidden;background:#fff;border:1px solid #dfe7e2;border-radius:12px;box-shadow:0 14px 34px #0f172a2b;text-align:left; }
+    .hero-search-suggestions.is-open { display:block; }
+    .hero-search-suggestion { display:flex;align-items:center;gap:11px;padding:10px 13px;text-decoration:none;color:#172033;border-bottom:1px solid #f1f5f3; }
+    .hero-search-suggestion:hover,.hero-search-suggestion.is-active { background:#f0fdf4; }
+    .hero-search-suggestion img { width:38px;height:38px;flex:0 0 38px;border-radius:10px;object-fit:cover;background:#f1f5f9; }
+    .hero-search-suggestion-info { min-width:0;flex:1; }
+    .hero-search-suggestion-name { display:block;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .hero-search-suggestion-meta { display:block;margin-top:3px;color:#718096;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .hero-search-suggestion-footer { display:block;padding:11px 13px;background:#f8faf9;color:#168447;font-size:12px;font-weight:700;text-decoration:none; }
+    .hero-search-suggestion-footer:hover { background:#f0fdf4; }
+    .hero-search-suggestion-empty { padding:13px;color:#64748b;font-size:12px; }
 
     /* Stats Bar */
     .stats-row {
@@ -1171,6 +1185,8 @@
       <input
               type="text"
               id="heroSearchInput"
+              autocomplete="off"
+              aria-autocomplete="list"
               placeholder="Tìm kỹ năng: Lập trình React, Thiết kế Logo, Sửa điều hòa, Gia sư IELTS...">
 
       <button type="submit">
@@ -3399,6 +3415,111 @@
    * ============================================================
    */
 
+  let heroSearchProviders = null;
+  let heroSearchProvidersPromise = null;
+
+  function normalizeHeroSearch(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/gi, 'd')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  function escapeHeroSearch(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  }
+
+  async function loadHeroSearchProviders() {
+    if (heroSearchProviders) return heroSearchProviders;
+    if (!heroSearchProvidersPromise) {
+      heroSearchProvidersPromise = fetch('/api/providers?limit=100')
+        .then(response => response.json())
+        .then(result => {
+          heroSearchProviders = result.success && Array.isArray(result.providers) ? result.providers : [];
+          return heroSearchProviders;
+        })
+        .catch(() => (heroSearchProviders = []));
+    }
+    return heroSearchProvidersPromise;
+  }
+
+  async function showHeroSearchSuggestions() {
+    const input = document.getElementById('heroSearchInput');
+    const suggestions = document.getElementById('heroSearchSuggestions');
+    if (!input || !suggestions) return;
+    const query = input.value.trim();
+    if (!query) {
+      suggestions.classList.remove('is-open');
+      return;
+    }
+    suggestions.innerHTML = '<div class="hero-search-suggestion-empty">Đang tìm chuyên gia phù hợp...</div>';
+    suggestions.classList.add('is-open');
+    const providers = await loadHeroSearchProviders();
+    if (!input.isConnected || input.value.trim() !== query) return;
+    const terms = normalizeHeroSearch(query).split(/\s+/).filter(Boolean);
+    const matches = providers.map(provider => {
+      const text = normalizeHeroSearch([
+        provider.name, provider.specialty, provider.bio, provider.location, provider.category,
+        ...(Array.isArray(provider.skills) ? provider.skills : [])
+      ].join(' '));
+      const matched = terms.length > 0 && terms.every(term => text.includes(term));
+      const normalizedQuery = normalizeHeroSearch(query);
+      const score = normalizeHeroSearch(provider.name).startsWith(normalizedQuery) ? 0 : normalizeHeroSearch(provider.specialty).startsWith(normalizedQuery) ? 1 : 2;
+      return { provider, matched, score };
+    }).filter(item => item.matched)
+      .sort((a, b) => a.score - b.score || Number(b.provider.rating || 0) - Number(a.provider.rating || 0))
+      .slice(0, 5);
+
+    const rows = matches.length
+      ? matches.map(({ provider }) => `<a class="hero-search-suggestion" role="option" href="customer_provider.html?id=${encodeURIComponent(provider.id)}"><img src="${escapeHeroSearch(provider.avatar || '')}" alt=""><span class="hero-search-suggestion-info"><span class="hero-search-suggestion-name">${escapeHeroSearch(provider.name || 'Provider')}</span><span class="hero-search-suggestion-meta">${escapeHeroSearch(provider.specialty || provider.category || 'Chuyên gia')} · ${escapeHeroSearch(provider.location || 'Chưa cập nhật')}</span></span><i class="fa-solid fa-arrow-up-right-from-square" style="color:#94a3b8;font-size:11px"></i></a>`).join('')
+      : '<div class="hero-search-suggestion-empty">Không tìm thấy gợi ý phù hợp.</div>';
+    suggestions.innerHTML = `${rows}<a class="hero-search-suggestion-footer" href="find_provider.html?search=${encodeURIComponent(query)}">Xem tất cả kết quả cho “${escapeHeroSearch(query)}” <i class="fa-solid fa-arrow-right"></i></a>`;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('heroSearchInput');
+    const form = input?.closest('.hero-search-box');
+    if (!input || !form) return;
+    const suggestions = document.createElement('div');
+    suggestions.id = 'heroSearchSuggestions';
+    suggestions.className = 'hero-search-suggestions';
+    suggestions.setAttribute('role', 'listbox');
+    form.appendChild(suggestions);
+    input.addEventListener('input', () => {
+      clearTimeout(input._heroSearchTimer);
+      input._heroSearchTimer = setTimeout(showHeroSearchSuggestions, 160);
+    });
+    input.addEventListener('keydown', event => {
+      const links = [...suggestions.querySelectorAll('.hero-search-suggestion')];
+      if (event.key === 'Escape') suggestions.classList.remove('is-open');
+      if (event.key === 'ArrowDown' && suggestions.classList.contains('is-open') && links.length) {
+        event.preventDefault();
+        const current = links.findIndex(link => link.classList.contains('is-active'));
+        links.forEach(link => link.classList.remove('is-active'));
+        links[(current + 1) % links.length].classList.add('is-active');
+      }
+      if (event.key === 'ArrowUp' && suggestions.classList.contains('is-open') && links.length) {
+        event.preventDefault();
+        const current = links.findIndex(link => link.classList.contains('is-active'));
+        links.forEach(link => link.classList.remove('is-active'));
+        links[(current <= 0 ? links.length : current) - 1].classList.add('is-active');
+      }
+      if (event.key === 'Enter') {
+        const active = suggestions.querySelector('.hero-search-suggestion.is-active');
+        if (active) {
+          event.preventDefault();
+          window.location.href = active.href;
+        }
+      }
+    });
+    document.addEventListener('click', event => {
+      if (!event.target.closest('.hero-search-box')) suggestions.classList.remove('is-open');
+    });
+  });
+
   function handleHeroSearch(e) {
 
     e.preventDefault();
@@ -3415,7 +3536,7 @@
     if (q) {
 
       window.location.href =
-              `customer.html?search=${encodeURIComponent(q)}`;
+              `find_provider.html?search=${encodeURIComponent(q)}`;
 
     } else {
 

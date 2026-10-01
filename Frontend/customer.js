@@ -640,6 +640,140 @@ function renderCustomerNavbar(activePage = 'home') {
 `;
 }
 
+let customerSearchProviders = null;
+let customerSearchProvidersPromise = null;
+
+function normalizeCustomerSearch(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/gi, 'd')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function escapeCustomerSearchHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
+async function getCustomerSearchProviders() {
+  if (customerSearchProviders) return customerSearchProviders;
+  if (!customerSearchProvidersPromise) {
+    customerSearchProvidersPromise = apiRequest('/api/providers?limit=100')
+      .then(result => {
+        customerSearchProviders = result.success && Array.isArray(result.providers) ? result.providers : [];
+        return customerSearchProviders;
+      })
+      .catch(() => (customerSearchProviders = []));
+  }
+  return customerSearchProvidersPromise;
+}
+
+function ensureCustomerSearchSuggestions(input) {
+  const fieldGroup = input.closest('.provider-search-box, .search-input-wrapper') || input.parentElement;
+  if (!fieldGroup) return null;
+  let suggestions = fieldGroup.querySelector('.customer-search-suggestions');
+  if (suggestions) return suggestions;
+
+  if (getComputedStyle(fieldGroup).position === 'static') fieldGroup.style.position = 'relative';
+  if (!document.getElementById('customerSearchSuggestionStyles')) {
+    const style = document.createElement('style');
+    style.id = 'customerSearchSuggestionStyles';
+    style.textContent = `.customer-search-suggestions{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:1200;background:#fff;border:1px solid #dfe7e2;border-radius:12px;box-shadow:0 14px 34px #0f172a1a;overflow:hidden;display:none;text-align:left}.customer-search-suggestions.is-open{display:block}.customer-search-suggestion{display:flex;align-items:center;gap:11px;padding:10px 12px;text-decoration:none;color:#172033;border-bottom:1px solid #f1f5f3}.customer-search-suggestion:hover,.customer-search-suggestion.is-active{background:#f0fdf4}.customer-search-suggestion img{width:38px;height:38px;flex:0 0 38px;border-radius:10px;object-fit:cover;background:#f1f5f9}.customer-search-suggestion-info{min-width:0;flex:1}.customer-search-suggestion-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.customer-search-suggestion-meta{font-size:11px;color:#718096;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.customer-search-suggestion-footer{display:block;padding:10px 12px;background:#f8faf9;color:#168447;font-size:12px;font-weight:700;text-decoration:none}.customer-search-suggestion-footer:hover{background:#f0fdf4}.customer-search-suggestion-empty{padding:13px;color:#64748b;font-size:12px}`;
+    document.head.appendChild(style);
+  }
+  suggestions = document.createElement('div');
+  suggestions.className = 'customer-search-suggestions';
+  suggestions.setAttribute('role', 'listbox');
+  fieldGroup.appendChild(suggestions);
+  return suggestions;
+}
+
+async function showCustomerSearchSuggestions(input) {
+  const query = input.value.trim();
+  const suggestions = ensureCustomerSearchSuggestions(input);
+  if (!suggestions) return;
+  if (!query) {
+    suggestions.classList.remove('is-open');
+    return;
+  }
+  suggestions.innerHTML = '<div class="customer-search-suggestion-empty">Đang tìm chuyên gia phù hợp...</div>';
+  suggestions.classList.add('is-open');
+
+  const providers = await getCustomerSearchProviders();
+  if (!input.isConnected || input.value.trim() !== query) return;
+  const terms = normalizeCustomerSearch(query).split(/\s+/).filter(Boolean);
+  const matching = providers.map(provider => {
+    const searchable = normalizeCustomerSearch([
+      provider.name, provider.specialty, provider.bio, provider.location, provider.category,
+      ...(Array.isArray(provider.skills) ? provider.skills : [])
+    ].join(' '));
+    const matched = terms.length > 0 && terms.every(term => searchable.includes(term));
+    const name = normalizeCustomerSearch(provider.name);
+    const specialty = normalizeCustomerSearch(provider.specialty);
+    const score = name.startsWith(normalizeCustomerSearch(query)) ? 0 : specialty.startsWith(normalizeCustomerSearch(query)) ? 1 : 2;
+    return { provider, matched, score };
+  }).filter(item => item.matched)
+    .sort((a, b) => a.score - b.score || Number(b.provider.rating || 0) - Number(a.provider.rating || 0))
+    .slice(0, 5);
+
+  const results = matching.length
+    ? matching.map(({ provider }) => `<a class="customer-search-suggestion" role="option" href="customer_provider.html?id=${encodeURIComponent(provider.id)}"><img src="${escapeCustomerSearchHtml(provider.avatar || '')}" alt=""><span class="customer-search-suggestion-info"><span class="customer-search-suggestion-name">${escapeCustomerSearchHtml(provider.name || 'Provider')}</span><span class="customer-search-suggestion-meta">${escapeCustomerSearchHtml(provider.specialty || provider.category || 'Chuyên gia')} · ${escapeCustomerSearchHtml(provider.location || 'Chưa cập nhật')}</span></span><i class="fa-solid fa-arrow-up-right-from-square" style="color:#94a3b8;font-size:11px"></i></a>`).join('')
+    : '<div class="customer-search-suggestion-empty">Không tìm thấy gợi ý phù hợp.</div>';
+  suggestions.innerHTML = `${results}<a class="customer-search-suggestion-footer" href="find_provider.html?search=${encodeURIComponent(query)}">Xem tất cả kết quả cho “${escapeCustomerSearchHtml(query)}” <i class="fa-solid fa-arrow-right"></i></a>`;
+}
+
+document.addEventListener('input', event => {
+  const input = event.target.closest('#navSearchInput, #searchInput, #findSearchInput');
+  if (!input) return;
+  clearTimeout(input._customerSearchTimer);
+  input._customerSearchTimer = setTimeout(() => showCustomerSearchSuggestions(input), 160);
+});
+
+document.addEventListener('keydown', event => {
+  const input = event.target.closest('#navSearchInput, #searchInput, #findSearchInput');
+  if (!input) return;
+  const suggestions = input.closest('.provider-search-box, .search-input-wrapper, div')?.querySelector('.customer-search-suggestions');
+  if (event.key === 'Escape' && suggestions) suggestions.classList.remove('is-open');
+  if (event.key === 'ArrowDown' && suggestions?.classList.contains('is-open')) {
+    event.preventDefault();
+    const links = [...suggestions.querySelectorAll('.customer-search-suggestion')];
+    if (!links.length) return;
+    const current = links.findIndex(link => link.classList.contains('is-active'));
+    links.forEach(link => link.classList.remove('is-active'));
+    links[(current + 1) % links.length].classList.add('is-active');
+  }
+  if (event.key === 'ArrowUp' && suggestions?.classList.contains('is-open')) {
+    event.preventDefault();
+    const links = [...suggestions.querySelectorAll('.customer-search-suggestion')];
+    if (!links.length) return;
+    const current = links.findIndex(link => link.classList.contains('is-active'));
+    links.forEach(link => link.classList.remove('is-active'));
+    links[(current <= 0 ? links.length : current) - 1].classList.add('is-active');
+  }
+  if (event.key === 'Enter' && suggestions?.classList.contains('is-open')) {
+    const active = suggestions.querySelector('.customer-search-suggestion.is-active');
+    if (active) {
+      event.preventDefault();
+      input._customerSearchHandledEnter = true;
+      window.location.href = active.href;
+    }
+  }
+});
+
+window.addEventListener('keyup', event => {
+  if (event.key !== 'Enter' || !event.target?._customerSearchHandledEnter) return;
+  event.target._customerSearchHandledEnter = false;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}, true);
+
+document.addEventListener('click', event => {
+  if (event.target.closest('.customer-search-suggestions, #navSearchInput, #searchInput, #findSearchInput')) return;
+  document.querySelectorAll('.customer-search-suggestions.is-open').forEach(node => node.classList.remove('is-open'));
+});
+
 function handleNavSearch() {
   const input = document.getElementById('navSearchInput');
   const q = (input ? input.value : '').trim();

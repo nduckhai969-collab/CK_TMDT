@@ -271,64 +271,30 @@ router.get('/', (req, res) => {
 
   if (search) {
 
-    const searchLower =
-        search
-            .toLowerCase()
-            .trim();
+    const normalizeSearchText = value => String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+    const searchTerms = normalizeSearchText(search).split(/\s+/).filter(Boolean);
 
 
     providers =
         providers.filter(provider => {
+          const searchableText = normalizeSearchText([
+            provider.name,
+            provider.specialty,
+            provider.bio,
+            provider.location,
+            provider.category,
+            ...(Array.isArray(provider.skills) ? provider.skills : [])
+          ].join(' '));
 
-          const name =
-              String(
-                  provider.name || ''
-              ).toLowerCase();
-
-
-          const specialty =
-              String(
-                  provider.specialty || ''
-              ).toLowerCase();
-
-
-          const bio =
-              String(
-                  provider.bio || ''
-              ).toLowerCase();
-
-
-          const location =
-              String(
-                  provider.location || ''
-              ).toLowerCase();
-
-
-          const skillMatch =
-              Array.isArray(
-                  provider.skills
-              ) &&
-              provider.skills.some(
-                  item =>
-                      String(item)
-                          .toLowerCase()
-                          .includes(searchLower)
-              );
-
-
-          return (
-
-              name.includes(searchLower) ||
-
-              specialty.includes(searchLower) ||
-
-              bio.includes(searchLower) ||
-
-              location.includes(searchLower) ||
-
-              skillMatch
-
-          );
+          return searchTerms.length > 0 && searchTerms.every(term => searchableText.includes(term));
 
         });
 

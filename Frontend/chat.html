@@ -160,7 +160,7 @@
 
     async function loadChatMessages() {
       try {
-        const res = await fetch(`${API_BASE}/api/chat?user1=${myId}&user2=${currentPartnerId}`);
+        const res = await fetch(`${API_BASE}/api/chat?user1=${myId}&user2=${currentPartnerId}`, { headers: { 'x-user-id': myId } });
         if (res.ok) {
           const data = await res.json();
           if (data && data.messages && data.messages.length > 0) {
@@ -198,7 +198,7 @@
       try {
         await fetch(`${API_BASE}/api/chat`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-user-id': myId },
           body: JSON.stringify({
             fromUserId: myId,
             toUserId: currentPartnerId,

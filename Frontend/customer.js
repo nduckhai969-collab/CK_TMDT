@@ -28,7 +28,6 @@ const SESSION_KEY = 'SKILLRENTAL_CURRENT_USER';
 // ============================================================
 
 function getCurrentCustomer() {
-
   const raw = localStorage.getItem(SESSION_KEY);
 
   if (!raw) {
@@ -36,27 +35,15 @@ function getCurrentCustomer() {
   }
 
   try {
-
     const user = JSON.parse(raw);
-
-    if (!user || !user.id) {
-
+    if (!user || !user.id || ['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(user.id)) {
       localStorage.removeItem(SESSION_KEY);
-
       return null;
     }
-
     return user;
-
   } catch (error) {
-
-    console.error(
-        'Session data không hợp lệ:',
-        error
-    );
-
+    console.error('Session data không hợp lệ:', error);
     localStorage.removeItem(SESSION_KEY);
-
     return null;
   }
 }
@@ -95,8 +82,8 @@ function clearCurrentCustomer() {
 // ============================================================
 
 function isCustomerLoggedIn() {
-
-  return getCurrentCustomer() !== null;
+  const user = getCurrentCustomer();
+  return Boolean(user && user.role === 'Customer');
 }
 
 
@@ -113,6 +100,11 @@ function requireCustomerLogin(callback) {
 
     openAuthModal('login');
 
+    return false;
+  }
+
+  if (user.role !== 'Customer') {
+    showToast('Không đủ quyền', 'Thao tác này chỉ dành cho tài khoản khách hàng.', 'error');
     return false;
   }
 
@@ -133,6 +125,17 @@ async function apiRequest(
     endpoint,
     options = {}
 ) {
+
+  const method = String(options.method || 'GET').toUpperCase();
+  const isMutation = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+  const isPrivateRead = method === 'GET' && (
+    /^\/api\/(orders|chat|complaints|reviews)(\/|\?|$)/.test(endpoint) ||
+    /^\/api\/auth\/me(\?|$)/.test(endpoint) ||
+    (/^\/api\/jobs(\?|$)/.test(endpoint) && /[?&]customerId=/.test(endpoint))
+  );
+  if ((isMutation || isPrivateRead) && !requireCustomerLogin()) {
+    return { success: false, loginRequired: true, message: 'Đăng nhập bằng tài khoản khách hàng để tiếp tục.' };
+  }
 
   try {
 
@@ -536,645 +539,155 @@ function getCategoryBadge(cat) {
 // CUSTOMER NAVBAR
 // ============================================================
 
-function renderCustomerNavbar(
-    activePage = 'home'
-) {
-
-  const user =
-      getCurrentCustomer();
-
+function renderCustomerNavbar(activePage = 'home') {
+  const user = getCurrentCustomer();
 
   return `
+<div aria-hidden="true" style="height:64px;"></div>
+<header class="customer-navbar landing-header" style="position:fixed !important; top:0; left:0; right:0; z-index:1000; width:100%; background:rgba(255,255,255,.98); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid #E2E8F0; box-shadow:0 1px 3px rgba(15,23,42,.04);">
+  <div style="max-width:1360px; margin:0 auto; padding:10px 24px; display:flex; align-items:center; justify-content:space-between; gap:14px; box-sizing:border-box;">
 
-<header
-    class="customer-navbar landing-header"
-    style="
-        position:sticky;
-        top:0;
-        z-index:1000;
-        background:rgba(255,255,255,.96);
-        backdrop-filter:blur(10px);
-        -webkit-backdrop-filter:blur(10px);
-        border-bottom:1px solid #E2E8F0;
-        box-shadow:0 1px 3px rgba(15,23,42,.04);
-    "
->
+    <button type="button" onclick="goBackCustomer()" title="Quay lại trang trước" aria-label="Quay lại trang trước" style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;padding:8px 10px;border:1px solid #E2E8F0;border-radius:8px;background:#FFF;color:#475569;font:600 12px Inter,sans-serif;cursor:pointer;">
+      <i class="fa-solid fa-arrow-left"></i><span>Quay lại</span>
+    </button>
+    
+    <!-- BRAND LOGO -->
+    <a href="customer.html" style="display:flex; align-items:center; gap:9px; text-decoration:none; flex-shrink:0;">
+      <div style="width:34px; height:34px; border-radius:8px; background:#16A34A; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; box-shadow:0 2px 6px rgba(22,163,74,.3);">
+        S
+      </div>
+      <div style="font-weight:800; font-size:17px; color:#0F172A; letter-spacing:-0.3px; white-space:nowrap;">
+        SKILL RENTAL
+      </div>
+    </a>
 
-    <div style="
-        max-width:1240px;
-        margin:0 auto;
-        padding:14px 24px;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:24px;
-        box-sizing:border-box;
-    ">
+    <!-- NAV MENU -->
+    <nav style="display:flex; align-items:center; gap:22px; flex-shrink:0;">
+      <a href="customer.html" style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; text-decoration:none; color:${activePage === 'home' ? '#16A34A' : '#475569'}; transition:color .2s ease;" onmouseover="this.style.color='#16A34A'" onmouseout="this.style.color='${activePage === 'home' ? '#16A34A' : '#475569'}'">
+        <i class="fa-solid fa-house" style="font-size:13px;"></i> Trang chủ
+      </a>
+      <a href="find_provider.html" style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; text-decoration:none; color:${activePage === 'providers' ? '#16A34A' : '#475569'}; transition:color .2s ease;" onmouseover="this.style.color='#16A34A'" onmouseout="this.style.color='${activePage === 'providers' ? '#16A34A' : '#475569'}'">
+        <i class="fa-solid fa-magnifying-glass" style="font-size:13px;"></i> Tìm Provider
+      </a>
+      <a href="customer_requests.html" style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; text-decoration:none; color:${activePage === 'requests' ? '#16A34A' : '#475569'}; transition:color .2s ease;" onmouseover="this.style.color='#16A34A'" onmouseout="this.style.color='${activePage === 'requests' ? '#16A34A' : '#475569'}'">
+        <i class="fa-solid fa-bars-progress" style="font-size:13px;"></i> Yêu cầu của tôi
+      </a>
+      <a href="customer_orders.html" style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; text-decoration:none; color:${activePage === 'orders' ? '#16A34A' : '#475569'}; transition:color .2s ease;" onmouseover="this.style.color='#16A34A'" onmouseout="this.style.color='${activePage === 'orders' ? '#16A34A' : '#475569'}'">
+        <i class="fa-solid fa-bag-shopping" style="font-size:13px;"></i> Đơn hàng
+      </a>
+      <a href="customer_chat.html" style="display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; text-decoration:none; color:${activePage === 'chat' ? '#16A34A' : '#475569'}; transition:color .2s ease;" onmouseover="this.style.color='#16A34A'" onmouseout="this.style.color='${activePage === 'chat' ? '#16A34A' : '#475569'}'">
+        <i class="fa-solid fa-comments" style="font-size:13px;"></i> Tin nhắn
+      </a>
+    </nav>
 
+    <!-- RIGHT BAR: SEARCH + NOTIFICATION + USER -->
+    <div style="display:flex; align-items:center; gap:16px;">
+      <!-- Header search -->
+      <div style="position:relative; width:180px;">
+        <input type="text" id="navSearchInput" placeholder="Tìm chuyên gia..." onkeyup="if(event.key==='Enter') handleNavSearch()" style="width:100%; padding:6px 30px 6px 12px; font-size:12.5px; border:1px solid #E2E8F0; border-radius:9999px; outline:none; background:#F8FAFC; color:#0F172A; transition:all .2s;" onfocus="this.style.borderColor='#16A34A'; this.style.background='#FFF'" onblur="this.style.borderColor='#E2E8F0'; this.style.background='#F8FAFC'">
+        <i class="fa-solid fa-magnifying-glass" onclick="handleNavSearch()" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#16A34A; font-size:12px; cursor:pointer;"></i>
+      </div>
 
-        <!-- ==================================================
-             LOGO
-        =================================================== -->
+      <!-- Notification Bell -->
+      <button type="button" onclick="showToast('Thông báo', 'Bạn không có thông báo mới nào.', 'info')" style="background:none; border:none; color:#64748B; font-size:15px; cursor:pointer; padding:6px; position:relative;" title="Thông báo">
+        <i class="fa-regular fa-bell"></i>
+        <span style="position:absolute; top:4px; right:4px; width:7px; height:7px; background:#EF4444; border-radius:50%;"></span>
+      </button>
 
-        <a
-            href="customer.html"
-            style="
-                display:flex;
-                align-items:center;
-                gap:10px;
-                text-decoration:none;
-                flex-shrink:0;
-            "
-        >
+      ${user ? `<!-- User Profile -->
+      <div style="position:relative;">
+        <button type="button" id="customerAccountButton" onclick="toggleCustomerAccountMenu()" style="display:flex; align-items:center; gap:8px; padding:3px 8px 3px 3px; border:1px solid transparent; border-radius:9999px; background:transparent; cursor:pointer;" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='transparent'">
+          <img src="${user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}" alt="Avatar" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1.5px solid #E2E8F0;">
+          <span style="font-weight:700; font-size:13px; color:#0F172A;">${user.name || 'Lê Tuấn Anh'}</span>
+          <i class="fa-solid fa-chevron-down" style="font-size:10px; color:#94A3B8;"></i>
+        </button>
 
-            <div style="
-                width:42px;
-                height:42px;
-                border-radius:10px;
-                background:#16A34A;
-                color:#FFFFFF;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                font-weight:800;
-                font-size:20px;
-                box-shadow:0 2px 8px rgba(22,163,74,.25);
-                box-sizing:border-box;
-            ">
-                SR
-            </div>
-
-
-            <div>
-
-                <div style="
-                    font-weight:800;
-                    font-size:19px;
-                    color:#0F172A;
-                    line-height:1.1;
-                    letter-spacing:0;
-                    white-space:nowrap;
-                ">
-                    SKILL RENTAL
-                </div>
-
-                <div style="
-                    font-size:10px;
-                    color:#16A34A;
-                    font-weight:600;
-                    text-transform:uppercase;
-                    letter-spacing:.4px;
-                    margin-top:2px;
-                ">
-                    Dịch vụ & Kỹ năng
-                </div>
-
-            </div>
-
-        </a>
-
-
-        <!-- ==================================================
-             MAIN MENU
-        =================================================== -->
-
-        <nav style="
-            flex:1;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            gap:26px;
-        ">
-
-
-            <!-- KHÁM PHÁ -->
-
-            <a
-                href="customer.html"
-                style="
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
-                    padding:0;
-                    border-radius:0;
-                    font-size:14px;
-                    font-weight:600;
-                    line-height:1.5;
-                    text-decoration:none;
-                    color:${
-      activePage === 'home'
-          ? '#16A34A'
-          : '#64748B'
-  };
-                    background:transparent;
-                    white-space:nowrap;
-                    transition:color .2s ease;
-                "
-                onmouseover="this.style.color='#16A34A'"
-                onmouseout="this.style.color='${
-      activePage === 'home'
-          ? '#16A34A'
-          : '#64748B'
-  }'"
-            >
-                <i class="fa-solid fa-compass"></i>
-                Khám Phá
+        <!-- Dropdown Menu -->
+        <div id="customerAccountMenu" style="display:none; position:absolute; top:calc(100% + 8px); right:0; width:210px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,.1); padding:8px; z-index:2000;">
+          <div style="padding:8px 10px; border-bottom:1px solid #F1F5F9; margin-bottom:6px;">
+            <div style="font-weight:700; font-size:13px; color:#0F172A;">${user.name || 'Lê Tuấn Anh'}</div>
+            <div style="font-size:11px; color:#64748B;">${user.email || 'tuananh.le@example.com'}</div>
+          </div>
+          <a href="customer_profile.html" style="display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:13px; color:#334155; text-decoration:none; border-radius:6px;" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='transparent'">
+            <i class="fa-regular fa-user" style="color:#64748B;"></i> Hồ Sơ Của Tôi
+          </a>
+          <a href="customer_orders.html" style="display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:13px; color:#334155; text-decoration:none; border-radius:6px;" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='transparent'">
+            <i class="fa-solid fa-receipt" style="color:#64748B;"></i> Quản Lý Đơn Hàng
+          </a>
+          <a href="customer_complaints.html" style="display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:13px; color:#334155; text-decoration:none; border-radius:6px;" onmouseover="this.style.background='#FEF2F2';this.style.color='#B91C1C'" onmouseout="this.style.background='transparent';this.style.color='#334155'">
+            <i class="fa-solid fa-shield-halved" style="color:#DC2626;"></i> Quản Lý Khiếu Nại
+          </a>
+          <a href="customer_reviews.html" style="display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:13px; color:#334155; text-decoration:none; border-radius:6px;" onmouseover="this.style.background='#FFFBEB';this.style.color='#A16207'" onmouseout="this.style.background='transparent';this.style.color='#334155'">
+            <i class="fa-solid fa-star" style="color:#D97706;"></i> Quản Lý Đánh Giá
+          </a>
+          <a href="customer_favorites.html" style="display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:13px; color:#334155; text-decoration:none; border-radius:6px;" onmouseover="this.style.background='#FFF1F2';this.style.color='#BE123C'" onmouseout="this.style.background='transparent';this.style.color='#334155'">
+            <i class="fa-solid fa-heart" style="color:#E11D48;"></i> Provider yêu thích
+          </a>
+          <div style="border-top:1px solid #F1F5F9; margin-top:6px; padding-top:6px;">
+            <a href="javascript:void(0)" onclick="handleCustomerLogout()" style="display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:13px; color:#EF4444; text-decoration:none; border-radius:6px;" onmouseover="this.style.background='#FEF2F2'" onmouseout="this.style.background='transparent'">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng Xuất
             </a>
-
-
-            <!-- ĐĂNG YÊU CẦU -->
-
-            <a
-                href="customer_requests.html"
-                onclick="
-                    if (!requireCustomerLogin()) {
-                        event.preventDefault();
-                    }
-                "
-                style="
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
-                    padding:0;
-                    border-radius:0;
-                    font-size:14px;
-                    font-weight:600;
-                    line-height:1.5;
-                    text-decoration:none;
-                    color:${
-      activePage === 'requests'
-          ? '#16A34A'
-          : '#64748B'
-  };
-                    background:transparent;
-                    white-space:nowrap;
-                    transition:color .2s ease;
-                "
-                onmouseover="this.style.color='#16A34A'"
-                onmouseout="this.style.color='${
-      activePage === 'requests'
-          ? '#16A34A'
-          : '#64748B'
-  }'"
-            >
-                <i class="fa-solid fa-bullhorn"></i>
-                Đăng Yêu Cầu
-            </a>
-
-
-            <!-- ĐƠN HÀNG -->
-
-            <a
-                href="customer_orders.html"
-                onclick="
-                    if (!requireCustomerLogin()) {
-                        event.preventDefault();
-                    }
-                "
-                style="
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
-                    padding:0;
-                    border-radius:0;
-                    font-size:14px;
-                    font-weight:600;
-                    line-height:1.5;
-                    text-decoration:none;
-                    color:${
-      activePage === 'orders'
-          ? '#16A34A'
-          : '#64748B'
-  };
-                    background:transparent;
-                    white-space:nowrap;
-                    transition:color .2s ease;
-                "
-                onmouseover="this.style.color='#16A34A'"
-                onmouseout="this.style.color='${
-      activePage === 'orders'
-          ? '#16A34A'
-          : '#64748B'
-  }'"
-            >
-                <i class="fa-solid fa-receipt"></i>
-                Đơn Hàng
-            </a>
-
-
-            <!-- TIN NHẮN -->
-
-            <a
-                href="customer_chat.html"
-                onclick="
-                    if (!requireCustomerLogin()) {
-                        event.preventDefault();
-                    }
-                "
-                style="
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
-                    padding:0;
-                    border-radius:0;
-                    font-size:14px;
-                    font-weight:600;
-                    line-height:1.5;
-                    text-decoration:none;
-                    color:${
-      activePage === 'chat'
-          ? '#16A34A'
-          : '#64748B'
-  };
-                    background:transparent;
-                    white-space:nowrap;
-                    transition:color .2s ease;
-                "
-                onmouseover="this.style.color='#16A34A'"
-                onmouseout="this.style.color='${
-      activePage === 'chat'
-          ? '#16A34A'
-          : '#64748B'
-  }'"
-            >
-                <i class="fa-solid fa-comments"></i>
-                Tin Nhắn
-            </a>
-
-        </nav>
-
-
-        <!-- ==================================================
-             ACCOUNT
-        =================================================== -->
-
-        ${
-      user
-
-          ? `
-
-        <!-- ĐÃ ĐĂNG NHẬP -->
-
-        <div style="
-            position:relative;
-            flex-shrink:0;
-        ">
-
-            <button
-                type="button"
-                id="customerAccountButton"
-                onclick="toggleCustomerAccountMenu()"
-                style="
-                    display:flex;
-                    align-items:center;
-                    gap:9px;
-                    padding:5px 10px 5px 5px;
-                    border:1px solid #E2E8F0;
-                    border-radius:10px;
-                    background:#FFFFFF;
-                    cursor:pointer;
-                    box-sizing:border-box;
-                "
-            >
-
-                <img
-                    src="${
-              user.avatar ||
-              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'
-          }"
-                    alt="Avatar"
-                    style="
-                        width:34px;
-                        height:34px;
-                        border-radius:50%;
-                        object-fit:cover;
-                        border:2px solid #DCFCE7;
-                    "
-                >
-
-
-                <div style="
-                    text-align:left;
-                    min-width:80px;
-                    max-width:130px;
-                ">
-
-                    <div style="
-                        font-weight:700;
-                        font-size:13px;
-                        color:#0F172A;
-                        line-height:1.2;
-                        overflow:hidden;
-                        text-overflow:ellipsis;
-                        white-space:nowrap;
-                    ">
-                        ${user.name || 'Tài khoản'}
-                    </div>
-
-                    <div style="
-                        font-size:10.5px;
-                        color:#16A34A;
-                        font-weight:600;
-                        margin-top:2px;
-                    ">
-                        ${user.role || 'Tài khoản'}
-                    </div>
-
-                </div>
-
-
-                <i
-                    class="fa-solid fa-chevron-down"
-                    style="
-                        font-size:10px;
-                        color:#64748B;
-                    "
-                ></i>
-
-            </button>
-
-
-            <!-- DROPDOWN -->
-
-            <div
-                id="customerAccountMenu"
-                style="
-                    display:none;
-                    position:absolute;
-                    top:calc(100% + 10px);
-                    right:0;
-                    width:230px;
-                    background:#FFFFFF;
-                    border:1px solid #E2E8F0;
-                    border-radius:12px;
-                    box-shadow:0 12px 30px rgba(15,23,42,.12);
-                    padding:8px;
-                    z-index:2000;
-                "
-            >
-
-                <div style="
-                    padding:10px 10px 12px;
-                    border-bottom:1px solid #F1F5F9;
-                    margin-bottom:6px;
-                ">
-
-                    <div style="
-                        font-size:11px;
-                        color:#64748B;
-                        margin-bottom:3px;
-                    ">
-                        Tài khoản
-                    </div>
-
-                    <div style="
-                        font-size:13px;
-                        font-weight:700;
-                        color:#0F172A;
-                    ">
-                        ${user.name || 'Tài khoản'}
-                    </div>
-
-                    <div style="
-                        font-size:11px;
-                        color:#64748B;
-                        margin-top:3px;
-                        overflow:hidden;
-                        text-overflow:ellipsis;
-                        white-space:nowrap;
-                    ">
-                        ${user.email || ''}
-                    </div>
-
-                    ${
-              user.balance !== undefined
-                  ? `
-                    <div style="
-                        display:flex;
-                        align-items:center;
-                        gap:5px;
-                        margin-top:8px;
-                        font-size:11px;
-                        color:#16A34A;
-                        font-weight:600;
-                    ">
-                        <i class="fa-solid fa-wallet"></i>
-                        Số dư:
-                        ${formatVND(user.balance)}
-                    </div>
-                    `
-                  : ''
-          }
-
-                </div>
-
-
-                <a
-                    href="customer_profile.html"
-                    style="
-                        display:flex;
-                        align-items:center;
-                        gap:10px;
-                        padding:10px;
-                        border-radius:8px;
-                        text-decoration:none;
-                        color:#334155;
-                        font-size:13px;
-                        font-weight:600;
-                    "
-                >
-                    <i
-                        class="fa-solid fa-user"
-                        style="
-                            width:18px;
-                            color:#16A34A;
-                            text-align:center;
-                        "
-                    ></i>
-
-                    Hồ Sơ
-                </a>
-
-
-                <a
-                    href="customer_orders.html"
-                    onclick="
-                        if (!requireCustomerLogin()) {
-                            event.preventDefault();
-                        }
-                    "
-                    style="
-                        display:flex;
-                        align-items:center;
-                        gap:10px;
-                        padding:10px;
-                        border-radius:8px;
-                        text-decoration:none;
-                        color:#334155;
-                        font-size:13px;
-                        font-weight:600;
-                    "
-                >
-                    <i
-                        class="fa-solid fa-receipt"
-                        style="
-                            width:18px;
-                            color:#16A34A;
-                            text-align:center;
-                        "
-                    ></i>
-
-                    Đơn Hàng Của Tôi
-                </a>
-
-
-                <a
-                    href="customer_complaint.html"
-                    onclick="
-                        if (!requireCustomerLogin()) {
-                            event.preventDefault();
-                        }
-                    "
-                    style="
-                        display:flex;
-                        align-items:center;
-                        gap:10px;
-                        padding:10px;
-                        border-radius:8px;
-                        text-decoration:none;
-                        color:#334155;
-                        font-size:13px;
-                        font-weight:600;
-                    "
-                >
-                    <i
-                        class="fa-solid fa-circle-exclamation"
-                        style="
-                            width:18px;
-                            color:#F59E0B;
-                            text-align:center;
-                        "
-                    ></i>
-
-                    Khiếu Nại & Hỗ Trợ
-                </a>
-
-
-                <div style="
-                    height:1px;
-                    background:#E2E8F0;
-                    margin:6px 4px;
-                "></div>
-
-
-                <button
-                    type="button"
-                    onclick="customerLogout()"
-                    style="
-                        width:100%;
-                        display:flex;
-                        align-items:center;
-                        gap:10px;
-                        padding:10px;
-                        border:none;
-                        border-radius:8px;
-                        background:transparent;
-                        color:#DC2626;
-                        font-size:13px;
-                        font-weight:600;
-                        cursor:pointer;
-                        text-align:left;
-                    "
-                >
-
-                    <i
-                        class="fa-solid fa-right-from-bracket"
-                        style="width:18px;"
-                    ></i>
-
-                    Đăng Xuất
-
-                </button>
-
-            </div>
-
+          </div>
         </div>
+      </div>
+      ` : `<div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" onclick="openAuthModal('login')" class="btn btn-outline" style="padding:7px 12px;font-size:12px;">Đăng nhập</button>
+        <button type="button" onclick="openAuthModal('register')" class="btn btn-primary" style="padding:7px 12px;font-size:12px;">Đăng ký</button>
+      </div>`}
+    </div>
+  </div>
+</header>
+`;
+}
 
-        `
+function handleNavSearch() {
+  const input = document.getElementById('navSearchInput');
+  const q = (input ? input.value : '').trim();
+  if (q) {
+    window.location.href = 'find_provider.html?search=' + encodeURIComponent(q);
+  } else {
+    window.location.href = 'find_provider.html';
+  }
+}
+window.handleNavSearch = handleNavSearch;
 
-          : `
-
-        <!-- CHƯA ĐĂNG NHẬP -->
-
-        <div style="
-            display:flex;
-            align-items:center;
-            gap:12px;
-            flex-shrink:0;
-        ">
-
-            <button
-                type="button"
-                onclick="openAuthModal('login')"
-                style="
-                    display:inline-flex;
-                    align-items:center;
-                    justify-content:center;
-                    gap:8px;
-                    padding:10px 20px;
-                    border:1px solid #E2E8F0;
-                    border-radius:8px;
-                    background:#FFFFFF;
-                    color:#0F172A;
-                    font-size:14px;
-                    font-weight:600;
-                    line-height:1;
-                    cursor:pointer;
-                    white-space:nowrap;
-                    box-sizing:border-box;
-                "
-            >
-                <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                Đăng Nhập
-            </button>
-
-
-            <button
-                type="button"
-                onclick="openAuthModal('register')"
-                style="
-                    display:inline-flex;
-                    align-items:center;
-                    justify-content:center;
-                    gap:8px;
-                    padding:10px 20px;
-                    border:1px solid #16A34A;
-                    border-radius:8px;
-                    background:#16A34A;
-                    color:#FFFFFF;
-                    font-size:14px;
-                    font-weight:600;
-                    line-height:1;
-                    cursor:pointer;
-                    white-space:nowrap;
-                    box-sizing:border-box;
-                "
-            >
-                <i class="fa-solid fa-user-plus"></i>
-                Đăng Ký
-            </button>
-
-        </div>
-
-        `
+function goBackCustomer() {
+  const currentPage = location.pathname.split('/').pop().toLowerCase();
+  if (currentPage === 'customer.html') {
+    location.href = 'index.html';
+    return;
   }
 
-    </div>
-
-</header>
-
-    `;
+  const previous = document.referrer;
+  if (previous) {
+    try {
+      const url = new URL(previous);
+      const isCustomerPage = url.origin === location.origin && /\/(customer[^/]*\.html|find_provider\.html|find-provider|find_provider)$/.test(url.pathname);
+      if (isCustomerPage) {
+        history.back();
+        return;
+      }
+    } catch (error) {
+      // Use the customer home page when the previous URL cannot be checked.
+    }
+  }
+  location.href = 'customer.html';
 }
+window.goBackCustomer = goBackCustomer;
+
+function openProviderProfileCard(event, providerId) {
+  if (event.target.closest('a, button, .provider-skill')) return;
+  location.href = `customer_provider.html?id=${encodeURIComponent(providerId)}`;
+}
+window.openProviderProfileCard = openProviderProfileCard;
+
+function handleProviderProfileCardKeydown(event, providerId) {
+  if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('a, button, .provider-skill')) {
+    event.preventDefault();
+    openProviderProfileCard(event, providerId);
+  }
+}
+window.handleProviderProfileCardKeydown = handleProviderProfileCardKeydown;
 
 
 // ============================================================
@@ -1256,6 +769,17 @@ function customerLogout() {
 
   }, 300);
 }
+
+function handleCustomerLogout(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const menu = document.getElementById('customerAccountMenu');
+  if (menu) menu.style.display = 'none';
+  customerLogout();
+}
+window.handleCustomerLogout = handleCustomerLogout;
 
 
 // ============================================================
@@ -2368,39 +1892,8 @@ async function handleModalLogin(e) {
       );
     }
   } catch (error) {
-    console.warn('Lỗi kết nối máy chủ, kích hoạt đăng nhập demo:', error);
-
-    /* FALLBACK DEMO CỤC BỘ ĐỒNG BỘ 100% VỚI INDEX.HTML */
-    let demoUser;
-    if (email.toLowerCase() === 'an.nguyen@example.com') {
-      demoUser = {
-        id: 'USR001',
-        name: 'Nguyễn Văn An',
-        email: email,
-        phone: '0912 345 678',
-        role: 'Provider',
-        balance: 24500000,
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'
-      };
-    } else {
-      demoUser = {
-        id: 'USR003',
-        name: 'Lê Hoàng Long',
-        email: email,
-        phone: '0988 776 655',
-        role: 'Customer',
-        balance: 10275000,
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
-      };
-    }
-
-    setCurrentCustomer(demoUser);
-    showToast('Đăng Nhập Thành Công!', `Đã đăng nhập với tài khoản ${demoUser.name}.`, 'success');
-    closeAuthModal();
-
-    setTimeout(() => {
-      redirectAfterLogin(demoUser);
-    }, 300);
+    console.error('Không thể kết nối máy chủ đăng nhập:', error);
+    showToast('Không thể đăng nhập', 'Không kết nối được máy chủ. Vui lòng thử lại khi server hoạt động.', 'error');
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = `
@@ -2735,3 +2228,251 @@ window.formatVND =
 
 window.getCategoryBadge =
     getCategoryBadge;
+
+// ============================================================
+// CUSTOMER FAVORITE PROVIDERS
+// ============================================================
+let favoriteProviderIds = new Set();
+let favoriteProviderIdsLoaded = false;
+
+async function loadFavoriteProviderIds() {
+  const user = getCurrentCustomer();
+  if (!user || user.role !== 'Customer') {
+    favoriteProviderIds = new Set();
+    favoriteProviderIdsLoaded = true;
+    syncFavoriteButtons();
+    return favoriteProviderIds;
+  }
+  const result = await apiRequest('/api/providers/favorites');
+  if (result.success) {
+    favoriteProviderIds = new Set(result.providerIds || []);
+    favoriteProviderIdsLoaded = true;
+    syncFavoriteButtons();
+  }
+  return favoriteProviderIds;
+}
+
+function syncFavoriteButtons() {
+  document.querySelectorAll('[data-favorite-provider]').forEach(button => {
+    const isFavorite = favoriteProviderIds.has(button.dataset.favoriteProvider);
+    button.setAttribute('aria-pressed', String(isFavorite));
+    button.title = isFavorite ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích';
+    button.classList.toggle('is-favorite', isFavorite);
+    const icon = button.querySelector('i');
+    if (icon) icon.className = `${isFavorite ? 'fa-solid' : 'fa-regular'} fa-heart`;
+    const label = button.querySelector('[data-favorite-label]');
+    if (label) label.textContent = isFavorite ? 'Đã yêu thích' : 'Thêm vào yêu thích';
+  });
+}
+
+async function toggleFavoriteProvider(providerId, button = null) {
+  if (!requireCustomerLogin()) return;
+  if (!favoriteProviderIdsLoaded) await loadFavoriteProviderIds();
+  const isFavorite = favoriteProviderIds.has(providerId);
+  if (button) button.disabled = true;
+  try {
+    const result = await apiRequest(`/api/providers/${encodeURIComponent(providerId)}/favorite`, {
+      method: isFavorite ? 'DELETE' : 'PUT'
+    });
+    if (!result.success) throw new Error(result.message || 'Không thể cập nhật danh sách yêu thích.');
+    if (isFavorite) favoriteProviderIds.delete(providerId);
+    else favoriteProviderIds.add(providerId);
+    syncFavoriteButtons();
+    if (typeof renderFavoriteProviders === 'function') renderFavoriteProviders();
+    showToast(isFavorite ? 'Đã cập nhật' : 'Đã lưu Provider', result.message, 'success');
+  } catch (error) {
+    showToast('Chưa cập nhật được', error.message || 'Vui lòng thử lại.', 'error');
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+window.loadFavoriteProviderIds = loadFavoriteProviderIds;
+window.syncFavoriteButtons = syncFavoriteButtons;
+window.toggleFavoriteProvider = toggleFavoriteProvider;
+
+// ============================================================
+// FLOATING CHAT WIDGET (Matching Design Screenshot)
+// ============================================================
+let activeFloatingChat = { providerId: 'PRV001', userId: 'USR001', name: 'Nguyễn Văn An', specialty: '', avatar: '' };
+
+function initFloatingChat(targetProviderId = 'PRV001', targetProviderName = 'Nguyễn Văn An', specialty = '', avatar = '') {
+  activeFloatingChat = { providerId: targetProviderId || 'PRV001', userId: '', name: targetProviderName || 'Chuyên gia', specialty: specialty || '', avatar: avatar || '' };
+  let widget = document.getElementById('srFloatingChatContainer');
+  if (!widget) {
+    widget = document.createElement('div');
+    widget.id = 'srFloatingChatContainer';
+    document.body.appendChild(widget);
+  }
+
+  widget.innerHTML = `
+    <!-- Floating Trigger Button (Pill at bottom right) -->
+    <div id="srChatTriggerBtn" onclick="toggleFloatingChat()" style="position:fixed; bottom:24px; right:24px; z-index:9990; background:#16A34A; color:#FFFFFF; padding:11px 20px; border-radius:9999px; display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; cursor:pointer; box-shadow:0 4px 16px rgba(22,163,74,0.4); transition:all 0.2s ease;">
+      <i class="fa-solid fa-comments"></i>
+      <span>Tin nhắn</span>
+      <span style="width:8px; height:8px; background:#4ADE80; border-radius:50%; display:inline-block;"></span>
+    </div>
+
+    <!-- Floating Chat Window (Popup matching screenshot) -->
+    <div id="srChatWindow" style="display:none; position:fixed; bottom:80px; right:24px; width:360px; height:500px; max-width:calc(100vw - 32px); background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; box-shadow:0 12px 36px rgba(15,23,42,0.18); z-index:9995; flex-direction:column; overflow:hidden; font-family:'Inter', sans-serif;">
+      
+      <!-- Chat Header -->
+      <div style="background:#FFFFFF; border-bottom:1px solid #E2E8F0; padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
+        <div style="font-weight:700; font-size:15px; color:#0F172A;">Tin nhắn</div>
+        <button type="button" onclick="toggleFloatingChat(false)" style="background:none; border:none; color:#94A3B8; font-size:16px; cursor:pointer; padding:4px;" title="Đóng">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Active Contact Bar (matching screenshot) -->
+      <div style="background:#F0FDF4; border-bottom:1px solid #DCFCE7; padding:8px 14px; display:flex; align-items:center; gap:10px;">
+        <div style="position:relative;">
+          <img id="srChatPartnerAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+          <span style="position:absolute; bottom:0; right:0; width:8px; height:8px; background:#16A34A; border-radius:50%; border:1.5px solid #FFF;"></span>
+        </div>
+        <div style="flex:1;">
+          <div id="srChatPartnerName" style="font-weight:700; font-size:13px; color:#0F172A;">Đang tải chuyên gia...</div>
+          <div id="srChatPartnerRole" style="font-size:11px; color:#16A34A; font-weight:500;">Tin nhắn được đồng bộ với hộp thư</div>
+        </div>
+        <a id="srChatFullPageLink" href="customer_chat.html" style="font-size:11px;color:#15803d;font-weight:700;text-decoration:none">Mở hộp thư <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+      </div>
+
+      <!-- Messages Body -->
+      <div id="srChatMessagesList" style="flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; background:#FAFAFA;">
+        <div style="margin:auto;text-align:center;color:#94A3B8;font-size:12px">Đang tải hội thoại…</div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <form id="srChatForm" onsubmit="handleSendFloatingMessage(event)" style="border-top:1px solid #E2E8F0; padding:10px 12px; display:flex; align-items:center; gap:8px; background:#FFFFFF;">
+        <input type="text" id="srChatInput" placeholder="Nhập tin nhắn..." style="flex:1; border:1px solid #E2E8F0; border-radius:8px; padding:9px 12px; font-size:13px; outline:none; font-family:inherit; transition:border 0.2s;" onfocus="this.style.borderColor='#16A34A'" onblur="this.style.borderColor='#E2E8F0'">
+        <button type="submit" style="background:#16A34A; color:#FFFFFF; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;">
+          Gửi
+        </button>
+      </form>
+    </div>
+  `;
+  const partnerName = document.getElementById('srChatPartnerName');
+  const partnerRole = document.getElementById('srChatPartnerRole');
+  const partnerAvatar = document.getElementById('srChatPartnerAvatar');
+  if (partnerName) partnerName.textContent = activeFloatingChat.name;
+  if (partnerRole) partnerRole.textContent = activeFloatingChat.specialty || 'Tin nhắn được đồng bộ với hộp thư';
+  if (partnerAvatar && activeFloatingChat.avatar) partnerAvatar.src = activeFloatingChat.avatar;
+  const fullPageLink = document.getElementById('srChatFullPageLink');
+  if (fullPageLink) fullPageLink.href = `customer_chat.html?with=${encodeURIComponent(activeFloatingChat.providerId)}`;
+  resolveFloatingChatProvider();
+}
+
+async function resolveFloatingChatProvider() {
+  const target = activeFloatingChat;
+  const response = await apiRequest(`/api/providers/${encodeURIComponent(target.providerId)}`);
+  if (target !== activeFloatingChat || !response.success || !response.provider) return;
+  const provider = response.provider;
+  target.userId = provider.userId || provider.id;
+  target.name = provider.name || target.name;
+  target.specialty = provider.specialty || target.specialty;
+  target.avatar = provider.avatar || target.avatar;
+  const name = document.getElementById('srChatPartnerName');
+  const role = document.getElementById('srChatPartnerRole');
+  const avatarImage = document.getElementById('srChatPartnerAvatar');
+  if (name) name.textContent = target.name;
+  if (role) role.textContent = target.specialty;
+  if (avatarImage) avatarImage.src = target.avatar || avatarImage.src;
+  await loadFloatingChatMessages();
+}
+
+async function loadFloatingChatMessages() {
+  const target = activeFloatingChat;
+  const list = document.getElementById('srChatMessagesList');
+  if (!list) return;
+  if (!target.userId) {
+    list.innerHTML = '<div style="margin:auto;text-align:center;color:#64748B;font-size:12px">Không tải được thông tin chuyên gia.</div>';
+    return;
+  }
+  const user = getCurrentCustomer();
+  if (!user || user.role !== 'Customer') return;
+  const result = await apiRequest(`/api/chat?user1=${encodeURIComponent(user.id)}&user2=${encodeURIComponent(target.userId)}`);
+  if (target !== activeFloatingChat || !document.getElementById('srChatMessagesList')) return;
+  const messages = result.success ? (result.messages || []) : [];
+  list.replaceChildren();
+  if (!messages.length) {
+    list.innerHTML = '<div style="margin:auto;text-align:center;color:#94A3B8;font-size:12px">Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện!</div>';
+    return;
+  }
+  messages.forEach(message => {
+    const bubble = document.createElement('div');
+    bubble.style.cssText = `align-self:${message.fromUserId === user.id ? 'flex-end' : 'flex-start'};max-width:84%;`;
+    const body = document.createElement('div');
+    body.textContent = message.text || '';
+    body.style.cssText = message.fromUserId === user.id
+      ? 'background:#DCFCE7;color:#14532D;padding:10px 14px;border-radius:14px 14px 2px 14px;font-size:13px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;'
+      : 'background:#FFF;border:1px solid #E2E8F0;color:#1E293B;padding:10px 14px;border-radius:14px 14px 14px 2px;font-size:13px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;';
+    const time = document.createElement('div');
+    time.textContent = message.time || '';
+    time.style.cssText = 'font-size:10px;color:#94A3B8;margin-top:4px;';
+    bubble.append(body, time);
+    list.appendChild(bubble);
+  });
+  list.scrollTop = list.scrollHeight;
+}
+
+function toggleFloatingChat(show = null) {
+  let win = document.getElementById('srChatWindow');
+  const willOpen = show === true || (show === null && (!win || win.style.display === 'none' || !win.style.display));
+  if (willOpen && !requireCustomerLogin()) return;
+  if (!win) {
+    initFloatingChat();
+    win = document.getElementById('srChatWindow');
+  }
+  if (show === null) {
+    const isHidden = win.style.display === 'none' || !win.style.display;
+    win.style.display = isHidden ? 'flex' : 'none';
+  } else {
+    win.style.display = show ? 'flex' : 'none';
+  }
+  if (win.style.display === 'flex') {
+    resolveFloatingChatProvider();
+    const input = document.getElementById('srChatInput');
+    if (input) input.focus();
+    const list = document.getElementById('srChatMessagesList');
+    if (list) list.scrollTop = list.scrollHeight;
+  }
+}
+
+async function handleSendFloatingMessage(e) {
+  if (e) e.preventDefault();
+  if (!requireCustomerLogin()) return;
+  const currentUser = getCurrentCustomer();
+  const input = document.getElementById('srChatInput');
+  const text = (input ? input.value : '').trim();
+  if (!text || !activeFloatingChat.userId) return;
+  const sendButton = document.querySelector('#srChatForm button[type="submit"]');
+  if (sendButton) sendButton.disabled = true;
+  try {
+    const result = await apiRequest('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        fromUserId: currentUser.id,
+        toUserId: activeFloatingChat.userId,
+        text: text
+      })
+    });
+    if (!result.success) throw new Error(result.message || 'Không thể gửi tin nhắn.');
+    input.value = '';
+    await loadFloatingChatMessages();
+  } catch (err) {
+    showToast('Chưa gửi được', err.message || 'Vui lòng thử lại.', 'error');
+  } finally {
+    if (sendButton) sendButton.disabled = false;
+  }
+}
+
+function openChatWithProvider(providerId, providerName, specialty, avatar) {
+  if (!requireCustomerLogin()) return;
+  initFloatingChat(providerId, providerName, specialty, avatar);
+  toggleFloatingChat(true);
+}
+
+window.initFloatingChat = initFloatingChat;
+window.toggleFloatingChat = toggleFloatingChat;
+window.handleSendFloatingMessage = handleSendFloatingMessage;
+window.openChatWithProvider = openChatWithProvider;

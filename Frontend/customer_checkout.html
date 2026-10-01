@@ -351,6 +351,7 @@
     });
 
     function selectPaymentMethod(method, el) {
+      if (!requireCustomerLogin()) return;
       selectedMethod = method;
       document.querySelectorAll('.payment-method-card').forEach(c => {
         c.classList.remove('selected');
@@ -365,6 +366,7 @@
     }
 
     async function submitEscrowOrder() {
+      if (!requireCustomerLogin()) return;
       const btn = document.getElementById('btnSubmitEscrow');
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Ký Quỹ Escrow...`;
@@ -379,6 +381,8 @@
         serviceTitle: draft.serviceTitle,
         price: draft.price,
         deadline: draft.date,
+        scheduledDate: draft.scheduledDate,
+        scheduledTime: draft.time,
         notes: draft.notes,
         paymentMethod: selectedMethod === 'vietqr' ? 'Chuyển khoản VietQR' : (selectedMethod === 'vnpay' ? 'Ví VNPay / MoMo' : 'Số dư tài khoản')
       };

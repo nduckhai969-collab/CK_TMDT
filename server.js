@@ -10,7 +10,7 @@ const jobRoutes = require('./routes/jobRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
-const adminRoutes = require('./routes/adminRoutes');
+//const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,7 +31,7 @@ app.use(express.static(path.join(__dirname, 'Frontend')));
 
 // 4. API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
+//app.use('/api/admin', adminRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/complaints', complaintRoutes);
@@ -52,6 +52,11 @@ app.get('/api', (req, res) => {
 // Chuyển hướng trang login cũ sang modal index
 app.get(['/customer_login.html', '/login'], (req, res) => {
   res.redirect('/index.html?auth=login');
+});
+
+// Route tìm provider
+app.get(['/find-provider', '/find_provider', '/find_provider.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Frontend', 'find_provider.html'));
 });
 
 // Route gốc vào trang chủ

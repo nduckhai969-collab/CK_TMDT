@@ -133,6 +133,7 @@
 
     async function submitComplaint(e) {
       e.preventDefault();
+      if (!requireCustomerLogin()) return;
       const btn = document.getElementById('btnSubmitComplaint');
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi Khiếu Nại...`;
@@ -156,8 +157,8 @@
       if (res.success) {
         showToast('Đã Mở Tranh Chấp', res.message, 'success');
         setTimeout(() => {
-          window.location.href = 'customer_orders.html';
-        }, 1500);
+          window.location.href = 'customer_complaints.html';
+        }, 1200);
       } else {
         showToast('Lỗi', res.message || 'Không thể gửi khiếu nại', 'error');
         btn.disabled = false;

@@ -2,8 +2,8 @@
   "users": [
     {
       "id": "USR001",
-      "name": "Nguyễn Văn An",
-      "email": "an.nguyen@example.com",
+      "name": "Nguyễn Văn Minh",
+      "email": "minh.nguyen@example.com",
       "phone": "0901 234 567",
       "role": "Provider",
       "password": "123",
@@ -15,8 +15,8 @@
     },
     {
       "id": "USR002",
-      "name": "Trần Thị Lan",
-      "email": "lan.tran@example.com",
+      "name": "Trần Ngọc Mai",
+      "email": "mai.tran@example.com",
       "phone": "0912 345 678",
       "role": "Provider",
       "password": "123",
@@ -35,7 +35,7 @@
       "password": "123",
       "joinDate": "15/03/2024",
       "spentOrEarned": "24.600.000đ",
-      "balance": 10275000,
+      "balance": 46335000,
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
       "address": "",
@@ -108,33 +108,45 @@
       "balance": 0,
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"
+    },
+    {
+      "id": "USR100",
+      "name": "Lê Tuấn Anh",
+      "email": "tuananh.le@example.com",
+      "phone": "0988 123 456",
+      "role": "Customer",
+      "password": "123",
+      "joinDate": "10/01/2024",
+      "spentOrEarned": "15.500.000đ",
+      "balance": 8500000,
+      "status": "active",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"
     }
   ],
   "providers": [
     {
       "id": "PRV001",
       "userId": "USR001",
-      "name": "Nguyễn Văn An",
-      "specialty": "Senior Architect & Fullstack",
+      "name": "Nguyễn Văn Minh",
+      "specialty": "Senior Java / Spring Boot Developer",
       "category": "IT",
       "rating": 5,
-      "reviewCount": 2,
-      "hourlyRate": 500000,
+      "reviewCount": 3,
+      "hourlyRate": 250000,
       "completedOrders": 42,
       "location": "Quận 1, TP. Hồ Chí Minh",
       "verified": true,
-      "badge": "PRO PROVIDER",
-      "bio": "Hơn 6 năm kinh nghiệm lập trình thực chiến React, Node.js, Next.js và thiết kế kiến trúc hệ thống chuẩn Microservices, Docker, AWS.",
+      "badge": "Đã xác minh",
+      "bio": "Hơn 6 năm kinh nghiệm phát triển hệ thống backend Java & Spring Boot, kiến trúc Microservices, RESTful API và tối ưu hiệu năng cao.",
       "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200",
       "cover": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800",
       "skills": [
-        "React.js",
-        "Node.js",
-        "PostgreSQL",
-        "Docker",
-        "AWS Solutions",
+        "Spring Boot",
+        "Java",
         "REST API",
-        "Figma to Code"
+        "Microservices",
+        "PostgreSQL",
+        "Docker"
       ],
       "certifications": [
         "AWS Certified Solutions Architect",
@@ -175,13 +187,13 @@
             "day": "T2",
             "morning": true,
             "afternoon": true,
-            "evening": false
+            "evening": true
           },
           {
             "day": "T3",
             "morning": true,
             "afternoon": true,
-            "evening": false
+            "evening": true
           },
           {
             "day": "T4",
@@ -193,52 +205,52 @@
             "day": "T5",
             "morning": true,
             "afternoon": true,
-            "evening": false
+            "evening": true
           },
           {
             "day": "T6",
             "morning": true,
             "afternoon": true,
-            "evening": false
+            "evening": true
           },
           {
             "day": "T7",
             "morning": true,
-            "afternoon": false,
-            "evening": false
+            "afternoon": true,
+            "evening": true
           },
           {
             "day": "CN",
-            "morning": false,
-            "afternoon": false,
-            "evening": false
+            "morning": true,
+            "afternoon": true,
+            "evening": true
           }
         ]
-      }
+      },
+      "workingHours": "T2-CN, 08:00-22:00"
     },
     {
       "id": "PRV002",
       "userId": "USR002",
-      "name": "Trần Thị Lan",
-      "specialty": "Senior UI/UX Designer & Brand Identity",
+      "name": "Trần Ngọc Mai",
+      "specialty": "UI/UX Designer",
       "category": "Design",
-      "rating": 4.9,
-      "reviewCount": 52,
-      "hourlyRate": 400000,
+      "rating": 4.8,
+      "reviewCount": 42,
+      "hourlyRate": 200000,
       "completedOrders": 64,
       "location": "Cầu Giấy, Hà Nội",
       "verified": true,
-      "badge": "TOP RATED",
-      "bio": "Thiết kế trải nghiệm người dùng cao cấp, hệ thống Design System hoàn chỉnh trên Figma, phong cách hiện đại chuẩn Silicon Valley.",
+      "badge": "Đã xác minh",
+      "bio": "Thiết kế giao diện hiện đại, tinh gọn trên Figma. Tối ưu trải nghiệm người dùng theo tiêu chuẩn quốc tế và bàn giao hệ thống Design System hoàn chỉnh.",
       "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200",
       "cover": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800",
       "skills": [
-        "Figma Master",
-        "UI/UX Mobile App",
-        "Design System",
-        "Logo & Branding",
-        "Wireframing",
-        "Prototyping"
+        "UI/UX",
+        "Figma",
+        "Web Design",
+        "Mobile App",
+        "Design System"
       ],
       "certifications": [
         "Google UX Design Professional",
@@ -257,31 +269,31 @@
           "deliveryDays": 7,
           "desc": "Bàn giao file Figma prototype trực quan, components chuẩn Auto-layout."
         }
-      ]
+      ],
+      "workingHours": "T2-CN, 08:00-20:00"
     },
     {
       "id": "PRV003",
       "userId": "USR005",
-      "name": "Phạm Hữu Cường",
-      "specialty": "Thạc Sĩ Ngôn Ngữ & Chuyên Gia Luyện Thi IELTS 8.0+",
-      "category": "Tutor",
-      "rating": 4.8,
-      "reviewCount": 29,
-      "hourlyRate": 350000,
+      "name": "Phạm Gia Huy",
+      "specialty": "Digital Marketing Specialist",
+      "category": "Marketing",
+      "rating": 4.7,
+      "reviewCount": 38,
+      "hourlyRate": 180000,
       "completedOrders": 35,
       "location": "Hải Châu, Đà Nẵng (Hỗ trợ Online)",
       "verified": true,
-      "badge": "VERIFIED EXPERT",
-      "bio": "Tốt nghiệp Thạc sĩ TESOL tại ĐH Monash (Úc). Kinh nghiệm 5 năm luyện thi cấp tốc IELTS Speaking & Writing từ mất gốc lên 7.0+.",
+      "badge": "Đã xác minh",
+      "bio": "Chuyên gia tiếp thị kỹ thuật số đa kênh, tối ưu quảng cáo Facebook Ads, Google Ads và SEO tổng thể giúp tăng trưởng doanh thu vượt trội.",
       "avatar": "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200",
       "cover": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800",
       "skills": [
-        "IELTS 8.5",
-        "Speaking 8.5",
-        "Writing 8.0",
-        "Tiếng Anh Giao Tiếp",
-        "Phát Âm Chuẩn IPA",
-        "Sửa Bài Chi Tiết"
+        "Digital Marketing",
+        "SEO",
+        "Facebook Ads",
+        "Google Ads",
+        "Content Marketing"
       ],
       "certifications": [
         "IELTS Overall 8.5 (IDP)",
@@ -300,7 +312,8 @@
           "deliveryDays": 30,
           "desc": "Giáo trình cá nhân hóa, cam kết tăng tối thiểu 0.5 - 1.0 band sau khóa."
         }
-      ]
+      ],
+      "workingHours": "T2-T6"
     },
     {
       "id": "PRV004",
@@ -382,6 +395,38 @@
           "price": 850000,
           "deliveryDays": 1,
           "desc": "Dọn dẹp công nghiệp toàn bộ căn hộ 2-3 phòng ngủ kèm dung dịch diệt khuẩn."
+        }
+      ]
+    },
+    {
+      "id": "PRV006",
+      "userId": "USR006",
+      "name": "Hoàng Quốc Bảo",
+      "specialty": "Data Analyst & BI Specialist",
+      "category": "IT",
+      "rating": 4.8,
+      "reviewCount": 76,
+      "hourlyRate": 220000,
+      "completedOrders": 54,
+      "location": "Cầu Giấy, Hà Nội",
+      "verified": true,
+      "badge": "Đã xác minh",
+      "workingHours": "T2-T7, 08:00-18:00",
+      "bio": "Chuyên gia phân tích dữ liệu kinh doanh, xây dựng mô hình dự báo và thiết kế dashboard Power BI trực quan hóa số liệu trực tiếp.",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200",
+      "skills": [
+        "Data",
+        "Python",
+        "Power BI",
+        "SQL",
+        "Tableau"
+      ],
+      "packages": [
+        {
+          "name": "Gói Dashboard Power BI",
+          "price": 2000000,
+          "deliveryDays": 3,
+          "desc": "Báo cáo trực quan"
         }
       ]
     }
@@ -470,6 +515,108 @@
   ],
   "jobRequests": [
     {
+      "id": "REQ-003",
+      "customerId": "USR100",
+      "customerName": "Lê Tuấn Anh",
+      "title": "Phân tích dữ liệu bán hàng",
+      "category": "Data",
+      "budget": "1.000.000đ - 2.000.000đ",
+      "budgetNum": 1500000,
+      "deadline": "4 ngày",
+      "location": "Online",
+      "status": "open",
+      "createdAt": "01/10/2026 11:00",
+      "desc": "Phân tích dữ liệu doanh thu và tạo dashboard trực quan cho doanh nghiệp.",
+      "tags": [
+        "Python",
+        "Power BI",
+        "4 ngày"
+      ],
+      "applicantCount": 2,
+      "applicants": [
+        {
+          "providerId": "PRV006",
+          "providerName": "Hoàng Quốc Bảo",
+          "proposedPrice": "1.200.000đ",
+          "status": "pending"
+        },
+        {
+          "providerId": "PRV003",
+          "providerName": "Phạm Gia Huy",
+          "proposedPrice": "1.400.000đ",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "customerId": "USR100",
+      "customerName": "Lê Tuấn Anh",
+      "title": "Xây dựng REST API Spring Boot",
+      "category": "IT",
+      "budget": "2.000.000đ - 4.000.000đ",
+      "budgetNum": 3000000,
+      "deadline": "7 ngày",
+      "location": "Online",
+      "status": "open",
+      "createdAt": "01/10/2026 10:30",
+      "desc": "Xây dựng backend API cho hệ thống quản lý bán hàng và xác thực người dùng.",
+      "tags": [
+        "Java",
+        "Spring Boot",
+        "7 ngày"
+      ],
+      "applicantCount": 1,
+      "applicants": [
+        {
+          "providerId": "PRV001",
+          "providerName": "Nguyễn Văn Minh",
+          "proposedPrice": "3.000.000đ",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "REQ-001",
+      "customerId": "USR100",
+      "customerName": "Lê Tuấn Anh",
+      "title": "Thiết kế Landing Page cho startup",
+      "category": "Design",
+      "budget": "1.500.000đ - 2.500.000đ",
+      "budgetNum": 2000000,
+      "deadline": "3 ngày",
+      "location": "Online",
+      "status": "open",
+      "createdAt": "01/10/2026 09:15",
+      "desc": "Cần thiết kế giao diện Landing Page hiện đại, responsive bằng Figma.",
+      "tags": [
+        "UI/UX Design",
+        "Figma",
+        "3 ngày"
+      ],
+      "applicantCount": 3,
+      "applicants": [
+        {
+          "providerId": "PRV002",
+          "providerName": "Trần Ngọc Mai",
+          "proposedPrice": "1.800.000đ",
+          "status": "pending"
+        },
+        {
+          "providerId": "PRV001",
+          "providerName": "Nguyễn Văn Minh",
+          "proposedPrice": "2.000.000đ",
+          "status": "pending"
+        },
+        {
+          "providerId": "PRV003",
+          "providerName": "Phạm Gia Huy",
+          "proposedPrice": "1.500.000đ",
+          "status": "pending"
+        }
+      ]
+    },
+    {
       "id": "JOB-2026-04",
       "customerId": "USR003",
       "customerName": "Lê Hoàng Long",
@@ -482,7 +629,9 @@
       "status": "open",
       "createdAt": "26/09/2026 11:57",
       "desc": "online 100%",
-      "applicants": []
+      "applicants": [],
+      "closeReason": null,
+      "statusUpdatedAt": "2026-10-01T10:10:23.650Z"
     },
     {
       "id": "JOB-2026-03",
@@ -520,7 +669,7 @@
       "budgetNum": 8000000,
       "deadline": "15/05/2025",
       "location": "Online / TP.HCM",
-      "status": "open",
+      "status": "closed",
       "createdAt": "25/04/2025 09:30",
       "desc": "Công ty mình cần 1 bạn dev có kinh nghiệm thiết kế website bán hàng bằng Node.js / React, tích hợp cổng thanh toán trực tuyến, quản lý tồn kho và đồng bộ đơn hàng.",
       "applicants": [
@@ -532,7 +681,7 @@
           "proposedPrice": "7.500.000đ",
           "appliedAt": "25/04/2025 11:20",
           "proposalText": "Chào bạn Long! Mình đã từng xây dựng 3 hệ thống e-commerce tương tự với thời gian tải trang dưới 1.2s. Mình có thể hoàn thành trong 8 ngày với chế độ bảo hành 6 tháng.",
-          "status": "pending"
+          "status": "accepted"
         }
       ]
     },
@@ -564,6 +713,141 @@
     }
   ],
   "orders": [
+    {
+      "id": "DH004891",
+      "customerId": "USR003",
+      "customerName": "Lê Hoàng Long",
+      "customerPhone": "0988 776 655",
+      "providerId": "PRV002",
+      "providerName": "Trần Ngọc Mai",
+      "providerPhone": "0901 234 567",
+      "serviceId": "SVC_CUSTOM",
+      "serviceTitle": "Thiết kế Logo & Bộ nhận diện thương hiệu chuẩn Agency",
+      "price": 3500000,
+      "priceFormatted": "3.500.000đ",
+      "platformFee": 175000,
+      "escrowDeposit": 3675000,
+      "escrowStatus": "escrow_held",
+      "orderStatus": "processing",
+      "paymentMethod": "Số dư tài khoản",
+      "date": "01/10/2026 17:28",
+      "deadline": "2/10/2026",
+      "scheduledDate": "2026-10-02",
+      "scheduledTime": "10:00 - 12:00",
+      "notes": "",
+      "milestones": [
+        {
+          "title": "Ký quỹ Escrow bảo vệ 100% thành công",
+          "done": true,
+          "time": "01/10/2026 17:28"
+        },
+        {
+          "title": "Provider tiếp nhận yêu cầu & triển khai công việc",
+          "done": true,
+          "time": "01/10/2026 17:28"
+        },
+        {
+          "title": "Bàn giao sản phẩm / hoàn thành dịch vụ",
+          "done": false,
+          "time": "Đang triển khai"
+        },
+        {
+          "title": "Khách hàng nghiệm thu & Giải ngân Escrow",
+          "done": false,
+          "time": "Chờ nghiệm thu"
+        }
+      ]
+    },
+    {
+      "id": "DH009727",
+      "customerId": "USR003",
+      "customerName": "Lê Hoàng Long",
+      "customerPhone": "0988 776 655",
+      "providerId": "PRV001",
+      "providerName": "Nguyễn Văn An",
+      "providerPhone": "0901 234 567",
+      "serviceId": "SVC_CUSTOM",
+      "serviceTitle": "Hợp đồng theo yêu cầu",
+      "price": 4800000,
+      "priceFormatted": "4.800.000đ",
+      "platformFee": 240000,
+      "escrowDeposit": 5040000,
+      "escrowStatus": "completed",
+      "orderStatus": "completed",
+      "paymentMethod": "Chuyển khoản VietQR",
+      "date": "01/10/2026 16:59",
+      "deadline": "7 ngày",
+      "scheduledDate": "",
+      "scheduledTime": "Theo thỏa thuận dự án",
+      "notes": "Tuyển từ yêu cầu: ",
+      "milestones": [
+        {
+          "title": "Ký quỹ Escrow bảo vệ 100% thành công",
+          "done": true,
+          "time": "01/10/2026 16:59"
+        },
+        {
+          "title": "Provider tiếp nhận yêu cầu & triển khai công việc",
+          "done": true,
+          "time": "01/10/2026 16:59"
+        },
+        {
+          "title": "Bàn giao sản phẩm / hoàn thành dịch vụ",
+          "done": true,
+          "time": "Đang triển khai"
+        },
+        {
+          "title": "Khách hàng nghiệm thu & Giải ngân Escrow",
+          "done": true,
+          "time": "01/10/2026 17:28"
+        }
+      ]
+    },
+    {
+      "id": "DH009708",
+      "customerId": "USR003",
+      "customerName": "Lê Hoàng Long",
+      "customerPhone": "0988 776 655",
+      "providerId": "PRV001",
+      "providerName": "Nguyễn Văn Minh",
+      "providerPhone": "0901 234 567",
+      "serviceId": "SVC_CUSTOM",
+      "serviceTitle": "Thiết kế website chuẩn SEO & Tối ưu tốc độ tải trang",
+      "price": 4500000,
+      "priceFormatted": "4.500.000đ",
+      "platformFee": 225000,
+      "escrowDeposit": 4725000,
+      "escrowStatus": "escrow_held",
+      "orderStatus": "processing",
+      "paymentMethod": "Chuyển khoản VietQR",
+      "date": "01/10/2026 16:06",
+      "deadline": "10/10/2026",
+      "scheduledDate": "2026-10-10",
+      "scheduledTime": "10:00 - 12:00",
+      "notes": "",
+      "milestones": [
+        {
+          "title": "Ký quỹ Escrow bảo vệ 100% thành công",
+          "done": true,
+          "time": "01/10/2026 16:06"
+        },
+        {
+          "title": "Provider tiếp nhận yêu cầu & triển khai công việc",
+          "done": true,
+          "time": "01/10/2026 16:06"
+        },
+        {
+          "title": "Bàn giao sản phẩm / hoàn thành dịch vụ",
+          "done": false,
+          "time": "Đang triển khai"
+        },
+        {
+          "title": "Khách hàng nghiệm thu & Giải ngân Escrow",
+          "done": false,
+          "time": "Chờ nghiệm thu"
+        }
+      ]
+    },
     {
       "id": "DH002964",
       "customerId": "USR003",
@@ -622,7 +906,7 @@
       "platformFee": 225000,
       "escrowDeposit": 4725000,
       "escrowStatus": "escrow_held",
-      "orderStatus": "processing",
+      "orderStatus": "delivered",
       "paymentMethod": "Ví VNPay (Ký quỹ Escrow)",
       "date": "28/04/2025 10:30",
       "deadline": "05/05/2025",
@@ -636,19 +920,22 @@
         {
           "title": "Provider bắt đầu triển khai kiến trúc & UI",
           "done": true,
-          "time": "28/04/2025 14:00"
+          "time": "26/09/2026 17:58"
         },
         {
           "title": "Bàn giao bản demo chạy thử (Alpha Release)",
-          "done": false,
-          "time": "Dự kiến 02/05/2025"
+          "done": true,
+          "time": "26/09/2026 18:00"
         },
         {
           "title": "Khách hàng nghiệm thu & Giải ngân Escrow",
           "done": false,
           "time": "Dự kiến 05/05/2025"
         }
-      ]
+      ],
+      "progressPercent": 100,
+      "deliveredAt": "26/09/2026 18:00",
+      "handoverNotes": "Đã bàn giao toàn bộ sản phẩm hoàn thiện và tài liệu hướng dẫn."
     },
     {
       "id": "DH001233",
@@ -730,9 +1017,68 @@
           "time": "26/04/2025"
         }
       ]
+    },
+    {
+      "id": "DH006380",
+      "customerId": "USR003",
+      "customerName": "Lê Hoàng Long",
+      "customerPhone": "0988 776 655",
+      "providerId": "PRV001",
+      "providerName": "Nguyễn Văn An",
+      "providerPhone": "0901 234 567",
+      "serviceId": "SVC_CUSTOM",
+      "serviceTitle": "Tiêu chuẩn - Thiết kế Web Landing Page",
+      "price": 4500000,
+      "priceFormatted": "4.500.000đ",
+      "platformFee": 225000,
+      "escrowDeposit": 4725000,
+      "escrowStatus": "disputed",
+      "orderStatus": "disputed",
+      "paymentMethod": "Chuyển khoản VietQR",
+      "date": "26/09/2026 17:33",
+      "deadline": "2026-09-28",
+      "notes": "",
+      "milestones": [
+        {
+          "title": "Ký quỹ Escrow bảo vệ 100% thành công",
+          "done": true,
+          "time": "26/09/2026 17:33"
+        },
+        {
+          "title": "Provider tiếp nhận yêu cầu & triển khai công việc",
+          "done": true,
+          "time": "26/09/2026 17:33"
+        },
+        {
+          "title": "Bàn giao sản phẩm / hoàn thành dịch vụ",
+          "done": false,
+          "time": "Đang triển khai"
+        },
+        {
+          "title": "Khách hàng nghiệm thu & Giải ngân Escrow",
+          "done": false,
+          "time": "Chờ nghiệm thu"
+        }
+      ]
     }
   ],
   "reviews": [
+    {
+      "id": "REV004",
+      "orderId": "DH009727",
+      "customerId": "USR003",
+      "customerName": "Lê Hoàng Long",
+      "providerId": "PRV001",
+      "providerName": "Nguyễn Văn An",
+      "serviceTitle": "Hợp đồng theo yêu cầu",
+      "rating": 5,
+      "content": "tuyệt",
+      "date": "01/10/2026",
+      "criteria": [
+        "Đúng hẹn & đúng cam kết",
+        "Chuyên môn cao, sản phẩm chất lượng"
+      ]
+    },
     {
       "id": "REV003",
       "orderId": "DH002964",
@@ -813,6 +1159,21 @@
       "createdAt": "24/04/2025 15:00",
       "userClaim": "Tôi thuê dịch vụ tổng vệ sinh 4 tiếng giá 850k. Nhân viên chỉ lau qua loa 2 tiếng rồi làm vỡ bình hoa trị giá 1 triệu, sau đó bỏ về. Tôi yêu cầu hoàn tiền 100% từ tiền ký quỹ Escrow.",
       "providerClaim": "Tôi đã dọn dẹp sạch sẽ. Bình hoa để chông chênh tự rơi, tôi đã nhận lỗi và đề nghị giảm 200k tiền công nhưng khách không đồng ý."
+    },
+    {
+      "id": "KN-2026-03",
+      "orderId": "DH006380",
+      "complainantId": "USR003",
+      "complainant": "Lê Hoàng Long (Khách hàng)",
+      "defendantId": "PRV001",
+      "defendant": "Nguyễn Văn An (Provider)",
+      "reason": "Chuyên gia không hoàn thành đúng chất lượng cam kết",
+      "amount": "2.500.000",
+      "priority": "high",
+      "status": "pending",
+      "createdAt": "26/09/2026 17:38",
+      "userClaim": "web",
+      "providerClaim": "Chờ Provider phản hồi giải trình"
     }
   ],
   "messages": [
@@ -843,6 +1204,41 @@
       "toUserId": "USR001",
       "text": "Xin chào anh An!",
       "time": "25/09/2026 14:27"
+    },
+    {
+      "id": "MSG-IMG-01",
+      "fromUserId": "USR001",
+      "toUserId": "USR100",
+      "text": "Chào bạn, mình đã xem yêu cầu.",
+      "time": "14:38"
+    },
+    {
+      "id": "MSG-IMG-02",
+      "fromUserId": "USR100",
+      "toUserId": "USR001",
+      "text": "Tối nay mình trao đổi chi tiết nhé.",
+      "time": "14:40"
+    },
+    {
+      "id": "MSG005",
+      "fromUserId": "USR003",
+      "toUserId": "USR001",
+      "text": "hello",
+      "time": "26/09/2026 17:22"
+    },
+    {
+      "id": "MSG006",
+      "fromUserId": "USR003",
+      "toUserId": "USR001",
+      "text": "heelo",
+      "time": "26/09/2026 17:22"
+    },
+    {
+      "id": "MSG007",
+      "fromUserId": "USR001",
+      "toUserId": "USR003",
+      "text": "chào bạn nha",
+      "time": "26/09/2026 18:00"
     }
   ],
   "pendingProviders": [
@@ -1150,5 +1546,6 @@
       "summary": "Chi tiết quá trình thiết kế UX/UI trên Figma, code Next.js frontend và Node.js microservices tích hợp Escrow payment.",
       "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600"
     }
-  ]
+  ],
+  "favoriteProviders": []
 }

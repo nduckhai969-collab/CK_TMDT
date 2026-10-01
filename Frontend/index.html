@@ -2556,7 +2556,12 @@
       const raw = localStorage.getItem(SESSION_KEY);
 
       if (raw) {
-        return JSON.parse(raw);
+        const user = JSON.parse(raw);
+        if (!user || ['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(user.id)) {
+          localStorage.removeItem(SESSION_KEY);
+          return null;
+        }
+        return user;
       }
 
     } catch (e) {
@@ -3115,86 +3120,11 @@
       );
 
 
-      /*
-       * FALLBACK DEMO CỤC BỘ
-       *
-       * Quan trọng:
-       * - an.nguyen@example.com -> Provider
-       * - long.le@example.com -> Customer
-       */
-
-      let demoUser;
-
-
-      if (
-              email.toLowerCase() ===
-              'an.nguyen@example.com'
-      ) {
-
-        demoUser = {
-
-          id: 'USR_PROVIDER_LOCAL',
-
-          name: 'Nguyễn Văn An',
-
-          email: email,
-
-          role: 'Provider',
-
-          avatar:
-                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'
-
-        };
-
-      } else {
-
-        demoUser = {
-
-          id: 'USR_CUSTOMER_LOCAL',
-
-          name:
-                  email.split('@')[0],
-
-          email: email,
-
-          role: 'Customer',
-
-          avatar:
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-
-        };
-
-      }
-
-
-      localStorage.setItem(
-              SESSION_KEY,
-              JSON.stringify(demoUser)
-      );
-
-
       showToastMsg(
-              'Đăng Nhập Thành Công!',
-              `Đã đăng nhập với tài khoản ${demoUser.name}.`,
-              'success'
+              'Không thể đăng nhập',
+              'Không kết nối được máy chủ. Vui lòng thử lại khi server hoạt động.',
+              'error'
       );
-
-
-      closeAuthModal();
-
-
-      /*
-       * QUAN TRỌNG:
-       * FALLBACK CŨ KHÔNG ĐIỀU HƯỚNG.
-       *
-       * BÂY GIỜ CŨNG ĐIỀU HƯỚNG THEO ROLE.
-       */
-
-      setTimeout(() => {
-
-        redirectAfterLogin(demoUser);
-
-      }, 300);
 
     } finally {
 

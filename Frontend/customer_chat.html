@@ -177,29 +177,72 @@
     };
 
     const contacts = [
-      { id: 'USR001', providerId: 'PRV001', name: 'Nguyễn Văn An', specialty: 'Senior Fullstack Web Dev', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100', lastMsg: 'Vâng, em đã nhận đơn và bắt đầu code ạ.' },
-      { id: 'USR002', providerId: 'PRV002', name: 'Trần Thị Lan', specialty: 'Senior UI/UX Designer', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100', lastMsg: 'Chị đã xem file brief yêu cầu logo rồi nhé.' },
-      { id: 'USR005', providerId: 'PRV003', name: 'Phạm Hữu Cường', specialty: 'Gia Sư IELTS 8.5', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100', lastMsg: 'Lịch học tối mai lúc 19:30 qua Zoom nhé em.' }
+      { id: 'USR001', providerId: 'PRV001', name: 'Nguyễn Văn An', specialty: 'Senior Fullstack Web Dev', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100', lastMsg: 'Chưa có tin nhắn' },
+      { id: 'USR002', providerId: 'PRV002', name: 'Trần Thị Lan', specialty: 'Senior UI/UX Designer', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100', lastMsg: 'Chưa có tin nhắn' },
+      { id: 'USR005', providerId: 'PRV003', name: 'Phạm Hữu Cường', specialty: 'Gia sư IELTS 8.5', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100', lastMsg: 'Chưa có tin nhắn' }
     ];
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('chat');
       document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+
+      const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        renderConversationsList();
+        document.getElementById('messagesContainer').innerHTML = '<div style="margin:auto;padding:28px;text-align:center;color:#64748B"><i class="fa-solid fa-lock" style="font-size:28px;color:#16A34A"></i><p style="font-weight:700;color:#0F172A">Đăng nhập để sử dụng chat</p><p>Đăng nhập tài khoản khách hàng để xem hội thoại và nhắn tin với Provider.</p><button class="btn btn-primary" onclick="openAuthModal(\'login\')">Đăng nhập</button></div>';
+        document.getElementById('chatPartnerName').textContent = 'Chưa đăng nhập';
+        document.getElementById('btnViewProfile').style.display = 'none';
+        document.getElementById('btnBookFromChat').style.display = 'none';
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('chatInput').placeholder = 'Đăng nhập để nhắn tin';
+        document.querySelector('.chat-main > div:last-child').style.display = 'none';
+        return;
+      }
 
       // Check partner from URL query
       const urlParams = new URLSearchParams(window.location.search);
       const withId = urlParams.get('with');
       if (withId) {
-        const found = contacts.find(c => c.providerId === withId || c.id === withId);
+        let found = contacts.find(c => c.providerId === withId || c.id === withId);
+        if (!found) {
+          const providerResult = await apiRequest(`/api/providers/${encodeURIComponent(withId)}`);
+          const provider = providerResult.provider;
+          if (provider) {
+            found = {
+              id: provider.userId || provider.id,
+              providerId: provider.id,
+              name: provider.name,
+              specialty: provider.specialty || 'Chuyên gia',
+              avatar: provider.avatar || '',
+              lastMsg: 'Chưa có tin nhắn'
+            };
+            contacts.push(found);
+          }
+        }
         if (found) currentPartner = found;
       }
 
+      await loadChatThreads();
       renderConversationsList();
       selectPartner(currentPartner);
     });
 
+    async function loadChatThreads() {
+      const result = await apiRequest('/api/chat/threads');
+      if (!result.success || !Array.isArray(result.threads)) return;
+      result.threads.forEach(thread => {
+        const contact = contacts.find(item => item.id === thread.partnerId || item.providerId === thread.providerId);
+        if (contact) contact.lastMsg = thread.lastMessage || 'Chưa có tin nhắn';
+      });
+    }
+
     function renderConversationsList() {
       const container = document.getElementById('conversationsList');
+      const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        container.innerHTML = '<div style="padding:22px 18px;text-align:center;color:#64748B"><i class="fa-solid fa-lock" style="font-size:22px;color:#16A34A"></i><p>Đăng nhập để xem các cuộc trò chuyện.</p><button class="btn btn-primary btn-sm" onclick="openAuthModal(\'login\')">Đăng nhập</button></div>';
+        return;
+      }
       container.innerHTML = contacts.map(c => `
         <div class="conversation-item ${c.id === currentPartner.id ? 'active' : ''}" onclick="selectPartnerById('${c.id}')">
           <div style="position:relative;">
@@ -215,11 +258,13 @@
     }
 
     function selectPartnerById(id) {
+      if (!requireCustomerLogin()) return;
       const p = contacts.find(c => c.id === id);
       if (p) selectPartner(p);
     }
 
     function selectPartner(partner) {
+      if (!requireCustomerLogin()) return;
       currentPartner = partner;
       document.getElementById('chatPartnerName').textContent = partner.name;
       document.getElementById('chatPartnerAvatar').src = partner.avatar;
@@ -232,55 +277,44 @@
 
     async function loadMessages() {
       const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        document.getElementById('messagesContainer').innerHTML = '<div style="padding:28px;text-align:center;color:#64748B"><i class="fa-solid fa-lock" style="font-size:28px"></i><p>Đăng nhập bằng tài khoản khách hàng để xem cuộc trò chuyện.</p><button class="btn btn-primary" onclick="openAuthModal(\'login\')">Đăng nhập</button></div>';
+        return;
+      }
       const res = await apiRequest(`/api/chat?user1=${user.id}&user2=${currentPartner.id}`);
       const container = document.getElementById('messagesContainer');
 
-      let msgs = [];
-      if (res.success && res.messages && res.messages.length > 0) {
-        msgs = res.messages;
-      } else {
-        // Sample default greeting message
-        msgs = [
-          { fromUserId: currentPartner.id, text: `Chào ${user.name}! Tôi là ${currentPartner.name}. Tôi có thể hỗ trợ gì cho dự án của bạn?`, time: 'Hôm nay' }
-        ];
+      const msgs = res.success && Array.isArray(res.messages) ? res.messages : [];
+      container.replaceChildren();
+      if (!msgs.length) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'margin:auto;text-align:center;color:#94A3B8;font-size:13px';
+        empty.textContent = 'Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện!';
+        container.appendChild(empty);
       }
-
-      container.innerHTML = msgs.map(m => {
-        const isMine = m.fromUserId === user.id;
-        return `
-          <div class="msg-bubble ${isMine ? 'mine' : 'theirs'}">
-            <div>${m.text}</div>
-            <div class="msg-time">${m.time || ''}</div>
-          </div>
-        `;
-      }).join('');
+      msgs.forEach(message => {
+        const bubble = document.createElement('div');
+        bubble.className = `msg-bubble ${message.fromUserId === user.id ? 'mine' : 'theirs'}`;
+        const body = document.createElement('div');
+        body.textContent = message.text || '';
+        const time = document.createElement('div');
+        time.className = 'msg-time';
+        time.textContent = message.time || '';
+        bubble.append(body, time);
+        container.appendChild(bubble);
+      });
 
       container.scrollTop = container.scrollHeight;
     }
 
     async function sendMessage() {
+      if (!requireCustomerLogin()) return;
       const input = document.getElementById('chatInput');
       const text = input.value.trim();
       if (!text) return;
 
       const user = getCurrentCustomer();
-      input.value = '';
-
-      // Append immediately
-      const container = document.getElementById('messagesContainer');
-      const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-      container.innerHTML += `
-        <div class="msg-bubble mine">
-          <div>${text}</div>
-          <div class="msg-time">${timeStr}</div>
-        </div>
-      `;
-      container.scrollTop = container.scrollHeight;
-
-      // Call API
-      await apiRequest('/api/chat', {
+      const result = await apiRequest('/api/chat', {
         method: 'POST',
         body: JSON.stringify({
           fromUserId: user.id,
@@ -288,18 +322,14 @@
           text: text
         })
       });
-
-      // Auto reply simulation after 1.5s
-      setTimeout(() => {
-        const replyText = `Cảm ơn bạn! Mình đã nắm được thông tin. Bạn có thể bấm nút "Đặt Lịch & Ký Quỹ" ở góc trên để sàn kích hoạt bảo lãnh Escrow an toàn nhé!`;
-        container.innerHTML += `
-          <div class="msg-bubble theirs">
-            <div>${replyText}</div>
-            <div class="msg-time">${timeStr}</div>
-          </div>
-        `;
-        container.scrollTop = container.scrollHeight;
-      }, 1500);
+      if (!result.success) {
+        showToast('Chưa gửi được', result.message || 'Vui lòng thử lại.', 'error');
+        return;
+      }
+      input.value = '';
+      await loadMessages();
+      await loadChatThreads();
+      renderConversationsList();
     }
   </script>
 </body>

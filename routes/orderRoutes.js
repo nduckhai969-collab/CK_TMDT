@@ -1,11 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
+const { slotsForDate } = require('./providerAvailability');
+const { requireCustomer } = require('./customerAuth');
 
 // List orders
-router.get('/', (req, res) => {
+router.get('/', requireCustomer, (req, res) => {
   const { customerId, providerId, status, escrowStatus } = req.query;
   let orders = db.getCollection('orders');
+
+  if (customerId && customerId !== req.authUser.id) {
+    return res.status(403).json({ success: false, message: 'Bạn không có quyền xem đơn hàng của tài khoản khác.' });
+  }
+  orders = orders.filter(o => o.customerId === req.authUser.id);
 
   if (customerId) {
     orders = orders.filter(o => o.customerId === customerId);
@@ -28,12 +35,16 @@ router.get('/', (req, res) => {
 });
 
 // Single order detail
-router.get('/:id', (req, res) => {
+router.get('/:id', requireCustomer, (req, res) => {
   const orders = db.getCollection('orders');
   const order = orders.find(o => o.id === req.params.id);
 
   if (!order) {
     return res.status(404).json({ success: false, message: 'Đơn hàng không tồn tại!' });
+  }
+
+  if (order.customerId !== req.authUser.id) {
+    return res.status(403).json({ success: false, message: 'Bạn không có quyền xem đơn hàng này.' });
   }
 
   res.json({
@@ -43,10 +54,8 @@ router.get('/:id', (req, res) => {
 });
 
 // Create new booking / order with Escrow Deposit
-router.post('/', (req, res) => {
+router.post('/', requireCustomer, (req, res) => {
   const {
-    customerId,
-    customerName,
     customerPhone,
     providerId,
     providerName,
@@ -54,12 +63,30 @@ router.post('/', (req, res) => {
     serviceTitle,
     price,
     deadline,
+    scheduledDate,
+    scheduledTime,
     notes,
     paymentMethod
   } = req.body;
 
   if (!providerId || !price) {
     return res.status(400).json({ success: false, message: 'Thông tin đặt dịch vụ không hợp lệ!' });
+  }
+
+  if (scheduledDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(scheduledDate)) {
+      return res.status(400).json({ success: false, message: 'Ngày đặt lịch không hợp lệ.' });
+    }
+    const [year, month, day] = scheduledDate.split('-').map(Number);
+    const appointmentDate = new Date(year, month - 1, day, 12);
+    const provider = (db.getCollection('providers') || []).find(item => item.id === providerId);
+    if (!provider || appointmentDate.getFullYear() !== year || appointmentDate.getMonth() !== month - 1 || appointmentDate.getDate() !== day) {
+      return res.status(400).json({ success: false, message: 'Không tìm thấy Provider hoặc ngày đặt lịch không hợp lệ.' });
+    }
+    const availableSlots = slotsForDate(provider, appointmentDate, db.getCollection('orders') || []);
+    if (!scheduledTime || !availableSlots.includes(scheduledTime)) {
+      return res.status(409).json({ success: false, message: 'Khung giờ này đã qua hoặc Provider không còn rảnh. Vui lòng chọn ngày và giờ khác.' });
+    }
   }
 
   const orders = db.getCollection('orders');
@@ -74,8 +101,8 @@ router.post('/', (req, res) => {
 
   const newOrder = {
     id: newId,
-    customerId: customerId || 'USR003',
-    customerName: customerName || 'Lê Hoàng Long',
+    customerId: req.authUser.id,
+    customerName: req.authUser.name,
     customerPhone: customerPhone || '0988 776 655',
     providerId: providerId,
     providerName: providerName || 'Chuyên gia SkillRental',
@@ -91,6 +118,8 @@ router.post('/', (req, res) => {
     paymentMethod: paymentMethod || 'Ví điện tử VNPay (Escrow 100%)',
     date: dateStr,
     deadline: deadline || '7 ngày sau đặt cọc',
+    scheduledDate: scheduledDate || '',
+    scheduledTime: scheduledTime || '',
     notes: notes || '',
     milestones: [
       { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: dateStr },
@@ -153,12 +182,16 @@ router.put('/:id/status', (req, res) => {
 });
 
 // Customer releases Escrow funds to Provider
-router.put('/:id/release-escrow', (req, res) => {
+router.put('/:id/release-escrow', requireCustomer, (req, res) => {
   const orders = db.getCollection('orders');
   const order = orders.find(o => o.id === req.params.id);
 
   if (!order) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  }
+
+  if (order.customerId !== req.authUser.id) {
+    return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác đơn hàng này.' });
   }
 
   if (order.escrowStatus === 'completed') {
@@ -197,13 +230,17 @@ router.put('/:id/release-escrow', (req, res) => {
 });
 
 // Cancel / Dispute order
-router.put('/:id/cancel', (req, res) => {
+router.put('/:id/cancel', requireCustomer, (req, res) => {
   const { reason } = req.body;
   const orders = db.getCollection('orders');
   const order = orders.find(o => o.id === req.params.id);
 
   if (!order) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  }
+
+  if (order.customerId !== req.authUser.id) {
+    return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác đơn hàng này.' });
   }
 
   order.orderStatus = 'disputed';

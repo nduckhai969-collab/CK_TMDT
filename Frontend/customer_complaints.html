@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Khiếu nại của tôi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{background:#f7f9f8;color:#172033;font-family:Inter,sans-serif}
+    .complaints-wrap{max-width:1080px;margin:28px auto 60px;padding:0 22px}
+    .complaints-hero{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:26px 30px;border:1px solid #f2caca;border-radius:18px;background:linear-gradient(120deg,#fff1f2,#fff 70%);margin-bottom:18px}
+    .complaint-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+    .stat-card{background:#fff;border:1px solid #e4e9e6;border-radius:13px;padding:15px;display:flex;align-items:center;gap:12px}
+    .stat-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#fff1f2;color:#dc2626}
+    .complaint-tabs{display:flex;gap:6px;overflow:auto;padding:5px;background:#eef2f5;border-radius:12px;width:max-content;max-width:100%;margin-bottom:16px}
+    .complaint-tab{border:1px solid transparent;border-radius:9px;background:transparent;color:#64748b;padding:9px 13px;white-space:nowrap;font:600 12px Inter,sans-serif;cursor:pointer}
+    .complaint-tab.active{background:white;color:#b91c1c;border-color:#fee2e2;box-shadow:0 2px 5px #0f172a0d}
+    .complaint-tab span{margin-left:4px;color:#475569;font-size:10px}
+    .complaint-card{background:white;border:1px solid #e1e8e4;border-radius:15px;margin-bottom:13px;overflow:hidden;transition:.18s;cursor:pointer}
+    .complaint-card:hover{border-color:#fca5a5;box-shadow:0 8px 22px #0f172a0d;transform:translateY(-1px)}
+    .complaint-card-main{padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+    .complaint-tags{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+    .complaint-tag{font-size:10px;font-weight:800;padding:6px 9px;border-radius:999px;background:#f1f5f9;color:#475569}
+    .complaint-tag.pending{background:#fff7ed;color:#c2410c}
+    .complaint-tag.resolved{background:#dcfce7;color:#15803d}
+    .complaint-card-footer{padding:11px 20px;border-top:1px solid #edf1ef;background:#fcfdfc;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#64748b;font-size:11px}
+    @media(max-width:650px){.complaints-hero{padding:21px;align-items:flex-start;flex-direction:column}.complaint-stats{grid-template-columns:1fr}.complaint-card-main{padding:16px;flex-direction:column}.complaint-card-footer{padding:11px 16px}}
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+  <main class="complaints-wrap">
+    <section class="complaints-hero">
+      <div><div style="display:inline-flex;gap:7px;align-items:center;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;margin-bottom:9px"><i class="fa-solid fa-shield-halved"></i> HỖ TRỢ & BẢO VỆ QUYỀN LỢI</div><h1 style="font-size:clamp(24px,4vw,31px);margin:0;color:#172033">Khiếu nại của tôi</h1><p style="font-size:13px;line-height:1.6;color:#64748b;margin:7px 0 0">Theo dõi phản hồi và kết quả xử lý các khiếu nại liên quan đến đơn hàng.</p></div>
+      <a class="btn btn-outline" href="customer_orders.html" style="font-weight:700"><i class="fa-solid fa-receipt"></i> Xem đơn hàng</a>
+    </section>
+    <section class="complaint-stats">
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-folder-open"></i></div><div><div style="font-size:11px;color:#64748b">Tổng khiếu nại</div><strong id="countAll" style="font-size:21px">0</strong></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#fff7ed;color:#c2410c"><i class="fa-solid fa-hourglass-half"></i></div><div><div style="font-size:11px;color:#64748b">Đang xử lý</div><strong id="countPending" style="font-size:21px">0</strong></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#dcfce7;color:#15803d"><i class="fa-solid fa-circle-check"></i></div><div><div style="font-size:11px;color:#64748b">Đã giải quyết</div><strong id="countResolved" style="font-size:21px">0</strong></div></div>
+    </section>
+    <div class="complaint-tabs">
+      <button type="button" class="complaint-tab active" onclick="filterComplaints('all',this)">Tất cả <span id="tabAll">0</span></button>
+      <button type="button" class="complaint-tab" onclick="filterComplaints('pending',this)">Đang xử lý <span id="tabPending">0</span></button>
+      <button type="button" class="complaint-tab" onclick="filterComplaints('resolved',this)">Đã giải quyết <span id="tabResolved">0</span></button>
+    </div>
+    <div id="complaintsList"><div style="padding:42px;text-align:center;color:#64748b"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><p>Đang tải khiếu nại...</p></div></div>
+  </main>
+  <div id="complaintDetailModal" style="display:none;position:fixed;inset:0;z-index:9999;background:#0f172a99;align-items:center;justify-content:center;padding:18px" onclick="if(event.target===this)closeComplaintDetail()">
+    <section style="width:min(620px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 60px #0f172a40">
+      <header style="padding:19px 22px;background:#fff7f7;border-bottom:1px solid #fee2e2;display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div id="detailComplaintId" style="font-size:11px;font-weight:800;color:#b91c1c"></div><h2 id="detailComplaintTitle" style="font-size:18px;margin:5px 0 0"></h2></div><button type="button" onclick="closeComplaintDetail()" aria-label="Đóng" style="width:34px;height:34px;border:0;border-radius:9px;background:white;color:#64748b;cursor:pointer"><i class="fa-solid fa-xmark"></i></button></header>
+      <div style="padding:22px;display:grid;gap:14px"><div id="detailComplaintMeta" style="font-size:12px;line-height:1.7;color:#64748b"></div><div><strong style="font-size:12px">Nội dung bạn gửi</strong><p id="detailUserClaim" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#475569;background:#f8fafc;border-radius:10px;padding:13px;font-size:13px"></p></div><div><strong style="font-size:12px">Phản hồi từ Provider</strong><p id="detailProviderClaim" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#475569;background:#f8fafc;border-radius:10px;padding:13px;font-size:13px"></p></div><div id="detailResolutionWrap" style="display:none"><strong style="font-size:12px">Kết quả xử lý</strong><p id="detailResolution" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#166534;background:#f0fdf4;border-radius:10px;padding:13px;font-size:13px"></p></div></div>
+    </section>
+  </div>
+  <div id="footer-placeholder"></div>
+  <script src="customer.js"></script>
+  <script>
+    let complaints = [];
+    let complaintFilter = 'all';
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+      loadComplaints();
+    });
+    function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
+    async function loadComplaints() {
+      const user = getCurrentCustomer();
+      const list = document.getElementById('complaintsList');
+      if (!user || user.role !== 'Customer') {
+        list.innerHTML = '<section style="padding:38px;text-align:center;background:white;border:1px solid #e2e8f0;border-radius:15px"><i class="fa-solid fa-lock" style="font-size:30px;color:#94a3b8"></i><h3>Đăng nhập để xem khiếu nại</h3><p style="color:#64748b">Thông tin khiếu nại chỉ hiển thị với tài khoản khách hàng đã gửi.</p><button class="btn btn-primary" onclick="openAuthModal(\'login\')">Đăng nhập</button></section>';
+        return;
+      }
+      const result = await apiRequest(`/api/complaints?complainantId=${encodeURIComponent(user.id)}`);
+      if (!result.success) { list.innerHTML = '<div style="padding:35px;text-align:center;color:#b91c1c;background:white;border-radius:14px">Không tải được danh sách khiếu nại. Vui lòng thử tải lại trang.</div>'; return; }
+      complaints = result.complaints || [];
+      document.getElementById('countAll').textContent = document.getElementById('tabAll').textContent = complaints.length;
+      document.getElementById('countPending').textContent = document.getElementById('tabPending').textContent = complaints.filter(item => item.status !== 'resolved').length;
+      document.getElementById('countResolved').textContent = document.getElementById('tabResolved').textContent = complaints.filter(item => item.status === 'resolved').length;
+      renderComplaints();
+    }
+    function filterComplaints(filter, button) {
+      complaintFilter = filter;
+      document.querySelectorAll('.complaint-tab').forEach(tab => tab.classList.remove('active'));
+      button.classList.add('active');
+      renderComplaints();
+    }
+    function renderComplaints() {
+      const items = complaintFilter === 'all' ? complaints : complaints.filter(item => complaintFilter === 'resolved' ? item.status === 'resolved' : item.status !== 'resolved');
+      const list = document.getElementById('complaintsList');
+      if (!items.length) {
+        list.innerHTML = '<section style="padding:42px;text-align:center;background:white;border:1px solid #e2e8f0;border-radius:15px"><div style="width:54px;height:54px;margin:auto;display:grid;place-items:center;border-radius:16px;background:#f1f5f9;color:#64748b;font-size:21px"><i class="fa-solid fa-shield"></i></div><h3 style="margin:13px 0 5px">Chưa có khiếu nại nào</h3><p style="color:#64748b;font-size:13px">Nếu có vấn đề với đơn hàng, bạn có thể gửi khiếu nại từ trang đơn hàng.</p><a class="btn btn-primary" href="customer_orders.html">Mở đơn hàng</a></section>';
+        return;
+      }
+      list.innerHTML = items.map(item => {
+        const resolved = item.status === 'resolved';
+        return `<article class="complaint-card" role="button" tabindex="0" onclick="openComplaintDetail('${escapeHTML(item.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openComplaintDetail('${escapeHTML(item.id)}')}"><div class="complaint-card-main"><div><div class="complaint-tags"><span class="complaint-tag">${escapeHTML(item.id)}</span><span class="complaint-tag ${resolved ? 'resolved' : 'pending'}"><i class="fa-solid ${resolved ? 'fa-circle-check' : 'fa-hourglass-half'}"></i> ${resolved ? 'Đã giải quyết' : 'Đang xử lý'}</span></div><h3 style="font-size:15px;margin:0 0 6px;color:#172033">${escapeHTML(item.reason || 'Khiếu nại đơn hàng')}</h3><div style="font-size:12px;color:#64748b">Đơn hàng <strong>${escapeHTML(item.orderId)}</strong> · ${escapeHTML(item.defendant || 'Provider')}</div></div><div style="font-size:13px;font-weight:800;color:#b91c1c">${escapeHTML(item.amount || 'Theo giá trị đơn')}</div></div><div class="complaint-card-footer"><span><i class="fa-regular fa-calendar"></i> Gửi lúc ${escapeHTML(item.createdAt || '—')}</span><span>${resolved ? 'Xem kết quả xử lý' : 'Nhấn để xem nội dung và tiến độ'} <i class="fa-solid fa-arrow-right"></i></span></div></article>`;
+      }).join('');
+    }
+    function openComplaintDetail(id) {
+      const item = complaints.find(complaint => complaint.id === id);
+      if (!item) return;
+      document.getElementById('detailComplaintId').textContent = `${item.id} · Đơn hàng ${item.orderId}`;
+      document.getElementById('detailComplaintTitle').textContent = item.reason || 'Khiếu nại đơn hàng';
+      document.getElementById('detailComplaintMeta').textContent = `Trạng thái: ${item.status === 'resolved' ? 'Đã giải quyết' : 'Đang xử lý'} · Gửi lúc: ${item.createdAt || '—'} · Provider: ${item.defendant || '—'} · Số tiền: ${item.amount || 'Theo giá trị đơn'}`;
+      document.getElementById('detailUserClaim').textContent = item.userClaim || 'Không có nội dung.';
+      document.getElementById('detailProviderClaim').textContent = item.providerClaim || 'Chưa có phản hồi từ Provider.';
+      document.getElementById('detailResolutionWrap').style.display = item.resolution ? '' : 'none';
+      const resolutionLabels = { refund_customer: 'Hoàn tiền cho khách hàng', pay_provider: 'Giải ngân cho Provider', partial_refund: 'Hoàn tiền một phần' };
+      document.getElementById('detailResolution').textContent = resolutionLabels[item.resolution] || item.resolution || '';
+      document.getElementById('complaintDetailModal').style.display = 'flex';
+    }
+    function closeComplaintDetail() { document.getElementById('complaintDetailModal').style.display = 'none'; }
+  </script>
+</body>
+</html>

@@ -200,6 +200,7 @@
 
     async function submitReview(e) {
       e.preventDefault();
+      if (!requireCustomerLogin()) return;
       const btn = document.getElementById('btnSubmitReview');
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi...`;
@@ -227,7 +228,7 @@
       if (res.success) {
         showToast('Cảm Ơn Đánh Giá!', 'Đánh giá của bạn đã được công khai trên hồ sơ chuyên gia.', 'success');
         setTimeout(() => {
-          window.location.href = 'customer_orders.html';
+          window.location.href = 'customer_reviews.html';
         }, 1200);
       } else {
         showToast('Lỗi', res.message || 'Không thể gửi đánh giá', 'error');

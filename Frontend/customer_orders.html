@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkillRental - Quản Lý Đơn Hàng & Tiến Độ Ký Quỹ Escrow</title>
+  <title>SkillRental - Đơn hàng của tôi</title>
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,31 +16,56 @@
     body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
     .order-card {
       background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 14px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-      transition: all 0.2s ease;
+      border: 1px solid #DDE7E2;
+      border-radius: 16px;
+      padding: 0;
+      margin-bottom: 18px;
+      overflow:hidden;
+      box-shadow: 0 3px 12px rgba(15,23,42,.035);
+      transition: box-shadow .2s ease, border-color .2s ease;
     }
     .order-card:hover {
-      box-shadow: 0 8px 20px -4px rgba(15,23,42,0.06);
+      border-color:#9bd3ae;
+      box-shadow: 0 10px 26px -6px rgba(15,23,42,0.1);
     }
+    .orders-hero { display:flex;justify-content:space-between;align-items:center;gap:22px;padding:26px 30px;margin-bottom:22px;border:1px solid #ccebd7;border-radius:18px;background:linear-gradient(115deg,#f0fdf4,#fff 68%); }
+    .order-head { display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:20px 22px;background:#fbfdfc;border-bottom:1px solid #e7eeea; }
+    .order-badges { display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px; }
+    .order-id { font-size:16px;font-weight:800;color:#0f172a; }
+    .order-meta { display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#64748b;font-size:11px; }
+    .order-meta span { display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid #e2e8f0;border-radius:8px;background:#fff; }
+    .order-total { flex:0 0 auto;min-width:170px;padding:11px 14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4; }
+    .order-body { display:grid;grid-template-columns:minmax(0,1.5fr) minmax(230px,.8fr);gap:14px;padding:18px 22px; }
+    .order-service-box,.escrow-info { padding:15px;border:1px solid #e5ece8;border-radius:12px;background:#fff; }
+    .order-service-title { margin:5px 0 12px;font-size:16px;line-height:1.45;font-weight:800;color:#172033; }
+    .provider-info { display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#475569; }
+    .provider-info strong { color:#0f172a; }
+    .order-notes { margin-top:12px;padding:10px 12px;border-left:3px solid #a7f3d0;background:#f8fafc;color:#64748b;border-radius:0 8px 8px 0;font-size:12px;line-height:1.5; }
+    .escrow-info { background:#f6fcf8;border-color:#d8eee0; }
+    .milestones-panel { margin:0 22px 18px;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc; }
+    .milestones-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px; }
+    .order-actions { display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 22px;border-top:1px solid #e7eeea;background:#fcfdfc; }
+    .order-action-group { display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap; }
     .status-tab {
-      padding: 9px 16px;
-      border-radius: 8px;
+      padding: 9px 13px;
+      border-radius: 9px;
       font-size: 13.5px;
       font-weight: 600;
       color: #64748B;
-      text-decoration: none;
       cursor: pointer;
       transition: all 0.15s ease;
+      white-space:nowrap;
+      border:1px solid transparent;
+      background:transparent;
     }
     .status-tab.active {
       background: #FFFFFF;
       color: #16A34A;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      border-color:#d6eade;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
+    .status-tab span { display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 4px;margin-left:3px;border-radius:7px;background:#e2e8f0;color:#475569;font-size:10px;font-weight:800; }
+    .status-tab.active span { background:#dcfce7;color:#15803d; }
     .milestone-step {
       display: flex;
       align-items: center;
@@ -66,6 +91,8 @@
       background: #E2E8F0;
       color: #94A3B8;
     }
+    @media(max-width:800px){.order-body{grid-template-columns:1fr}.milestones-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:600px){.orders-hero{padding:21px;align-items:flex-start;flex-direction:column}.order-head{padding:16px;flex-direction:column}.order-total{width:100%;box-sizing:border-box}.order-body{padding:14px 16px}.milestones-panel{margin:0 16px 14px;padding:13px}.order-actions{padding:13px 16px;align-items:flex-start;flex-direction:column}.order-action-group{width:100%;justify-content:flex-start}.order-action-group .btn{flex:1;justify-content:center}.status-tab{font-size:12px;padding:8px 10px}}
   </style>
 </head>
 <body>
@@ -73,39 +100,27 @@
   <!-- Top Navbar -->
   <div id="navbar-placeholder"></div>
 
-  <main style="max-width: 1240px; margin: 32px auto 60px; padding: 0 24px;">
+  <main style="max-width: 1160px; margin: 28px auto 60px; padding: 0 24px;">
 
-    <!-- PAGE HEADER & ESCROW OVERVIEW -->
-    <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:24px;">
+    <section class="orders-hero">
       <div>
-        <div style="display:inline-flex; align-items:center; gap:6px; background:#DCFCE7; color:#15803D; font-size:12px; font-weight:700; padding:4px 10px; border-radius:9999px; margin-bottom:8px;">
-          <i class="fa-solid fa-shield-halved"></i> 100% ESCROW PROTECTED
-        </div>
-        <h1 style="font-size:24px; font-weight:800; color:#0F172A; margin:0;">
-          Quản Lý Đơn Hàng & Tiến Độ Nghiệm Thu
-        </h1>
-        <p style="font-size:14px; color:#64748B; margin-top:4px;">
-          Theo dõi tiến độ chuyên gia thực hiện, xác nhận giải ngân ký quỹ hoặc mở khiếu nại tranh chấp khi cần.
-        </p>
+        <div style="display:inline-flex;align-items:center;gap:7px;padding:5px 10px;background:#dcfce7;color:#15803d;border-radius:999px;font-size:11px;font-weight:800;margin-bottom:9px"><i class="fa-solid fa-shield-halved"></i> KÝ QUỸ ĐƯỢC BẢO VỆ</div>
+        <h1 style="font-size:clamp(24px,4vw,32px);font-weight:800;color:#0f172a;margin:0">Đơn hàng của tôi</h1>
+        <p style="font-size:13px;color:#64748b;line-height:1.6;margin:7px 0 0">Theo dõi tiến độ, nghiệm thu và quản lý khoản ký quỹ của bạn.</p>
       </div>
-
-      <div style="display:flex; gap:10px;">
-        <a href="customer_requests.html" class="btn btn-outline" style="border-color:#CBD5E1; color:#0F172A; font-weight:600;">
-          <i class="fa-solid fa-bullhorn" style="color:#16A34A;"></i> Tin Đăng Tuyển
-        </a>
-        <a href="customer.html" class="btn btn-primary" style="font-weight:700;">
-          <i class="fa-solid fa-plus"></i> Đặt Dịch Vụ Mới
-        </a>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <a href="customer_requests.html" class="btn btn-outline" style="font-weight:700"><i class="fa-solid fa-rectangle-list" style="color:#15803d"></i> Yêu cầu của tôi</a>
+        <a href="customer.html" class="btn btn-primary" style="font-weight:700"><i class="fa-solid fa-plus"></i> Đặt dịch vụ</a>
       </div>
-    </div>
+    </section>
 
     <!-- FILTER TABS -->
-    <div style="background:#F1F5F9; padding:6px; border-radius:10px; display:inline-flex; gap:4px; margin-bottom:24px;">
-      <span class="status-tab active" onclick="filterOrders('all', this)">Tất Cả Đơn (<span id="countAll">0</span>)</span>
-      <span class="status-tab" onclick="filterOrders('processing', this)">Đang Thực Hiện (<span id="countProcessing">0</span>)</span>
-      <span class="status-tab" onclick="filterOrders('delivered', this)">Chờ Nghiệm Thu (<span id="countDelivered">0</span>)</span>
-      <span class="status-tab" onclick="filterOrders('completed', this)">Đã Hoàn Tất (<span id="countCompleted">0</span>)</span>
-      <span class="status-tab" onclick="filterOrders('disputed', this)">Tranh Chấp (<span id="countDisputed">0</span>)</span>
+    <div style="background:#eef2f5;padding:5px;border-radius:12px;display:flex;gap:4px;margin-bottom:20px;overflow-x:auto;width:max-content;max-width:100%;box-sizing:border-box">
+      <button type="button" class="status-tab active" onclick="filterOrders('all', this)">Tất cả <span id="countAll">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('processing', this)">Đang làm <span id="countProcessing">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('delivered', this)">Chờ nghiệm thu <span id="countDelivered">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('completed', this)">Hoàn tất <span id="countCompleted">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('disputed', this)">Tranh chấp <span id="countDisputed">0</span></button>
     </div>
 
     <!-- ORDERS LIST CONTAINER -->
@@ -156,6 +171,16 @@
 
     async function loadCustomerOrders() {
       const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        document.getElementById('ordersContainer').innerHTML = `
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:40px; text-align:center;">
+            <i class="fa-solid fa-lock" style="font-size:32px;color:#94A3B8"></i>
+            <h3 style="margin:12px 0 6px;color:#0F172A">Đăng nhập để xem đơn hàng</h3>
+            <p style="color:#64748B;margin-bottom:16px">Bạn có thể xem trang công khai, còn đơn hàng cá nhân cần tài khoản khách hàng.</p>
+            <button class="btn btn-primary" onclick="openAuthModal('login')">Đăng nhập</button>
+          </div>`;
+        return;
+      }
       const res = await apiRequest(`/api/orders?customerId=${user.id}`);
       if (res.success && res.orders) {
         myOrders = res.orders;
@@ -216,67 +241,39 @@
 
         let badgeStatus = '';
         if (isCompleted) {
-          badgeStatus = `<span style="background:#DCFCE7; color:#15803D; font-weight:700; font-size:12px; padding:4px 10px; border-radius:9999px;"><i class="fa-solid fa-circle-check"></i> Đã Hoàn Tất & Giải Ngân</span>`;
+          badgeStatus = `<span style="background:#DCFCE7; color:#15803D; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-circle-check"></i> Hoàn tất</span>`;
         } else if (isDelivered) {
-          badgeStatus = `<span style="background:#FEF3C7; color:#B45309; font-weight:700; font-size:12px; padding:4px 10px; border-radius:9999px;"><i class="fa-solid fa-bell"></i> Chuyên Gia Đã Bàn Giao (Chờ Nghiệm Thu)</span>`;
+          badgeStatus = `<span style="background:#FEF3C7; color:#B45309; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-bell"></i> Chờ nghiệm thu</span>`;
         } else if (isDisputed) {
-          badgeStatus = `<span style="background:#FEE2E2; color:#B91C1C; font-weight:700; font-size:12px; padding:4px 10px; border-radius:9999px;"><i class="fa-solid fa-scale-balanced"></i> Đang Tranh Chấp Escrow</span>`;
+          badgeStatus = `<span style="background:#FEE2E2; color:#B91C1C; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-scale-balanced"></i> Đang tranh chấp</span>`;
         } else {
-          badgeStatus = `<span style="background:#EFF6FF; color:#1D4ED8; font-weight:700; font-size:12px; padding:4px 10px; border-radius:9999px;"><i class="fa-solid fa-bars-progress"></i> Đang Triển Khai</span>`;
+          badgeStatus = `<span style="background:#EFF6FF; color:#1D4ED8; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-bars-progress"></i> Đang thực hiện</span>`;
         }
 
         return `
           <div class="order-card">
-            <!-- Order Header -->
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; padding-bottom:16px; border-bottom:1px solid #F1F5F9; margin-bottom:18px;">
-              <div>
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                  <span style="font-weight:800; font-size:16px; color:#0F172A;">${o.id}</span>
-                  <span class="badge-escrow"><i class="fa-solid fa-lock"></i> ${o.escrowStatus === 'completed' ? 'Đã giải ngân' : 'Ký quỹ an toàn'}</span>
-                  ${badgeStatus}
-                </div>
-                <div style="font-size:13px; color:#64748B;">
-                  Ngày tạo: ${o.date} • Hạn chót: <strong>${o.deadline || 'Thỏa thuận'}</strong>
-                </div>
+            <div class="order-head">
+              <div style="min-width:0;flex:1">
+                <div class="order-badges"><span class="order-id">Đơn ${o.id}</span>${badgeStatus}<span class="badge-escrow"><i class="fa-solid fa-lock"></i> ${o.escrowStatus === 'completed' ? 'Đã giải ngân' : 'Đang ký quỹ'}</span></div>
+                <div class="order-meta"><span><i class="fa-regular fa-calendar"></i> Tạo ngày ${o.date || '—'}</span><span><i class="fa-regular fa-clock"></i> Hạn ${o.deadline || 'Thỏa thuận'}</span></div>
               </div>
-
-              <div style="text-align:right;">
-                <div style="font-size:11px; color:#64748B; text-transform:uppercase; font-weight:600;">Tổng Tiền Ký Quỹ</div>
-                <div style="font-size:20px; font-weight:800; color:#16A34A;">
-                  ${formatVND(o.escrowDeposit || o.price)}
-                </div>
-              </div>
+              <div class="order-total"><div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Tiền ký quỹ</div><div style="font-size:20px;font-weight:800;color:#15803d;margin-top:4px">${formatVND(o.escrowDeposit || o.price)}</div></div>
             </div>
 
-            <!-- Service & Provider Summary -->
-            <div style="display:grid; grid-template-columns: 2fr 1.2fr; gap:20px; margin-bottom:20px;">
-              <div>
-                <h3 style="font-size:16px; font-weight:800; color:#0F172A; margin-bottom:6px;">
-                  ${o.serviceTitle}
-                </h3>
-                <div style="font-size:13px; color:#475569; display:flex; align-items:center; gap:8px;">
-                  <span>Chuyên gia thực hiện:</span>
-                  <strong style="color:#0F172A;"><i class="fa-solid fa-user-tie" style="color:#16A34A;"></i> ${o.providerName}</strong>
-                  <span>• SĐT: ${o.providerPhone || '0901 234 567'}</span>
-                </div>
-                ${o.notes ? `<div style="font-size:12.5px; color:#64748B; margin-top:6px; font-style:italic;">"${o.notes}"</div>` : ''}
+            <div class="order-body">
+              <div class="order-service-box">
+                <div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:.05em">Dịch vụ</div>
+                <h3 class="order-service-title">${o.serviceTitle || 'Dịch vụ theo yêu cầu'}</h3>
+                <div class="provider-info"><i class="fa-solid fa-user-tie" style="color:#16A34A"></i><span>Chuyên gia</span><strong>${o.providerName || 'Chưa cập nhật'}</strong>${o.providerPhone ? `<span style="color:#94a3b8">•</span><span><i class="fa-solid fa-phone" style="color:#94a3b8"></i> ${o.providerPhone}</span>` : ''}</div>
+                ${o.notes ? `<div class="order-notes"><strong>Ghi chú:</strong> ${o.notes}</div>` : ''}
               </div>
-
-              <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:12px 16px; font-size:12.5px;">
-                <div style="color:#64748B; margin-bottom:4px;">Cơ chế bảo vệ ký quỹ:</div>
-                <div style="color:#15803D; font-weight:600; line-height:1.4;">
-                  <i class="fa-solid fa-shield-halved"></i> Tiền của bạn đang được sàn phong tỏa bảo lãnh 100%.
-                </div>
-              </div>
+              <div class="escrow-info"><div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:.05em;margin-bottom:8px">Bảo vệ thanh toán</div><div style="display:flex;gap:10px;align-items:flex-start;color:#15803d;font-size:12px;font-weight:700;line-height:1.5"><i class="fa-solid fa-shield-halved" style="font-size:17px;margin-top:1px"></i><span>Tiền được giữ an toàn cho đến khi bạn nghiệm thu công việc.</span></div></div>
             </div>
 
-            <!-- Milestones Progress Timeline -->
-            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:16px; margin-bottom:20px;">
-              <div style="font-weight:700; font-size:13px; color:#0F172A; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-                <i class="fa-solid fa-list-check" style="color:#16A34A;"></i> Các Mốc Nghiệm Thu Công Việc:
-              </div>
-              <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;">
-                ${(o.milestones || []).map((m, idx) => `
+            <div class="milestones-panel">
+              <div style="font-weight:800;font-size:12px;color:#0f172a;margin-bottom:13px;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-list-check" style="color:#16A34A"></i> Tiến độ công việc</div>
+              <div class="milestones-grid">
+                ${(o.milestones || []).length ? (o.milestones || []).map((m, idx) => `
                   <div class="milestone-step">
                     <div class="milestone-dot ${m.done ? 'done' : 'pending'}">
                       ${m.done ? '<i class="fa-solid fa-check"></i>' : idx + 1}
@@ -290,34 +287,28 @@
                       </div>
                     </div>
                   </div>
-                `).join('')}
+                `).join('') : '<div style="font-size:12px;color:#64748b">Chưa có mốc tiến độ được cập nhật.</div>'}
               </div>
             </div>
 
-            <!-- Actions Bar -->
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; pt-2;">
-              <div>
-                <a href="customer_chat.html" class="btn btn-outline btn-sm" style="border-color:#CBD5E1; color:#0F172A; font-weight:600;">
-                  <i class="fa-solid fa-comments" style="color:#16A34A;"></i> Nhắn Tin Chuyên Gia
-                </a>
-              </div>
-
-              <div style="display:flex; gap:10px;">
+            <div class="order-actions">
+              <a href="customer_chat.html?with=${o.providerId || ''}" class="btn btn-outline btn-sm" style="font-weight:700"><i class="fa-solid fa-comments" style="color:#16A34A"></i> Nhắn chuyên gia</a>
+              <div class="order-action-group">
                 ${!isCompleted && !isDisputed ? `
-                  <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#FCA5A5; color:#DC2626; font-weight:600;">
-                    <i class="fa-solid fa-shield-halved"></i> Mở Khiếu Nại Tranh Chấp
+                  <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fecaca;color:#b91c1c;font-weight:700">
+                    <i class="fa-solid fa-shield-halved"></i> Khiếu nại
                   </a>
                 ` : ''}
 
                 ${isDelivered || (isEscrowHeld && !isCompleted && !isDisputed) ? `
-                  <button onclick="openReleaseModal('${o.id}', ${o.price})" class="btn btn-primary" style="font-weight:700; box-shadow:0 2px 8px rgba(22,163,74,0.3);">
-                    <i class="fa-solid fa-hand-holding-dollar"></i> Nghiệm Thu & Giải Ngân Escrow
+                  <button onclick="openReleaseModal('${o.id}', ${o.price})" class="btn btn-primary" style="font-weight:700">
+                    <i class="fa-solid fa-circle-check"></i> Nghiệm thu & giải ngân
                   </button>
                 ` : ''}
 
                 ${isCompleted ? `
-                  <a href="customer_review.html?orderId=${o.id}" class="btn btn-primary" style="font-weight:700; background:#F59E0B; border-color:#F59E0B;">
-                    <i class="fa-solid fa-star"></i> Đánh Giá Chuyên Gia
+                  <a href="customer_review.html?orderId=${o.id}" class="btn btn-primary" style="font-weight:700;background:#F59E0B;border-color:#F59E0B">
+                    <i class="fa-solid fa-star"></i> Đánh giá
                   </a>
                 ` : ''}
               </div>

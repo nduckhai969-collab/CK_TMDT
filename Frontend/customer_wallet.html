@@ -41,12 +41,12 @@
       const amount = document.getElementById('topupAmount').value;
       if (!amount || amount < 10000) return alert('Vui lòng nhập số tiền hợp lệ (tối thiểu 10.000đ)');
       
-      const res = await apiRequest('/api/payments/vnpay/create_payment_url', {
+      const res = await apiRequest('/api/payments/vnpay/create', {
         method: 'POST',
         body: { amount: parseInt(amount), orderDescription: 'Nạp tiền vào ví SkillRental', orderType: 'topup', language: 'vn', bankCode: '' }
       });
-      if (res.success && res.url) {
-        window.location.href = res.url;
+      if (res.success && (res.paymentUrl || res.url)) {
+        window.location.href = res.paymentUrl || res.url;
       } else {
         alert(res.message || 'Lỗi khi tạo giao dịch VNPay. Vui lòng thử lại.');
       }

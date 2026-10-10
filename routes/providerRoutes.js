@@ -220,6 +220,12 @@ router.post('/reviews/:id/reply', requireProvider, (req, res) => {
 });
 
 
+// Route cố định phải đứng TRƯỚC '/:id' (nếu không Express coi 'packages' là một id).
+router.get('/packages', (req, res) => {
+  const packages = db.getCollection('packages') || [];
+  res.json({ success: true, packages });
+});
+
 // Customer favorites are stored per signed-in customer in the database.
 router.get('/favorites', requireCustomer, (req, res) => {
   const favorites = (db.getCollection('favoriteProviders') || []).filter(item => item.customerId === req.authUser.id);
@@ -410,11 +416,6 @@ router.post('/complaints/:id/defense', requireProvider, (req, res) => {
   } else {
     res.status(404).json({ success: false, message: 'Không tìm thấy khiếu nại' });
   }
-});
-
-router.get('/packages', (req, res) => {
-  const packages = db.getCollection('packages') || [];
-  res.json({ success: true, packages });
 });
 
 router.post('/packages/purchase', requireProvider, (req, res) => {

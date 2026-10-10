@@ -13,6 +13,7 @@ const INITIAL_DATABASE = {
     { id: 'USR005', name: 'Phạm Hữu Cường', email: 'cuong.pham@example.com', phone: '0977 445 566', role: 'Provider', password: '123', joinDate: '18/06/2024', spentOrEarned: '74.000.000đ', balance: 12000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150' },
     { id: 'USR006', name: 'Vũ Thị Minh', email: 'minh.vu@example.com', phone: '0944 889 900', role: 'Customer', password: '123', joinDate: '02/08/2024', spentOrEarned: '18.400.000đ', balance: 8000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
     { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', password: '123', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', balance: 2000000, status: 'locked', lockReason: 'Gian lận đánh giá', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150' },
+
     { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', password: '123', joinDate: '10/01/2025', spentOrEarned: '0đ', balance: 500000, status: 'active', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150' },
     { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', password: '123', joinDate: '15/01/2025', spentOrEarned: '0đ', balance: 1000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150' },
     { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', password: 'admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }
@@ -107,7 +108,10 @@ const INITIAL_DATABASE = {
     },
     {
       id: 'PRV004',
+
       userId: 'USR008',
+      userId: 'USR003b',
+
       name: 'Trần Đình Trọng',
       specialty: 'Kỹ Sư Điện Lạnh & Bảo Trì Thiết Bị Gia Dụng Thông Minh',
       category: 'Repair',
@@ -131,6 +135,7 @@ const INITIAL_DATABASE = {
     {
       id: 'PRV005',
       userId: 'USR009',
+      userId: 'USR003c',
       name: 'Lê Thị Duyên',
       specialty: 'Chuyên Gia Dọn Dẹp, Quản Gia & Chăm Sóc Không Gian Sống',
       category: 'Home',
@@ -190,6 +195,7 @@ const INITIAL_DATABASE = {
       skills: ['Facebook Ads', 'Google Ads'],
       certifications: [],
       packages: []
+
     }
   ],
 

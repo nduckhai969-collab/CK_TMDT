@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đề Xuất &amp; Ứng Tuyển Việc Làm - SkillRental Partner</title>
+  <!-- Google Fonts Inter -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="brand-icon">S</div>
+        <span>SkillRental</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Tổng quan</div>
+        <a href="dashboard.html" class="nav-link">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="nav-section-title">Hồ sơ &amp; Dịch vụ</div>
+        <a href="profile.html" class="nav-link">
+          <i class="fa-solid fa-id-card-clip"></i>
+          <span>Hồ Sơ &amp; Dịch Vụ</span>
+        </a>
+
+        <div class="nav-section-title">Công việc &amp; Đơn hàng</div>
+        <a href="jobs.html" class="nav-link active">
+          <i class="fa-solid fa-briefcase"></i>
+          <span>Đề xuất &amp; Ứng tuyển</span>
+          <span class="badge-count" style="background-color: var(--primary);">6</span>
+        </a>
+        <a href="bookings.html" class="nav-link">
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>Đặt lịch &amp; Tiến độ</span>
+        </a>
+
+        <div class="nav-section-title">Kinh doanh &amp; Khách hàng</div>
+        <a href="chat.html" class="nav-link">
+          <i class="fa-solid fa-comments"></i>
+          <span>Tin nhắn Khách hàng</span>
+          <span class="badge-count">3</span>
+        </a>
+        
+        <a href="payment.html" class="nav-link">
+          <i class="fa-solid fa-credit-card"></i>
+          <span>Thanh toán &amp; Phí sàn</span>
+        </a>
+        
+        <a href="income.html" class="nav-link">
+          <i class="fa-solid fa-wallet"></i>
+          <span>Ví &amp; Thu nhập</span>
+        </a>
+        
+        <a href="review.html" class="nav-link">
+          <i class="fa-solid fa-star"></i>
+          <span>Đánh giá &amp; Uy tín</span>
+        </a>
+        
+        <a href="complaint.html" class="nav-link">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Khiếu nại &amp; Tranh chấp</span>
+          <span class="badge-count" style="background-color: var(--warning);">1</span>
+        </a>
+
+        <div class="nav-section-title">Dịch vụ hệ thống</div>
+        <a href="package.html" class="nav-link">
+          <i class="fa-solid fa-box-archive"></i>
+          <span>Mua dịch vụ</span>
+        </a>
+        
+        <a href="post.html" class="nav-link">
+          <i class="fa-solid fa-newspaper"></i>
+          <span>Bài viết &amp; Portfolio</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-profile">
+        <div class="avatar">NV</div>
+        <div class="profile-info">
+          <div class="profile-name">Nguyễn Văn Pro</div>
+          <div class="profile-role">Senior UI/UX &amp; Web Dev</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-wrapper">
+      
+      <!-- Top Sticky Header -->
+      <header class="top-header">
+        <div class="header-title">Đề Xuất &amp; Ứng Tuyển Việc Làm</div>
+        <div class="header-actions">
+          <span class="badge badge-success">
+            <span class="badge-dot"></span> Đang Nhận Việc Tự Động
+          </span>
+          <!-- Switcher to Admin Portal -->
+          <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
+            <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
+          </a>
+        </div>
+      </header>
+
+      <!-- Main Body Content -->
+      <div class="content-body">
+
+        <!-- Navigation Tabs -->
+        <div class="tab-list">
+          <div class="tab-item active" onclick="switchJobTab('tab-uc33', this)">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Đề Xuất Cho Tôi
+            <span class="badge-count" style="background:var(--primary); margin-left:6px;">6</span>
+          </div>
+          <div class="tab-item" onclick="switchJobTab('tab-uc34', this)">
+            <i class="fa-solid fa-file-lines"></i> Xem Chi Tiết Request
+          </div>
+          <div class="tab-item" onclick="switchJobTab('tab-uc35', this)">
+            <i class="fa-solid fa-paper-plane"></i> Báo Giá &amp; Ứng Tuyển
+          </div>
+          <div class="tab-item" onclick="switchJobTab('tab-uc36', this)">
+            <i class="fa-solid fa-clock-rotate-left"></i> Theo Dõi Ứng Tuyển
+            <span class="badge-count" style="background:var(--warning); margin-left:6px;">3</span>
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             1. NHẬN ĐỀ XUẤT CÔNG VIỆC
+             =================================================================== -->
+        <div id="tab-uc33" class="screen-tab-content active">
+          
+          <div class="grid-3" style="grid-template-columns: 2fr 1fr; margin-bottom: 24px;">
+            <!-- Left: Recommended Jobs List -->
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+                <div>
+                  <h2 style="font-size:18px; font-weight:700; color:var(--secondary);">Đề Xuất Phù Hợp Với Kỹ Năng Của Bạn</h2>
+                  <div style="font-size:13px; color:var(--text-muted);">Hệ thống AI tự động gợi ý dựa trên hồ sơ đã xác thực và đánh giá uy tín</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <span class="badge badge-success"><span class="badge-dot"></span> 6 Việc mới hôm nay</span>
+                </div>
+              </div>
+
+              <!-- Job 1 -->
+              <div class="job-card">
+                <div style="display:flex; gap:16px;">
+                  <div class="match-ring" style="--pct:96"><span>96%</span></div>
+                  <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                      <div>
+                        <div style="font-weight:700; font-size:16px; color:var(--secondary);">Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay</div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                          Khách hàng: <strong>Nguyễn Thị Hoa</strong> (TP.HCM) • Đăng 2 giờ trước
+                        </div>
+                      </div>
+                      <span class="badge badge-success"><span class="badge-dot"></span>Phù hợp tuyệt đối</span>
+                    </div>
+
+                    <div style="display:flex; gap:8px; margin:12px 0; flex-wrap:wrap;">
+                      <span class="chip"><i class="fa-solid fa-code" style="color:var(--primary); margin-right:4px;"></i> React / Node.js</span>
+                      <span class="chip"><i class="fa-solid fa-credit-card" style="color:var(--info); margin-right:4px;"></i> Cổng VNPay</span>
+                      <span class="chip"><i class="fa-solid fa-coins" style="color:var(--warning); margin-right:4px;"></i> 8.000.000đ – 12.000.000đ</span>
+                      <span class="chip"><i class="fa-solid fa-calendar" style="margin-right:4px;"></i> 14 ngày bàn giao</span>
+                    </div>
+
+                    <p style="font-size:13px; color:var(--text-main); line-height:1.6; margin-bottom:12px;">
+                      Cần một lập trình viên kinh nghiệm phát triển trang web bán lẻ mỹ phẩm, chuẩn SEO, responsive di động và tích hợp cổng thanh toán VNPay, Momo. Đã có sẵn thiết kế Figma và API sơ bộ.
+                    </p>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
+                      <div style="font-size:12px; color:var(--text-muted);">
+                        <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> Vì sao đề xuất: Trùng khớp 4/4 kỹ năng bạn đã được xác minh chứng chỉ
+                      </div>
+                      <div style="display:flex; gap:8px;">
+                        <button class="btn btn-outline btn-sm" onclick="showToast('Đã lưu công việc vào danh sách quan tâm!')">
+                          <i class="fa-regular fa-bookmark"></i> Lưu
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="openJobDetail('REQ-10245', 'Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay', '8.000.000 – 12.000.000đ', 'Nguyễn Thị Hoa')">
+                          Xem chi tiết →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Job 2 -->
+              <div class="job-card">
+                <div style="display:flex; gap:16px;">
+                  <div class="match-ring" style="--pct:88"><span>88%</span></div>
+                  <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                      <div>
+                        <div style="font-weight:700; font-size:16px; color:var(--secondary);">Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành</div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                          Khách hàng: <strong>Công ty Cổ phần Vận tải Express</strong> • Đăng 4 giờ trước
+                        </div>
+                      </div>
+                      <span class="badge badge-info"><span class="badge-dot"></span>Phù hợp cao</span>
+                    </div>
+
+                    <div style="display:flex; gap:8px; margin:12px 0; flex-wrap:wrap;">
+                      <span class="chip"><i class="fa-solid fa-pen-nib" style="color:var(--primary); margin-right:4px;"></i> Figma Design System</span>
+                      <span class="chip"><i class="fa-solid fa-mobile-screen" style="margin-right:4px;"></i> iOS &amp; Android</span>
+                      <span class="chip"><i class="fa-solid fa-coins" style="color:var(--warning); margin-right:4px;"></i> 6.500.000đ</span>
+                      <span class="chip"><i class="fa-solid fa-calendar" style="margin-right:4px;"></i> 10 ngày</span>
+                    </div>
+
+                    <p style="font-size:13px; color:var(--text-main); line-height:1.6; margin-bottom:12px;">
+                      Yêu cầu thiết kế 20 màn hình mobile app, bao gồm luồng đặt đơn hàng, theo dõi tài xế trên bản đồ GPS thời gian thực và quản lý ví tài khoản.
+                    </p>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
+                      <div style="font-size:12px; color:var(--text-muted);">
+                        <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> Vì sao đề xuất: Bạn có chứng chỉ Google UX Design đã xác thực
+                      </div>
+                      <div style="display:flex; gap:8px;">
+                        <button class="btn btn-outline btn-sm" onclick="showToast('Đã lưu công việc!')"><i class="fa-regular fa-bookmark"></i> Lưu</button>
+                        <button class="btn btn-primary btn-sm" onclick="openJobDetail('REQ-10246', 'Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành', '6.500.000đ', 'Cty Express')">Xem chi tiết →</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Job 3 -->
+              <div class="job-card">
+                <div style="display:flex; gap:16px;">
+                  <div class="match-ring" style="--pct:75"><span>75%</span></div>
+                  <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                      <div>
+                        <div style="font-weight:700; font-size:16px; color:var(--secondary);">Tối ưu tốc độ tải trang Core Web Vitals cho Website Tin tức</div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                          Khách hàng: <strong>Phạm Văn Đức</strong> • Đăng hôm qua
+                        </div>
+                      </div>
+                      <span class="badge badge-neutral">Cân nhắc</span>
+                    </div>
+
+                    <div style="display:flex; gap:8px; margin:12px 0; flex-wrap:wrap;">
+                      <span class="chip">Tối ưu LCP &amp; PageSpeed</span>
+                      <span class="chip">Next.js SSR</span>
+                      <span class="chip">3.000.000đ</span>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
+                      <div style="font-size:12px; color:var(--text-muted);">Yêu cầu xử lý trong 3 ngày</div>
+                      <div style="display:flex; gap:8px;">
+                        <button class="btn btn-outline btn-sm" onclick="showToast('Đã bỏ qua đề xuất!')">Bỏ qua</button>
+                        <button class="btn btn-primary btn-sm" onclick="openJobDetail('REQ-10247', 'Tối ưu tốc độ tải trang Core Web Vitals', '3.000.000đ', 'Phạm Văn Đức')">Xem chi tiết →</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right: Filter & Recommendations Settings -->
+            <div>
+              <div class="card">
+                <div class="card-title" style="margin-bottom:14px;"><i class="fa-solid fa-filter" style="color:var(--primary);"></i> Bộ Lọc Đề Xuất Thông Minh</div>
+                
+                <div class="form-group">
+                  <label class="form-label">Kỹ năng phù hợp</label>
+                  <select class="form-control">
+                    <option>Tất cả kỹ năng đã xác thực (5 kỹ năng)</option>
+                    <option>React / Next.js</option>
+                    <option>Node.js / Express</option>
+                    <option>UI/UX Figma Design</option>
+                    <option>AWS Cloud Solutions</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Khu vực / Bán kính nhận việc</label>
+                  <select class="form-control">
+                    <option>Toàn quốc (Làm việc Remote từ xa)</option>
+                    <option>TP. Hồ Chí Minh (Offline / Gặp mặt)</option>
+                    <option>Trong bán kính 10km</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Mức ngân sách tối thiểu</label>
+                  <input type="text" class="form-control" value="3.000.000đ">
+                </div>
+
+                <button class="btn btn-primary btn-block" onclick="showToast('Đã áp dụng bộ lọc đề xuất mới!')">
+                  <i class="fa-solid fa-arrows-rotate"></i> Cập Nhật Danh Sách
+                </button>
+              </div>
+
+              <div class="card" style="background:var(--primary-light); border-color:#BBF7D0;">
+                <div style="font-weight:700; color:var(--primary-dark); font-size:14px; margin-bottom:6px;">
+                  <i class="fa-solid fa-lightbulb"></i> Mẹo Tăng Tỷ Lệ Nhận Đơn
+                </div>
+                <p style="font-size:12px; color:var(--primary-dark); line-height:1.6;">
+                  Provider có thời gian phản hồi dưới 15 phút và gửi báo giá kèm sản phẩm mẫu tương tự có tỷ lệ được khách hàng chọn cao hơn <strong>4.2 lần</strong>!
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- ===================================================================
+             2. XEM CHI TIẾT REQUEST (REQUEST DETAILS)
+             =================================================================== -->
+        <div id="tab-uc34" class="screen-tab-content">
+          <div style="margin-bottom:16px;">
+            <button class="btn btn-outline btn-sm" onclick="switchJobTab('tab-uc33', document.querySelector('.tab-item:nth-child(1)'))">
+              <i class="fa-solid fa-arrow-left"></i> Quay lại danh sách đề xuất
+            </button>
+          </div>
+
+          <div class="grid-3" style="grid-template-columns: 2fr 1fr;">
+            <!-- Main Details -->
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+                <div>
+                  <span class="badge badge-success" style="margin-bottom:8px;"><span class="badge-dot"></span> Đang Mở Nhận Báo Giá</span>
+                  <h1 style="font-size:20px; font-weight:800; color:var(--secondary);" id="reqDetailTitle">Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay</h1>
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                    Mã yêu cầu: <strong id="reqDetailId">#REQ-10245</strong> • Đăng lúc: 28/04/2025 14:30 • 4 Provider đã nộp báo giá
+                  </div>
+                </div>
+              </div>
+
+              <div style="border-top:1px solid var(--border-color); padding:16px 0;">
+                <h3 style="font-size:15px; font-weight:700; color:var(--secondary); margin-bottom:8px;">Mô tả chi tiết công việc</h3>
+                <p style="font-size:13.5px; color:var(--text-main); line-height:1.7;">
+                  Doanh nghiệp chúng tôi cần tìm một lập trình viên Fullstack giàu kinh nghiệm để hoàn thiện dự án website bán hàng mỹ phẩm thiên nhiên.
+                  <br><br>
+                  <strong>Các hạng mục chính:</strong><br>
+                  1. Lập trình Frontend từ thiết kế Figma đã được ban giám đốc duyệt (chuẩn Responsive máy tính và điện thoại).<br>
+                  2. Xây dựng trang danh mục sản phẩm, bộ lọc giá, thương hiệu và đánh giá sao.<br>
+                  3. Tích hợp giỏ hàng và cổng thanh toán trực tuyến qua VNPay &amp; MoMo QR Code.<br>
+                  4. Tối ưu On-page SEO, schema markup sản phẩm và tốc độ tải trang đạt điểm Google Lighthouse &gt; 90.<br>
+                  5. Hướng dẫn nhân viên quản trị thêm/sửa sản phẩm qua trang admin backend.
+                </p>
+              </div>
+
+              <div style="border-top:1px solid var(--border-color); padding:16px 0;">
+                <h3 style="font-size:15px; font-weight:700; color:var(--secondary); margin-bottom:10px;">Kỹ năng yêu cầu bắt buộc</h3>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <span class="chip" style="background:#DCFCE7; color:#15803D;">✓ ReactJS / Next.js</span>
+                  <span class="chip" style="background:#DCFCE7; color:#15803D;">✓ NodeJS / RESTful API</span>
+                  <span class="chip" style="background:#DCFCE7; color:#15803D;">✓ Cổng VNPay</span>
+                  <span class="chip">Chuẩn SEO On-page</span>
+                  <span class="chip">Responsive Mobile First</span>
+                </div>
+              </div>
+
+              <div style="border-top:1px solid var(--border-color); padding:16px 0;">
+                <h3 style="font-size:15px; font-weight:700; color:var(--secondary); margin-bottom:10px;">Tài liệu &amp; Thiết kế đính kèm</h3>
+                <div class="grid-3" style="gap:12px;">
+                  <div style="border:1px solid var(--border-color); border-radius:8px; padding:12px; display:flex; align-items:center; gap:10px; background:#F8FAFC;">
+                    <i class="fa-brands fa-figma" style="font-size:24px; color:#A855F7;"></i>
+                    <div style="flex:1; overflow:hidden;">
+                      <div style="font-weight:600; font-size:13px; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">Figma_Cosmetics_v2.fig</div>
+                      <div style="font-size:11px; color:var(--text-muted);">14.2 MB • Thiết kế UI</div>
+                    </div>
+                  </div>
+                  <div style="border:1px solid var(--border-color); border-radius:8px; padding:12px; display:flex; align-items:center; gap:10px; background:#F8FAFC;">
+                    <i class="fa-solid fa-file-pdf" style="font-size:24px; color:#EF4444;"></i>
+                    <div style="flex:1; overflow:hidden;">
+                      <div style="font-weight:600; font-size:13px; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">Yeu_Cau_Ky_Thuat_SRS.pdf</div>
+                      <div style="font-size:11px; color:var(--text-muted);">2.1 MB • Tài liệu mô tả</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Client Summary & Apply Action -->
+            <div>
+              <div class="card">
+                <div class="card-title">Ngân Sách Dự Kiến</div>
+                <div style="font-size:24px; font-weight:800; color:var(--primary); margin:8px 0;" id="reqDetailBudget">8.000.000 – 12.000.000đ</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Khách thanh toán ký quỹ 100% qua ví Escrow sàn SkillRental</div>
+
+                <div class="kv-row"><span class="k">Thời gian mong muốn</span><span class="v">14 Ngày</span></div>
+                <div class="kv-row"><span class="k">Hình thức làm việc</span><span class="v">Trọn gói (Fixed Price)</span></div>
+                <div class="kv-row"><span class="k">Hạn chót nhận báo giá</span><span class="v" style="color:var(--error);">Còn 2 ngày</span></div>
+
+                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="goToApplyTab()">
+                  <i class="fa-solid fa-paper-plane"></i> Ứng Tuyển &amp; Báo Giá Ngay
+                </button>
+              </div>
+
+              <!-- Customer Info Card -->
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px;">Thông Tin Khách Hàng</div>
+                <div style="display:flex; gap:12px; align-items:center;">
+                  <div class="avatar" style="width:48px; height:48px; font-size:18px;">NH</div>
+                  <div>
+                    <div style="font-weight:700; font-size:14px;" id="reqDetailClient">Nguyễn Thị Hoa</div>
+                    <div style="font-size:12px; color:var(--text-muted);">Khách hàng Doanh nghiệp</div>
+                    <div style="font-size:12px; color:var(--warning); margin-top:2px;">★★★★★ 4.9 (18 đánh giá)</div>
+                  </div>
+                </div>
+
+                <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border-color); font-size:12px;">
+                  <div style="margin-bottom:4px;"><i class="fa-solid fa-shield-check" style="color:var(--success);"></i> Đã xác minh CCCD/CMND</div>
+                  <div style="margin-bottom:4px;"><i class="fa-solid fa-credit-card" style="color:var(--success);"></i> Phương thức thanh toán đã liên kết</div>
+                  <div><i class="fa-solid fa-clock-rotate-left" style="color:var(--info);"></i> Tỷ lệ thuê Provider lại: 85%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ===================================================================
+             3. BÁO GIÁ & ỨNG TUYỂN (APPLY & SUBMIT PROPOSAL)
+             =================================================================== -->
+        <div id="tab-uc35" class="screen-tab-content">
+          <div class="grid-3" style="grid-template-columns: 2fr 1fr;">
+            <!-- Proposal Form -->
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Hồ Sơ Báo Giá &amp; Đề Xuất Kỹ Thuật</h2>
+                  <div style="font-size:13px; color:var(--text-muted);">Gửi báo giá minh bạch và giải pháp kỹ thuật để thuyết phục khách hàng</div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Công việc ứng tuyển</label>
+                <input type="text" class="form-control" id="applyJobTitle" value="Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay" readonly style="background:#F1F5F9; font-weight:600;">
+              </div>
+
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label">Mức giá bạn đề xuất (VNĐ) <span style="color:var(--error);">*</span></label>
+                  <input type="number" class="form-control" id="proposalPrice" value="9500000" oninput="calculateEarning()">
+                  <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Ngân sách khách: 8.000.000đ – 12.000.000đ</div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Thời gian hoàn thành ước tính <span style="color:var(--error);">*</span></label>
+                  <div style="display:flex; gap:8px;">
+                    <input type="number" class="form-control" id="proposalDays" value="12">
+                    <span style="display:flex; align-items:center; font-size:13px; color:var(--text-secondary);">ngày</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Thư chào giá &amp; Lời nhắn gửi khách hàng <span style="color:var(--error);">*</span></label>
+                <textarea class="form-control" rows="6" id="proposalLetter" placeholder="Giới thiệu kinh nghiệm tương tự, quy trình thực hiện và cam kết chất lượng...">Chào chị Hoa, em là An - Fullstack Web Developer với hơn 5 năm kinh nghiệm chuyên xây dựng website TMĐT tối ưu chuẩn SEO và tích hợp cổng thanh toán VNPay/MoMo.
+
+Em đã từng triển khai 3 dự án bán lẻ mỹ phẩm có các tính năng tương tự:
+1. Thiết kế chuẩn Responsive Mobile First từ Figma sang Next.js.
+2. Tích hợp thanh toán bảo mật chuẩn Sandbox/Production của VNPay.
+3. Tối ưu điểm Google PageSpeed đạt 95+ điểm trên cả Mobile và Desktop.
+
+Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn quản trị và bảo hành kỹ thuật 3 tháng sau nghiệm thu.</textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Đính kèm sản phẩm mẫu hoặc chứng chỉ liên quan</label>
+                <div class="upload-box" onclick="showToast('Đã chọn file minh chứng đính kèm thành công!')">
+                  <i class="fa-solid fa-cloud-arrow-up" style="font-size:26px; color:var(--primary); margin-bottom:8px;"></i>
+                  <div>Kéo thả tệp hoặc nhấp vào đây để tải lên hình ảnh demo/PDF hồ sơ năng lực</div>
+                  <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Hỗ trợ: PDF, PNG, JPG, ZIP (Tối đa 25MB)</div>
+                </div>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:10px; margin-top:20px; padding:12px; background:#F8FAFC; border-radius:8px;">
+                <input type="checkbox" id="proposalConfirm" checked style="width:18px; height:18px; cursor:pointer;">
+                <label for="proposalConfirm" style="font-size:13px; color:var(--text-main); cursor:pointer;">
+                  Tôi cam kết thực hiện đúng tiến độ, chất lượng và tuân thủ chính sách giao dịch qua trung gian Escrow của SkillRental.
+                </label>
+              </div>
+            </div>
+
+            <!-- Financial Breakdown & Submit -->
+            <div>
+              <div class="card">
+                <div class="card-title" style="margin-bottom:14px;">Bóc Tách Thu Nhập Thực Nhận</div>
+
+                <div class="kv-row">
+                  <span class="k">Báo giá đề xuất</span>
+                  <span class="v" id="calcPriceDisplay">9.500.000đ</span>
+                </div>
+                <div class="kv-row">
+                  <span class="k">Phí hoa hồng sàn (5%)</span>
+                  <span class="v" style="color:var(--error);" id="calcFeeDisplay">-475.000đ</span>
+                </div>
+                <div class="kv-row">
+                  <span class="k">Thuế &amp; Phí duy trì Escrow</span>
+                  <span class="v" style="color:var(--success);">Miễn phí 0đ</span>
+                </div>
+                <div class="kv-row" style="padding:14px 0; border-top:2px solid var(--border-color); font-size:15px;">
+                  <span class="k" style="font-weight:700; color:var(--secondary);">Thực nhận về ví</span>
+                  <span class="v" style="font-size:20px; font-weight:800; color:var(--primary);" id="calcNetDisplay">9.025.000đ</span>
+                </div>
+
+                <div style="font-size:12px; color:var(--text-muted); margin-top:10px; line-height:1.5;">
+                  Số tiền sẽ được ký quỹ tại sàn ngay khi khách chấp nhận và tự động giải ngân vào Ví của bạn sau khi nghiệm thu thành công.
+                </div>
+
+                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="submitProposalAction()">
+                  <i class="fa-solid fa-paper-plane"></i> Gửi Hồ Sơ Ứng Tuyển
+                </button>
+                <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="showToast('Đã lưu nháp hồ sơ báo giá!')">
+                  <i class="fa-regular fa-floppy-disk"></i> Lưu Bản Nháp
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ===================================================================
+             4. THEO DÕI HỒ SƠ ỨNG TUYỂN (PROPOSAL TRACKING)
+             =================================================================== -->
+        <div id="tab-uc36" class="screen-tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Quản Lý &amp; Theo Dõi Hồ Sơ Ứng Tuyển</h2>
+                <div style="font-size:13px; color:var(--text-muted);">Trạng thái phản hồi từ khách hàng đối với các báo giá bạn đã gửi</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-secondary btn-sm" onclick="filterProposals('all', this)">Tất cả (5)</button>
+                <button class="btn btn-primary btn-sm" onclick="filterProposals('pending', this)">Đang chờ (3)</button>
+                <button class="btn btn-secondary btn-sm" onclick="filterProposals('accepted', this)">Đã chấp nhận (1)</button>
+                <button class="btn btn-secondary btn-sm" onclick="filterProposals('rejected', this)">Từ chối (1)</button>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Công việc &amp; Khách hàng</th>
+                    <th>Báo giá đề xuất</th>
+                    <th>Thời gian</th>
+                    <th>Ngày gửi</th>
+                    <th>Trạng thái xử lý</th>
+                    <th style="text-align:right;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="proposalsTableBody">
+                  <!-- Row 1: Pending -->
+                  <tr data-status="pending">
+                    <td>
+                      <div style="font-weight:700; color:var(--secondary);">Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay</div>
+                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Nguyễn Thị Hoa</strong> (TP.HCM)</div>
+                    </td>
+                    <td><strong>9.500.000đ</strong></td>
+                    <td>12 ngày</td>
+                    <td>28/04/2025</td>
+                    <td><span class="badge badge-warning"><span class="badge-dot"></span> Đang chờ khách xem</span></td>
+                    <td style="text-align:right;">
+                      <button class="btn btn-outline btn-sm" onclick="openModal('viewProposalModal')">Xem thư</button>
+                    </td>
+                  </tr>
+
+                  <!-- Row 2: Accepted (Direct link to Booking) -->
+                  <tr data-status="accepted" style="background:#F0FDF4;">
+                    <td>
+                      <div style="font-weight:700; color:var(--secondary);">Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành</div>
+                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Cty Cổ phần Vận tải Express</strong></div>
+                    </td>
+                    <td><strong style="color:var(--primary);">6.500.000đ</strong></td>
+                    <td>10 ngày</td>
+                    <td>26/04/2025</td>
+                    <td><span class="badge badge-success"><span class="badge-dot"></span> Khách đã chấp nhận</span></td>
+                    <td style="text-align:right;">
+                      <a href="bookings.html?tab=booking" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-calendar-check"></i> Đến Booking &amp; Hợp Đồng →
+                      </a>
+                    </td>
+                  </tr>
+
+                  <!-- Row 3: Pending -->
+                  <tr data-status="pending">
+                    <td>
+                      <div style="font-weight:700; color:var(--secondary);">Tối ưu tốc độ tải trang Core Web Vitals cho Website Tin tức</div>
+                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Phạm Văn Đức</strong></div>
+                    </td>
+                    <td><strong>3.000.000đ</strong></td>
+                    <td>3 ngày</td>
+                    <td>25/04/2025</td>
+                    <td><span class="badge badge-info"><span class="badge-dot"></span> Khách đang cân nhắc</span></td>
+                    <td style="text-align:right;">
+                      <button class="btn btn-outline btn-sm" onclick="openModal('viewProposalModal')">Xem chi tiết</button>
+                    </td>
+                  </tr>
+
+                  <!-- Row 4: Pending -->
+                  <tr data-status="pending">
+                    <td>
+                      <div style="font-weight:700; color:var(--secondary);">Kiểm thử bảo mật Web API Penetration Testing</div>
+                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Cty TNHH Công Nghệ Kim Long</strong></div>
+                    </td>
+                    <td><strong>12.000.000đ</strong></td>
+                    <td>7 ngày</td>
+                    <td>24/04/2025</td>
+                    <td><span class="badge badge-warning"><span class="badge-dot"></span> Đang chờ duyệt</span></td>
+                    <td style="text-align:right;">
+                      <button class="btn btn-outline btn-sm" onclick="openModal('viewProposalModal')">Xem chi tiết</button>
+                    </td>
+                  </tr>
+
+                  <!-- Row 5: Rejected -->
+                  <tr data-status="rejected">
+                    <td>
+                      <div style="font-weight:700; color:var(--secondary);">Cài đặt và cấu hình cụm máy chủ Kubernetes CI/CD</div>
+                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Lê Minh Khang</strong></div>
+                    </td>
+                    <td><strong>15.000.000đ</strong></td>
+                    <td>14 ngày</td>
+                    <td>20/04/2025</td>
+                    <td><span class="badge badge-error"><span class="badge-dot"></span> Đã chọn Provider khác</span></td>
+                    <td style="text-align:right;">
+                      <button class="btn btn-ghost btn-sm" onclick="showToast('Khách hàng chọn báo giá khác có thời gian triển khai sớm hơn.')">Xem lý do</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastBox" class="toast-box">
+    <i class="fa-solid fa-circle-check" style="color: var(--primary);"></i>
+    <span id="toastMessage">Thông báo</span>
+  </div>
+
+  <!-- Proposal View Modal -->
+  <div class="modal-backdrop" id="viewProposalModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.5); z-index:1050; align-items:center; justify-content:center;">
+    <div style="background:#FFF; width:100%; max-width:550px; border-radius:12px; padding:24px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.2);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:17px; font-weight:700;">Chi Tiết Thư Chào Giá Đã Gửi</h3>
+        <button onclick="closeModal('viewProposalModal')" style="border:none; background:none; font-size:18px; cursor:pointer;">✕</button>
+      </div>
+      <div style="font-size:13px; color:var(--text-main); line-height:1.6; background:#F8FAFC; padding:16px; border-radius:8px; border:1px solid var(--border-color);">
+        Chào chị Hoa, em là An - Fullstack Web Developer với hơn 5 năm kinh nghiệm chuyên xây dựng website TMĐT tối ưu chuẩn SEO và tích hợp cổng thanh toán VNPay/MoMo. Em cam kết hoàn thiện trong 12 ngày và bảo hành 3 tháng.
+      </div>
+      <div style="margin-top:20px; text-align:right;">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('viewProposalModal')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="provider.js"></script>
+  <script>
+    function showToast(msg) {
+      const toast = document.getElementById('toastBox');
+      document.getElementById('toastMessage').textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    function switchJobTab(tabId, el) {
+      document.querySelectorAll('.screen-tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      const target = document.getElementById(tabId);
+      if (target) target.classList.add('active');
+      if (el) el.classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    let currentJobId = 'JOB-2025-01';
+
+    function openJobDetail(id, title, budget, client) {
+      currentJobId = id || 'JOB-2025-01';
+      document.getElementById('reqDetailTitle').textContent = title;
+      document.getElementById('reqDetailId').textContent = '#' + id;
+      document.getElementById('reqDetailBudget').textContent = budget;
+      document.getElementById('reqDetailClient').textContent = client;
+      document.getElementById('applyJobTitle').value = title;
+      switchJobTab('tab-uc34', document.querySelectorAll('.tab-item')[1]);
+    }
+
+    function goToApplyTab() {
+      switchJobTab('tab-uc35', document.querySelectorAll('.tab-item')[2]);
+    }
+
+    function calculateEarning() {
+      const price = parseFloat(document.getElementById('proposalPrice').value) || 0;
+      const fee = Math.round(price * 0.05);
+      const net = price - fee;
+      document.getElementById('calcPriceDisplay').textContent = price.toLocaleString('vi-VN') + 'đ';
+      document.getElementById('calcFeeDisplay').textContent = '-' + fee.toLocaleString('vi-VN') + 'đ';
+      document.getElementById('calcNetDisplay').textContent = net.toLocaleString('vi-VN') + 'đ';
+    }
+
+    async function submitProposalAction() {
+      const price = document.getElementById('proposalPrice').value;
+      const days = document.getElementById('proposalDays').value;
+      const coverLetter = document.getElementById('proposalCoverLetter') ? document.getElementById('proposalCoverLetter').value : '';
+
+      if (!price || !days) {
+        showToast('Vui lòng nhập đầy đủ báo giá và số ngày hoàn thành!');
+        return;
+      }
+
+      showToast('Đang gửi hồ sơ ứng tuyển...', 'info');
+      try {
+        if (window.providerApi) {
+          const num = Number(price);
+          await window.providerApi.applyToJob(currentJobId, {
+            proposedPrice: num.toLocaleString('vi-VN') + 'đ',
+            proposalText: coverLetter || `Tôi cam kết hoàn thành dự án trong ${days} ngày với đơn giá ${num.toLocaleString('vi-VN')}đ.`
+          });
+        }
+      } catch (err) {
+        console.warn('Apply job API error:', err);
+      }
+
+      showToast('Đã gửi hồ sơ ứng tuyển và báo giá thành công!');
+      setTimeout(() => {
+        switchJobTab('tab-uc36', document.querySelectorAll('.tab-item')[3]);
+      }, 700);
+    }
+
+    function filterProposals(status, btn) {
+      document.querySelectorAll('.table-container tbody tr').forEach(row => {
+        if (status === 'all' || row.getAttribute('data-status') === status) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      btn.parentElement.querySelectorAll('button').forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-secondary');
+      });
+      btn.classList.remove('btn-secondary');
+      btn.classList.add('btn-primary');
+    }
+
+    function openModal(id) {
+      document.getElementById(id).style.display = 'flex';
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Rental - Quản lý Đơn hàng &amp; Escrow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">S</div>
+        <div class="brand-text">
+          <strong>SKILL RENTAL</strong>
+          <span>Admin Portal (B4)</span>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <div class="menu-label">TỔNG QUAN</div>
+        <a class="menu-item" href="admin.html">
+          <span class="menu-icon">⌂</span>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ NGƯỜI DÙNG</div>
+        <a class="menu-item" href="users.html">
+          <span class="menu-icon">♙</span>
+          <span>Người dùng</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=locked">
+          <span class="menu-icon">▣</span>
+          <span>Khóa tài khoản</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=unlock-requests">
+          <span class="menu-icon">🔓</span>
+          <span>Mở khóa tài khoản</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ PROVIDER</div>
+        <a class="menu-item" href="providers.html">
+          <span class="menu-icon">♙</span>
+          <span>Tất cả Provider</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt Provider &amp; Hồ sơ</span>
+          <span class="badge-count" id="badge-provider-pending">4</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=skills">
+          <span class="menu-icon">✦</span>
+          <span>Duyệt kỹ năng &amp; CC</span>
+          <span class="badge-count" id="badge-skill-pending">3</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ DỊCH VỤ</div>
+        <a class="menu-item" href="services.html">
+          <span class="menu-icon">▤</span>
+          <span>Dịch vụ</span>
+        </a>
+        <a class="menu-item" href="services.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt dịch vụ &amp; giá</span>
+          <span class="badge-count" id="badge-service-pending">5</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ GIAO DỊCH &amp; ĐÁNH GIÁ</div>
+        <a class="menu-item active" href="orders.html">
+          <span class="menu-icon">▤</span>
+          <span>Đơn hàng</span>
+        </a>
+        <a class="menu-item" href="reviews.html">
+          <span class="menu-icon">★</span>
+          <span>Đánh giá</span>
+        </a>
+        <a class="menu-item" href="complaints.html">
+          <span class="menu-icon">⚑</span>
+          <span>Khiếu nại</span>
+          <span class="badge-count" id="badge-complaint-count">2</span>
+        </a>
+
+        <div class="menu-label">THỐNG KÊ &amp; BÁO CÁO</div>
+        <a class="menu-item" href="reports.html">
+          <span class="menu-icon">▥</span>
+          <span>Báo cáo &amp; Xuất file</span>
+        </a>
+        <a class="menu-item" href="statistics.html">
+          <span class="menu-icon">◫</span>
+          <span>Thống kê hệ thống</span>
+        </a>
+        <a class="menu-item" href="cashflow.html">
+          <span class="menu-icon">◷</span>
+          <span>Thống kê dòng tiền</span>
+        </a>
+
+        <div class="menu-label">CẤU HÌNH &amp; GÓI</div>
+        <a class="menu-item" href="packages.html">
+          <span class="menu-icon">▢</span>
+          <span>Gói đăng tin</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="online-dot"></div>
+        <span>Hệ thống B4 đang hoạt động</span>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="breadcrumb-tag">GIAO DỊCH / ĐƠN HÀNG &amp; ESCROW</span>
+          <div class="top-search">
+            <span>⌕</span>
+            <input type="text" placeholder="Tìm kiếm mã đơn, khách hàng, provider...">
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <a href="dashboard.html" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:12px;">
+            <span>💼</span>
+            <span>Cổng Provider ↗</span>
+          </a>
+          <button class="icon-badge-btn" onclick="showToast('Thông báo', 'Hệ thống Escrow hoạt động an toàn 100%', 'info')">
+            <span>♢</span>
+            <span class="badge-dot">3</span>
+          </button>
+          <div class="admin-profile">
+            <div class="admin-avatar">A</div>
+            <div class="admin-info">
+              <strong>Nguyễn Văn Admin</strong>
+              <span>Quản trị viên hệ thống</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-header">
+          <div class="page-title-group">
+            <h1><span class="green-pill"></span> Quản lý Đơn hàng &amp; Escrow</h1>
+            <p>Tra cứu tiến trình thực hiện dịch vụ, trạng thái thanh toán ký quỹ Escrow và quyền can thiệp hủy đơn</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="exportDataSimulation('Danh_Sach_Don_Hang')">
+              <span>⤓</span> Xuất danh sách đơn
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Toolbar -->
+        <div class="filter-toolbar">
+          <div class="filter-left">
+            <div class="search-input-wrap">
+              <span>⌕</span>
+              <input type="text" id="order-search" placeholder="Mã đơn hàng, khách hàng, provider...">
+            </div>
+            <select class="filter-select" id="order-status-filter">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="processing">Đang thực hiện</option>
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="pending">Chờ xử lý</option>
+              <option value="completed">Hoàn thành</option>
+              <option value="disputed">Khiếu nại / Tranh chấp</option>
+              <option value="cancelled">Đã hủy</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap">
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã đơn</th>
+                  <th>Khách hàng</th>
+                  <th>Provider</th>
+                  <th>Dịch vụ</th>
+                  <th>Giá trị</th>
+                  <th>Ký quỹ Escrow</th>
+                  <th>Trạng thái đơn</th>
+                  <th>Ngày tạo</th>
+                  <th style="text-align:right">Can thiệp</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody"></tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            <span class="table-info-text" id="orders-count-text"></span>
+            <div class="pagination">
+              <button class="page-btn">‹</button>
+              <button class="page-btn active">1</button>
+              <button class="page-btn">2</button>
+              <button class="page-btn">›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Order Detail & Can thiệp -->
+  <div class="modal-overlay" id="modal-order-detail">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3>Chi tiết &amp; Can thiệp Đơn hàng</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-order-detail')">×</button>
+      </div>
+      <div class="modal-body" id="modal-order-detail-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-order-detail')">Đóng</button>
+        <button class="btn btn-danger-outline btn-sm" id="btn-cancel-order-intervene">Can thiệp hủy đơn & hoàn tiền</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="common.js"></script>
+  <script>
+    let activeOrderId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderOrdersTable();
+      setupOrderEvents();
+    });
+
+    function renderOrdersTable() {
+      const state = getAppState();
+      const q = (document.getElementById('order-search')?.value || '').toLowerCase().trim();
+      const st = document.getElementById('order-status-filter')?.value || 'all';
+
+      const filtered = state.orders.filter(o => {
+        const matchQ = o.id.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q) || o.provider.toLowerCase().includes(q) || o.service.toLowerCase().includes(q);
+        const matchSt = (st === 'all') || (o.orderStatus === st);
+        return matchQ && matchSt;
+      });
+
+      const tbody = document.getElementById('orders-tbody');
+      const countEl = document.getElementById('orders-count-text');
+      if (countEl) countEl.textContent = `Hiển thị ${filtered.length} / ${state.orders.length} đơn hàng`;
+
+      if (!tbody) return;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:var(--text-secondary);">Không tìm thấy đơn hàng phù hợp.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(o => `
+        <tr>
+          <td><strong>${o.id}</strong></td>
+          <td>${o.customer}</td>
+          <td>${o.provider}</td>
+          <td>${o.service}</td>
+          <td><strong style="color:var(--secondary)">${o.price}</strong></td>
+          <td>
+            <span class="badge ${o.escrowStatus === 'Đã giữ ký quỹ' ? 'badge-info' : o.escrowStatus === 'Đã giải ngân' ? 'badge-success' : o.escrowStatus === 'Tạm giữ tranh chấp' ? 'badge-danger' : 'badge-warning'}">
+              ${o.escrowStatus}
+            </span>
+          </td>
+          <td>
+            <span class="badge ${o.orderStatus === 'processing' ? 'badge-info' : o.orderStatus === 'completed' ? 'badge-success' : o.orderStatus === 'disputed' || o.orderStatus === 'cancelled' ? 'badge-danger' : 'badge-warning'}">
+              ${o.orderStatus === 'processing' ? 'Đang thực hiện' : o.orderStatus === 'completed' ? 'Hoàn thành' : o.orderStatus === 'confirmed' ? 'Đã xác nhận' : o.orderStatus === 'disputed' ? 'Khiếu nại / Tranh chấp' : o.orderStatus === 'cancelled' ? 'Đã hủy' : 'Chờ xử lý'}
+            </span>
+          </td>
+          <td>${o.date}</td>
+          <td style="text-align:right">
+            <button class="btn btn-primary btn-xs" onclick="openOrderModal('${o.id}')">
+              <span>▤</span> Xem & Can thiệp
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function setupOrderEvents() {
+      const search = document.getElementById('order-search');
+      const filter = document.getElementById('order-status-filter');
+      if (search) search.addEventListener('input', renderOrdersTable);
+      if (filter) filter.addEventListener('change', renderOrdersTable);
+
+      document.getElementById('btn-cancel-order-intervene').addEventListener('click', () => {
+        if (!activeOrderId) return;
+        const state = getAppState();
+        const order = state.orders.find(o => o.id === activeOrderId);
+        if (order) {
+          order.orderStatus = 'cancelled';
+          order.escrowStatus = 'Đã hoàn tiền';
+          if (window.adminApi) {
+            window.adminApi.forceRefundOrder(activeOrderId).catch(console.warn);
+          }
+          saveAppState(state);
+          closeModal('modal-order-detail');
+          renderOrdersTable();
+          showToast('Can thiệp đơn hàng thành công', `Đơn hàng ${order.id} đã bị hủy cưỡng chế và hoàn 100% tiền Escrow cho khách.`, 'warning');
+        }
+      });
+    }
+
+    function openOrderModal(id) {
+      const state = getAppState();
+      const order = state.orders.find(o => o.id === id);
+      if (!order) return;
+
+      activeOrderId = id;
+      const body = document.getElementById('modal-order-detail-body');
+      body.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:18px;">
+          <div>
+            <h4 style="font-size:16px; color:var(--secondary);">Đơn hàng: ${order.id}</h4>
+            <p style="color:var(--text-secondary);">${order.service}</p>
+          </div>
+          <div>
+            <span class="badge badge-info">${order.orderStatus}</span>
+          </div>
+        </div>
+
+        <div class="dispute-box">
+          <div>
+            <span class="form-label">Khách hàng thuê dịch vụ</span>
+            <strong style="color:var(--secondary)">${order.customer}</strong>
+            <p style="color:var(--text-secondary); font-size:11px;">Đã nạp tiền bảo lãnh qua cổng Escrow</p>
+          </div>
+          <div>
+            <span class="form-label">Provider cung cấp kỹ năng</span>
+            <strong style="color:var(--secondary)">${order.provider}</strong>
+            <p style="color:var(--text-secondary); font-size:11px;">Hạn chót hoàn tất: ${order.deadline}</p>
+          </div>
+        </div>
+
+        <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:8px; padding:14px; margin:16px 0;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span>Tổng giá trị đơn hàng:</span>
+            <strong style="font-size:15px; color:var(--secondary);">${order.price}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span>Trạng thái tài khoản ký quỹ (Escrow):</span>
+            <strong style="color:var(--primary);">${order.escrowStatus}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Phí hoa hồng nền tảng (10%):</span>
+            <span>Khấu trừ tự động khi giải ngân</span>
+          </div>
+        </div>
+      `;
+      openModal('modal-order-detail');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Ví VNPay - SkillRental</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+  <style>
+    body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #0f172a; }
+    .wallet-container { max-width: 600px; margin: 50px auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
+    .wallet-icon { font-size: 48px; color: #16A34A; margin-bottom: 20px; }
+    .balance { font-size: 36px; font-weight: 800; color: #0f172a; margin-bottom: 30px; }
+    input[type=number] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
+    .btn-vnpay { background: #005A9E; color: #fff; font-weight: 700; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+  <div class="wallet-container">
+    <div class="wallet-icon"><i class="fa-solid fa-wallet"></i></div>
+    <h2>Ví của bạn</h2>
+    <div class="balance" id="currentBalance">0đ</div>
+    
+    <h3 style="margin-bottom:15px; text-align:left; font-size:15px;">Nạp tiền qua VNPay</h3>
+    <input type="number" id="topupAmount" placeholder="Nhập số tiền cần nạp (VND)..." min="10000" step="10000">
+    <button class="btn-vnpay" onclick="topupVNPay()"><i class="fa-solid fa-credit-card"></i> Nạp Tiền Bằng VNPay</button>
+  </div>
+  <script src="customer.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
+      const user = getCurrentCustomer();
+      if (user) document.getElementById('currentBalance').textContent = formatVND(user.balance || 0);
+    });
+
+    async function topupVNPay() {
+      const amount = document.getElementById('topupAmount').value;
+      if (!amount || amount < 10000) return alert('Vui lòng nhập số tiền hợp lệ (tối thiểu 10.000đ)');
+      
+      const res = await apiRequest('/api/payments/vnpay/create_payment_url', {
+        method: 'POST',
+        body: { amount: parseInt(amount), orderDescription: 'Nạp tiền vào ví SkillRental', orderType: 'topup', language: 'vn', bankCode: '' }
+      });
+      if (res.success && res.url) {
+        window.location.href = res.url;
+      } else {
+        alert(res.message || 'Lỗi khi tạo giao dịch VNPay. Vui lòng thử lại.');
+      }
+    }
+  </script>
+</body>
+</html>

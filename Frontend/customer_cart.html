@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Giỏ hàng - SkillRental</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+  <style>
+    body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #0f172a; }
+    .cart-container { max-width: 800px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .cart-item { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding: 15px 0; }
+    .cart-item:last-child { border-bottom: none; }
+    .item-info { display: flex; align-items: center; gap: 15px; }
+    .item-info img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
+    .item-details h4 { margin: 0 0 5px; font-size: 15px; }
+    .item-details p { margin: 0; color: #64748b; font-size: 13px; }
+    .item-price { font-weight: 700; color: #16A34A; }
+    .cart-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 800; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #e2e8f0; }
+    .btn-checkout { width: 100%; background: #16A34A; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: 700; margin-top: 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+  <div class="cart-container">
+    <h2><i class="fa-solid fa-cart-shopping"></i> Giỏ hàng của bạn</h2>
+    <div id="cartItems">
+      <!-- Mock Cart Item -->
+      <div class="cart-item">
+        <div class="item-info">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" alt="Provider">
+          <div class="item-details">
+            <h4>Dịch vụ Lập trình Website</h4>
+            <p>Provider: Nguyễn Văn An</p>
+          </div>
+        </div>
+        <div class="item-price">4.500.000đ</div>
+        <button style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>
+    <div class="cart-total">
+      <span>Tổng cộng:</span>
+      <span>4.500.000đ</span>
+    </div>
+    <button class="btn-checkout" onclick="alert('Đang chuyển tới trang thanh toán...')">Tiến hành đặt lịch & thanh toán</button>
+  </div>
+  <script src="customer.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
+    });
+  </script>
+</body>
+</html>

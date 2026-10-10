@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Hồ sơ Provider</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="style.css">
+  <style>
+    body{background:#f5f8f7}.profile-layout{max-width:1040px;margin:24px auto 56px;padding:0 20px;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,.9fr);gap:16px;align-items:start}.profile-main{display:grid;gap:12px}.profile-card,.booking-card{background:#fff;border:1px solid #e5ebe8;border-radius:12px;padding:20px;box-shadow:0 2px 8px #0f172a08}.profile-intro{display:flex;align-items:center;gap:16px}.profile-avatar{width:68px;height:68px;border-radius:50%;object-fit:cover}.profile-name{font-size:21px;color:#172033;margin:0 0 5px}.profile-subtitle{color:#5b6573;font-weight:600;font-size:13px}.profile-meta{display:flex;gap:14px;flex-wrap:wrap;color:#667085;font-size:12px;margin-top:8px}.profile-card h2{font-size:15px;color:#182230;margin:0 0 10px}.profile-card p{color:#586575;font-size:13px;line-height:1.65}.skill-tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.skill-tag{padding:4px 9px;border-radius:99px;background:#eaf7ef;color:#187744;font-size:11px;font-weight:600}.portfolio-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.portfolio-item{overflow:hidden}.portfolio-item img{width:100%;height:78px;object-fit:cover;border-radius:7px;background:#edf3f7}.portfolio-item span{display:block;margin-top:4px;font-size:11px;font-weight:600;color:#364152}.booking-card{position:sticky;top:82px;padding:18px}.price-label{font-size:12px;color:#687385}.price-value{font-size:23px;font-weight:800;color:#168447;margin:5px 0}.booking-hours{font-size:12px;color:#657181;margin:8px 0 14px}.booking-card .btn{display:flex;justify-content:center;width:100%;margin-top:8px;padding:10px}.favorite-profile-button{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;margin-top:8px;padding:10px;border:1px solid #fecdd3;border-radius:8px;background:#fff1f2;color:#be123c;font:700 13px Inter,sans-serif;cursor:pointer}.favorite-profile-button.is-favorite{background:#e11d48;color:#fff;border-color:#e11d48}.reviews-score{display:flex;align-items:center;gap:14px}.score{font-size:26px;font-weight:800;color:#172033}.stars{color:#edae26}.rating-bars{flex:1;font-size:11px;color:#718096}.rating-row{display:grid;grid-template-columns:28px 1fr 18px;gap:6px;align-items:center;margin:3px 0}.rating-track{height:5px;border-radius:8px;background:#e8edf1}.rating-fill{height:100%;background:#e7ad37;border-radius:8px}.muted-note{font-size:12px;color:#8792a0;margin-top:12px}.empty-reviews{font-size:12px;color:#8792a0;margin-top:12px}.verify-badge{font-size:10px;color:#138044;background:#e8f7ee;border-radius:20px;padding:3px 8px;font-weight:700}@media(max-width:720px){.profile-layout{grid-template-columns:1fr;padding:0 14px}.booking-card{position:static;grid-row:1}.profile-intro{align-items:flex-start}.profile-name{font-size:18px}}
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+</head>
+<body><div id="navbar-placeholder"></div>
+<main class="profile-layout">
+  <div class="profile-main">
+    <section class="profile-card">
+      <div class="profile-intro"><img id="providerAvatar" class="profile-avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200" alt="Ảnh Provider"><div><h1 class="profile-name" id="providerName">Đang tải hồ sơ...</h1><span id="verifyBadge" class="verify-badge"><i class="fa-solid fa-circle-check"></i> Hồ sơ Provider</span><div id="providerSpecialty" class="profile-subtitle"></div><div class="profile-meta"><span id="providerRating"></span><span id="providerLocation"></span></div></div></div>
+      <hr style="border:0;border-top:1px solid #edf0f2;margin:16px 0"><h2>Giới thiệu</h2><p id="providerBio">Đang tải thông tin...</p><h2 style="margin-top:14px">Kỹ năng</h2><div id="skillsContainer" class="skill-tags"></div>
+    </section>
+    <section class="profile-card"><h2>Portfolio dự án</h2><p>Hình ảnh và tên dự án minh họa; hồ sơ chưa có dữ liệu portfolio được xác thực.</p><div class="portfolio-grid" style="margin-top:10px">
+      <div class="portfolio-item"><img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&h=220&fit=crop" alt="Dự án thương mại điện tử"><span>Dự án thương mại điện tử</span></div>
+      <div class="portfolio-item"><img src="https://images.unsplash.com/photo-1551650975-87deedd944c3?w=500&h=220&fit=crop" alt="Ứng dụng thanh toán"><span>Ứng dụng thanh toán</span></div>
+      <div class="portfolio-item"><img src="https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=500&h=220&fit=crop" alt="Nền tảng quản lý"><span>Nền tảng quản lý</span></div>
+      <div class="portfolio-item"><img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=500&h=220&fit=crop" alt="Tối ưu hệ thống"><span>Tối ưu hệ thống</span></div>
+    </div></section>
+    <section class="profile-card">
+      <h2>Bài viết & Bình luận</h2>
+      <div id="postsContainer" style="margin-top:10px;">
+        <div style="border: 1px solid #e5ebe8; border-radius:10px; padding: 15px; margin-bottom: 15px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200" alt="Avatar" style="width:36px; height:36px; border-radius:50%;">
+            <div>
+              <div style="font-weight:700; font-size:13px;" id="postAuthorName">Provider</div>
+              <div style="font-size:11px; color:#667085;">2 giờ trước</div>
+            </div>
+          </div>
+          <p style="font-size:13px; color:#364152; line-height:1.5;">Hôm nay hoàn thành xong dự án thiết kế UI/UX cho ứng dụng thương mại điện tử. Rất vui vì khách hàng rất hài lòng! 🎨✨</p>
+          <div style="display:flex; gap:15px; margin-top:12px; font-size:12px; color:#667085;">
+            <span style="cursor:pointer;"><i class="fa-regular fa-heart"></i> 12 Thích</span>
+            <span style="cursor:pointer;"><i class="fa-regular fa-comment"></i> 3 Bình luận</span>
+          </div>
+          <!-- Comments -->
+          <div style="margin-top:15px; border-top:1px solid #edf0f2; padding-top:12px;">
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+              <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100" style="width:28px; height:28px; border-radius:50%;">
+              <div style="background:#f5f8f7; padding:8px 12px; border-radius:12px; font-size:12px;">
+                <strong style="color:#172033; display:block; margin-bottom:2px;">Khách hàng A</strong>
+                Tuyệt vời quá! Chúc mừng bạn nhé.
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <input type="text" placeholder="Viết bình luận..." style="flex:1; border:1px solid #e5ebe8; border-radius:20px; padding:6px 14px; font-size:12px; outline:none;">
+              <button style="background:#16A34A; color:#fff; border:none; border-radius:20px; padding:6px 14px; font-size:12px; cursor:pointer; font-weight:600;">Gửi</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="profile-card"><h2>Đánh giá khách hàng</h2><div class="reviews-score"><div><div class="score" id="scoreValue">—</div><div id="scoreStars" class="stars">★★★★★</div><small id="reviewCount" style="color:#8792a0"></small></div><div class="rating-bars" id="ratingBars"></div></div><div id="reviewsContainer"></div></section>
+  </div>
+  <aside class="booking-card"><div class="price-label">Giá / giờ</div><div class="price-value" id="bookingPriceDisplay">Đang tải...</div><div class="booking-hours" id="bookingHours">Thời gian làm việc sẽ được xác nhận khi đặt lịch.</div><a id="bookProvider" class="btn btn-primary" href="customer_booking.html"><i class="fa-solid fa-calendar-check"></i>&nbsp; Đặt lịch ngay</a><a id="btnChatNow" class="btn btn-outline" href="customer_chat.html" onclick="if(currentProvider){event.preventDefault();openChatWithProvider(currentProvider.id,currentProvider.name,currentProvider.specialty,currentProvider.avatar)}"><i class="fa-regular fa-message"></i>&nbsp; Nhắn tin nhanh</a><button type="button" id="btnFavoriteProvider" class="favorite-profile-button" data-favorite-provider="" onclick="toggleCurrentProviderFavorite(this)"><i class="fa-regular fa-heart"></i> <span data-favorite-label>Thêm vào yêu thích</span></button><p class="muted-note">Lịch sẽ được xác nhận khi Provider duyệt yêu cầu. Chức năng khóa học chưa được triển khai.</p></aside>
+</main><div id="footer-placeholder"></div><script src="customer.js"></script>
+<script>
+let currentProvider=null;
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('navbar-placeholder').innerHTML=renderCustomerNavbar('home');document.getElementById('footer-placeholder').innerHTML=renderCustomerFooter();loadFavoriteProviderIds();loadProviderDetail(new URLSearchParams(location.search).get('id')||'PRV001')});
+document.addEventListener('DOMContentLoaded',()=>{const providerId=new URLSearchParams(location.search).get('id')||'PRV001';const button=document.getElementById('btnFavoriteProvider');button.dataset.favoriteProvider=providerId;syncFavoriteButtons()});
+function toggleCurrentProviderFavorite(button){if(!currentProvider)return;toggleFavoriteProvider(currentProvider.id,button)}
+async function loadProviderDetail(id){const res=await apiRequest(`/api/providers/${id}`);if(!res.success||!res.provider){showToast('Lỗi','Không tìm thấy thông tin Provider','error');return}currentProvider=res.provider;const p=res.provider;document.getElementById('providerName').textContent=p.name;document.getElementById('providerSpecialty').textContent=p.specialty;document.getElementById('providerAvatar').src=p.avatar||document.getElementById('providerAvatar').src;document.getElementById('providerBio').textContent=p.bio||'Provider chưa cập nhật phần giới thiệu.';document.getElementById('providerLocation').innerHTML=`<i class="fa-solid fa-location-dot"></i> ${p.location||'Chưa cập nhật địa điểm'}`;document.getElementById('providerRating').innerHTML=`<i class="fa-solid fa-star" style="color:#f0b429"></i> ${p.rating||'—'} · ${p.reviewCount||0} đánh giá`;document.getElementById('bookingPriceDisplay').textContent=`${formatVND(p.hourlyRate||0)} / giờ`;document.getElementById('btnChatNow').href=`customer_chat.html?with=${p.id}`;document.getElementById('bookProvider').href=`customer_booking.html?id=${encodeURIComponent(p.id)}`;document.getElementById('skillsContainer').innerHTML=(p.skills||[]).map(s=>`<span class="skill-tag">${s}</span>`).join('')||'<span class="muted-note">Chưa cập nhật kỹ năng.</span>';document.getElementById('scoreValue').textContent=p.rating||'—';document.getElementById('reviewCount').textContent=`${p.reviewCount||0} đánh giá trên hồ sơ`;document.getElementById('ratingBars').innerHTML=[5,4,3,2,1].map(n=>`<div class="rating-row"><span>${n} ★</span><div class="rating-track"><div class="rating-fill" style="width:${n===5&&p.reviewCount?100:0}%"></div></div><span>${n===5&&p.reviewCount?p.reviewCount:0}</span></div>`).join('');const reviews=res.reviews||[];document.getElementById('reviewsContainer').innerHTML=reviews.length?reviews.slice(0,3).map(r=>`<div style="border-top:1px solid #edf0f2;padding-top:10px;margin-top:10px"><strong style="font-size:12px">${r.customerName||'Khách hàng'}</strong><span style="float:right;color:#e7ad37">${'★'.repeat(Number(r.rating)||5)}</span><p style="margin-top:5px">${r.content||''}</p></div>`).join(''):'<div class="empty-reviews">Chưa có đánh giá chi tiết từ khách hàng trong hệ thống.</div>'}
+</script></body></html>

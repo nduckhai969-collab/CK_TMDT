@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
+const { processReleaseEscrow, processForceRefund } = require('../services/orderService');
 
 // ============================================================================
 // 1. DASHBOARD & SYSTEM OVERVIEW (UC-51)
@@ -526,60 +527,25 @@ router.get('/orders', (req, res) => {
 });
 
 router.post('/orders/:id/force-release', (req, res) => {
-  const orders = db.getCollection('orders');
-  const order = orders.find(o => o.id === req.params.id);
-
-  if (!order) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  try {
+    const order = processReleaseEscrow(req.params.id, { force: true });
+    res.json({
+      success: true,
+      message: `Admin đã can thiệp giải ngân số tiền ${order.priceFormatted || order.price} cho Provider!`,
+      order
+    });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
   }
-
-  order.escrowStatus = 'completed';
-  order.orderStatus = 'completed';
-
-  // Credit Provider wallet
-  const users = db.getCollection('users');
-  const provider = users.find(u => u.name === order.providerName || u.id === order.providerId);
-  if (provider) {
-    provider.balance = (provider.balance || 0) + Number(order.price);
-    db.saveCollection('users', users);
-  }
-
-  db.saveCollection('orders', orders);
-
-  res.json({
-    success: true,
-    message: `Admin đã can thiệp giải ngân số tiền ${order.priceFormatted || order.price} cho Provider!`,
-    order
-  });
 });
 
 router.post('/orders/:id/force-refund', (req, res) => {
-  const orders = db.getCollection('orders');
-  const order = orders.find(o => o.id === req.params.id);
-
-  if (!order) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  try {
+    const order = processForceRefund(req.params.id);
+    res.json({ success: true, message: 'Admin đã hoàn trả 100% tiền ký quỹ Escrow cho khách hàng!', order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
   }
-
-  order.escrowStatus = 'refunded';
-  order.orderStatus = 'cancelled';
-
-  // Refund customer balance
-  const users = db.getCollection('users');
-  const customer = users.find(u => u.id === order.customerId || u.name === order.customerName);
-  if (customer) {
-    const refundAmount = Number(order.escrowDeposit) || Number(order.price);
-    customer.balance = (customer.balance || 0) + refundAmount;
-    db.saveCollection('users', users);
-  }
-
-  db.saveCollection('orders', orders);
-
-  res.json({
-    success: true,
-    message: `Admin đã hoàn trả 100% tiền ký quỹ Escrow cho khách hàng!`,
-    order
-  });
 });
 
 // ============================================================================
@@ -607,6 +573,34 @@ router.post('/reviews/:id/status', (req, res) => {
     success: true,
     message: status === 'hidden' ? 'Đã ẩn đánh giá vi phạm khỏi hệ thống!' : 'Đã công khai lại đánh giá!',
     review
+  });
+});
+
+// ============================================================================
+// 7B. COMMENT MODERATION
+// ============================================================================
+router.get('/comments', (req, res) => {
+  const comments = db.getCollection('comments') || [];
+  res.json({ success: true, total: comments.length, comments });
+});
+
+router.post('/comments/:id/status', (req, res) => {
+  const { status, note } = req.body;
+  const comments = db.getCollection('comments') || [];
+  const comment = comments.find(c => c.id === req.params.id);
+
+  if (!comment) {
+    return res.status(404).json({ success: false, message: 'Bình luận không tồn tại!' });
+  }
+
+  comment.status = status || 'hidden';
+  if (note) comment.note = note;
+  db.saveCollection('comments', comments);
+
+  res.json({
+    success: true,
+    message: status === 'hidden' ? 'Đã ẩn bình luận vi phạm!' : 'Đã công khai lại bình luận!',
+    comment
   });
 });
 
@@ -803,10 +797,10 @@ router.put('/packages/:id', (req, res) => {
 // 12. SYSTEM STATISTICS (UC-68)
 // ============================================================================
 router.get('/statistics', (req, res) => {
-  const users = db.getCollection('users');
-  const providers = db.getCollection('providers');
-  const services = db.getCollection('services');
-  const orders = db.getCollection('orders');
+  const users = db.getCollection('users') || [];
+  const providers = db.getCollection('providers') || [];
+  const services = db.getCollection('services') || [];
+  const orders = db.getCollection('orders') || [];
 
   const categories = {
     IT: services.filter(s => s.category === 'IT').length,
@@ -816,12 +810,65 @@ router.get('/statistics', (req, res) => {
     Repair: services.filter(s => s.category === 'Repair').length
   };
 
-  const revenueByMonth = [
-    { month: 'T1/2025', volume: 18000000, revenue: 900000 },
-    { month: 'T2/2025', volume: 24500000, revenue: 1225000 },
-    { month: 'T3/2025', volume: 38000000, revenue: 1900000 },
-    { month: 'T4/2025', volume: 56000000, revenue: 2800000 }
-  ];
+  const { startDate, endDate } = req.query;
+  let filteredOrders = orders;
+  if (startDate && endDate) {
+    // 'YYYY-MM-DD' phải đọc theo giờ địa phương: new Date('2025-04-20') là 00:00 UTC (= 07:00 ở VN)
+    // nên đơn lúc 00:00 giờ VN của ngày đầu sẽ bị loại nhầm.
+    const toLocalDate = (s) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s));
+      return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(s);
+    };
+    const start = toLocalDate(startDate);
+    const end = toLocalDate(endDate);
+    end.setHours(23, 59, 59, 999);
+    filteredOrders = orders.filter(o => {
+      // Parse order date (DD/MM/YYYY HH:mm or ISO)
+      let dStr = o.date || o.createdAt;
+      let d;
+      if (dStr && dStr.includes('/')) {
+        const parts = dStr.split(' ')[0].split('/');
+        d = new Date(parts[2], parts[1] - 1, parts[0]);
+      } else {
+        d = new Date(dStr);
+      }
+      return d >= start && d <= end;
+    });
+  }
+
+  // Calculate daily revenue for chart
+  const revenueByDay = {};
+  filteredOrders.forEach(o => {
+    if (o.orderStatus === 'completed' || o.orderStatus === 'processing' || o.orderStatus === 'delivered') {
+      let dStr = o.date || o.createdAt;
+      let d;
+      if (dStr && dStr.includes('/')) {
+        const parts = dStr.split(' ')[0].split('/');
+        d = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      } else {
+        const dateObj = new Date(dStr);
+        d = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+      }
+      const price = Number(o.price || 0);
+      if (!revenueByDay[d]) {
+        revenueByDay[d] = { volume: 0, revenue: 0, count: 0 };
+      }
+      revenueByDay[d].volume += price;
+      // Giả định doanh thu sàn là 5% giá trị đơn hàng
+      revenueByDay[d].revenue += Math.round(price * 0.05);
+      revenueByDay[d].count += 1;
+    }
+  });
+
+  // Also calculate order statuses for pie chart
+  const orderStatuses = {
+    pending: filteredOrders.filter(o => o.orderStatus === 'pending').length,
+    processing: filteredOrders.filter(o => o.orderStatus === 'processing').length,
+    delivered: filteredOrders.filter(o => o.orderStatus === 'delivered').length,
+    completed: filteredOrders.filter(o => o.orderStatus === 'completed').length,
+    cancelled: filteredOrders.filter(o => o.orderStatus === 'cancelled').length,
+    disputed: filteredOrders.filter(o => o.orderStatus === 'disputed').length
+  };
 
   res.json({
     success: true,
@@ -834,7 +881,9 @@ router.get('/statistics', (req, res) => {
         locked: users.filter(u => u.status === 'locked').length
       },
       categories,
-      revenueByMonth
+      revenueByDay,
+      orderStatuses,
+      totalOrders: filteredOrders.length
     }
   });
 });

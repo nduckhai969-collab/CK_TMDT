@@ -37,13 +37,13 @@ function getCurrentCustomer() {
   try {
     const user = JSON.parse(raw);
     if (!user || !user.id || ['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(user.id)) {
-      localStorage.removeItem(SESSION_KEY);
+      (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
       return null;
     }
     return user;
   } catch (error) {
     console.error('Session data không hợp lệ:', error);
-    localStorage.removeItem(SESSION_KEY);
+    (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
     return null;
   }
 }
@@ -71,9 +71,7 @@ function setCurrentCustomer(user) {
 
 function clearCurrentCustomer() {
 
-  localStorage.removeItem(
-      SESSION_KEY
-  );
+  (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
 }
 
 
@@ -580,7 +578,7 @@ function renderCustomerNavbar(activePage = 'home') {
       </a>
     </nav>
 
-    <!-- RIGHT BAR: SEARCH + NOTIFICATION + USER -->
+    <!-- RIGHT BAR: SEARCH + NOTIFICATION + CART + VNPay + USER -->
     <div style="display:flex; align-items:center; gap:16px;">
       <!-- Header search -->
       <div style="position:relative; width:180px;">
@@ -588,11 +586,39 @@ function renderCustomerNavbar(activePage = 'home') {
         <i class="fa-solid fa-magnifying-glass" onclick="handleNavSearch()" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#16A34A; font-size:12px; cursor:pointer;"></i>
       </div>
 
+      <!-- Nạp VNPay -->
+      <a href="customer_wallet.html?vnpay=1" style="display:inline-flex; align-items:center; gap:6px; background:#16A34A; color:#FFF; font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:8px; text-decoration:none;">
+        <i class="fa-solid fa-wallet"></i> Nạp VNPay
+      </a>
+
+      <!-- Giỏ hàng (Cart) -->
+      <a href="customer_cart.html" style="background:none; border:none; color:#64748B; font-size:15px; cursor:pointer; padding:6px; position:relative; text-decoration:none;" title="Giỏ hàng">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span style="position:absolute; top:2px; right:0px; width:14px; height:14px; background:#F59E0B; color:#fff; border-radius:50%; font-size:9px; display:flex; align-items:center; justify-content:center; font-weight:bold;">3</span>
+      </a>
+
       <!-- Notification Bell -->
-      <button type="button" onclick="showToast('Thông báo', 'Bạn không có thông báo mới nào.', 'info')" style="background:none; border:none; color:#64748B; font-size:15px; cursor:pointer; padding:6px; position:relative;" title="Thông báo">
-        <i class="fa-regular fa-bell"></i>
-        <span style="position:absolute; top:4px; right:4px; width:7px; height:7px; background:#EF4444; border-radius:50%;"></span>
-      </button>
+      <div style="position:relative;">
+        <button type="button" onclick="document.getElementById('notifDropdown').style.display = document.getElementById('notifDropdown').style.display === 'none' ? 'block' : 'none'" style="background:none; border:none; color:#64748B; font-size:15px; cursor:pointer; padding:6px; position:relative;" title="Thông báo">
+          <i class="fa-regular fa-bell"></i>
+          <span style="position:absolute; top:4px; right:4px; width:7px; height:7px; background:#EF4444; border-radius:50%;"></span>
+        </button>
+        <!-- Dropdown Thông báo -->
+        <div id="notifDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:-50px; width:300px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,.1); z-index:2000;">
+          <div style="padding:12px; font-weight:700; border-bottom:1px solid #F1F5F9;">Thông báo mới</div>
+          <div style="max-height:300px; overflow-y:auto;">
+            <div style="padding:12px; border-bottom:1px solid #F1F5F9; font-size:13px; display:flex; gap:10px;">
+              <div style="color:#16A34A;"><i class="fa-solid fa-circle-check"></i></div>
+              <div><strong>Provider Nguyễn Văn A</strong> đã chấp nhận yêu cầu của bạn.<div style="color:#64748B; font-size:11px; margin-top:4px;">10 phút trước</div></div>
+            </div>
+            <div style="padding:12px; border-bottom:1px solid #F1F5F9; font-size:13px; display:flex; gap:10px;">
+              <div style="color:#F59E0B;"><i class="fa-solid fa-bell"></i></div>
+              <div>Hệ thống đã nhận thanh toán qua <strong>VNPay</strong>.<div style="color:#64748B; font-size:11px; margin-top:4px;">1 giờ trước</div></div>
+            </div>
+          </div>
+          <div style="padding:8px; text-align:center;"><a href="#" style="font-size:12px; color:#16A34A; text-decoration:none;">Xem tất cả</a></div>
+        </div>
+      </div>
 
       ${user ? `<!-- User Profile -->
       <div style="position:relative;">
@@ -606,7 +632,7 @@ function renderCustomerNavbar(activePage = 'home') {
         <div id="customerAccountMenu" style="display:none; position:absolute; top:calc(100% + 8px); right:0; width:210px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,.1); padding:8px; z-index:2000;">
           <div style="padding:8px 10px; border-bottom:1px solid #F1F5F9; margin-bottom:6px;">
             <div style="font-weight:700; font-size:13px; color:#0F172A;">${user.name || 'Lê Tuấn Anh'}</div>
-            <div style="font-size:11px; color:#64748B;">${user.email || 'tuananh.le@example.com'}</div>
+            <div style="font-size:11px; color:#64748B;">Số dư: ${formatVND(user.balance || 0)}</div>
           </div>
           <a href="customer_profile.html" style="display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:13px; color:#334155; text-decoration:none; border-radius:6px;" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='transparent'">
             <i class="fa-regular fa-user" style="color:#64748B;"></i> Hồ Sơ Của Tôi

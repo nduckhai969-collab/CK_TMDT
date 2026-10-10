@@ -94,6 +94,10 @@
     @media(max-width:800px){.order-body{grid-template-columns:1fr}.milestones-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:600px){.orders-hero{padding:21px;align-items:flex-start;flex-direction:column}.order-head{padding:16px;flex-direction:column}.order-total{width:100%;box-sizing:border-box}.order-body{padding:14px 16px}.milestones-panel{margin:0 16px 14px;padding:13px}.order-actions{padding:13px 16px;align-items:flex-start;flex-direction:column}.order-action-group{width:100%;justify-content:flex-start}.order-action-group .btn{flex:1;justify-content:center}.status-tab{font-size:12px;padding:8px 10px}}
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
 </head>
 <body>
 
@@ -294,6 +298,11 @@
             <div class="order-actions">
               <a href="customer_chat.html?with=${o.providerId || ''}" class="btn btn-outline btn-sm" style="font-weight:700"><i class="fa-solid fa-comments" style="color:#16A34A"></i> Nhắn chuyên gia</a>
               <div class="order-action-group">
+                ${(o.orderStatus === 'pending' || o.orderStatus === 'processing') ? `
+                  <button onclick="cancelCustomerOrder('${o.id}')" class="btn btn-outline btn-sm" style="border-color:#94a3b8;color:#475569;font-weight:700">
+                    <i class="fa-solid fa-xmark"></i> Hủy đơn
+                  </button>
+                ` : ''}
                 ${!isCompleted && !isDisputed ? `
                   <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fecaca;color:#b91c1c;font-weight:700">
                     <i class="fa-solid fa-shield-halved"></i> Khiếu nại
@@ -350,6 +359,20 @@
         showToast('Lỗi', res.message || 'Không thể giải ngân tiền ký quỹ', 'error');
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-check"></i> Xác Nhận Giải Ngân`;
+      }
+    }
+
+    async function cancelCustomerOrder(orderId) {
+      if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này không? Tiền ký quỹ sẽ được hoàn trả.')) return;
+      const res = await apiRequest(`/api/orders/${orderId}/cancel`, {
+        method: 'PUT',
+        body: { reason: 'Khách hàng hủy đơn' }
+      });
+      if (res.success) {
+        showToast('Thành công', 'Hủy đơn hàng thành công. Tiền ký quỹ đã được hoàn vào ví của bạn.', 'success');
+        loadCustomerOrders();
+      } else {
+        showToast('Lỗi', res.message || 'Không thể hủy đơn hàng', 'error');
       }
     }
   </script>

@@ -1079,6 +1079,10 @@
       }
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
 </head>
 
 <body>
@@ -2379,6 +2383,11 @@
 
         </div>
 
+        <div style="text-align:right; margin:-6px 0 4px;">
+          <a href="#" onclick="handleForgotPassword(event)"
+             style="font-size:13px; font-weight:600; text-decoration:none;">Quên mật khẩu?</a>
+        </div>
+
         <button
                 type="submit"
                 class="btn btn-primary btn-block"
@@ -2388,6 +2397,20 @@
           <i class="fa-solid fa-arrow-right-to-bracket"></i>
           Đăng Nhập Ngay
 
+        </button>
+
+        <div style="text-align:center; margin:16px 0; font-size:13px; color:var(--text-muted); position:relative;">
+          <hr style="border:none; border-top:1px solid var(--border-color); position:absolute; top:50%; width:100%; z-index:1;">
+          <span style="background:#FFF; padding:0 10px; position:relative; z-index:2;">HOẶC</span>
+        </div>
+
+        <button
+                type="button"
+                class="btn btn-outline btn-block"
+                style="width:100%; height:44px; font-weight:600; font-size:14px; margin-bottom:12px;"
+                onclick="handleGoogleLogin(event)">
+          <i class="fa-brands fa-google" style="color:#DB4437;"></i>
+          Đăng Nhập Bằng Google
         </button>
 
         <div class="quick-demo-box">
@@ -2401,7 +2424,7 @@
             <button
                     type="button"
                     class="btn-demo"
-                    onclick="quickFillAndLogin('long.le@example.com', '123')">
+                    onclick="quickFillAndLogin('long.le@example.com', 'SkillRental@123')">
 
               <i
                       class="fa-solid fa-user"
@@ -2415,14 +2438,14 @@
             <button
                     type="button"
                     class="btn-demo"
-                    onclick="quickFillAndLogin('an.nguyen@example.com', '123')">
+                    onclick="quickFillAndLogin('minh.nguyen@example.com', 'SkillRental@123')">
 
               <i
                       class="fa-solid fa-briefcase"
                       style="color:#0F172A;">
               </i>
 
-              Provider: Nguyễn Văn An
+              Provider: Nguyễn Văn Minh
 
             </button>
 
@@ -2574,7 +2597,7 @@
       if (raw) {
         const user = JSON.parse(raw);
         if (!user || ['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(user.id)) {
-          localStorage.removeItem(SESSION_KEY);
+          SkillAuth.logout();
           return null;
         }
         return user;
@@ -3057,24 +3080,7 @@
 
     try {
 
-      const res = await fetch(
-              '/api/auth/login',
-              {
-                method: 'POST',
-
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-
-                body: JSON.stringify({
-                  email,
-                  password
-                })
-              }
-      );
-
-
-      const data = await res.json();
+      const data = await SkillAuth.login(email, password);
 
 
       if (data.success && data.user) {
@@ -3121,6 +3127,13 @@
       /*
        * LOGIN THẤT BẠI
        */
+      if (data.code === 'EMAIL_NOT_VERIFIED' &&
+          confirm('Email chưa được xác nhận. Gửi lại email xác nhận tới ' + email + '?')) {
+        const r = await SkillAuth.resendVerification(email, password);
+        showToastMsg(r.success ? 'Đã gửi email' : 'Không thể gửi', r.message, r.success ? 'success' : 'error');
+        return;
+      }
+
       showToastMsg(
               'Đăng Nhập Thất Bại',
               data.message || 'Sai thông tin tài khoản!',
@@ -3153,12 +3166,85 @@
 
   }
 
+  async function handleGoogleLogin(e) {
+    e.preventDefault();
+    try {
+      const data = await SkillAuth.loginWithGoogle();
+      if (data.success && data.user) {
+        showToastMsg('Đăng Nhập Thành Công!', `Chào mừng ${data.user.name}.`, 'success');
+        closeAuthModal();
+        setTimeout(() => { redirectAfterLogin(data.user); }, 300);
+        return;
+      }
+      if (data.code === 'NO_PROFILE' && data.googleUser) {
+        // Switch to register tab, hide password field, pre-fill data
+        switchAuthTab('register');
+        document.getElementById('regName').value = data.googleUser.name;
+        document.getElementById('regEmail').value = data.googleUser.email;
+        document.getElementById('regEmail').readOnly = true;
+        document.getElementById('regPhone').value = data.googleUser.phone;
+        
+        // Hide password field in register form
+        const pwdGroup = document.getElementById('regPassword').closest('.form-group');
+        if (pwdGroup) pwdGroup.style.display = 'none';
+        // Remove required attribute from password
+        document.getElementById('regPassword').removeAttribute('required');
+        
+        document.getElementById('registerForm').onsubmit = async (evt) => {
+          evt.preventDefault();
+          const role = document.querySelector('input[name="regRole"]:checked').value;
+          const phone = document.getElementById('regPhone').value.trim();
+          const name = document.getElementById('regName').value.trim();
+          
+          const submitBtn = document.getElementById('registerSubmitBtn');
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo tài khoản...';
+          
+          try {
+            data.googleUser.phone = phone;
+            data.googleUser.name = name;
+            const res = await SkillAuth.registerGoogleProfile(role, data.googleUser);
+            if (res.success && res.user) {
+              showToastMsg('Tạo Tài Khoản Thành Công!', `Chào mừng bạn với vai trò ${role}.`, 'success');
+              closeAuthModal();
+              setTimeout(() => { redirectAfterLogin(res.user); }, 300);
+            } else {
+              showToastMsg('Đăng Ký Thất Bại', res.message || 'Không thể tạo tài khoản!', 'error');
+            }
+          } catch (err) {
+            showToastMsg('Lỗi', 'Không thể hoàn tất đăng ký.', 'error');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Hoàn Tất Đăng Ký';
+          }
+        };
+        showToastMsg('Chưa có hồ sơ', data.message, 'success');
+        return;
+      }
+      showToastMsg('Đăng Nhập Thất Bại', data.message || 'Lỗi xác thực Google.', 'error');
+    } catch (err) {
+      console.error(err);
+      showToastMsg('Đăng Nhập Thất Bại', 'Không thể hoàn tất đăng nhập bằng Google.', 'error');
+    }
+  }
+
 
   /*
    * ============================================================
    * 9. ĐĂNG KÝ
    * ============================================================
    */
+
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) {
+      showToastMsg('Nhập email', 'Vui lòng nhập email vào ô "Email" rồi bấm lại "Quên mật khẩu?".', 'error');
+      return;
+    }
+    const r = await SkillAuth.forgotPassword(email);
+    showToastMsg(r.success ? 'Đã gửi email' : 'Không thể gửi', r.message, r.success ? 'success' : 'error');
+  }
 
   async function handleModalRegister(e) {
 
@@ -3203,29 +3289,16 @@
 
     try {
 
-      const res = await fetch(
-              '/api/auth/register',
-              {
-                method: 'POST',
-
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-
-                body: JSON.stringify({
-                  name,
-                  email,
-                  phone,
-                  password,
-                  role
-                })
-              }
-      );
+      const data = await SkillAuth.register({ name, email, phone, password, role });
 
 
-      const data =
-              await res.json();
-
+      if (data.success && data.verifyEmail) {
+        showToastMsg('Đăng Ký Thành Công!', data.message, 'success');
+        document.getElementById('registerForm').reset();
+        document.getElementById('loginEmail').value = email;
+        switchAuthTab('login');
+        return;
+      }
 
       if (data.success && data.user) {
 
@@ -3274,59 +3347,11 @@
       );
 
 
-      /*
-       * FALLBACK ĐĂNG KÝ
-       */
-
-      const newUser = {
-
-        id:
-                'USR_' +
-                Date.now(),
-
-        name,
-
-        email,
-
-        phone,
-
-        password,
-
-        role,
-
-        avatar:
-                role === 'Provider'
-                        ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'
-                        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-
-      };
-
-
-      localStorage.setItem(
-              SESSION_KEY,
-              JSON.stringify(newUser)
-      );
-
-
       showToastMsg(
-              'Đăng Ký Thành Công!',
-              `Tài khoản ${name} (${role}) đã được tạo.`,
-              'success'
+              'Đăng Ký Thất Bại',
+              'Không thể hoàn tất đăng ký. Vui lòng thử lại.',
+              'error'
       );
-
-
-      closeAuthModal();
-
-
-      /*
-       * ĐĂNG KÝ FALLBACK CŨNG ĐI THEO ROLE
-       */
-
-      setTimeout(() => {
-
-        redirectAfterLogin(newUser);
-
-      }, 300);
 
     } finally {
 
@@ -3380,9 +3405,7 @@
 
   function handleLogout() {
 
-    localStorage.removeItem(
-            SESSION_KEY
-    );
+    SkillAuth.logout();
 
 
     showToastMsg(

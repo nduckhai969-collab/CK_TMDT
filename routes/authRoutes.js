@@ -1,69 +1,70 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
+const { auth } = require('../firebase');
+const { authenticate, requireSignedIn, requireAdmin } = require('./customerAuth');
 
-// Login
-router.post('/login', (req, res) => {
-  const { email, password } = req.body;
+// Đăng ký / đăng nhập / đăng xuất / quên mật khẩu / gửi email xác nhận
+// do Firebase Authentication (frontend) xử lý. Server chỉ quản lý HỒ SƠ người dùng.
+
+function publicUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    address: user.address || '',
+    role: user.role,
+    balance: user.balance,
+    avatar: user.avatar,
+    joinDate: user.joinDate
+  };
+}
+
+function nextUserId(users) {
+  const max = users.reduce((m, u) => {
+    const match = /^USR(\d+)$/.exec(u.id || '');
+    return match ? Math.max(m, parseInt(match[1], 10)) : m;
+  }, 0);
+  return `USR${String(max + 1).padStart(3, '0')}`;
+}
+
+// Tạo hồ sơ sau khi frontend đã tạo tài khoản Firebase (token có thể chưa xác nhận email)
+router.post('/register', authenticate({ allowNoProfile: true, allowUnverified: true }), async (req, res) => {
+  if (req.authUser) {
+    return res.status(409).json({ success: false, message: 'Tài khoản này đã có hồ sơ trên hệ thống!' });
+  }
+
+  const { name, phone, role } = req.body || {};
+  const email = req.firebaseUser.email;
+
+  if (!name || !String(name).trim() || !email) {
+    return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ họ tên và email!' });
+  }
+  if (phone && !/^[0-9+\s().-]{8,16}$/.test(String(phone).trim())) {
+    return res.status(400).json({ success: false, message: 'Số điện thoại không hợp lệ!' });
+  }
+
   const users = db.getCollection('users');
-  const user = users.find(u => u.email.toLowerCase() === (email || '').trim().toLowerCase());
-
-  if (!user) {
-    return res.status(401).json({ success: false, message: 'Email hoặc tài khoản không tồn tại!' });
-  }
-
-  if (user.password && user.password !== password) {
-    return res.status(401).json({ success: false, message: 'Mật khẩu không chính xác!' });
-  }
-
-  if (user.status === 'locked') {
-    return res.status(403).json({ success: false, message: `Tài khoản đã bị tạm khóa: ${user.lockReason || 'Liên hệ Admin'}` });
-  }
-
-  res.json({
-    success: true,
-    message: 'Đăng nhập thành công!',
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      balance: user.balance,
-      avatar: user.avatar
-    }
-  });
-});
-
-// Register
-router.post('/register', (req, res) => {
-  const { name, email, phone, password, role = 'Customer' } = req.body;
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ họ tên, email và mật khẩu!' });
-  }
-
-  const users = db.getCollection('users');
-  const existing = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-
-  if (existing) {
+  if (users.some(u => String(u.email || '').toLowerCase() === email.toLowerCase())) {
     return res.status(409).json({ success: false, message: 'Email này đã được sử dụng trên hệ thống!' });
   }
 
+  // Chỉ cho phép tự đăng ký Customer hoặc Provider, KHÔNG cho tự chọn Admin
+  const safeRole = role === 'Provider' ? 'Provider' : 'Customer';
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-  const newId = `USR${String(users.length + 1).padStart(3, '0')}`;
 
   const newUser = {
-    id: newId,
-    name: name.trim(),
-    email: email.trim(),
-    phone: phone ? phone.trim() : '0900 000 000',
-    role: role === 'Provider' ? 'Provider' : 'Customer',
-    password: password,
+    id: nextUserId(users),
+    uid: req.firebaseUser.uid,
+    name: String(name).trim(),
+    email,
+    phone: phone ? String(phone).trim() : '0900 000 000',
+    role: safeRole,
     joinDate: dateStr,
     spentOrEarned: '0đ',
-    balance: role === 'Customer' ? 5000000 : 0, // Free 5M test balance for customer
+    balance: safeRole === 'Customer' ? 5000000 : 0, // số dư thử nghiệm
     status: 'active',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
   };
@@ -71,189 +72,102 @@ router.post('/register', (req, res) => {
   users.push(newUser);
   db.saveCollection('users', users);
 
-  res.status(201).json({
-    success: true,
-    message: 'Đăng ký tài khoản thành công!',
-    user: {
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      phone: newUser.phone,
-      role: newUser.role,
-      balance: newUser.balance,
-      avatar: newUser.avatar
-    }
-  });
-});
-
-// Get current profile
-router.get('/me', (req, res) => {
-  const userId = req.headers['x-user-id'] || req.query.userId || 'USR003';
-  const users = db.getCollection('users');
-  const user = users.find(u => u.id === userId);
-
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+  try {
+    await auth.setCustomUserClaims(req.firebaseUser.uid, { role: safeRole });
+  } catch (err) {
+    console.error('[auth] Không gán được custom claims:', err.message);
   }
 
-  res.json({
+  res.status(201).json({
     success: true,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      balance: user.balance,
-      avatar: user.avatar,
-      joinDate: user.joinDate
-    }
+    message: 'Đăng ký tài khoản thành công! Vui lòng kiểm tra email để xác nhận.',
+    user: publicUser(newUser)
   });
 });
 
-// List all users for demo switcher
-router.get('/users', (req, res) => {
-  const users = db.getCollection('users');
+// Đăng nhập: frontend đăng nhập Firebase, gửi token lên đây để lấy hồ sơ
+router.post('/login', requireSignedIn, (req, res) => {
+  res.json({ success: true, message: 'Đăng nhập thành công!', user: publicUser(req.authUser) });
+});
 
+// Hồ sơ hiện tại
+router.get('/me', requireSignedIn, (req, res) => {
+  res.json({ success: true, user: publicUser(req.authUser) });
+});
+
+// Danh sách user (chỉ Admin)
+router.get('/users', requireAdmin, (req, res) => {
+  const users = db.getCollection('users');
   res.json({
     success: true,
     users: users.map(u => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      balance: u.balance,
-      avatar: u.avatar,
-      status: u.status
+      id: u.id, name: u.name, email: u.email, role: u.role,
+      balance: u.balance, avatar: u.avatar, status: u.status
     }))
   });
 });
 
-
-// Update current profile
-router.put('/profile', (req, res) => {
-  const userId = req.headers['x-user-id'] || req.body.userId;
-
-  if (!userId) {
-    return res.status(400).json({
-      success: false,
-      message: 'Không xác định được tài khoản!'
-    });
-  }
-
-  const { name, phone, address, avatar } = req.body;
+// Cập nhật hồ sơ
+router.put('/profile', requireSignedIn, (req, res) => {
+  const { name, phone, address, avatar } = req.body || {};
 
   if (!name || !name.trim()) {
-    return res.status(400).json({
-      success: false,
-      message: 'Họ tên không được để trống!'
-    });
+    return res.status(400).json({ success: false, message: 'Họ tên không được để trống!' });
   }
 
   const users = db.getCollection('users');
-  const userIndex = users.findIndex(u => u.id === userId);
-
-  if (userIndex === -1) {
-    return res.status(404).json({
-      success: false,
-      message: 'Không tìm thấy người dùng!'
-    });
+  const index = users.findIndex(u => u.id === req.authUser.id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
   }
 
-  users[userIndex].name = name.trim();
-  users[userIndex].phone = phone ? phone.trim() : '';
-  users[userIndex].address = address ? address.trim() : '';
-
-  if (avatar) {
-    users[userIndex].avatar = avatar;
-  }
-
+  users[index].name = name.trim();
+  users[index].phone = phone ? phone.trim() : '';
+  users[index].address = address ? address.trim() : '';
+  if (avatar) users[index].avatar = avatar;
   db.saveCollection('users', users);
 
-  res.json({
-    success: true,
-    message: 'Cập nhật thông tin thành công!',
-    user: {
-      id: users[userIndex].id,
-      name: users[userIndex].name,
-      email: users[userIndex].email,
-      phone: users[userIndex].phone,
-      address: users[userIndex].address || '',
-      role: users[userIndex].role,
-      balance: users[userIndex].balance,
-      avatar: users[userIndex].avatar,
-      joinDate: users[userIndex].joinDate
-    }
-  });
+  res.json({ success: true, message: 'Cập nhật thông tin thành công!', user: publicUser(users[index]) });
 });
 
-
-// Change password
-router.put('/change-password', (req, res) => {
-  const userId = req.headers['x-user-id'] || req.body.userId;
-
-  const {
-    currentPassword,
-    newPassword
-  } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({
-      success: false,
-      message: 'Không xác định được tài khoản!'
-    });
-  }
+// Đổi mật khẩu: kiểm tra mật khẩu hiện tại qua Firebase Auth REST API rồi cập nhật
+router.put('/change-password', requireSignedIn, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
 
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({
-      success: false,
-      message: 'Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới!'
-    });
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới!' });
   }
-
   if (newPassword.length < 6) {
-    return res.status(400).json({
-      success: false,
-      message: 'Mật khẩu mới phải có ít nhất 6 ký tự!'
-    });
+    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự!' });
   }
-
-  const users = db.getCollection('users');
-  const userIndex = users.findIndex(u => u.id === userId);
-
-  if (userIndex === -1) {
-    return res.status(404).json({
-      success: false,
-      message: 'Không tìm thấy người dùng!'
-    });
-  }
-
-  const user = users[userIndex];
-
-  if (user.password !== currentPassword) {
-    return res.status(401).json({
-      success: false,
-      message: 'Mật khẩu hiện tại không chính xác!'
-    });
-  }
-
   if (currentPassword === newPassword) {
-    return res.status(400).json({
-      success: false,
-      message: 'Mật khẩu mới phải khác mật khẩu hiện tại!'
-    });
+    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải khác mật khẩu hiện tại!' });
   }
 
-  users[userIndex].password = newPassword;
+  const apiKey = process.env.FIREBASE_WEB_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ success: false, message: 'Server chưa cấu hình FIREBASE_WEB_API_KEY.' });
+  }
 
-  db.saveCollection('users', users);
+  try {
+    const verify = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: req.firebaseUser.email, password: currentPassword, returnSecureToken: false })
+      }
+    );
+    if (!verify.ok) {
+      return res.status(401).json({ success: false, message: 'Mật khẩu hiện tại không chính xác!' });
+    }
 
-  res.json({
-    success: true,
-    message: 'Đổi mật khẩu thành công!'
-  });
+    await auth.updateUser(req.firebaseUser.uid, { password: newPassword });
+    res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+  } catch (err) {
+    console.error('[auth] change-password:', err.message);
+    res.status(500).json({ success: false, message: 'Không thể đổi mật khẩu lúc này.' });
+  }
 });
 
-
-// Export router
 module.exports = router;

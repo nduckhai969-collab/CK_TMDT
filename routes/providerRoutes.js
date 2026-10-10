@@ -3,12 +3,39 @@ const router = express.Router();
 
 const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
-const { requireCustomer } = require('./customerAuth');
+const { requireCustomer, requireProvider, requireSignedIn } = require('./customerAuth');
+const { generateId } = require('../utils/id');
+const { formatDateTime } = require('../utils/dates');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder } = require('../services/orderService');
+const { replyToReview } = require('../services/reviewService');
+
+function getMyProvider(req) {
+  const providers = db.getCollection('providers') || [];
+  let p = providers.find(p => p.userId === req.authUser.id);
+  if (!p) {
+    p = {
+      id: generateId('PRV'),
+      userId: req.authUser.id,
+      name: req.authUser.name,
+      avatar: req.authUser.avatar,
+      email: req.authUser.email,
+      phone: req.authUser.phone,
+      rating: 5.0,
+      reviews: 0,
+      completedOrders: 0,
+      createdAt: formatDateTime(new Date()),
+      verified: false
+    };
+    providers.unshift(p);
+    db.saveCollection('providers', providers);
+  }
+  return p;
+}
 
 // Homepage summaries and provider detail endpoints used by the customer portal.
 router.get('/stats', (req, res) => {
   const providers = db.getCollection('providers') || [];
-  const jobs = db.getCollection('jobs') || [];
+  const jobs = db.getCollection('jobRequests') || [];
   const services = db.getCollection('services') || [];
   const ratings = providers.map(p => Number(p.rating)).filter(Number.isFinite);
   const skills = new Set(providers.flatMap(p => Array.isArray(p.skills) ? p.skills : []));
@@ -25,7 +52,7 @@ router.get('/stats', (req, res) => {
 
 router.get('/featured', (req, res) => {
   const providers = [...(db.getCollection('providers') || [])]
-    .sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0) || Number(b.reviewCount || 0) - Number(a.reviewCount || 0))
+    .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
 });
@@ -37,6 +64,166 @@ router.get('/newest', (req, res) => {
   // appended provider records first.
   if (providers.every(p => !p.createdAt && !p.joinDate)) providers.reverse();
   res.json({ success: true, providers: providers.slice(0, 6) });
+});
+
+// LƯU Ý: các route cố định ('/me', '/dashboard/stats'...) phải đứng TRƯỚC '/:id', nếu không Express coi 'me' là một id.
+/* ==========================================================
+   PROVIDER DASHBOARD APIs
+========================================================== */
+
+router.get('/me', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  res.json({ success: true, provider });
+});
+
+router.put('/profile', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  const providers = db.getCollection('providers');
+  const index = providers.findIndex(p => p.id === provider.id);
+  
+  if (index !== -1) {
+    const { bio, specialty, category, location, skills, hourlyRate, bankAccount, bankName } = req.body;
+    if (bio !== undefined) providers[index].bio = bio;
+    if (specialty !== undefined) providers[index].specialty = specialty;
+    if (category !== undefined) providers[index].category = category;
+    if (location !== undefined) providers[index].location = location;
+    if (skills !== undefined) providers[index].skills = Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim());
+    if (hourlyRate !== undefined) providers[index].hourlyRate = Number(hourlyRate);
+    if (bankAccount !== undefined) providers[index].bankAccount = bankAccount;
+    if (bankName !== undefined) providers[index].bankName = bankName;
+    
+    db.saveCollection('providers', providers);
+    res.json({ success: true, message: 'Cập nhật hồ sơ thành công!', provider: providers[index] });
+  } else {
+    res.status(404).json({ success: false, message: 'Lỗi đồng bộ hồ sơ.' });
+  }
+});
+
+router.get('/dashboard/stats', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  const orders = db.getCollection('orders') || [];
+  
+  const myOrders = orders.filter(o => o.providerId === provider.id);
+  
+  const pending = myOrders.filter(o => o.orderStatus === 'pending').length;
+  const processing = myOrders.filter(o => o.orderStatus === 'processing').length;
+  const completed = myOrders.filter(o => o.orderStatus === 'completed').length;
+  
+  // Tổng doanh thu từ các đơn completed
+  const totalRevenue = myOrders
+    .filter(o => o.orderStatus === 'completed')
+    .reduce((sum, o) => sum + Number(o.price || 0), 0);
+    
+  res.json({
+    success: true,
+    stats: {
+      pendingOrders: pending,
+      processingOrders: processing,
+      completedOrders: completed,
+      totalRevenue,
+      rating: provider.rating || 5.0,
+      balance: req.authUser.balance || 0
+    }
+  });
+});
+
+router.get('/me/services', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  const services = (db.getCollection('services') || []).filter(s => s.providerId === provider.id);
+  res.json({ success: true, services });
+});
+
+router.get('/me/orders', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  const orders = (db.getCollection('orders') || []).filter(o => o.providerId === provider.id);
+  res.json({ success: true, orders });
+});
+
+router.get('/me/wallet', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  const transactions = (db.getCollection('walletTransactions') || []).filter(t => t.userId === req.authUser.id);
+  res.json({ 
+    success: true, 
+    balance: req.authUser.balance || 0,
+    transactions 
+  });
+});
+
+router.post('/wallet/withdraw', requireProvider, (req, res) => {
+  const { amount, bankCode, bankAccount } = req.body;
+  const numAmount = Number(amount);
+  
+  if (!numAmount || numAmount <= 0) {
+    return res.status(400).json({ success: false, message: 'Số tiền rút không hợp lệ.' });
+  }
+  
+  if (req.authUser.balance < numAmount) {
+    return res.status(400).json({ success: false, message: 'Số dư không đủ để rút.' });
+  }
+  
+  // Trừ tiền user
+  const users = db.getCollection('users');
+  const userIndex = users.findIndex(u => u.id === req.authUser.id);
+  if (userIndex !== -1) {
+    users[userIndex].balance -= numAmount;
+    db.saveCollection('users', users);
+  }
+  
+  // Ghi log giao dịch
+  const transactions = db.getCollection('walletTransactions') || [];
+  transactions.unshift({
+    id: generateId('TXN'),
+    userId: req.authUser.id,
+    type: 'withdraw',
+    amount: numAmount,
+    status: 'pending',
+    bankCode,
+    bankAccount,
+    createdAt: formatDateTime(new Date()),
+    description: `Yêu cầu rút ${numAmount.toLocaleString('vi-VN')}đ về ngân hàng`
+  });
+  db.saveCollection('walletTransactions', transactions);
+  
+  res.json({ success: true, message: 'Đã gửi yêu cầu rút tiền thành công!' });
+});
+
+
+// ---- Thao tác đơn hàng của người bán (đường dẫn mà provider.js đang gọi) ----
+function orderAction(handler) {
+  return (req, res) => {
+    try {
+      const order = handler(req);
+      res.json({ success: true, message: 'Cập nhật đơn hàng thành công!', order });
+    } catch (err) {
+      res.status(err.status || 400).json({ success: false, message: err.message });
+    }
+  };
+}
+router.post('/orders/:id/accept', requireProvider, orderAction(req => processAcceptOrder(req.params.id, req.authUser.id)));
+router.post('/orders/:id/deliver', requireProvider, orderAction(req => processDeliverOrder(req.params.id, req.authUser.id)));
+router.post('/orders/:id/progress', requireProvider, orderAction(req => processProgressOrder(req.params.id, req.authUser.id, req.body.note || '')));
+
+// ---- Đánh giá của tôi + trả lời đánh giá ----
+router.get('/me/reviews', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  const reviews = (db.getCollection('reviews') || []).filter(r => r.providerId === provider.id);
+  res.json({ success: true, total: reviews.length, reviews });
+});
+
+router.post('/reviews/:id/reply', requireProvider, (req, res) => {
+  try {
+    const review = replyToReview(req.params.id, req.authUser.id, req.body.reply || req.body.content);
+    res.json({ success: true, message: 'Đã trả lời đánh giá.', review });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+
+// Route cố định phải đứng TRƯỚC '/:id' (nếu không Express coi 'packages' là một id).
+router.get('/packages', (req, res) => {
+  const packages = db.getCollection('packages') || [];
+  res.json({ success: true, packages });
 });
 
 // Customer favorites are stored per signed-in customer in the database.
@@ -98,6 +285,207 @@ router.get('/:id', (req, res) => {
   res.json({ success: true, provider, services, reviews });
 });
 
+// Thêm các endpoint còn thiếu cho provider
+router.put('/hourly-rate', requireProvider, (req, res) => {
+  const { hourlyRate } = req.body;
+  const providers = db.getCollection('providers');
+  const provider = getMyProvider(req);
+  const index = providers.findIndex(p => p.id === provider.id);
+  if (index !== -1) {
+    providers[index].hourlyRate = Number(hourlyRate);
+    db.saveCollection('providers', providers);
+    res.json({ success: true, message: 'Cập nhật giá giờ thành công' });
+  } else {
+    res.status(404).json({ success: false, message: 'Không tìm thấy Provider' });
+  }
+});
+
+router.post('/skills', requireProvider, (req, res) => {
+  const { name } = req.body;
+  const providers = db.getCollection('providers');
+  const provider = getMyProvider(req);
+  const index = providers.findIndex(p => p.id === provider.id);
+  if (index !== -1) {
+    if (!providers[index].skills) providers[index].skills = [];
+    if (!providers[index].skills.includes(name)) {
+      providers[index].skills.push(name);
+      db.saveCollection('providers', providers);
+    }
+    res.json({ success: true, message: 'Thêm kỹ năng thành công' });
+  } else {
+    res.status(404).json({ success: false, message: 'Không tìm thấy Provider' });
+  }
+});
+
+router.delete('/skills/:skillName', requireProvider, (req, res) => {
+  const { skillName } = req.params;
+  const providers = db.getCollection('providers');
+  const provider = getMyProvider(req);
+  const index = providers.findIndex(p => p.id === provider.id);
+  if (index !== -1) {
+    if (providers[index].skills) {
+      providers[index].skills = providers[index].skills.filter(s => s !== skillName);
+      db.saveCollection('providers', providers);
+    }
+    res.json({ success: true, message: 'Xóa kỹ năng thành công' });
+  } else {
+    res.status(404).json({ success: false, message: 'Không tìm thấy Provider' });
+  }
+});
+
+router.post('/certifications/submit', requireProvider, (req, res) => {
+  const { certTitle, issuer, skillName } = req.body;
+  const approvals = db.getCollection('skillApprovals') || [];
+  approvals.push({
+    id: generateId('SKL'),
+    providerId: getMyProvider(req).id,
+    providerName: getMyProvider(req).name,
+    skillName,
+    certTitle,
+    issuer,
+    date: formatDateTime(new Date()),
+    status: 'pending'
+  });
+  db.saveCollection('skillApprovals', approvals);
+  res.json({ success: true, message: 'Đã gửi chứng chỉ chờ duyệt' });
+});
+
+router.post('/services', requireProvider, (req, res) => {
+  const serviceData = req.body;
+  const services = db.getCollection('services') || [];
+  const p = getMyProvider(req);
+  const newSvc = {
+    ...serviceData,
+    id: generateId('SVC'),
+    providerId: p.id,
+    providerName: p.name,
+    providerAvatar: p.avatar,
+    status: 'active'
+  };
+  services.unshift(newSvc);
+  db.saveCollection('services', services);
+  res.json({ success: true, message: 'Thêm dịch vụ thành công', service: newSvc });
+});
+
+router.put('/services/:id', requireProvider, (req, res) => {
+  const serviceData = req.body;
+  const services = db.getCollection('services') || [];
+  const idx = services.findIndex(s => s.id === req.params.id && s.providerId === getMyProvider(req).id);
+  if (idx !== -1) {
+    services[idx] = { ...services[idx], ...serviceData };
+    db.saveCollection('services', services);
+    res.json({ success: true, message: 'Cập nhật dịch vụ thành công', service: services[idx] });
+  } else {
+    res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ' });
+  }
+});
+
+router.put('/services/:id/request-price', requireProvider, (req, res) => {
+  // Mock request price change
+  res.json({ success: true, message: 'Yêu cầu thay đổi giá đã được gửi' });
+});
+
+router.put('/me/bank-account', requireProvider, (req, res) => {
+  const { bank, account, holder } = req.body;
+  const providers = db.getCollection('providers');
+  const provider = getMyProvider(req);
+  const index = providers.findIndex(p => p.id === provider.id);
+  if (index !== -1) {
+    providers[index].bankAccount = { bank, account, holder };
+    db.saveCollection('providers', providers);
+    res.json({ success: true, message: 'Cập nhật tài khoản ngân hàng thành công' });
+  } else {
+    res.status(404).json({ success: false, message: 'Không tìm thấy Provider' });
+  }
+});
+
+router.get('/me/complaints', requireProvider, (req, res) => {
+  const complaints = (db.getCollection('complaints') || []).filter(c => c.defendantId === getMyProvider(req).id);
+  res.json({ success: true, complaints });
+});
+
+router.post('/complaints/:id/defense', requireProvider, (req, res) => {
+  const { providerClaim } = req.body;
+  const complaints = db.getCollection('complaints') || [];
+  const idx = complaints.findIndex(c => c.id === req.params.id && c.defendantId === getMyProvider(req).id);
+  if (idx !== -1) {
+    complaints[idx].providerClaim = providerClaim;
+    complaints[idx].status = 'pending_review';
+    db.saveCollection('complaints', complaints);
+    res.json({ success: true, message: 'Đã gửi giải trình' });
+  } else {
+    res.status(404).json({ success: false, message: 'Không tìm thấy khiếu nại' });
+  }
+});
+
+router.post('/packages/purchase', requireProvider, (req, res) => {
+  const { packageId } = req.body;
+  const packages = db.getCollection('packages') || [];
+  const pkg = packages.find(p => p.id === packageId);
+  if (!pkg) return res.status(404).json({ success: false, message: 'Gói không tồn tại' });
+  
+  const purchases = db.getCollection('packagePurchases') || [];
+  const provider = getMyProvider(req);
+  
+  // Trừ tiền user
+  if (pkg.price > 0) {
+    const users = db.getCollection('users');
+    const uidx = users.findIndex(u => u.id === req.authUser.id);
+    if (uidx !== -1) {
+      if (users[uidx].balance < pkg.price) {
+        return res.status(400).json({ success: false, message: 'Số dư không đủ' });
+      }
+      users[uidx].balance -= pkg.price;
+      db.saveCollection('users', users);
+      
+      const transactions = db.getCollection('walletTransactions') || [];
+      transactions.unshift({
+        id: generateId('TXN'),
+        userId: req.authUser.id,
+        type: 'package_purchase',
+        amount: -pkg.price,
+        status: 'completed',
+        createdAt: formatDateTime(new Date()),
+        description: `Mua gói dịch vụ: ${pkg.name}`
+      });
+      db.saveCollection('walletTransactions', transactions);
+    }
+  }
+
+  purchases.unshift({
+    id: generateId('PKG-ORD'),
+    providerId: provider.id,
+    provider: provider.name,
+    packageName: pkg.name,
+    amount: pkg.price + 'đ',
+    activeDate: formatDateTime(new Date()).split(' ')[0],
+    expireDate: 'Tự động gia hạn',
+    status: 'Đang hoạt động'
+  });
+  db.saveCollection('packagePurchases', purchases);
+  res.json({ success: true, message: 'Mua gói dịch vụ thành công' });
+});
+
+router.get('/me/posts', requireProvider, (req, res) => {
+  const posts = (db.getCollection('posts') || []).filter(p => p.providerId === getMyProvider(req).id);
+  res.json({ success: true, posts });
+});
+
+router.post('/posts', requireProvider, (req, res) => {
+  const postData = req.body;
+  const posts = db.getCollection('posts') || [];
+  const provider = getMyProvider(req);
+  posts.unshift({
+    ...postData,
+    id: generateId('POST'),
+    providerId: provider.id,
+    providerName: provider.name,
+    date: formatDateTime(new Date()).split(' ')[0],
+    likes: 0
+  });
+  db.saveCollection('posts', posts);
+  res.json({ success: true, message: 'Đăng bài thành công' });
+});
 
 /* ============================================================
    GET /api/providers

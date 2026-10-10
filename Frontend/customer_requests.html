@@ -58,10 +58,6 @@
     .request-card-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px; }
     .request-icon-action { width:38px; height:38px; display:inline-grid; place-items:center; border:1px solid #dbe4e0; border-radius:10px; color:#475569; background:#fff; cursor:pointer; }
     .request-icon-action:hover { background:#f0fdf4; color:#15803d; border-color:#86efac; }
-    .applicant-count-summary { display:flex; align-items:center; gap:10px; color:#334155; font-size:12px; font-weight:700; }
-    .applicant-avatar-stack { display:flex; align-items:center; padding-left:2px; }
-    .applicant-avatar-stack img,.applicant-avatar-more { width:30px; height:30px; flex:0 0 30px; border:2px solid #fff; border-radius:50%; object-fit:cover; background:#e2e8f0; margin-left:-7px; }
-    .applicant-avatar-more { display:grid; place-items:center; color:#475569; background:#e2e8f0; font-size:9px; font-weight:800; }
     @media(max-width:700px) { .request-card-head{padding:17px 16px 12px;flex-direction:column}.request-card-budget{width:100%;box-sizing:border-box}.request-card-meta{padding:0 16px 13px}.request-card-description{margin:0 16px 13px}.request-card-footer{padding:13px 16px;align-items:flex-start;flex-direction:column}.request-card-actions{width:100%;justify-content:flex-start} }
     .requests-hero { position:relative; overflow:hidden; background:linear-gradient(125deg,#052e1b,#15803d 58%,#22c55e); border-radius:20px; padding:30px 32px; color:#fff; margin-bottom:22px; box-shadow:0 12px 28px rgba(21,128,61,.18); }
     .requests-hero:after { content:'✦'; position:absolute; right:5%; top:-48px; font-size:190px; color:rgba(255,255,255,.08); }
@@ -83,6 +79,10 @@
       gap: 16px;
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
 </head>
 <body>
 
@@ -96,15 +96,15 @@
       <div style="position:relative;z-index:1;max-width:700px">
         <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.82;margin-bottom:8px"><i class="fa-solid fa-wand-magic-sparkles"></i> Không gian dự án của bạn</div>
         <h1 style="font-size:clamp(25px,4vw,34px);font-weight:800;margin:0">Yêu cầu của tôi</h1>
-        <p style="font-size:14px;line-height:1.65;opacity:.9;margin:9px 0 0">Theo dõi ứng viên, xem hồ sơ và cập nhật yêu cầu bất cứ lúc nào trước khi chọn chuyên gia.</p>
+        <p style="font-size:14px;line-height:1.65;opacity:.9;margin:9px 0 0">Theo dõi đề xuất từ chuyên gia, xem lại thông tin và cập nhật yêu cầu bất cứ lúc nào trước khi chốt ứng viên.</p>
       </div>
       <button onclick="switchTab('create')" class="btn" style="position:relative;z-index:1;background:white;color:#15803d;font-weight:800;margin-top:20px"><i class="fa-solid fa-plus"></i> Tạo yêu cầu mới</button>
     </section>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:22px">
       <div class="summary-card"><div class="summary-icon"><i class="fa-solid fa-layer-group"></i></div><div><div style="font-size:12px;color:#64748b">Tổng yêu cầu</div><strong id="statTotal" style="font-size:22px;color:#0f172a">0</strong></div></div>
-      <div class="summary-card"><div class="summary-icon" style="background:#eff6ff;color:#2563eb"><i class="fa-solid fa-bullhorn"></i></div><div><div style="font-size:12px;color:#64748b">Đang nhận ứng tuyển</div><strong id="statOpen" style="font-size:22px;color:#0f172a">0</strong></div></div>
-      <div class="summary-card"><div class="summary-icon" style="background:#fff7ed;color:#ea580c"><i class="fa-solid fa-user-group"></i></div><div><div style="font-size:12px;color:#64748b">Tổng người ứng tuyển</div><strong id="statApplicants" style="font-size:22px;color:#0f172a">0</strong></div></div>
+      <div class="summary-card"><div class="summary-icon" style="background:#eff6ff;color:#2563eb"><i class="fa-solid fa-bullhorn"></i></div><div><div style="font-size:12px;color:#64748b">Đang nhận đề xuất</div><strong id="statOpen" style="font-size:22px;color:#0f172a">0</strong></div></div>
+      <div class="summary-card"><div class="summary-icon" style="background:#fff7ed;color:#ea580c"><i class="fa-solid fa-user-group"></i></div><div><div style="font-size:12px;color:#64748b">Đề xuất nhận được</div><strong id="statApplicants" style="font-size:22px;color:#0f172a">0</strong></div></div>
     </div>
 
     <!-- TABS NAVIGATION -->
@@ -119,7 +119,7 @@
 
     <div id="requestToolbar" class="request-toolbar">
       <div style="position:relative;flex:1;min-width:210px"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:13px;top:13px;color:#94a3b8"></i><input id="requestSearch" type="search" placeholder="Tìm theo tên yêu cầu..." oninput="renderJobsList()" style="width:100%;padding:11px 12px 11px 38px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;font-size:13px"></div>
-      <select id="requestStatusFilter" onchange="renderJobsList()" style="padding:11px 13px;border:1px solid #cbd5e1;border-radius:10px;background:white;font:inherit;font-size:13px"><option value="all">Tất cả trạng thái</option><option value="open">Đang nhận ứng tuyển</option><option value="closed">Đã đóng / đã chốt</option></select>
+      <select id="requestStatusFilter" onchange="renderJobsList()" style="padding:11px 13px;border:1px solid #cbd5e1;border-radius:10px;background:white;font:inherit;font-size:13px"><option value="all">Tất cả trạng thái</option><option value="open">Đang nhận đề xuất</option><option value="closed">Đã đóng / đã chốt</option></select>
       <span style="font-size:12px;color:#64748b"><i class="fa-regular fa-circle-question"></i> Nhấn vào thẻ để xem chi tiết</span>
     </div>
 
@@ -220,7 +220,7 @@
         </div>
         <div style="font-size:13px;font-weight:800;margin-bottom:8px">Mô tả công việc</div><div id="detailDescription" style="font-size:13px;color:#475569;line-height:1.75;white-space:pre-wrap;background:#f8fafc;padding:16px;border-radius:12px"></div>
         <div id="detailStatusNote" style="font-size:12px;color:#64748b;background:#f8fafc;padding:11px 13px;border-radius:10px;margin-top:14px"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px"><span id="detailMeta" style="font-size:12px;color:#64748b"></span><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="detailStatusActionBtn" onclick="toggleCurrentRequestStatus()" class="btn btn-outline"></button><button id="detailEditBtn" onclick="editRequestFromDetail()" class="btn btn-outline"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button><button id="detailApplicantsBtn" onclick="applicantsFromDetail()" class="btn btn-primary"><i class="fa-solid fa-users"></i> Xem ứng viên</button></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px"><span id="detailMeta" style="font-size:12px;color:#64748b"></span><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="detailStatusActionBtn" onclick="toggleCurrentRequestStatus()" class="btn btn-outline"></button><button id="detailEditBtn" onclick="editRequestFromDetail()" class="btn btn-outline"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button><button id="detailApplicantsBtn" onclick="applicantsFromDetail()" class="btn btn-primary"><i class="fa-solid fa-users"></i> Xem đề xuất</button></div></div>
       </div>
     </div>
   </div>
@@ -232,7 +232,7 @@
       <!-- Modal Header -->
       <div style="padding:20px 24px; border-bottom:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <h3 id="modalJobTitle" style="font-size:17px; font-weight:800; color:#0F172A; margin:0;">Ứng viên đã ứng tuyển</h3>
+          <h3 id="modalJobTitle" style="font-size:17px; font-weight:800; color:#0F172A; margin:0;">Chuyên gia gửi đề xuất</h3>
           <div id="modalJobBudget" style="font-size:12.5px; color:#16A34A; font-weight:600; margin-top:2px;">Ngân sách: 8.000.000đ</div>
         </div>
         <button onclick="closeApplicantsModal()" style="border:none; background:transparent; font-size:18px; color:#94A3B8; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
@@ -294,21 +294,21 @@
       const job = currentDetailJob;
       document.getElementById('detailTitle').textContent = job.title;
       const hasAcceptedProvider = (job.applicants || []).some(applicant => applicant.status === 'accepted') || job.closeReason === 'provider_selected';
-      document.getElementById('detailStatus').textContent = job.status === 'open' ? '● Đang nhận ứng tuyển' : (hasAcceptedProvider ? '● Đã chốt chuyên gia' : '● Đã đóng yêu cầu');
+      document.getElementById('detailStatus').textContent = job.status === 'open' ? '● Đang nhận đề xuất' : (hasAcceptedProvider ? '● Đã chốt chuyên gia' : '● Đã đóng yêu cầu');
       document.getElementById('detailBudget').textContent = job.budget || formatVND(job.budgetNum || 0);
       document.getElementById('detailCategory').textContent = categoryName(job.category);
       document.getElementById('detailDeadline').textContent = job.deadline || 'Thỏa thuận';
       document.getElementById('detailLocation').textContent = job.location || 'Toàn quốc / Online';
       document.getElementById('detailDescription').textContent = job.desc || 'Chưa có mô tả.';
-      document.getElementById('detailMeta').textContent = `Mã ${job.id} · Đăng lúc ${job.createdAt || '—'} · ${(job.applicants || []).length} người ứng tuyển`;
+      document.getElementById('detailMeta').textContent = `Mã ${job.id} · Đăng lúc ${job.createdAt || '—'} · ${(job.applicants || []).length} đề xuất`;
       document.getElementById('detailEditBtn').style.display = job.status === 'open' ? '' : 'none';
       const statusAction = document.getElementById('detailStatusActionBtn');
       statusAction.style.display = hasAcceptedProvider ? 'none' : '';
       statusAction.innerHTML = job.status === 'open' ? '<i class="fa-solid fa-circle-pause"></i> Đóng yêu cầu' : '<i class="fa-solid fa-circle-play"></i> Mở lại yêu cầu';
       document.getElementById('detailStatusNote').textContent = hasAcceptedProvider
-        ? 'Yêu cầu đã chốt chuyên gia nên hệ thống tự đóng và không nhận thêm hồ sơ ứng tuyển.'
-        : (job.status === 'open' ? 'Bạn có thể đóng tạm yêu cầu để ngừng nhận ứng viên, rồi mở lại bất cứ lúc nào.' : 'Yêu cầu đang tạm đóng. Mở lại để chuyên gia tiếp tục ứng tuyển.');
-      document.getElementById('detailApplicantsBtn').innerHTML = `<i class="fa-solid fa-users"></i> Xem ${(job.applicants || []).length} ứng viên`;
+        ? 'Yêu cầu đã chốt chuyên gia nên hệ thống tự đóng và không nhận thêm đề xuất.'
+        : (job.status === 'open' ? 'Bạn có thể đóng tạm yêu cầu để ngừng nhận đề xuất, rồi mở lại bất cứ lúc nào.' : 'Yêu cầu đang tạm đóng. Mở lại để chuyên gia tiếp tục gửi đề xuất.');
+      document.getElementById('detailApplicantsBtn').innerHTML = `<i class="fa-solid fa-users"></i> Xem ${(job.applicants || []).length} đề xuất`;
       document.getElementById('requestDetailModal').style.display = 'flex';
     }
 
@@ -322,8 +322,8 @@
       const jobId = currentDetailJob.id;
       const nextStatus = currentDetailJob.status === 'open' ? 'closed' : 'open';
       const confirmText = nextStatus === 'closed'
-        ? 'Đóng yêu cầu này? Chuyên gia sẽ không thể ứng tuyển thêm.'
-        : 'Mở lại yêu cầu này để tiếp tục nhận ứng viên?';
+        ? 'Đóng yêu cầu này? Chuyên gia sẽ không thể gửi thêm đề xuất.'
+        : 'Mở lại yêu cầu này để tiếp tục nhận đề xuất?';
       if (!window.confirm(confirmText)) return;
       const button = document.getElementById('detailStatusActionBtn');
       button.disabled = true;
@@ -450,7 +450,7 @@
           <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:48px; text-align:center;">
             <i class="fa-solid fa-bullhorn" style="font-size:44px; color:#94A3B8; margin-bottom:14px;"></i>
             <h3 style="font-size:17px; font-weight:700; color:#0F172A; margin-bottom:6px;">Bạn chưa tạo yêu cầu nào</h3>
-            <p style="font-size:13.5px; color:#64748B; margin-bottom:18px;">Tạo yêu cầu để nhận hồ sơ ứng tuyển phù hợp từ các chuyên gia trên Skill Rental.</p>
+            <p style="font-size:13.5px; color:#64748B; margin-bottom:18px;">Tạo yêu cầu để nhận đề xuất phù hợp từ các chuyên gia trên Skill Rental.</p>
             <button onclick="switchTab('create')" class="btn btn-primary" style="font-weight:600;"><i class="fa-solid fa-plus-circle"></i> Tạo yêu cầu đầu tiên</button>
           </div>
         `;
@@ -474,7 +474,7 @@
                 <div class="request-card-badges">
                   ${getCategoryBadge(j.category)}
                   <span class="request-status-pill" style="background:${isOpen ? '#dcfce7' : '#f1f5f9'};color:${isOpen ? '#15803d' : '#475569'}">
-                    <i class="fa-solid fa-circle" style="font-size:7px"></i>${isOpen ? 'Đang nhận ứng tuyển' : ((j.applicants || []).some(a => a.status === 'accepted') ? 'Đã chốt chuyên gia' : 'Đã đóng')}
+                    <i class="fa-solid fa-circle" style="font-size:7px"></i>${isOpen ? 'Đang nhận đề xuất' : ((j.applicants || []).some(a => a.status === 'accepted') ? 'Đã chốt chuyên gia' : 'Đã đóng')}
                   </span>
                 </div>
               </div>
@@ -490,11 +490,11 @@
             <div class="request-card-description"><strong style="display:block;color:#334155;font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Mô tả</strong>${(j.desc || '').slice(0, 220)}${(j.desc || '').length > 220 ? '…' : ''}</div>
 
             <div class="request-card-footer">
-              <div class="applicant-count-summary"><span class="applicant-avatar-stack" aria-hidden="true">${(j.applicants || []).slice(0, 3).map(a => `<img src="${a.avatar || 'https://www.gravatar.com/avatar/?d=mp&s=80'}" alt="" title="${a.providerName || 'Ứng viên'}">`).join('')}${applicantCount > 3 ? `<span class="applicant-avatar-more">+${applicantCount - 3}</span>` : ''}</span><span>${applicantCount} người ứng tuyển</span></div>
+              <div style="display:flex;align-items:center;gap:9px;color:#334155;font-size:12px;font-weight:700"><span class="summary-icon" style="width:34px;height:34px;border-radius:10px;font-size:14px"><i class="fa-solid fa-users"></i></span>${applicantCount} đề xuất</div>
               <div class="request-card-actions">
                 ${isOpen ? `<button type="button" class="request-icon-action" title="Chỉnh sửa yêu cầu" aria-label="Chỉnh sửa yêu cầu" onclick="startEditRequest('${j.id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
                 ${(j.applicants || []).some(a => a.status === 'accepted') ? '' : `<button type="button" class="request-icon-action" title="${isOpen ? 'Đóng yêu cầu' : 'Mở lại yêu cầu'}" aria-label="${isOpen ? 'Đóng yêu cầu' : 'Mở lại yêu cầu'}" onclick="openRequestDetails('${j.id}');toggleCurrentRequestStatus()"><i class="fa-solid fa-${isOpen ? 'pause' : 'play'}"></i></button>`}
-                <button type="button" onclick="openApplicantsModal('${j.id}')" class="btn ${applicantCount > 0 ? 'btn-primary' : 'btn-outline'}" style="font-size:12px;font-weight:700;padding:9px 13px"><i class="fa-solid fa-users"></i> Xem ứng viên</button>
+                <button type="button" onclick="openApplicantsModal('${j.id}')" class="btn ${applicantCount > 0 ? 'btn-primary' : 'btn-outline'}" style="font-size:12px;font-weight:700;padding:9px 13px"><i class="fa-solid fa-users"></i> Xem đề xuất</button>
               </div>
             </div>
           </article>
@@ -543,7 +543,7 @@
       currentModalJob = myJobs.find(j => j.id === jobId);
       if (!currentModalJob) return;
 
-      document.getElementById('modalJobTitle').textContent = `Ứng viên cho: ${currentModalJob.title}`;
+      document.getElementById('modalJobTitle').textContent = `Ứng Viên Cho: ${currentModalJob.title}`;
       document.getElementById('modalJobBudget').textContent = `Ngân sách dự kiến: ${currentModalJob.budget}`;
 
       const container = document.getElementById('applicantsListContainer');
@@ -553,7 +553,7 @@
         container.innerHTML = `
           <div style="text-align:center; padding:32px; color:#64748B;">
             <i class="fa-solid fa-inbox" style="font-size:36px; color:#CBD5E1; margin-bottom:10px;"></i>
-            <div>Chưa có chuyên gia nào ứng tuyển. Yêu cầu của bạn đang được hiển thị cho các Provider phù hợp!</div>
+            <div>Chưa có chuyên gia nào gửi đề xuất. Tin của bạn đang được hiển thị cho các Provider phù hợp!</div>
           </div>
         `;
       } else {

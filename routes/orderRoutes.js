@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
-const { requireCustomer } = require('./customerAuth');
+const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processReleaseEscrow } = require('../services/orderService');
+const { createNotification, notifyProvider } = require('../services/notificationService');
 
 // List orders
 router.get('/', requireCustomer, (req, res) => {
@@ -90,14 +92,38 @@ router.post('/', requireCustomer, (req, res) => {
   }
 
   const orders = db.getCollection('orders');
-  const priceNum = Number(price);
+  
+  // Calculate price securely from backend
+  const services = db.getCollection('services') || [];
+  const service = services.find(s => s.id === serviceId);
+  
+  // Nạp 1 giá trị an toàn, mặc định dùng req.body.price nếu không tìm thấy nhưng cảnh báo
+  let priceNum = Number(price);
+  if (service && service.price) {
+    // Nếu có hours (từ req.body, mặc định 1)
+    const hours = Number(req.body.hours) || 1;
+    priceNum = Number(service.price) * hours;
+  }
+
   const platformFee = Math.round(priceNum * 0.05); // 5% escrow protection & platform fee
   const escrowDeposit = priceNum + platformFee;
 
+  const users = db.getCollection('users');
+  const customer = users.find(u => u.id === req.authUser.id);
+  
+  if (!customer || customer.balance < escrowDeposit) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Số dư không đủ. Cần ${escrowDeposit.toLocaleString('vi-VN')}đ (bao gồm phí sàn), nhưng số dư là ${(customer?.balance || 0).toLocaleString('vi-VN')}đ.`
+    });
+  }
+
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  const newId = `DH00${randomSuffix}`;
+  let newId;
+  do {
+    newId = `DH00${Math.floor(1000 + Math.random() * 9000)}`;
+  } while (orders.some(o => o.id === newId));
 
   const newOrder = {
     id: newId,
@@ -108,13 +134,13 @@ router.post('/', requireCustomer, (req, res) => {
     providerName: providerName || 'Chuyên gia SkillRental',
     providerPhone: '0901 234 567',
     serviceId: serviceId || 'SVC_CUSTOM',
-    serviceTitle: serviceTitle || 'Dịch vụ kỹ năng chuyên nghiệp',
+    serviceTitle: (service ? service.title : serviceTitle) || 'Dịch vụ kỹ năng chuyên nghiệp',
     price: priceNum,
     priceFormatted: priceNum.toLocaleString('vi-VN') + 'đ',
     platformFee: platformFee,
     escrowDeposit: escrowDeposit,
     escrowStatus: 'escrow_held', // Funds securely locked in Escrow vault
-    orderStatus: 'processing',   // Started
+    orderStatus: 'pending',      // Pending provider acceptance
     paymentMethod: paymentMethod || 'Ví điện tử VNPay (Escrow 100%)',
     date: dateStr,
     deadline: deadline || '7 ngày sau đặt cọc',
@@ -123,8 +149,8 @@ router.post('/', requireCustomer, (req, res) => {
     notes: notes || '',
     milestones: [
       { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: dateStr },
-      { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: true, time: dateStr },
-      { title: 'Bàn giao sản phẩm / hoàn thành dịch vụ', done: false, time: 'Đang triển khai' },
+      { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: false, time: 'Chờ tiếp nhận' },
+      { title: 'Bàn giao sản phẩm / hoàn thành dịch vụ', done: false, time: 'Chờ bàn giao' },
       { title: 'Khách hàng nghiệm thu & Giải ngân Escrow', done: false, time: 'Chờ nghiệm thu' }
     ]
   };
@@ -132,13 +158,30 @@ router.post('/', requireCustomer, (req, res) => {
   orders.unshift(newOrder);
   db.saveCollection('orders', orders);
 
-  // Deduct balance or register escrow
-  const users = db.getCollection('users');
-  const customer = users.find(u => u.id === newOrder.customerId);
-  if (customer && customer.balance >= escrowDeposit) {
-    customer.balance -= escrowDeposit;
-    db.saveCollection('users', users);
-  }
+  // Deduct balance
+  customer.balance -= escrowDeposit;
+  db.saveCollection('users', users);
+
+  // Add Wallet Transaction for Escrow
+  const transactions = db.getCollection('walletTransactions') || [];
+  transactions.unshift({
+    id: `TXN_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+    userId: req.authUser.id,
+    type: 'escrow',
+    amount: -escrowDeposit,
+    status: 'completed',
+    createdAt: dateStr,
+    description: `Ký quỹ Escrow cho đơn hàng ${newId}`
+  });
+  db.saveCollection('walletTransactions', transactions);
+
+  // Notify Provider
+  notifyProvider(
+    providerId,
+    'Đơn hàng mới',
+    `Bạn có một yêu cầu dịch vụ mới từ ${req.authUser.name} với giá trị ${newOrder.priceFormatted}.`,
+    'info'
+  );
 
   res.status(201).json({
     success: true,
@@ -147,9 +190,39 @@ router.post('/', requireCustomer, (req, res) => {
   });
 });
 
-// Update order milestone / delivery status (Provider or System)
-router.put('/:id/status', (req, res) => {
-  const { status, milestoneTitle } = req.body;
+// Provider accepts the order
+router.put('/:id/accept', requireRole('Provider'), (req, res) => {
+  try {
+    const order = processAcceptOrder(req.params.id, req.authUser.id);
+    res.json({ success: true, message: 'Đã tiếp nhận đơn hàng!', order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+// Provider delivers the order
+router.put('/:id/deliver', requireRole('Provider'), (req, res) => {
+  try {
+    const order = processDeliverOrder(req.params.id, req.authUser.id);
+    res.json({ success: true, message: 'Đã bàn giao đơn hàng!', order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+// Provider updates progress
+router.put('/:id/progress', requireRole('Provider'), (req, res) => {
+  try {
+    const order = processProgressOrder(req.params.id, req.authUser.id, req.body.note || '');
+    res.json({ success: true, message: 'Đã cập nhật tiến độ!', order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+// For Admin to force status change (legacy support if needed)
+router.put('/:id/status', requireRole('Admin'), (req, res) => {
+  const { status } = req.body;
   const orders = db.getCollection('orders');
   const order = orders.find(o => o.id === req.params.id);
 
@@ -157,19 +230,8 @@ router.put('/:id/status', (req, res) => {
     return res.status(404).json({ success: false, message: 'Đơn hàng không tồn tại!' });
   }
 
-  const now = new Date();
-  const timeStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
   if (status) {
     order.orderStatus = status;
-  }
-
-  if (status === 'delivered') {
-    // Mark delivery milestone as done
-    if (order.milestones && order.milestones[2]) {
-      order.milestones[2].done = true;
-      order.milestones[2].time = timeStr;
-    }
   }
 
   db.saveCollection('orders', orders);
@@ -183,77 +245,32 @@ router.put('/:id/status', (req, res) => {
 
 // Customer releases Escrow funds to Provider
 router.put('/:id/release-escrow', requireCustomer, (req, res) => {
-  const orders = db.getCollection('orders');
-  const order = orders.find(o => o.id === req.params.id);
-
-  if (!order) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  try {
+    const order = processReleaseEscrow(req.params.id, { customerId: req.authUser.id });
+    res.json({
+      success: true,
+      message: `Đã nghiệm thu thành công! Số tiền ${order.priceFormatted || order.price} đã được giải ngân an toàn vào ví Provider.`,
+      order
+    });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
   }
-
-  if (order.customerId !== req.authUser.id) {
-    return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác đơn hàng này.' });
-  }
-
-  if (order.escrowStatus === 'completed') {
-    return res.status(400).json({ success: false, message: 'Đơn hàng này đã được giải ngân Escrow trước đó!' });
-  }
-
-  const now = new Date();
-  const timeStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-  order.escrowStatus = 'completed';
-  order.orderStatus = 'completed';
-
-  // Mark all milestones as done
-  if (order.milestones) {
-    order.milestones.forEach(m => m.done = true);
-    if (order.milestones[3]) {
-      order.milestones[3].time = timeStr;
-    }
-  }
-
-  // Credit Provider wallet
-  const users = db.getCollection('users');
-  const providerUser = users.find(u => u.name === order.providerName || u.id === order.providerId);
-  if (providerUser) {
-    providerUser.balance = (providerUser.balance || 0) + Number(order.price);
-  }
-
-  db.saveCollection('orders', orders);
-  db.saveCollection('users', users);
-
-  res.json({
-    success: true,
-    message: `Đã nghiệm thu thành công! Số tiền ${order.priceFormatted} đã được giải ngân an toàn vào ví Provider.`,
-    order
-  });
 });
 
 // Cancel / Dispute order
-router.put('/:id/cancel', requireCustomer, (req, res) => {
-  const { reason } = req.body;
-  const orders = db.getCollection('orders');
-  const order = orders.find(o => o.id === req.params.id);
-
-  if (!order) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+router.put('/:id/cancel', requireSignedIn, (req, res) => {
+  try {
+    const order = processCancelOrder(req.params.id, req.authUser.id, req.authUser.role, req.body.reason);
+    res.json({
+      success: true,
+      message: order.orderStatus === 'disputed' 
+        ? 'Đơn hàng đã được chuyển sang trạng thái Tranh chấp. Tiền ký quỹ Escrow được tạm khóa chờ Admin xử lý!'
+        : 'Đơn hàng đã bị hủy và hoàn tiền thành công!',
+      order
+    });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
   }
-
-  if (order.customerId !== req.authUser.id) {
-    return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác đơn hàng này.' });
-  }
-
-  order.orderStatus = 'disputed';
-  order.escrowStatus = 'disputed';
-  order.disputeReason = reason || 'Khách hàng yêu cầu hủy / khiếu nại chất lượng';
-
-  db.saveCollection('orders', orders);
-
-  res.json({
-    success: true,
-    message: 'Đơn hàng đã được chuyển sang trạng thái Tranh chấp. Tiền ký quỹ Escrow được tạm khóa chờ Admin xử lý!',
-    order
-  });
 });
 
 module.exports = router;

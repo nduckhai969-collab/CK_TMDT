@@ -1,7 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
-const { requireCustomer } = require('./customerAuth');
+const { requireCustomer, requireProvider } = require('./customerAuth');
+const { generateId } = require('../utils/id');
+const { replyToReview } = require('../services/reviewService');
+
+// Public reviews
+router.get('/public', (req, res) => {
+  const { providerId } = req.query;
+  if (!providerId) {
+    return res.status(400).json({ success: false, message: 'Thiếu providerId' });
+  }
+  const reviews = (db.getCollection('reviews') || []).filter(r => r.providerId === providerId);
+  res.json({
+    success: true,
+    total: reviews.length,
+    reviews
+  });
+});
 
 // List reviews
 router.get('/', requireCustomer, (req, res) => {
@@ -34,20 +50,29 @@ router.post('/', requireCustomer, (req, res) => {
     return res.status(403).json({ success: false, message: 'Chỉ khách hàng sở hữu đơn hàng mới có thể gửi đánh giá.' });
   }
 
+  if (order.orderStatus !== 'completed') {
+    return res.status(400).json({ success: false, message: 'Chỉ có thể đánh giá các đơn hàng đã hoàn thành.' });
+  }
+
   const reviews = db.getCollection('reviews');
+  const existingReview = reviews.find(r => r.orderId === orderId);
+  if (existingReview) {
+    return res.status(400).json({ success: false, message: 'Đơn hàng này đã được đánh giá.' });
+  }
+
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-  const newId = `REV${String(reviews.length + 1).padStart(3, '0')}`;
+  const newId = generateId('REV');
 
   const newReview = {
     id: newId,
-    orderId: orderId || 'DH_MANUAL',
+    orderId: order.id,
     customerId: req.authUser.id,
     customerName: req.authUser.name,
-    providerId: providerId || 'PRV001',
-    providerName: providerName || 'Nguyễn Văn An',
-    serviceTitle: serviceTitle || 'Dịch vụ hoàn tất',
-    rating: Number(rating) || 5,
+    providerId: order.providerId,
+    providerName: order.providerName || providerName || 'Chuyên gia SkillRental',
+    serviceTitle: order.serviceTitle || serviceTitle || 'Dịch vụ hoàn tất',
+    rating: Math.min(5, Math.max(1, Number(rating) || 5)),
     content: content.trim(),
     date: dateStr,
     criteria: Array.isArray(criteria) ? criteria : ['Chuyên nghiệp', 'Đúng hẹn']
@@ -72,6 +97,16 @@ router.post('/', requireCustomer, (req, res) => {
     message: 'Cảm ơn bạn đã gửi đánh giá dịch vụ!',
     review: newReview
   });
+});
+
+// Reply to a review (provider only)
+router.post('/:id/reply', requireProvider, (req, res) => {
+  try {
+    const review = replyToReview(req.params.id, req.authUser.id, req.body.content || req.body.reply);
+    res.json({ success: true, message: 'Đã trả lời đánh giá.', review });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
 });
 
 module.exports = router;

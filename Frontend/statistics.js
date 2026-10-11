@@ -1,370 +1,165 @@
 /**
- * statistics.js - Thống kê doanh thu theo ngày & Trạng thái đơn hàng (Demo LocalStorage)
- * Chart.js Integration
+ * statistics.js - Thống kê dành cho Admin (dữ liệu thật từ GET /api/admin/statistics)
+ *  - Biểu đồ CỘT: giá trị giao dịch & doanh thu sàn theo ngày (hoặc theo tháng nếu khoảng ngày dài),
+ *    lọc theo "Từ ngày - Đến ngày".
+ *  - Biểu đồ TRÒN: phân bổ trạng thái đơn hàng trong cùng khoảng ngày.
  */
 
 let revenueChart = null;
 let orderStatusChart = null;
 
-// Parse giá tiền sang dạng number (ví dụ: "4.500.000đ" -> 4500000, 4500000 -> 4500000)
-function parsePriceToNumber(val) {
-  if (typeof val === 'number') return val;
-  if (!val) return 0;
-  const numStr = String(val).replace(/[^0-9]/g, '');
-  return parseInt(numStr, 10) || 0;
+const STATUS_META = [
+  { key: 'pending',    label: 'PENDING',    vi: 'Chờ tiếp nhận',   color: '#F59E0B' },
+  { key: 'processing', label: 'PROCESSING', vi: 'Đang thực hiện',  color: '#3B82F6' },
+  { key: 'delivered',  label: 'DELIVERED',  vi: 'Đã bàn giao',     color: '#6366F1' },
+  { key: 'completed',  label: 'COMPLETED',  vi: 'Đã hoàn thành',   color: '#22C55E' },
+  { key: 'cancelled',  label: 'CANCELLED',  vi: 'Đã hủy',          color: '#EF4444' },
+  { key: 'disputed',   label: 'DISPUTED',   vi: 'Khiếu nại / Tranh chấp', color: '#EC4899' }
+];
+
+const DAILY_LIMIT_DAYS = 62; // vượt quá thì gom theo tháng để biểu đồ không bị chi chít
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+function toISO(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function parseISO(s) { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, m - 1, d); }
+function fmtDDMM(d) { return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`; }
+function fmtDDMMYYYY(d) { return `${fmtDDMM(d)}/${d.getFullYear()}`; }
+function fmtMoney(n) { return Number(n || 0).toLocaleString('vi-VN') + 'đ'; }
+
+function showFeedback(message, type) {
+  const el = document.getElementById('revenue-chart-feedback');
+  if (!el) return;
+  if (!message) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.className = 'chart-feedback ' + (type || 'warning');
+  el.textContent = message;
 }
 
-// Parse chuỗi ngày thành Date object ("28/04/2025 10:30", "28/04/2025", "2025-04-28", etc.)
-function parseOrderDate(dateStr) {
-  if (!dateStr) return null;
-  if (dateStr instanceof Date) return dateStr;
+async function fetchStatistics(from, to) {
+  if (!window.adminApi || typeof window.adminApi.getStatistics !== 'function') {
+    throw new Error('adminApi.getStatistics chưa được định nghĩa (kiểm tra common.js).');
+  }
+  const res = await window.adminApi.getStatistics(from, to);
+  if (!res || !res.success) throw new Error((res && res.message) || 'Không lấy được dữ liệu thống kê.');
+  return res.data;
+}
 
-  // DD/MM/YYYY format
-  if (typeof dateStr === 'string' && dateStr.includes('/')) {
-    const parts = dateStr.split(' ')[0].split('/');
-    if (parts.length === 3) {
-      const day = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const year = parseInt(parts[2], 10);
-      return new Date(year, month, day);
+// Gom doanh thu theo ngày (khoảng ngắn) hoặc theo tháng (khoảng dài)
+function buildBuckets(revenueByDay, start, end) {
+  const spanDays = Math.round((end - start) / 86400000) + 1;
+  const buckets = [];
+
+  if (spanDays <= DAILY_LIMIT_DAYS) {
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const row = revenueByDay[toISO(d)] || { volume: 0, revenue: 0, count: 0 };
+      buckets.push({ label: fmtDDMM(d), volume: row.volume, revenue: row.revenue, count: row.count });
     }
+    return { buckets, unit: 'ngày' };
   }
 
-  // ISO / YYYY-MM-DD
-  const parsed = new Date(dateStr);
-  if (!isNaN(parsed.getTime())) {
-    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  const byMonth = new Map();
+  for (let d = new Date(start.getFullYear(), start.getMonth(), 1); d <= end; d.setMonth(d.getMonth() + 1)) {
+    byMonth.set(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}`, { label: `${pad2(d.getMonth() + 1)}/${d.getFullYear()}`, volume: 0, revenue: 0, count: 0 });
   }
-  return null;
+  Object.entries(revenueByDay).forEach(([iso, row]) => {
+    const day = parseISO(iso);
+    if (day < start || day > end) return;
+    const bucket = byMonth.get(iso.slice(0, 7));
+    if (!bucket) return;
+    bucket.volume += row.volume; bucket.revenue += row.revenue; bucket.count += row.count;
+  });
+  return { buckets: [...byMonth.values()], unit: 'tháng' };
 }
 
-// Format Date sang YYYY-MM-DD (dùng so sánh date key)
-function formatDateToISO(d) {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+function renderBarChart(data, start, end) {
+  const { buckets, unit } = buildBuckets(data.revenueByDay || {}, start, end);
+  const totalVolume = buckets.reduce((s, b) => s + b.volume, 0);
+  const totalRevenue = buckets.reduce((s, b) => s + b.revenue, 0);
+  const totalOrders = buckets.reduce((s, b) => s + b.count, 0);
 
-// Format Date sang DD/MM (dùng hiển thị nhãn trục hoành biểu đồ)
-function formatDateToDDMM(d) {
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${day}/${month}`;
-}
-
-// Đọc danh sách orders từ localStorage (sử dụng getAppState của common.js hoặc fallback key)
-function getOrdersFromStorage() {
-  try {
-    if (typeof getAppState === 'function') {
-      const state = getAppState();
-      if (state && Array.isArray(state.orders)) {
-        return state.orders;
-      }
-    }
-    const rawState = localStorage.getItem('SKILL_RENTAL_ADMIN_STATE_V1');
-    if (rawState) {
-      const parsed = JSON.parse(rawState);
-      if (parsed && Array.isArray(parsed.orders)) {
-        return parsed.orders;
-      }
-    }
-    const rawOrders = localStorage.getItem('orders');
-    if (rawOrders) {
-      const parsed = JSON.parse(rawOrders);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (err) {
-    console.error('Lỗi khi đọc orders từ localStorage:', err);
-  }
-  return [];
-}
-
-// ============================================================================
-// TASK 1: BIỂU ĐỒ DOANH THU THEO KHOẢNG NGÀY (BAR CHART)
-// ============================================================================
-function renderRevenueChart() {
-  const fromInput = document.getElementById('stats-date-from');
-  const toInput = document.getElementById('stats-date-to');
-  const feedbackEl = document.getElementById('revenue-chart-feedback');
   const summaryEl = document.getElementById('revenue-summary-text');
-
-  if (!fromInput || !toInput) return;
-
-  const fromVal = fromInput.value;
-  const toVal = toInput.value;
-
-  // Kiểm tra nếu chưa chọn ngày
-  if (!fromVal || !toVal) {
-    if (feedbackEl) {
-      feedbackEl.style.display = 'block';
-      feedbackEl.className = 'chart-feedback warning';
-      feedbackEl.textContent = 'Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc để xem biểu đồ.';
-    }
-    return;
-  }
-
-  const startDate = new Date(fromVal);
-  const endDate = new Date(toVal);
-
-  if (startDate > endDate) {
-    if (feedbackEl) {
-      feedbackEl.style.display = 'block';
-      feedbackEl.className = 'chart-feedback error';
-      feedbackEl.textContent = 'Ngày bắt đầu không được lớn hơn ngày kết thúc.';
-    }
-    return;
-  }
-
-  if (feedbackEl) {
-    feedbackEl.style.display = 'none';
-  }
-
-  const orders = getOrdersFromStorage();
-
-  // Tạo map chứa tất cả các ngày trong khoảng [startDate, endDate] với giá trị khởi tạo = 0
-  const dateMap = new Map();
-  const currentDate = new Date(startDate);
-
-  while (currentDate <= endDate) {
-    const isoKey = formatDateToISO(currentDate);
-    const labelKey = formatDateToDDMM(currentDate);
-    dateMap.set(isoKey, {
-      label: labelKey,
-      revenue: 0,
-      orderCount: 0
-    });
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  // Trạng thái đơn hàng hợp lệ tính doanh thu (thực tế hoặc đang giao dịch đã nạp tiền)
-  const validStatuses = ['completed', 'processing', 'confirmed'];
-
-  let totalFilteredRevenue = 0;
-  let totalFilteredOrders = 0;
-
-  orders.forEach(order => {
-    const status = (order.orderStatus || '').toLowerCase();
-    // Bỏ qua đơn bị hủy hoặc tranh chấp
-    if (!validStatuses.includes(status) && status !== '') return;
-
-    const orderDate = parseOrderDate(order.date || order.createdAt);
-    if (!orderDate) return;
-
-    const isoKey = formatDateToISO(orderDate);
-    if (dateMap.has(isoKey)) {
-      const price = parsePriceToNumber(order.price || order.total || order.amount || 0);
-      const dayData = dateMap.get(isoKey);
-      dayData.revenue += price;
-      dayData.orderCount += 1;
-      totalFilteredRevenue += price;
-      totalFilteredOrders += 1;
-    }
-  });
-
-  const labels = [];
-  const data = [];
-
-  dateMap.forEach((val) => {
-    labels.push(val.label);
-    data.push(val.revenue);
-  });
-
   if (summaryEl) {
-    summaryEl.innerHTML = `Khoảng thời gian: <strong>${formatDateToDDMM(startDate)} - ${formatDateToDDMM(endDate)}</strong> | Tổng doanh thu: <strong style="color:var(--primary); font-size:15px;">${totalFilteredRevenue.toLocaleString('vi-VN')}đ</strong> (${totalFilteredOrders} đơn hàng)`;
+    summaryEl.innerHTML = `Từ <strong>${fmtDDMMYYYY(start)}</strong> đến <strong>${fmtDDMMYYYY(end)}</strong> (theo ${unit}) | ` +
+      `Giá trị giao dịch: <strong>${fmtMoney(totalVolume)}</strong> | ` +
+      `Doanh thu sàn: <strong style="color:var(--primary); font-size:15px;">${fmtMoney(totalRevenue)}</strong> (${totalOrders} đơn)`;
   }
 
-  // Render Chart.js Bar Chart
-  const ctx = document.getElementById('revenueBarChart');
-  if (!ctx) return;
+  const canvas = document.getElementById('revenueBarChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (revenueChart) revenueChart.destroy();
 
-  if (revenueChart) {
-    revenueChart.destroy();
-  }
-
-  revenueChart = new Chart(ctx, {
+  revenueChart = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: labels,
-      datasets: [{
-        label: 'Doanh thu (VNĐ)',
-        data: data,
-        backgroundColor: 'rgba(22, 163, 74, 0.8)',
-        hoverBackgroundColor: 'rgba(21, 128, 61, 0.95)',
-        borderColor: '#16A34A',
-        borderWidth: 1.5,
-        borderRadius: 6,
-        maxBarThickness: 45
-      }]
+      labels: buckets.map(b => b.label),
+      datasets: [
+        { label: 'Giá trị giao dịch (VNĐ)', data: buckets.map(b => b.volume), backgroundColor: 'rgba(59, 130, 246, 0.75)', borderRadius: 6, maxBarThickness: 40 },
+        { label: 'Doanh thu sàn 5% (VNĐ)', data: buckets.map(b => b.revenue), backgroundColor: 'rgba(22, 163, 74, 0.85)', borderRadius: 6, maxBarThickness: 40 }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            font: { family: 'Inter', size: 12, weight: '600' },
-            color: '#1E293B'
-          }
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const val = context.raw || 0;
-              return ` Doanh thu: ${val.toLocaleString('vi-VN')} VNĐ`;
-            }
-          }
-        }
+        legend: { display: true, position: 'top', labels: { font: { family: 'Inter', size: 12, weight: '600' }, color: '#1E293B' } },
+        tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Number(ctx.raw || 0).toLocaleString('vi-VN')} VNĐ` } }
       },
       scales: {
         y: {
           beginAtZero: true,
           ticks: {
-            font: { family: 'Inter', size: 11 },
-            color: '#64748B',
-            callback: function(value) {
-              if (value >= 1000000) return (value / 1000000) + 'M';
-              if (value >= 1000) return (value / 1000) + 'k';
-              return value;
-            }
+            font: { family: 'Inter', size: 11 }, color: '#64748B',
+            callback: (v) => (v >= 1000000 ? (v / 1000000) + 'M' : (v >= 1000 ? (v / 1000) + 'k' : v))
           },
-          grid: {
-            color: '#F1F5F9'
-          }
+          grid: { color: '#F1F5F9' }
         },
-        x: {
-          ticks: {
-            font: { family: 'Inter', size: 11 },
-            color: '#64748B'
-          },
-          grid: {
-            display: false
-          }
-        }
+        x: { ticks: { font: { family: 'Inter', size: 11 }, color: '#64748B' }, grid: { display: false } }
       }
     }
   });
 }
 
-// ============================================================================
-// TASK 2: BIỂU ĐỒ TRÒN PHÂN BỔ TRẠNG THÁI ĐƠN HÀNG (PIE CHART)
-// ============================================================================
-function renderOrderStatusChart() {
-  const orders = getOrdersFromStorage();
+function renderPieChart(data) {
+  const counts = data.orderStatuses || {};
+  const values = STATUS_META.map(s => Number(counts[s.key] || 0));
+  const total = values.reduce((a, b) => a + b, 0);
 
-  const statusCounts = {
-    'PENDING': 0,
-    'CONFIRMED': 0,
-    'PROCESSING': 0,
-    'COMPLETED': 0,
-    'CANCELLED': 0,
-    'DISPUTED': 0
-  };
-
-  orders.forEach(o => {
-    const rawSt = (o.orderStatus || '').toUpperCase();
-    if (rawSt.includes('PENDING') || rawSt.includes('CHỜ')) {
-      statusCounts['PENDING']++;
-    } else if (rawSt.includes('CONFIRM') || rawSt.includes('XÁC NHẬN')) {
-      statusCounts['CONFIRMED']++;
-    } else if (rawSt.includes('PROCESS') || rawSt.includes('THỰC HIỆN')) {
-      statusCounts['PROCESSING']++;
-    } else if (rawSt.includes('COMPLET') || rawSt.includes('HOÀN THÀNH')) {
-      statusCounts['COMPLETED']++;
-    } else if (rawSt.includes('CANCEL') || rawSt.includes('HỦY')) {
-      statusCounts['CANCELLED']++;
-    } else if (rawSt.includes('DISPUT') || rawSt.includes('TRANH CHẤP') || rawSt.includes('KHIẾU NẠI')) {
-      statusCounts['DISPUTED']++;
-    } else {
-      statusCounts['PENDING']++;
-    }
-  });
-
-  const labels = ['PENDING', 'CONFIRMED', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'DISPUTED'];
-  const data = [
-    statusCounts['PENDING'],
-    statusCounts['CONFIRMED'],
-    statusCounts['PROCESSING'],
-    statusCounts['COMPLETED'],
-    statusCounts['CANCELLED'],
-    statusCounts['DISPUTED']
-  ];
-
-  // Màu sắc theo đúng semantic Design System
-  const backgroundColors = [
-    '#F59E0B', // PENDING - Vàng cam
-    '#6366F1', // CONFIRMED - Indigo
-    '#3B82F6', // PROCESSING - Xanh dương
-    '#22C55E', // COMPLETED - Xanh lá
-    '#EF4444', // CANCELLED - Đỏ
-    '#EC4899'  // DISPUTED - Hồng tím
-  ];
-
-  // Render thống kê thẻ nhỏ bên cạnh
   const listEl = document.getElementById('order-status-stats-list');
   if (listEl) {
-    const statusLabelsVi = {
-      'PENDING': 'Chờ xử lý / thanh toán',
-      'CONFIRMED': 'Đã xác nhận',
-      'PROCESSING': 'Đang thực hiện',
-      'COMPLETED': 'Đã hoàn thành',
-      'CANCELLED': 'Đã hủy',
-      'DISPUTED': 'Khiếu nại / Tranh chấp'
-    };
-
-    listEl.innerHTML = labels.map((st, idx) => `
+    listEl.innerHTML = STATUS_META.map((s, i) => `
       <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#F8FAFC; border-radius:8px; border:1px solid #E2E8F0; font-size:12px;">
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="width:10px; height:10px; border-radius:50%; background:${backgroundColors[idx]}; display:inline-block;"></span>
-          <strong>${st}</strong>
-          <span style="color:var(--text-secondary); font-size:11px;">(${statusLabelsVi[st]})</span>
+          <span style="width:10px; height:10px; border-radius:50%; background:${s.color}; display:inline-block;"></span>
+          <strong>${s.label}</strong>
+          <span style="color:var(--text-secondary); font-size:11px;">(${s.vi})</span>
         </div>
-        <span style="font-weight:700; color:var(--secondary);">${data[idx]} đơn</span>
-      </div>
-    `).join('');
+        <span style="font-weight:700; color:var(--secondary);">${values[i]} đơn</span>
+      </div>`).join('') +
+      `<div style="text-align:right; font-size:12px; color:var(--text-secondary); padding-top:4px;">Tổng: <strong>${total}</strong> đơn</div>`;
   }
 
-  const ctx = document.getElementById('orderStatusPieChart');
-  if (!ctx) return;
+  const canvas = document.getElementById('orderStatusPieChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (orderStatusChart) orderStatusChart.destroy();
 
-  if (orderStatusChart) {
-    orderStatusChart.destroy();
-  }
-
-  orderStatusChart = new Chart(ctx, {
+  orderStatusChart = new Chart(canvas, {
     type: 'pie',
     data: {
-      labels: labels,
-      datasets: [{
-        data: data,
-        backgroundColor: backgroundColors,
-        borderWidth: 2,
-        borderColor: '#FFFFFF'
-      }]
+      labels: STATUS_META.map(s => s.label),
+      datasets: [{ data: values, backgroundColor: STATUS_META.map(s => s.color), borderWidth: 2, borderColor: '#FFFFFF' }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'right',
-          labels: {
-            font: { family: 'Inter', size: 12, weight: '500' },
-            color: '#1E293B',
-            boxWidth: 14,
-            padding: 12
-          }
-        },
+        legend: { position: 'right', labels: { font: { family: 'Inter', size: 12, weight: '500' }, color: '#1E293B', boxWidth: 14, padding: 12 } },
         tooltip: {
           callbacks: {
-            label: function(context) {
-              const label = context.label || '';
-              const value = context.raw || 0;
-              const total = context.dataset.data.reduce((a, b) => a + b, 0);
-              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-              return ` ${label}: ${value} đơn (${percentage}%)`;
+            label: (ctx) => {
+              const value = ctx.raw || 0;
+              const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = sum > 0 ? ((value / sum) * 100).toFixed(1) : 0;
+              return ` ${ctx.label}: ${value} đơn (${pct}%)`;
             }
           }
         }
@@ -373,26 +168,62 @@ function renderOrderStatusChart() {
   });
 }
 
-// Khởi tạo các giá trị ban đầu cho trang thống kê
-document.addEventListener('DOMContentLoaded', () => {
-  // Gán giá trị mặc định cho Date Picker (từ ngày 20/04/2025 đến ngày 30/04/2025 để khớp với mock orders)
+// Đọc khoảng ngày trong 2 ô input, kiểm tra hợp lệ, gọi API rồi vẽ lại cả 2 biểu đồ
+async function loadStatistics() {
+  const fromVal = document.getElementById('stats-date-from').value;
+  const toVal = document.getElementById('stats-date-to').value;
+
+  if (!fromVal || !toVal) {
+    showFeedback('Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc để xem biểu đồ.', 'warning');
+    return;
+  }
+  const start = parseISO(fromVal);
+  const end = parseISO(toVal);
+  if (start > end) {
+    showFeedback('Ngày bắt đầu không được lớn hơn ngày kết thúc.', 'error');
+    return;
+  }
+
+  showFeedback('');
+  try {
+    const data = await fetchStatistics(fromVal, toVal);
+    renderBarChart(data, start, end);
+    renderPieChart(data);
+    if (!data.totalOrders) showFeedback('Không có đơn hàng nào trong khoảng thời gian đã chọn.', 'warning');
+  } catch (err) {
+    console.error('Lỗi tải thống kê:', err);
+    showFeedback('Không tải được thống kê: ' + err.message, 'error');
+  }
+}
+
+// Lần đầu: lấy toàn bộ dữ liệu để chọn sẵn khoảng ngày có đơn hàng (không gán cứng ngày nào)
+async function initStatistics() {
   const fromInput = document.getElementById('stats-date-from');
   const toInput = document.getElementById('stats-date-to');
-  const btnFilter = document.getElementById('btn-filter-revenue');
+  if (!fromInput || !toInput) return;
 
-  if (fromInput && toInput) {
-    // Mặc định khoảng ngày phù hợp với dữ liệu seed 2025
-    fromInput.value = '2025-04-20';
-    toInput.value = '2025-04-30';
+  try {
+    const all = await fetchStatistics('', '');
+    const days = Object.keys(all.revenueByDay || {}).sort();
+    if (days.length) {
+      fromInput.value = days[0];
+      toInput.value = days[days.length - 1];
+    } else {
+      const today = new Date();
+      const monthAgo = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
+      fromInput.value = toISO(monthAgo);
+      toInput.value = toISO(today);
+    }
+  } catch (err) {
+    console.error('Lỗi khởi tạo thống kê:', err);
+    showFeedback('Không tải được thống kê: ' + err.message, 'error');
+    return;
   }
+  loadStatistics();
+}
 
-  if (btnFilter) {
-    btnFilter.addEventListener('click', () => {
-      renderRevenueChart();
-    });
-  }
-
-  // Khởi tạo cả 2 biểu đồ
-  renderRevenueChart();
-  renderOrderStatusChart();
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btn-filter-revenue');
+  if (btn) btn.addEventListener('click', loadStatistics);
+  initStatistics();
 });

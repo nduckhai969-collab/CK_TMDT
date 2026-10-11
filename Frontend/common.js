@@ -255,6 +255,7 @@ async function syncStateWithServer() {
 // Admin API client methods
 window.adminApi = {
   getDashboard: () => fetch(`${API_BASE}/api/admin/dashboard`).then(r => r.json()),
+  getStatistics: (from, to) => fetch(`${API_BASE}/api/admin/statistics` + (from && to ? `?startDate=${encodeURIComponent(from)}&endDate=${encodeURIComponent(to)}` : '')).then(r => r.json()),
   lockUser: (id, reason, duration) => fetch(`${API_BASE}/api/admin/users/${id}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, duration }) }).then(r => r.json()),
   unlockUser: (id) => fetch(`${API_BASE}/api/admin/users/${id}/unlock`, { method: 'POST' }).then(r => r.json()),
   decideUnlock: (id, decision) => fetch(`${API_BASE}/api/admin/unlock-requests/${id}/decide`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }) }).then(r => r.json()),

@@ -538,21 +538,13 @@
           "providerId": "PRV006",
           "providerName": "Hoàng Quốc Bảo",
           "proposedPrice": "1.200.000đ",
-          "status": "pending",
-          "specialty": "Data Analyst & BI Specialist",
-          "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200",
-          "appliedAt": "01/10/2026 11:00",
-          "proposalText": "Tôi có kinh nghiệm về Data Analyst & BI Specialist và sẵn sàng trao đổi để hoàn thành yêu cầu này."
+          "status": "pending"
         },
         {
           "providerId": "PRV003",
           "providerName": "Phạm Gia Huy",
           "proposedPrice": "1.400.000đ",
-          "status": "pending",
-          "specialty": "Digital Marketing Specialist",
-          "avatar": "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200",
-          "appliedAt": "01/10/2026 11:00",
-          "proposalText": "Tôi có kinh nghiệm về Digital Marketing Specialist và sẵn sàng trao đổi để hoàn thành yêu cầu này."
+          "status": "pending"
         }
       ]
     },
@@ -580,11 +572,7 @@
           "providerId": "PRV001",
           "providerName": "Nguyễn Văn Minh",
           "proposedPrice": "3.000.000đ",
-          "status": "pending",
-          "specialty": "Senior Java / Spring Boot Developer",
-          "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200",
-          "appliedAt": "01/10/2026 10:30",
-          "proposalText": "Tôi có kinh nghiệm về Senior Java / Spring Boot Developer và sẵn sàng trao đổi để hoàn thành yêu cầu này."
+          "status": "pending"
         }
       ]
     },
@@ -612,31 +600,19 @@
           "providerId": "PRV002",
           "providerName": "Trần Ngọc Mai",
           "proposedPrice": "1.800.000đ",
-          "status": "pending",
-          "specialty": "UI/UX Designer",
-          "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200",
-          "appliedAt": "01/10/2026 09:15",
-          "proposalText": "Tôi có kinh nghiệm về UI/UX Designer và sẵn sàng trao đổi để hoàn thành yêu cầu này."
+          "status": "pending"
         },
         {
           "providerId": "PRV001",
           "providerName": "Nguyễn Văn Minh",
           "proposedPrice": "2.000.000đ",
-          "status": "pending",
-          "specialty": "Senior Java / Spring Boot Developer",
-          "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200",
-          "appliedAt": "01/10/2026 09:15",
-          "proposalText": "Tôi có kinh nghiệm về Senior Java / Spring Boot Developer và sẵn sàng trao đổi để hoàn thành yêu cầu này."
+          "status": "pending"
         },
         {
           "providerId": "PRV003",
           "providerName": "Phạm Gia Huy",
           "proposedPrice": "1.500.000đ",
-          "status": "pending",
-          "specialty": "Digital Marketing Specialist",
-          "avatar": "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200",
-          "appliedAt": "01/10/2026 09:15",
-          "proposalText": "Tôi có kinh nghiệm về Digital Marketing Specialist và sẵn sàng trao đổi để hoàn thành yêu cầu này."
+          "status": "pending"
         }
       ]
     },
@@ -653,41 +629,9 @@
       "status": "open",
       "createdAt": "26/09/2026 11:57",
       "desc": "online 100%",
-      "applicants": [
-        {
-          "providerId": "PRV001",
-          "providerName": "Nguyễn Văn Minh",
-          "specialty": "Senior Java / Spring Boot Developer",
-          "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200",
-          "proposedPrice": "4.800.000đ",
-          "appliedAt": "26/09/2026 12:15",
-          "proposalText": "Tôi có thể triển khai giao diện cửa hàng responsive, tích hợp REST API và tối ưu quy trình đặt hàng.",
-          "status": "pending"
-        },
-        {
-          "providerId": "PRV002",
-          "providerName": "Trần Ngọc Mai",
-          "specialty": "UI/UX Designer",
-          "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200",
-          "proposedPrice": "4.200.000đ",
-          "appliedAt": "26/09/2026 13:40",
-          "proposalText": "Tôi có thể thiết kế luồng mua sắm rõ ràng, giao diện mobile-first và bộ component nhất quán cho cửa hàng.",
-          "status": "pending"
-        },
-        {
-          "providerId": "PRV006",
-          "providerName": "Hoàng Quốc Bảo",
-          "specialty": "Data Analyst & BI Specialist",
-          "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200",
-          "proposedPrice": "3.900.000đ",
-          "appliedAt": "26/09/2026 15:05",
-          "proposalText": "Tôi có kinh nghiệm với dữ liệu sản phẩm và dashboard bán hàng, có thể hỗ trợ cấu trúc catalogue và báo cáo.",
-          "status": "pending"
-        }
-      ],
+      "applicants": [],
       "closeReason": null,
-      "statusUpdatedAt": "2026-10-01T10:10:23.650Z",
-      "applicantCount": 3
+      "statusUpdatedAt": "2026-10-01T10:10:23.650Z"
     },
     {
       "id": "JOB-2026-03",

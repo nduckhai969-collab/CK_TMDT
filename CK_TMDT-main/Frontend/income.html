@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ví & Thu nhập - SkillRental Partner</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="brand-icon">S</div>
+        <span>SkillRental</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Tổng quan</div>
+        <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+
+        <div class="nav-section-title">Hồ sơ & Dịch vụ</div>
+        <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-card-clip"></i><span>Hồ Sơ & Dịch Vụ</span></a>
+
+        <div class="nav-section-title">Công việc & Đơn hàng</div>
+        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);">6</span></a>
+        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);">2</span></a>
+
+        <div class="nav-section-title">Kinh doanh & Khách hàng</div>
+        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count">3</span></a>
+        <a href="payment.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Thanh toán & Phí sàn</span></a>
+        <a href="income.html" class="nav-link active"><i class="fa-solid fa-wallet"></i><span>Ví & Thu nhập</span></a>
+        <a href="review.html" class="nav-link"><i class="fa-solid fa-star"></i><span>Đánh giá & Uy tín</span></a>
+        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);">1</span></a>
+
+        <div class="nav-section-title">Dịch vụ hệ thống</div>
+        <a href="package.html" class="nav-link"><i class="fa-solid fa-box-archive"></i><span>Mua dịch vụ</span></a>
+        <a href="post.html" class="nav-link"><i class="fa-solid fa-newspaper"></i><span>Bài viết & Portfolio</span></a>
+      </nav>
+
+      <div class="sidebar-profile">
+        <div class="avatar">NV</div>
+        <div class="profile-info">
+          <div class="profile-name">Nguyễn Văn Pro</div>
+          <div class="profile-role">Senior UI/UX & Web Dev</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-wrapper">
+      <header class="top-header">
+        <div class="header-title">Quản Lý Ví & Thu Nhập</div>
+        <div class="header-actions">
+          <span class="badge badge-success"><span class="badge-dot"></span> Đã Liên Kết Ngân Hàng</span>
+          <!-- Switcher to Admin Portal -->
+          <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
+            <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
+          </a>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <div class="grid-3" style="margin-bottom: 24px;">
+          <div class="balance-box" style="grid-column: span 2;">
+            <div class="balance-title">SỐ DƯ KHẢ DỤNG CÓ THỂ RÚT</div>
+            <div class="balance-amount" id="walletBalance">25.000.000 VNĐ</div>
+            <div style="display:flex; gap:24px; font-size: 13px; color: #CBD5E1; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px;">
+              <div>Tiền cọc giữ chỗ (Đang thực hiện): <strong style="color: #FFF;" id="escrowHeldAmount">4.500.000đ</strong></div>
+              <div>Tổng thu nhập lũy kế: <strong style="color: #FFF;" id="cumulativeEarnings">112.500.000đ</strong></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-title" style="margin-bottom: 12px;"><i class="fa-solid fa-building-columns" style="color: var(--primary-accent);"></i> Tài Khoản Ngân Hàng</div>
+            <div style="background-color: var(--bg-subtle); padding: 14px; border-radius: 8px;" id="bankInfoBox">
+              <div style="font-weight: 700; color: var(--text-main);" id="bankNameDisplay">MB BANK (Ngân hàng Quân Đội)</div>
+              <div style="font-size: 14px; font-weight: 600; margin: 4px 0;" id="bankAccountDisplay">0987.654.321</div>
+              <div style="font-size: 12px; color: var(--text-muted);" id="bankHolderDisplay">Chủ tài khoản: NGUYEN VAN PRO</div>
+            </div>
+            <button class="btn btn-outline btn-sm" style="width: 100%; margin-top: 12px;" onclick="promptUpdateBank()">Cập Nhật Tài Khoản</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fa-solid fa-arrow-up-from-bracket" style="color: var(--primary-accent);"></i> Yêu Cầu Rút Tiền Về Ngân Hàng</div>
+          </div>
+          
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Số tiền cần rút (VNĐ)</label>
+              <input type="number" class="form-control" id="withdrawAmount" placeholder="Ví dụ: 5000000" value="5000000">
+              <div style="display:flex; gap:8px; margin-top: 8px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawVal(2000000)">2.000.000đ</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawVal(5000000)">5.000.000đ</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawVal(10000000)">10.000.000đ</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawAll()">Rút Toàn Bộ</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Mật khẩu xác thực giao dịch</label>
+              <input type="password" class="form-control" id="withdrawPassword" placeholder="••••••••" value="123456">
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Tiền sẽ xử lý về tài khoản ngân hàng trong từ 5 - 15 phút.</div>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary" id="btnSubmitWithdraw" style="min-width: 200px;" onclick="handleWithdrawSubmit()">
+            <i class="fa-solid fa-paper-plane"></i> GỬI YÊU CẦU RÚT TIỀN
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Lịch Sử Rút Tiền</div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Mã Giao Dịch</th>
+                <th>Thời Gian Yêu Cầu</th>
+                <th>Số Tiền</th>
+                <th>Ngân Hàng Thụ Hưởng</th>
+                <th>Trạng Thái</th>
+              </tr>
+            </thead>
+            <tbody id="payoutTableBody">
+              <tr>
+                <td>#WD-0912</td>
+                <td>28/04/2025 09:15</td>
+                <td>25.000.000đ</td>
+                <td>Vietcombank (0071001234567)</td>
+                <td><span class="badge badge-warning"><span class="badge-dot"></span> Đang chờ duyệt</span></td>
+              </tr>
+              <tr>
+                <td>#WD-88412</td>
+                <td>12/09/2026 14:20</td>
+                <td>10.000.000đ</td>
+                <td>MB Bank (0987***321)</td>
+                <td><span class="badge badge-success"><span class="badge-dot"></span> Đã hoàn tất</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="provider.js"></script>
+  <script>
+    let currentAvailableBalance = 25000000;
+
+    function setWithdrawVal(val) {
+      document.getElementById('withdrawAmount').value = val;
+    }
+
+    function setWithdrawAll() {
+      document.getElementById('withdrawAmount').value = currentAvailableBalance;
+    }
+
+    async function loadWallet() {
+      try {
+        const res = await window.providerApi.getWallet();
+        if (res && res.success && res.wallet) {
+          const w = res.wallet;
+          currentAvailableBalance = w.balance;
+          document.getElementById('walletBalance').textContent = w.balanceFormatted;
+          if (w.escrowHeldFormatted) document.getElementById('escrowHeldAmount').textContent = w.escrowHeldFormatted;
+          if (w.cumulativeEarnings) document.getElementById('cumulativeEarnings').textContent = w.cumulativeEarnings;
+
+          if (w.bankAccount) {
+            document.getElementById('bankNameDisplay').textContent = w.bankAccount.bank;
+            document.getElementById('bankAccountDisplay').textContent = w.bankAccount.account;
+            document.getElementById('bankHolderDisplay').textContent = 'Chủ tài khoản: ' + w.bankAccount.holder;
+          }
+
+          if (w.payoutHistory && w.payoutHistory.length > 0) {
+            const tbody = document.getElementById('payoutTableBody');
+            tbody.innerHTML = w.payoutHistory.map(p => `
+              <tr>
+                <td>#${p.id}</td>
+                <td>${p.date}</td>
+                <td><strong>${p.amount}</strong></td>
+                <td>${p.bank} (${p.account})</td>
+                <td>
+                  ${p.status === 'paid'
+                    ? '<span class="badge badge-success"><span class="badge-dot"></span> Đã hoàn tất</span>'
+                    : '<span class="badge badge-warning"><span class="badge-dot"></span> Chờ Admin duyệt</span>'}
+                </td>
+              </tr>
+            `).join('');
+          }
+        }
+      } catch (err) {
+        console.warn('Load wallet error:', err);
+      }
+    }
+
+    async function handleWithdrawSubmit() {
+      const amount = document.getElementById('withdrawAmount').value;
+      const pwd = document.getElementById('withdrawPassword').value;
+
+      if (!amount || Number(amount) <= 0) {
+        showToast('Vui lòng nhập số tiền cần rút hợp lệ!');
+        return;
+      }
+      if (Number(amount) > currentAvailableBalance) {
+        showToast('Số dư khả dụng không đủ!');
+        return;
+      }
+
+      showToast('Đang gửi lệnh rút tiền...', 'info');
+      try {
+        const res = await window.providerApi.withdraw(amount, pwd);
+        if (res && res.success) {
+          showToast(res.message);
+          loadWallet();
+        } else {
+          showToast(res.message || 'Lỗi xử lý rút tiền');
+        }
+      } catch (e) {
+        showToast('Lỗi kết nối khi gửi yêu cầu rút tiền');
+      }
+    }
+
+    async function promptUpdateBank() {
+      const bank = prompt('Nhập tên ngân hàng:', 'MB Bank');
+      if (!bank) return;
+      const account = prompt('Nhập số tài khoản:', '0987654321');
+      if (!account) return;
+      const holder = prompt('Nhập tên chủ tài khoản:', 'NGUYEN VAN AN');
+      if (!holder) return;
+
+      const res = await window.providerApi.updateBankAccount(bank, account, holder);
+      if (res && res.success) {
+        showToast('Đã cập nhật thông tin ngân hàng thành công!');
+        loadWallet();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadWallet();
+    });
+  </script>
+</body>
+</html>

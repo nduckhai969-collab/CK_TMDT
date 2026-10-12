@@ -3,6 +3,14 @@
 const db = require('../data/db');
 const { auth } = require('../firebase');
 
+function nextUserId(users) {
+  const max = users.reduce((m, u) => {
+    const match = /^USR(\d+)$/.exec(u.id || '');
+    return match ? Math.max(m, parseInt(match[1], 10)) : m;
+  }, 0);
+  return `USR${String(max + 1).padStart(3, '0')}`;
+}
+
 function bearerToken(req) {
   const header = req.headers.authorization || '';
   return header.startsWith('Bearer ') ? header.slice(7).trim() : null;
@@ -54,6 +62,32 @@ function authenticate({ allowNoProfile = false, allowUnverified = false } = {}) 
         db.saveCollection('users', users);
         profile = byEmail;
       }
+    }
+
+    // Tự động tạo hồ sơ cho tài khoản Firebase đã xác thực email nhưng chưa có trong Firestore
+    if (!profile && !allowNoProfile && decoded.email && decoded.email_verified) {
+      const email = decoded.email.toLowerCase();
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      const defaultName = decoded.name || email.split('@')[0];
+      const roleClaim = (decoded.role || (decoded.customClaims && decoded.customClaims.role) || 'Customer');
+      const safeRole = roleClaim === 'Provider' ? 'Provider' : (roleClaim === 'Admin' ? 'Admin' : 'Customer');
+      const newProf = {
+        id: nextUserId(users),
+        uid: decoded.uid,
+        name: defaultName,
+        email: decoded.email,
+        phone: decoded.phone_number || '0900 000 000',
+        role: safeRole,
+        joinDate: dateStr,
+        spentOrEarned: '0đ',
+        balance: safeRole === 'Customer' ? 5000000 : 0,
+        status: 'active',
+        avatar: decoded.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
+      };
+      users.push(newProf);
+      db.saveCollection('users', users);
+      profile = newProf;
     }
 
     if (!profile) {

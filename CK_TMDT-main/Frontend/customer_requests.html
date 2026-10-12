@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Yêu cầu của tôi</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
+    .tab-btn {
+      padding: 10px 20px;
+      font-weight: 700;
+      font-size: 14px;
+      color: #64748B;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn.active {
+      color: #16A34A;
+      border-bottom-color: #16A34A;
+    }
+    .request-row-card {
+      background: #FFFFFF;
+      border: 1px solid #dbe4e0;
+      border-radius: 16px;
+      padding: 0;
+      margin-bottom: 18px;
+      overflow:hidden;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .request-row-card:hover {
+      border-color: #86c99f;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, .08);
+      transform:translateY(-2px);
+    }
+    .request-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; padding:20px 22px 16px; }
+    .request-card-title { font-size:17px; line-height:1.4; font-weight:800; color:#0f172a; margin:0 0 10px; }
+    .request-card-badges { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+    .request-status-pill { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:6px 10px; font-size:11px; font-weight:800; white-space:nowrap; }
+    .request-card-budget { flex:0 0 auto; min-width:150px; padding:11px 14px; border:1px solid #bbf7d0; border-radius:12px; background:#f0fdf4; }
+    .request-card-meta { display:flex; flex-wrap:wrap; gap:8px; padding:0 22px 16px; }
+    .request-meta-chip { display:inline-flex; align-items:center; gap:7px; border:1px solid #e2e8f0; background:#f8fafc; color:#475569; border-radius:8px; padding:7px 10px; font-size:11px; }
+    .request-card-description { margin:0 22px 16px; padding:13px 15px; border-left:3px solid #86efac; border-radius:0 10px 10px 0; background:#f8fafc; color:#475569; font-size:13px; line-height:1.65; }
+    .request-card-footer { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:14px 22px; border-top:1px solid #e8eeeb; background:#fcfdfc; }
+    .request-card-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px; }
+    .request-icon-action { width:38px; height:38px; display:inline-grid; place-items:center; border:1px solid #dbe4e0; border-radius:10px; color:#475569; background:#fff; cursor:pointer; }
+    .request-icon-action:hover { background:#f0fdf4; color:#15803d; border-color:#86efac; }
+    @media(max-width:700px) { .request-card-head{padding:17px 16px 12px;flex-direction:column}.request-card-budget{width:100%;box-sizing:border-box}.request-card-meta{padding:0 16px 13px}.request-card-description{margin:0 16px 13px}.request-card-footer{padding:13px 16px;align-items:flex-start;flex-direction:column}.request-card-actions{width:100%;justify-content:flex-start} }
+    .requests-hero { position:relative; overflow:hidden; background:linear-gradient(125deg,#052e1b,#15803d 58%,#22c55e); border-radius:20px; padding:30px 32px; color:#fff; margin-bottom:22px; box-shadow:0 12px 28px rgba(21,128,61,.18); }
+    .requests-hero:after { content:'✦'; position:absolute; right:5%; top:-48px; font-size:190px; color:rgba(255,255,255,.08); }
+    .summary-card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:18px; display:flex; align-items:center; gap:14px; }
+    .summary-icon { width:44px; height:44px; border-radius:13px; display:grid; place-items:center; background:#dcfce7; color:#15803d; font-size:18px; }
+    .request-toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:14px; background:#fff; border:1px solid #e2e8f0; border-radius:14px; margin-bottom:16px; }
+    .detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
+    .detail-item { padding:14px; border-radius:12px; background:#f8fafc; border:1px solid #e2e8f0; }
+    @media(max-width:640px) { .requests-hero{padding:24px 20px}.detail-grid{grid-template-columns:1fr} }
+    .applicant-box {
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 16px;
+      background: #FFFFFF;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <div id="navbar-placeholder"></div>
+
+  <main style="max-width: 1180px; margin: 28px auto 60px; padding: 0 24px;">
+
+    <!-- HEADER TITLE -->
+    <section class="requests-hero">
+      <div style="position:relative;z-index:1;max-width:700px">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.82;margin-bottom:8px"><i class="fa-solid fa-wand-magic-sparkles"></i> Không gian dự án của bạn</div>
+        <h1 style="font-size:clamp(25px,4vw,34px);font-weight:800;margin:0">Yêu cầu của tôi</h1>
+        <p style="font-size:14px;line-height:1.65;opacity:.9;margin:9px 0 0">Theo dõi đề xuất từ chuyên gia, xem lại thông tin và cập nhật yêu cầu bất cứ lúc nào trước khi chốt ứng viên.</p>
+      </div>
+      <button onclick="switchTab('create')" class="btn" style="position:relative;z-index:1;background:white;color:#15803d;font-weight:800;margin-top:20px"><i class="fa-solid fa-plus"></i> Tạo yêu cầu mới</button>
+    </section>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:22px">
+      <div class="summary-card"><div class="summary-icon"><i class="fa-solid fa-layer-group"></i></div><div><div style="font-size:12px;color:#64748b">Tổng yêu cầu</div><strong id="statTotal" style="font-size:22px;color:#0f172a">0</strong></div></div>
+      <div class="summary-card"><div class="summary-icon" style="background:#eff6ff;color:#2563eb"><i class="fa-solid fa-bullhorn"></i></div><div><div style="font-size:12px;color:#64748b">Đang nhận đề xuất</div><strong id="statOpen" style="font-size:22px;color:#0f172a">0</strong></div></div>
+      <div class="summary-card"><div class="summary-icon" style="background:#fff7ed;color:#ea580c"><i class="fa-solid fa-user-group"></i></div><div><div style="font-size:12px;color:#64748b">Đề xuất nhận được</div><strong id="statApplicants" style="font-size:22px;color:#0f172a">0</strong></div></div>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div style="border-bottom: 1px solid #E2E8F0; margin-bottom: 28px; display:flex; gap:12px;">
+      <button id="tabManage" class="tab-btn active" onclick="switchTab('manage')">
+        <i class="fa-solid fa-list-check"></i> Danh sách của tôi (<span id="jobCountBadge">0</span>)
+      </button>
+      <button id="tabCreate" class="tab-btn" onclick="switchTab('create')">
+        <i class="fa-solid fa-pen-to-square"></i> Tạo yêu cầu tìm chuyên gia
+      </button>
+    </div>
+
+    <div id="requestToolbar" class="request-toolbar">
+      <div style="position:relative;flex:1;min-width:210px"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:13px;top:13px;color:#94a3b8"></i><input id="requestSearch" type="search" placeholder="Tìm theo tên yêu cầu..." oninput="renderJobsList()" style="width:100%;padding:11px 12px 11px 38px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;font-size:13px"></div>
+      <select id="requestStatusFilter" onchange="renderJobsList()" style="padding:11px 13px;border:1px solid #cbd5e1;border-radius:10px;background:white;font:inherit;font-size:13px"><option value="all">Tất cả trạng thái</option><option value="open">Đang nhận đề xuất</option><option value="closed">Đã đóng / đã chốt</option></select>
+      <span style="font-size:12px;color:#64748b"><i class="fa-regular fa-circle-question"></i> Nhấn vào thẻ để xem chi tiết</span>
+    </div>
+
+    <!-- VIEW 1: MANAGE POSTED JOBS & APPLICANTS (Figma r1_c4) -->
+    <div id="viewManage">
+      <div id="jobsListContainer">
+        <div style="text-align:center; padding:40px; color:#64748B;">
+          <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+          <div style="margin-top:10px;">Đang tải danh sách yêu cầu tuyển...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: CREATE NEW JOB FORM (Figma r1_c3) -->
+    <div id="viewCreate" style="display:none; max-width:860px; margin:0 auto;">
+      <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:32px; box-shadow:0 4px 16px rgba(0,0,0,0.03);">
+        <h2 style="font-size:18px; font-weight:800; color:#0F172A; margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+          <i class="fa-solid fa-file-pen" style="color:#16A34A;"></i> Thông tin công việc cần tìm
+        </h2>
+
+        <form id="jobForm" onsubmit="handleSaveJob(event)">
+          <div style="margin-bottom:18px;">
+            <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Tên công việc hoặc dự án <span style="color:#EF4444;">*</span></label>
+            <input type="text" id="jobTitle" required placeholder="VD: Cần lập trình viên làm website bán hàng hoặc thợ sửa máy lạnh..." style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
+            <div>
+              <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Lĩnh Vực Chuyên Môn <span style="color:#EF4444;">*</span></label>
+              <select id="jobCategory" required style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; background:#FFF;">
+                <option value="IT">Lập trình & CNTT (Web, Mobile, App)</option>
+                <option value="Design">Thiết kế Đồ họa & UI/UX</option>
+                <option value="Tutor">Gia sư & Đào tạo Kỹ năng</option>
+                <option value="Repair">Sửa chữa Kỹ thuật & Điện lạnh</option>
+                <option value="Home">Dọn dẹp & Dịch vụ Đời sống</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Ngân Sách Dự Kiến (VNĐ) <span style="color:#EF4444;">*</span></label>
+              <input type="number" id="jobBudget" required placeholder="VD: 5000000" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
+            <div>
+              <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Hạn Chót Hoàn Thành</label>
+              <input type="date" id="jobDeadline" style="width:100%; padding:9px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit; outline:none;">
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Hình Thức Làm Việc</label>
+              <select id="jobLocation" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; background:#FFF;">
+                <option value="Online / Từ xa">Làm việc Online / Từ xa</option>
+                <option value="Tại nhà (TP. Hồ Chí Minh)">Gặp trực tiếp tại nhà (TP.HCM)</option>
+                <option value="Tại nhà (Hà Nội)">Gặp trực tiếp tại nhà (Hà Nội)</option>
+                <option value="Thỏa thuận sau">Thỏa thuận linh hoạt</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Mô tả chi tiết công việc <span style="color:#EF4444;">*</span></label>
+            <textarea id="jobDesc" rows="5" required placeholder="Ghi rõ khối lượng công việc, tính năng mong muốn, yêu cầu chất lượng, bàn giao source code/file kết quả..." style="width:100%; padding:12px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; resize:vertical;"></textarea>
+          </div>
+
+          <!-- Escrow Protection Note in Form -->
+          <div style="background:#DCFCE7; border:1px solid #86EFAC; border-radius:10px; padding:14px; margin-bottom:24px; display:flex; gap:12px; align-items:flex-start;">
+            <i class="fa-solid fa-shield-halved" style="color:#15803D; font-size:20px; margin-top:2px;"></i>
+            <div style="font-size:12.5px; color:#15803D; line-height:1.5;">
+              <strong>Bảo lãnh an toàn sàn:</strong> Khi bạn chọn được chuyên gia ưng ý từ danh sách ứng tuyển, bạn sẽ nạp ký quỹ Escrow. Tiền chỉ được sàn chuyển cho chuyên gia sau khi bạn nghiệm thu đạt chất lượng.
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:12px;">
+            <button type="button" onclick="switchTab('manage')" class="btn btn-outline" style="font-weight:600; padding:11px 22px;">Hủy Bỏ</button>
+            <button type="submit" id="btnSubmitJob" class="btn btn-primary" style="font-weight:700; padding:11px 26px; box-shadow:0 4px 12px rgba(22,163,74,0.3);">
+              <i class="fa-solid fa-paper-plane"></i> Đăng yêu cầu
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- REQUEST DETAIL MODAL -->
+  <div id="requestDetailModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:9998;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(3px)" onclick="if(event.target===this)closeRequestModal()">
+    <div style="background:#fff;border-radius:18px;max-width:720px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 24px 60px rgba(15,23,42,.24)">
+      <div style="padding:22px 24px;background:linear-gradient(120deg,#052e1b,#15803d);color:white;border-radius:18px 18px 0 0;display:flex;justify-content:space-between;gap:16px;align-items:flex-start">
+        <div><div id="detailStatus" style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase"></div><h2 id="detailTitle" style="font-size:21px;margin:6px 0 0"></h2></div>
+        <button onclick="closeRequestModal()" aria-label="Đóng" style="border:0;background:rgba(255,255,255,.15);color:white;border-radius:9px;width:36px;height:36px;cursor:pointer"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="padding:24px">
+        <div class="detail-grid" style="margin-top:0">
+          <div class="detail-item"><div style="font-size:11px;color:#64748b">Ngân sách dự kiến</div><strong id="detailBudget" style="display:block;color:#15803d;font-size:18px;margin-top:4px"></strong></div>
+          <div class="detail-item"><div style="font-size:11px;color:#64748b">Lĩnh vực</div><strong id="detailCategory" style="display:block;margin-top:4px"></strong></div>
+          <div class="detail-item"><div style="font-size:11px;color:#64748b">Hạn mong muốn</div><strong id="detailDeadline" style="display:block;margin-top:4px"></strong></div>
+          <div class="detail-item"><div style="font-size:11px;color:#64748b">Hình thức làm việc</div><strong id="detailLocation" style="display:block;margin-top:4px"></strong></div>
+        </div>
+        <div style="font-size:13px;font-weight:800;margin-bottom:8px">Mô tả công việc</div><div id="detailDescription" style="font-size:13px;color:#475569;line-height:1.75;white-space:pre-wrap;background:#f8fafc;padding:16px;border-radius:12px"></div>
+        <div id="detailStatusNote" style="font-size:12px;color:#64748b;background:#f8fafc;padding:11px 13px;border-radius:10px;margin-top:14px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px"><span id="detailMeta" style="font-size:12px;color:#64748b"></span><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="detailStatusActionBtn" onclick="toggleCurrentRequestStatus()" class="btn btn-outline"></button><button id="detailEditBtn" onclick="editRequestFromDetail()" class="btn btn-outline"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button><button id="detailApplicantsBtn" onclick="applicantsFromDetail()" class="btn btn-primary"><i class="fa-solid fa-users"></i> Xem đề xuất</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICANTS MODAL -->
+  <div id="applicantsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#FFFFFF; border-radius:16px; max-width:700px; width:92%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 20px 35px -5px rgba(0,0,0,0.2); animation:modalIn 0.3s ease-out;">
+      
+      <!-- Modal Header -->
+      <div style="padding:20px 24px; border-bottom:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h3 id="modalJobTitle" style="font-size:17px; font-weight:800; color:#0F172A; margin:0;">Chuyên gia gửi đề xuất</h3>
+          <div id="modalJobBudget" style="font-size:12.5px; color:#16A34A; font-weight:600; margin-top:2px;">Ngân sách: 8.000.000đ</div>
+        </div>
+        <button onclick="closeApplicantsModal()" style="border:none; background:transparent; font-size:18px; color:#94A3B8; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Modal Body (Applicants list) -->
+      <div id="applicantsListContainer" style="padding:24px; overflow-y:auto; flex:1;">
+        <!-- Loaded via JS -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="padding:16px 24px; border-top:1px solid #E2E8F0; text-align:right; background:#F8FAFC; border-bottom-left-radius:16px; border-bottom-right-radius:16px;">
+        <button onclick="closeApplicantsModal()" class="btn btn-outline btn-sm" style="font-weight:600;">Đóng Lại</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="customer.js"></script>
+  <script>
+    let myJobs = [];
+    let currentModalJob = null;
+    let currentDetailJob = null;
+    let editingJobId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('requests');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+
+      // Set default deadline date (7 days later)
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      document.getElementById('jobDeadline').value = d.toISOString().split('T')[0];
+
+      loadJobs();
+    });
+
+    function switchTab(tab) {
+      if (tab === 'create' && !requireCustomerLogin()) return;
+      if (tab === 'manage') {
+        if (editingJobId) resetJobEditor();
+        document.getElementById('viewManage').style.display = 'block';
+        document.getElementById('viewCreate').style.display = 'none';
+        document.getElementById('tabManage').classList.add('active');
+        document.getElementById('tabCreate').classList.remove('active');
+      } else {
+        document.getElementById('viewManage').style.display = 'none';
+        document.getElementById('viewCreate').style.display = 'block';
+        document.getElementById('tabManage').classList.remove('active');
+        document.getElementById('tabCreate').classList.add('active');
+      }
+    }
+
+    function openRequestDetails(jobId) {
+      if (!requireCustomerLogin()) return;
+      currentDetailJob = myJobs.find(job => job.id === jobId);
+      if (!currentDetailJob) return;
+      const job = currentDetailJob;
+      document.getElementById('detailTitle').textContent = job.title;
+      const hasAcceptedProvider = (job.applicants || []).some(applicant => applicant.status === 'accepted') || job.closeReason === 'provider_selected';
+      document.getElementById('detailStatus').textContent = job.status === 'open' ? '● Đang nhận đề xuất' : (hasAcceptedProvider ? '● Đã chốt chuyên gia' : '● Đã đóng yêu cầu');
+      document.getElementById('detailBudget').textContent = job.budget || formatVND(job.budgetNum || 0);
+      document.getElementById('detailCategory').textContent = categoryName(job.category);
+      document.getElementById('detailDeadline').textContent = job.deadline || 'Thỏa thuận';
+      document.getElementById('detailLocation').textContent = job.location || 'Toàn quốc / Online';
+      document.getElementById('detailDescription').textContent = job.desc || 'Chưa có mô tả.';
+      document.getElementById('detailMeta').textContent = `Mã ${job.id} · Đăng lúc ${job.createdAt || '—'} · ${(job.applicants || []).length} đề xuất`;
+      document.getElementById('detailEditBtn').style.display = job.status === 'open' ? '' : 'none';
+      const statusAction = document.getElementById('detailStatusActionBtn');
+      statusAction.style.display = hasAcceptedProvider ? 'none' : '';
+      statusAction.innerHTML = job.status === 'open' ? '<i class="fa-solid fa-circle-pause"></i> Đóng yêu cầu' : '<i class="fa-solid fa-circle-play"></i> Mở lại yêu cầu';
+      document.getElementById('detailStatusNote').textContent = hasAcceptedProvider
+        ? 'Yêu cầu đã chốt chuyên gia nên hệ thống tự đóng và không nhận thêm đề xuất.'
+        : (job.status === 'open' ? 'Bạn có thể đóng tạm yêu cầu để ngừng nhận đề xuất, rồi mở lại bất cứ lúc nào.' : 'Yêu cầu đang tạm đóng. Mở lại để chuyên gia tiếp tục gửi đề xuất.');
+      document.getElementById('detailApplicantsBtn').innerHTML = `<i class="fa-solid fa-users"></i> Xem ${(job.applicants || []).length} đề xuất`;
+      document.getElementById('requestDetailModal').style.display = 'flex';
+    }
+
+    function closeRequestModal() {
+      document.getElementById('requestDetailModal').style.display = 'none';
+      currentDetailJob = null;
+    }
+
+    async function toggleCurrentRequestStatus() {
+      if (!currentDetailJob || !requireCustomerLogin()) return;
+      const jobId = currentDetailJob.id;
+      const nextStatus = currentDetailJob.status === 'open' ? 'closed' : 'open';
+      const confirmText = nextStatus === 'closed'
+        ? 'Đóng yêu cầu này? Chuyên gia sẽ không thể gửi thêm đề xuất.'
+        : 'Mở lại yêu cầu này để tiếp tục nhận đề xuất?';
+      if (!window.confirm(confirmText)) return;
+      const button = document.getElementById('detailStatusActionBtn');
+      button.disabled = true;
+      try {
+        const res = await apiRequest(`/api/jobs/${encodeURIComponent(jobId)}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: nextStatus })
+        });
+        if (!res.success) throw new Error(res.message || 'Không thể cập nhật trạng thái.');
+        showToast('Đã cập nhật', res.message, 'success');
+        await loadJobs();
+        openRequestDetails(jobId);
+      } catch (error) {
+        showToast('Chưa thể cập nhật', error.message || 'Vui lòng thử lại.', 'error');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function applicantsFromDetail() {
+      if (!currentDetailJob) return;
+      const jobId = currentDetailJob.id;
+      closeRequestModal();
+      openApplicantsModal(jobId);
+    }
+
+    function editRequestFromDetail() {
+      if (currentDetailJob) startEditRequest(currentDetailJob.id);
+    }
+
+    function categoryName(category) {
+      return ({ IT: 'Lập trình & CNTT', Design: 'Thiết kế & UI/UX', Tutor: 'Gia sư & đào tạo', Repair: 'Sửa chữa kỹ thuật', Home: 'Dịch vụ đời sống' })[category] || category || 'Khác';
+    }
+
+    function startEditRequest(jobId) {
+      if (!requireCustomerLogin()) return;
+      const job = myJobs.find(item => item.id === jobId);
+      if (!job || job.status !== 'open') return;
+      closeRequestModal();
+      editingJobId = job.id;
+      document.getElementById('jobTitle').value = job.title || '';
+      document.getElementById('jobCategory').value = job.category || 'IT';
+      document.getElementById('jobBudget').value = job.budgetNum || Number(String(job.budget || '').replace(/[^0-9]/g, '')) || '';
+      const deadline = String(job.deadline || '');
+      const normalizedDeadline = /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? deadline : (/^\d{2}\/\d{2}\/\d{4}$/.test(deadline) ? deadline.split('/').reverse().join('-') : '');
+      document.getElementById('jobDeadline').value = normalizedDeadline;
+      const locationSelect = document.getElementById('jobLocation');
+      const location = job.location || 'Online / Từ xa';
+      if (![...locationSelect.options].some(option => option.value === location)) locationSelect.add(new Option(location, location));
+      locationSelect.value = location;
+      document.getElementById('jobDesc').value = job.desc || '';
+      document.querySelector('#viewCreate h2').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#16A34A"></i> Chỉnh sửa yêu cầu';
+      document.getElementById('btnSubmitJob').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi';
+      switchTab('create');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetJobEditor() {
+      editingJobId = null;
+      document.getElementById('jobForm').reset();
+      document.querySelector('#viewCreate h2').innerHTML = '<i class="fa-solid fa-file-pen" style="color:#16A34A;"></i> Thông tin yêu cầu';
+      document.getElementById('btnSubmitJob').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Đăng yêu cầu';
+    }
+
+    async function handleSaveJob(event) {
+      if (!editingJobId) return handleCreateJob(event);
+      event.preventDefault();
+      if (!requireCustomerLogin()) return;
+      const btn = document.getElementById('btnSubmitJob');
+      btn.disabled = true;
+      const payload = {
+        title: document.getElementById('jobTitle').value,
+        category: document.getElementById('jobCategory').value,
+        budgetNum: Number(document.getElementById('jobBudget').value),
+        deadline: document.getElementById('jobDeadline').value || 'Thỏa thuận',
+        location: document.getElementById('jobLocation').value,
+        desc: document.getElementById('jobDesc').value
+      };
+      try {
+        const res = await apiRequest(`/api/jobs/${encodeURIComponent(editingJobId)}`, { method: 'PATCH', body: JSON.stringify(payload) });
+        if (!res.success) throw new Error(res.message || 'Không thể cập nhật yêu cầu.');
+        showToast('Đã cập nhật', 'Thông tin yêu cầu đã được lưu.', 'success');
+        resetJobEditor();
+        await loadJobs();
+        switchTab('manage');
+      } catch (error) {
+        showToast('Chưa thể lưu', error.message || 'Vui lòng thử lại.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function loadJobs() {
+      const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        myJobs = [];
+        document.getElementById('jobsListContainer').innerHTML = `
+          <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:40px;text-align:center;">
+            <i class="fa-solid fa-lock" style="font-size:32px;color:#94A3B8"></i>
+            <h3 style="margin:12px 0 6px;color:#0F172A">Đăng nhập để xem yêu cầu của bạn</h3>
+            <p style="color:#64748B;margin-bottom:16px">Các yêu cầu cá nhân chỉ hiển thị với tài khoản khách hàng đã đăng nhập.</p>
+            <button class="btn btn-primary" onclick="openAuthModal('login')">Đăng nhập</button>
+          </div>`;
+        return;
+      }
+      const res = await apiRequest(`/api/jobs?customerId=${encodeURIComponent(user.id)}`);
+      if (res.success && res.jobs) {
+        myJobs = res.jobs;
+        document.getElementById('jobCountBadge').textContent = myJobs.length;
+        document.getElementById('statTotal').textContent = myJobs.length;
+        document.getElementById('statOpen').textContent = myJobs.filter(j => j.status === 'open').length;
+        document.getElementById('statApplicants').textContent = myJobs.reduce((sum, j) => sum + (j.applicants || []).length, 0);
+        renderJobsList();
+      }
+    }
+
+    function renderJobsList() {
+      const container = document.getElementById('jobsListContainer');
+      const query = (document.getElementById('requestSearch')?.value || '').trim().toLocaleLowerCase('vi');
+      const statusFilter = document.getElementById('requestStatusFilter')?.value || 'all';
+      const visibleJobs = myJobs.filter(j => (!query || `${j.title} ${j.desc} ${j.category}`.toLocaleLowerCase('vi').includes(query)) && (statusFilter === 'all' || j.status === statusFilter));
+      if (myJobs.length === 0) {
+        container.innerHTML = `
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:48px; text-align:center;">
+            <i class="fa-solid fa-bullhorn" style="font-size:44px; color:#94A3B8; margin-bottom:14px;"></i>
+            <h3 style="font-size:17px; font-weight:700; color:#0F172A; margin-bottom:6px;">Bạn chưa tạo yêu cầu nào</h3>
+            <p style="font-size:13.5px; color:#64748B; margin-bottom:18px;">Tạo yêu cầu để nhận đề xuất phù hợp từ các chuyên gia trên Skill Rental.</p>
+            <button onclick="switchTab('create')" class="btn btn-primary" style="font-weight:600;"><i class="fa-solid fa-plus-circle"></i> Tạo yêu cầu đầu tiên</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (visibleJobs.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:42px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;color:#64748b"><i class="fa-solid fa-filter-circle-xmark" style="font-size:28px;color:#94a3b8"></i><p>Không tìm thấy yêu cầu phù hợp.</p></div>';
+        return;
+      }
+
+      container.innerHTML = visibleJobs.map(j => {
+        const applicantCount = (j.applicants || []).length;
+        const isOpen = j.status === 'open';
+
+        return `
+          <article class="request-row-card" tabindex="0" aria-label="Yêu cầu ${j.title}" onclick="if(!event.target.closest('button'))openRequestDetails('${j.id}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();openRequestDetails('${j.id}')}">
+            <div class="request-card-head">
+              <div style="min-width:0;flex:1">
+                <h2 class="request-card-title">${j.title}</h2>
+                <div class="request-card-badges">
+                  ${getCategoryBadge(j.category)}
+                  <span class="request-status-pill" style="background:${isOpen ? '#dcfce7' : '#f1f5f9'};color:${isOpen ? '#15803d' : '#475569'}">
+                    <i class="fa-solid fa-circle" style="font-size:7px"></i>${isOpen ? 'Đang nhận đề xuất' : ((j.applicants || []).some(a => a.status === 'accepted') ? 'Đã chốt chuyên gia' : 'Đã đóng')}
+                  </span>
+                </div>
+              </div>
+              <div class="request-card-budget"><div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Ngân sách dự kiến</div><div style="font-size:19px;font-weight:800;color:#15803d;margin-top:3px">${j.budget || formatVND(j.budgetNum || 0)}</div></div>
+            </div>
+
+            <div class="request-card-meta">
+              <span class="request-meta-chip"><i class="fa-regular fa-hashtag"></i>${j.id}</span>
+              <span class="request-meta-chip"><i class="fa-regular fa-calendar"></i>Đăng ${j.createdAt || '—'}</span>
+              <span class="request-meta-chip"><i class="fa-regular fa-clock"></i>Hạn ${j.deadline || 'Thỏa thuận'}</span>
+            </div>
+
+            <div class="request-card-description"><strong style="display:block;color:#334155;font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Mô tả</strong>${(j.desc || '').slice(0, 220)}${(j.desc || '').length > 220 ? '…' : ''}</div>
+
+            <div class="request-card-footer">
+              <div style="display:flex;align-items:center;gap:9px;color:#334155;font-size:12px;font-weight:700"><span class="summary-icon" style="width:34px;height:34px;border-radius:10px;font-size:14px"><i class="fa-solid fa-users"></i></span>${applicantCount} đề xuất</div>
+              <div class="request-card-actions">
+                ${isOpen ? `<button type="button" class="request-icon-action" title="Chỉnh sửa yêu cầu" aria-label="Chỉnh sửa yêu cầu" onclick="startEditRequest('${j.id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
+                ${(j.applicants || []).some(a => a.status === 'accepted') ? '' : `<button type="button" class="request-icon-action" title="${isOpen ? 'Đóng yêu cầu' : 'Mở lại yêu cầu'}" aria-label="${isOpen ? 'Đóng yêu cầu' : 'Mở lại yêu cầu'}" onclick="openRequestDetails('${j.id}');toggleCurrentRequestStatus()"><i class="fa-solid fa-${isOpen ? 'pause' : 'play'}"></i></button>`}
+                <button type="button" onclick="openApplicantsModal('${j.id}')" class="btn ${applicantCount > 0 ? 'btn-primary' : 'btn-outline'}" style="font-size:12px;font-weight:700;padding:9px 13px"><i class="fa-solid fa-users"></i> Xem đề xuất</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function handleCreateJob(e) {
+      e.preventDefault();
+      if (!requireCustomerLogin()) return;
+      const btn = document.getElementById('btnSubmitJob');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang đăng...`;
+
+      const user = getCurrentCustomer();
+      const payload = {
+        customerId: user.id,
+        customerName: user.name,
+        title: document.getElementById('jobTitle').value,
+        category: document.getElementById('jobCategory').value,
+        budgetNum: Number(document.getElementById('jobBudget').value),
+        deadline: document.getElementById('jobDeadline').value,
+        location: document.getElementById('jobLocation').value,
+        desc: document.getElementById('jobDesc').value
+      };
+
+      const res = await apiRequest('/api/jobs', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.success) {
+        showToast('Đăng thành công', 'Yêu cầu của bạn đã được đăng.', 'success');
+        document.getElementById('jobForm').reset();
+        await loadJobs();
+        switchTab('manage');
+      } else {
+        showToast('Lỗi', res.message || 'Không thể đăng yêu cầu', 'error');
+      }
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Đăng yêu cầu`;
+    }
+
+    function openApplicantsModal(jobId) {
+      if (!requireCustomerLogin()) return;
+      currentModalJob = myJobs.find(j => j.id === jobId);
+      if (!currentModalJob) return;
+
+      document.getElementById('modalJobTitle').textContent = `Ứng Viên Cho: ${currentModalJob.title}`;
+      document.getElementById('modalJobBudget').textContent = `Ngân sách dự kiến: ${currentModalJob.budget}`;
+
+      const container = document.getElementById('applicantsListContainer');
+      const applicants = currentModalJob.applicants || [];
+
+      if (applicants.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:32px; color:#64748B;">
+            <i class="fa-solid fa-inbox" style="font-size:36px; color:#CBD5E1; margin-bottom:10px;"></i>
+            <div>Chưa có chuyên gia nào gửi đề xuất. Tin của bạn đang được hiển thị cho các Provider phù hợp!</div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = applicants.map(a => `
+          <div class="applicant-box">
+            <div style="display:flex; gap:14px; align-items:center;">
+              <img src="${a.avatar}" alt="${a.providerName}" style="width:50px; height:50px; border-radius:12px; object-fit:cover; border:2px solid #E2E8F0;">
+              <div>
+                <div style="font-weight:800; font-size:15px; color:#0F172A;">${a.providerName}</div>
+                <div style="font-size:12.5px; color:#64748B;">${a.specialty}</div>
+                <div style="font-size:12.5px; color:#475569; margin-top:6px; background:#F8FAFC; padding:8px 10px; border-radius:6px; border:1px solid #E2E8F0;">
+                  "${a.proposalText}"
+                </div>
+              </div>
+            </div>
+
+            <div style="text-align:right; flex-shrink:0;">
+              <div style="font-size:11px; color:#64748B;">Báo giá chào thầu:</div>
+              <div style="font-size:17px; font-weight:800; color:#16A34A; margin-bottom:8px;">${a.proposedPrice}</div>
+              
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <button onclick="acceptApplicant('${currentModalJob.id}', '${a.providerId}', '${a.providerName}', '${a.proposedPrice}')" class="btn btn-primary btn-sm" style="font-weight:700;">
+                  <i class="fa-solid fa-handshake"></i> Chọn & Ký Quỹ Escrow
+                </button>
+                <a href="customer_chat.html?with=${a.providerId}" class="btn btn-outline btn-sm" style="border-color:#CBD5E1; font-weight:600; text-align:center;">
+                  <i class="fa-solid fa-comments"></i> Chat Báo Giá
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('applicantsModal').style.display = 'flex';
+    }
+
+    function closeApplicantsModal() {
+      document.getElementById('applicantsModal').style.display = 'none';
+      currentModalJob = null;
+    }
+
+    async function acceptApplicant(jobId, providerId, providerName, priceFormatted) {
+      if (!requireCustomerLogin()) return;
+      const priceNum = Number(priceFormatted.replace(/[^0-9]/g, '')) || 5000000;
+      
+      const res = await apiRequest(`/api/jobs/${jobId}/accept-applicant`, {
+        method: 'POST',
+        body: JSON.stringify({ providerId })
+      });
+
+      if (res.success) {
+        showToast('Đã Chọn Chuyên Gia!', res.message, 'success');
+        closeApplicantsModal();
+
+        // Save draft and redirect to checkout for escrow deposit
+        const draft = {
+          providerId,
+          providerName,
+          serviceTitle: currentModalJob ? currentModalJob.title : 'Hợp đồng theo yêu cầu',
+          price: priceNum,
+          date: currentModalJob ? currentModalJob.deadline : '7 ngày',
+          time: 'Theo thỏa thuận dự án',
+          quantity: '1 Hợp đồng trọn gói',
+          notes: `Tuyển từ yêu cầu: ${currentModalJob ? currentModalJob.id : ''}`
+        };
+        localStorage.setItem('SKILLRENTAL_CHECKOUT_DRAFT', JSON.stringify(draft));
+        setTimeout(() => {
+          window.location.href = 'customer_checkout.html';
+        }, 1000);
+      } else {
+        showToast('Lỗi', res.message || 'Không thể chấp thuận ứng viên', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

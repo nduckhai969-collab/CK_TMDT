@@ -57,7 +57,25 @@ router.post('/register', authenticate({ allowNoProfile: true, allowUnverified: t
   }
 
   const users = db.getCollection('users');
-  if (users.some(u => String(u.email || '').toLowerCase() === email.toLowerCase())) {
+  const existingUser = users.find(u => String(u.email || '').toLowerCase() === email.toLowerCase());
+  if (existingUser) {
+    if (!existingUser.uid) {
+      existingUser.uid = req.firebaseUser.uid;
+      if (name) existingUser.name = String(name).trim();
+      if (phone) existingUser.phone = String(phone).trim();
+      if (role === 'Provider' || role === 'Customer') existingUser.role = role;
+      db.saveCollection('users', users);
+      try {
+        await auth.setCustomUserClaims(req.firebaseUser.uid, { role: existingUser.role });
+      } catch (err) {
+        console.error('[auth] Không gán được custom claims:', err.message);
+      }
+      return res.status(201).json({
+        success: true,
+        message: 'Đăng ký tài khoản thành công! Vui lòng kiểm tra email để xác nhận.',
+        user: publicUser(existingUser)
+      });
+    }
     return res.status(409).json({ success: false, message: 'Email này đã được sử dụng trên hệ thống!' });
   }
 
@@ -241,6 +259,59 @@ router.put('/change-password', requireSignedIn, async (req, res) => {
   } catch (err) {
     console.error('[auth] change-password:', err.message);
     res.status(500).json({ success: false, message: 'Không thể đổi mật khẩu lúc này.' });
+  }
+});
+
+// Gửi lại email xác nhận từ server qua Firebase Admin SDK
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !String(email).trim()) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email!' });
+  }
+  const cleanEmail = String(email).trim().toLowerCase();
+  try {
+    const userRecord = await auth.getUserByEmail(cleanEmail);
+    if (userRecord.emailVerified) {
+      return res.json({ success: true, alreadyVerified: true, message: 'Email này đã được xác nhận. Bạn có thể đăng nhập ngay!' });
+    }
+    const verifyLink = await auth.generateEmailVerificationLink(cleanEmail);
+    res.json({
+      success: true,
+      message: `Đã tạo liên kết xác nhận cho ${cleanEmail}. Vui lòng kiểm tra hộp thư của bạn.`,
+      verifyLink: process.env.NODE_ENV !== 'production' ? verifyLink : undefined
+    });
+  } catch (err) {
+    if (err.code === 'auth/user-not-found') {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản với email này.' });
+    }
+    console.error('[auth] resend-verification:', err.message);
+    res.status(500).json({ success: false, message: 'Không thể gửi lại email xác nhận lúc này.' });
+  }
+});
+
+// Quên mật khẩu: tạo liên kết đặt lại mật khẩu từ server qua Firebase Admin SDK
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !String(email).trim()) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email!' });
+  }
+  const cleanEmail = String(email).trim().toLowerCase();
+  try {
+    const resetLink = await auth.generatePasswordResetLink(cleanEmail);
+    res.json({
+      success: true,
+      message: `Nếu email ${cleanEmail} tồn tại trong hệ thống, liên kết khôi phục mật khẩu đã được tạo.`,
+      resetLink: process.env.NODE_ENV !== 'production' ? resetLink : undefined
+    });
+  } catch (err) {
+    if (err.code === 'auth/user-not-found') {
+      return res.json({
+        success: true,
+        message: `Nếu email ${cleanEmail} tồn tại trong hệ thống, liên kết khôi phục mật khẩu đã được tạo.`
+      });
+    }
+    console.error('[auth] forgot-password:', err.message);
+    res.status(500).json({ success: false, message: 'Không thể xử lý yêu cầu đặt lại mật khẩu lúc này.' });
   }
 });
 

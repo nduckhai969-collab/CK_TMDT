@@ -2368,24 +2368,31 @@
 
         </div>
 
-        <div class="form-group">
+        <div id="loginAlertBox" style="display:none; margin-bottom:14px;"></div>
 
+        <div class="form-group">
           <label for="loginPassword">
             Mật khẩu
           </label>
-
-          <input
-                  type="password"
-                  id="loginPassword"
-                  class="form-control"
-                  placeholder="••••••••"
-                  required>
-
+          <div style="position:relative; display:flex; align-items:center;">
+            <input
+                    type="password"
+                    id="loginPassword"
+                    class="form-control"
+                    placeholder="••••••••"
+                    required>
+            <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" style="position:absolute; right:10px; background:none; border:none; color:#94A3B8; cursor:pointer; font-size:15px; padding:6px;">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
         </div>
 
-        <div style="text-align:right; margin:-6px 0 4px;">
-          <a href="#" onclick="handleForgotPassword(event)"
-             style="font-size:13px; font-weight:600; text-decoration:none;">Quên mật khẩu?</a>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:-6px 0 10px;">
+          <label style="font-size:13px; color:var(--text-muted); display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="loginRememberMe" checked> Ghi nhớ
+          </label>
+          <a href="#" onclick="switchAuthTab('forgot'); return false;"
+             style="font-size:13px; font-weight:600; color:var(--primary); text-decoration:none;">Quên mật khẩu?</a>
         </div>
 
         <button
@@ -2506,59 +2513,50 @@
         </div>
 
         <div class="form-group">
-
           <label for="regPassword">
             Mật khẩu khởi tạo
           </label>
-
-          <input
-                  type="password"
-                  id="regPassword"
-                  class="form-control"
-                  placeholder="Ít nhất 6 ký tự"
-                  required>
-
+          <div style="position:relative; display:flex; align-items:center;">
+            <input
+                    type="password"
+                    id="regPassword"
+                    class="form-control"
+                    placeholder="Ít nhất 6 ký tự"
+                    minlength="6"
+                    required>
+            <button type="button" onclick="togglePasswordVisibility('regPassword', this)" style="position:absolute; right:10px; background:none; border:none; color:#94A3B8; cursor:pointer; font-size:15px; padding:6px;">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
         </div>
 
         <div class="form-group">
-
           <label>
             Bạn tham gia với vai trò gì?
           </label>
-
           <div class="role-select-box">
-
             <label class="role-radio-label">
-
               <input
                       type="radio"
                       name="regRole"
                       value="Customer"
                       checked>
-
               <span>
                   <i class="fa-solid fa-user"></i>
                   Khách hàng
                 </span>
-
             </label>
-
             <label class="role-radio-label">
-
               <input
                       type="radio"
                       name="regRole"
                       value="Provider">
-
               <span>
                   <i class="fa-solid fa-briefcase"></i>
                   Chuyên gia
                 </span>
-
             </label>
-
           </div>
-
         </div>
 
         <button
@@ -2566,13 +2564,84 @@
                 class="btn btn-primary btn-block"
                 style="width:100%; height:44px; font-weight:700; font-size:15px; margin-top:8px;"
                 id="registerSubmitBtn">
-
           <i class="fa-solid fa-user-plus"></i>
           Hoàn Tất Đăng Ký
-
         </button>
 
+        <div style="text-align:center; margin-top:14px; font-size:13px; color:var(--text-muted);">
+          Đã có tài khoản? <a href="#" onclick="switchAuthTab('login'); return false;" style="color:var(--primary); font-weight:700; text-decoration:none;">Đăng nhập ngay</a>
+        </div>
+
       </form>
+
+      <!-- FORGOT PASSWORD -->
+      <form
+              id="forgotForm"
+              onsubmit="handleModalForgotPassword(event)"
+              style="display:none;">
+
+        <div style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1E40AF; padding:12px 14px; border-radius:10px; font-size:13px; line-height:1.45; margin-bottom:16px; display:flex; gap:10px;">
+          <i class="fa-solid fa-shield-halved" style="font-size:18px; margin-top:2px;"></i>
+          <div>Nhập địa chỉ email tài khoản của bạn. Hệ thống sẽ gửi email chứa liên kết an toàn để bạn tự tạo mật khẩu mới.</div>
+        </div>
+
+        <div id="forgotResultBox" style="display:none; margin-bottom:14px;"></div>
+
+        <div class="form-group">
+          <label for="forgotEmail">
+            Email đã đăng ký
+          </label>
+          <input
+                  type="email"
+                  id="forgotEmail"
+                  class="form-control"
+                  placeholder="name@example.com"
+                  required>
+        </div>
+
+        <button
+                type="submit"
+                class="btn btn-primary btn-block"
+                style="width:100%; height:44px; font-weight:700; font-size:15px; margin-top:8px;"
+                id="forgotSubmitBtn">
+          <i class="fa-solid fa-paper-plane"></i>
+          Gửi Liên Kết Khôi Phục
+        </button>
+
+        <div style="text-align:center; margin-top:16px;">
+          <a href="#" onclick="switchAuthTab('login'); return false;"
+             style="font-size:13px; font-weight:700; color:var(--text-muted); text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-arrow-left"></i> Quay lại Đăng Nhập
+          </a>
+        </div>
+
+      </form>
+
+      <!-- VERIFY EMAIL NOTICE -->
+      <div id="verifyNoticeBox" style="display:none; text-align:center; padding:10px 0;">
+        <div style="width:68px; height:68px; border-radius:50%; background:#DCFCE7; color:#16A34A; display:flex; align-items:center; justify-content:center; font-size:30px; margin:0 auto 16px;">
+          <i class="fa-solid fa-envelope-circle-check"></i>
+        </div>
+
+        <h4 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">Kiểm Tra Hộp Thư Của Bạn</h4>
+        <p style="font-size:13px; color:#475569; line-height:1.5; margin:0 0 16px;">
+          Chúng tôi đã gửi email kích hoạt tài khoản tới:
+          <br><strong id="verifyNoticeEmail" style="color:#16A34A; font-size:14px;">email@example.com</strong>
+        </p>
+
+        <div style="background:#FEF3C7; border:1px solid #FCD34D; color:#92400E; padding:12px 14px; border-radius:10px; font-size:13px; text-align:left; margin-bottom:16px; display:flex; gap:10px;">
+          <i class="fa-solid fa-circle-exclamation" style="font-size:16px; margin-top:2px;"></i>
+          <div>Vui lòng mở email và nhấn vào nút <strong>Verify your email</strong> để kích hoạt tài khoản trước khi đăng nhập. Nhớ kiểm tra cả mục Spam / Thư rác!</div>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-block" onclick="switchAuthTab('login')" style="width:100%; height:44px; margin-bottom:10px; font-weight:700;">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Tôi Đã Xác Nhận, Đăng Nhập Ngay
+        </button>
+
+        <button type="button" class="btn btn-outline btn-block" id="btnResendVerification" onclick="triggerResendVerification()" style="width:100%; height:42px; font-weight:600;">
+          <i class="fa-solid fa-rotate-right"></i> Gửi Lại Email Xác Nhận
+        </button>
+      </div>
 
     </div>
   </div>
@@ -2891,60 +2960,51 @@
    */
 
   function switchAuthTab(tab) {
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const forgotForm = document.getElementById('forgotForm');
+    const verifyNotice = document.getElementById('verifyNoticeBox');
+    const tabLoginBtn = document.getElementById('tabLoginBtn');
+    const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+    const bannerTitle = document.getElementById('modalBannerTitle');
+    const bannerSubtitle = document.getElementById('modalBannerSubtitle');
+    const tabsContainer = document.querySelector('.modal-tabs');
 
-    const loginForm =
-            document.getElementById('loginForm');
+    if (!loginForm || !registerForm) return;
 
-    const registerForm =
-            document.getElementById('registerForm');
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'none';
+    if (forgotForm) forgotForm.style.display = 'none';
+    if (verifyNotice) verifyNotice.style.display = 'none';
+    if (tabsContainer) tabsContainer.style.display = 'flex';
 
-    const tabLoginBtn =
-            document.getElementById('tabLoginBtn');
-
-    const tabRegisterBtn =
-            document.getElementById('tabRegisterBtn');
-
-    const bannerTitle =
-            document.getElementById('modalBannerTitle');
-
-    const bannerSubtitle =
-            document.getElementById('modalBannerSubtitle');
-
+    if (tabLoginBtn) tabLoginBtn.classList.remove('active');
+    if (tabRegisterBtn) tabRegisterBtn.classList.remove('active');
 
     if (tab === 'login') {
-
       loginForm.style.display = 'block';
-
-      registerForm.style.display = 'none';
-
-      tabLoginBtn.classList.add('active');
-
-      tabRegisterBtn.classList.remove('active');
-
-      bannerTitle.innerText =
-              'Chào Mừng Đến Với SkillRental';
-
-      bannerSubtitle.innerText =
-              'Đăng nhập để thuê kỹ năng hoặc quản lý dịch vụ chuyên gia';
-
-    } else {
-
-      loginForm.style.display = 'none';
-
+      if (tabLoginBtn) tabLoginBtn.classList.add('active');
+      if (bannerTitle) bannerTitle.innerText = 'Chào Mừng Đến Với SkillRental';
+      if (bannerSubtitle) bannerSubtitle.innerText = 'Đăng nhập để thuê kỹ năng hoặc quản lý dịch vụ chuyên gia';
+    } else if (tab === 'register') {
       registerForm.style.display = 'block';
-
-      tabLoginBtn.classList.remove('active');
-
-      tabRegisterBtn.classList.add('active');
-
-      bannerTitle.innerText =
-              'Tạo Tài Khoản Mới';
-
-      bannerSubtitle.innerText =
-              'Bắt đầu kết nối với hàng ngàn cơ hội kỹ năng và thu nhập';
-
+      if (tabRegisterBtn) tabRegisterBtn.classList.add('active');
+      if (bannerTitle) bannerTitle.innerText = 'Tạo Tài Khoản Mới';
+      if (bannerSubtitle) bannerSubtitle.innerText = 'Bắt đầu kết nối với hàng ngàn cơ hội kỹ năng và thu nhập';
+    } else if (tab === 'forgot') {
+      if (forgotForm) forgotForm.style.display = 'block';
+      if (tabsContainer) tabsContainer.style.display = 'none';
+      if (bannerTitle) bannerTitle.innerText = 'Khôi Phục Mật Khẩu';
+      if (bannerSubtitle) bannerSubtitle.innerText = 'Nhận hướng dẫn đặt lại mật khẩu an toàn qua email';
+      const loginEmail = document.getElementById('loginEmail')?.value;
+      const forgotEmail = document.getElementById('forgotEmail');
+      if (loginEmail && forgotEmail && !forgotEmail.value) forgotEmail.value = loginEmail;
+    } else if (tab === 'verify') {
+      if (verifyNotice) verifyNotice.style.display = 'block';
+      if (tabsContainer) tabsContainer.style.display = 'none';
+      if (bannerTitle) bannerTitle.innerText = 'Xác Thực Tài Khoản';
+      if (bannerSubtitle) bannerSubtitle.innerText = 'Kích hoạt tài khoản để bắt đầu trải nghiệm dịch vụ';
     }
-
   }
 
 
@@ -3125,12 +3185,31 @@
 
 
       /*
-       * LOGIN THẤT BẠI
+       * LOGIN THẤT BẠI - CHƯA XÁC NHẬN EMAIL
        */
-      if (data.code === 'EMAIL_NOT_VERIFIED' &&
-          confirm('Email chưa được xác nhận. Gửi lại email xác nhận tới ' + email + '?')) {
-        const r = await SkillAuth.resendVerification(email, password);
-        showToastMsg(r.success ? 'Đã gửi email' : 'Không thể gửi', r.message, r.success ? 'success' : 'error');
+      if (data.code === 'EMAIL_NOT_VERIFIED') {
+        const alertBox = document.getElementById('loginAlertBox');
+        if (alertBox) {
+          alertBox.style.display = 'flex';
+          alertBox.style.background = '#FEF3C7';
+          alertBox.style.border = '1px solid #FCD34D';
+          alertBox.style.color = '#92400E';
+          alertBox.style.padding = '12px 14px';
+          alertBox.style.borderRadius = '10px';
+          alertBox.style.fontSize = '13px';
+          alertBox.style.gap = '10px';
+          alertBox.innerHTML = `
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:18px; margin-top:2px;"></i>
+            <div style="flex:1;">
+              <strong>Tài khoản chưa được kích hoạt!</strong>
+              <div style="margin:4px 0 8px; font-size:12px;">Vui lòng kiểm tra email <b>${email}</b> và nhấp vào liên kết xác nhận.</div>
+              <button type="button" class="btn btn-outline btn-sm" style="background:#FFF; font-size:12px; font-weight:700;" onclick="triggerResendVerification('${email}', '${password}')">
+                <i class="fa-solid fa-paper-plane"></i> Gửi lại email xác nhận ngay
+              </button>
+            </div>
+          `;
+        }
+        showToastMsg('Chưa xác nhận email', data.message, 'warning');
         return;
       }
 
@@ -3231,19 +3310,69 @@
 
   /*
    * ============================================================
-   * 9. ĐĂNG KÝ
+   * 9. LẤY LẠI MẬT KHẨU & ĐĂNG KÝ
    * ============================================================
    */
 
-  async function handleForgotPassword(e) {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
+  async function handleModalForgotPassword(e) {
+    if (e) e.preventDefault();
+    const email = document.getElementById('forgotEmail')?.value?.trim();
+    const submitBtn = document.getElementById('forgotSubmitBtn');
+    const resultBox = document.getElementById('forgotResultBox');
+
     if (!email) {
-      showToastMsg('Nhập email', 'Vui lòng nhập email vào ô "Email" rồi bấm lại "Quên mật khẩu?".', 'error');
+      showToastMsg('Nhập email', 'Vui lòng nhập địa chỉ email của bạn.', 'error');
       return;
     }
-    const r = await SkillAuth.forgotPassword(email);
-    showToastMsg(r.success ? 'Đã gửi email' : 'Không thể gửi', r.message, r.success ? 'success' : 'error');
+
+    if (resultBox) resultBox.style.display = 'none';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi yêu cầu...';
+    }
+
+    try {
+      const res = await SkillAuth.forgotPassword(email);
+      if (res.success) {
+        if (resultBox) {
+          resultBox.style.display = 'flex';
+          resultBox.style.background = '#DCFCE7';
+          resultBox.style.border = '1px solid #86EFAC';
+          resultBox.style.color = '#166534';
+          resultBox.style.padding = '12px 14px';
+          resultBox.style.borderRadius = '10px';
+          resultBox.style.fontSize = '13px';
+          resultBox.style.gap = '10px';
+          let devExtra = '';
+          if (res.resetLink) {
+            devExtra = `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #86EFAC;"><small style="color:#15803D;">Link demo kiểm thử: <a href="${res.resetLink}" target="_blank" style="color:#15803D; font-weight:700;">Nhấp để đặt lại mật khẩu</a></small></div>`;
+          }
+          resultBox.innerHTML = `
+            <i class="fa-solid fa-circle-check" style="font-size:18px; margin-top:2px;"></i>
+            <div style="flex:1;">
+              <strong>Đã gửi liên kết thành công!</strong>
+              <div style="margin-top:2px;">${res.message}</div>
+              ${devExtra}
+            </div>
+          `;
+        }
+        showToastMsg('Đã gửi email khôi phục', res.message, 'success');
+      } else {
+        showToastMsg('Không thể gửi', res.message, 'error');
+      }
+    } catch (err) {
+      showToastMsg('Lỗi', 'Không thể gửi email lúc này. Vui lòng thử lại sau.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi Liên Kết Khôi Phục';
+      }
+    }
+  }
+
+  async function handleForgotPassword(e) {
+    if (e) e.preventDefault();
+    switchAuthTab('forgot');
   }
 
   async function handleModalRegister(e) {
@@ -3296,7 +3425,9 @@
         showToastMsg('Đăng Ký Thành Công!', data.message, 'success');
         document.getElementById('registerForm').reset();
         document.getElementById('loginEmail').value = email;
-        switchAuthTab('login');
+        const emailLabel = document.getElementById('verifyNoticeEmail');
+        if (emailLabel) emailLabel.innerText = email;
+        switchAuthTab('verify');
         return;
       }
 

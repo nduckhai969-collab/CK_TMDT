@@ -44,12 +44,15 @@
         <a href="post.html" class="nav-link"><i class="fa-solid fa-newspaper"></i><span>Bài viết & Portfolio</span></a>
       </nav>
 
-      <div class="sidebar-profile">
-        <div class="avatar">NV</div>
-        <div class="profile-info">
-          <div class="profile-name">Nguyễn Văn Pro</div>
-          <div class="profile-role">Senior UI/UX & Web Dev</div>
+      <div class="sidebar-profile" style="display:flex; align-items:center; gap:10px;">
+        <div class="avatar" id="providerSidebarAvatar">NV</div>
+        <div class="profile-info" style="flex:1; overflow:hidden;">
+          <div class="profile-name" id="providerSidebarName" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Nguyễn Văn Pro</div>
+          <div class="profile-role" id="providerSidebarRole" style="font-size:12px; color:var(--text-muted);">Provider</div>
         </div>
+        <button type="button" onclick="handleLogout()" title="Đăng xuất khỏi hệ thống" style="background:#FEE2E2; border:1px solid #FCA5A5; color:#DC2626; border-radius:8px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; flex-shrink:0;">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
       </div>
     </aside>
 
@@ -66,7 +69,9 @@
           <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
             <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
           </a>
-          <a href="chat.html" class="btn btn-secondary btn-sm"><i class="fa-solid fa-envelope"></i> Tin nhắn mới (3)</a>
+          <button type="button" onclick="handleLogout()" class="btn btn-sm" style="background:#FEE2E2; border:1px solid #FCA5A5; color:#DC2626; font-weight:600; cursor:pointer;">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng Xuất
+          </button>
         </div>
       </header>
 

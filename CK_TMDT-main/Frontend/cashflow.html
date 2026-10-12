@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Rental - Thống kê Dòng tiền & Ký quỹ Escrow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">S</div>
+        <div class="brand-text">
+          <strong>SKILL RENTAL</strong>
+          <span>Admin Portal (B4)</span>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <div class="menu-label">TỔNG QUAN</div>
+        <a class="menu-item" href="admin.html">
+          <span class="menu-icon">⌂</span>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ NGƯỜI DÙNG</div>
+        <a class="menu-item" href="users.html">
+          <span class="menu-icon">♙</span>
+          <span>Người dùng</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=locked">
+          <span class="menu-icon">▣</span>
+          <span>Khóa tài khoản</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=unlock-requests">
+          <span class="menu-icon">🔓</span>
+          <span>Mở khóa tài khoản</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ PROVIDER</div>
+        <a class="menu-item" href="providers.html">
+          <span class="menu-icon">♙</span>
+          <span>Tất cả Provider</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt Provider & Hồ sơ</span>
+          <span class="badge-count" id="badge-provider-pending">4</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=skills">
+          <span class="menu-icon">✦</span>
+          <span>Duyệt kỹ năng & CC</span>
+          <span class="badge-count" id="badge-skill-pending">3</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ DỊCH VỤ</div>
+        <a class="menu-item" href="services.html">
+          <span class="menu-icon">▤</span>
+          <span>Dịch vụ</span>
+        </a>
+        <a class="menu-item" href="services.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt dịch vụ & giá</span>
+          <span class="badge-count" id="badge-service-pending">5</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ GIAO DỊCH & ĐÁNH GIÁ</div>
+        <a class="menu-item" href="orders.html">
+          <span class="menu-icon">▤</span>
+          <span>Đơn hàng</span>
+        </a>
+        <a class="menu-item" href="reviews.html">
+          <span class="menu-icon">★</span>
+          <span>Đánh giá</span>
+        </a>
+        <a class="menu-item" href="complaints.html">
+          <span class="menu-icon">⚑</span>
+          <span>Khiếu nại</span>
+          <span class="badge-count" id="badge-complaint-count">2</span>
+        </a>
+
+        <div class="menu-label">THỐNG KÊ & BÁO CÁO</div>
+        <a class="menu-item" href="reports.html">
+          <span class="menu-icon">▥</span>
+          <span>Báo cáo & Xuất file</span>
+        </a>
+        <a class="menu-item" href="statistics.html">
+          <span class="menu-icon">◫</span>
+          <span>Thống kê hệ thống</span>
+        </a>
+        <a class="menu-item active" href="cashflow.html">
+          <span class="menu-icon">◷</span>
+          <span>Thống kê dòng tiền</span>
+        </a>
+
+        <div class="menu-label">CẤU HÌNH & GÓI</div>
+        <a class="menu-item" href="packages.html">
+          <span class="menu-icon">▢</span>
+          <span>Gói đăng tin</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="online-dot"></div>
+        <span>Hệ thống B4 đang hoạt động</span>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="breadcrumb-tag">TÀI CHÍNH / DÒNG TIỀN ESCROW</span>
+          <div class="top-search">
+            <span>⌕</span>
+            <input type="text" placeholder="Tìm kiếm nhanh giao dịch, STK, ngân hàng...">
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <a href="dashboard.html" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:12px;">
+            <span>💼</span>
+            <span>Cổng Provider ↗</span>
+          </a>
+          <button class="icon-badge-btn" onclick="showToast('Đối soát', 'Đối soát tài khoản ngân hàng ký quỹ khớp 100%', 'success')">
+            <span>♢</span>
+            <span class="badge-dot">3</span>
+          </button>
+          <div class="admin-profile">
+            <div class="admin-avatar">A</div>
+            <div class="admin-info">
+              <strong>Nguyễn Văn Admin</strong>
+              <span>Quản trị viên hệ thống</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-header">
+          <div class="page-title-group">
+            <h1><span class="green-pill"></span> Thống kê Dòng tiền & Ký quỹ Escrow</h1>
+            <p>Quản lý dòng tiền vào (Inflow), dòng tiền ra (Outflow) và doanh thu hoa hồng sàn 10%</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary btn-sm" onclick="showToast('Đối soát hoàn tất', 'Dòng tiền Escrow khớp 100% với tài khoản ngân hàng', 'success')">
+              <span>✓</span> Đối soát ngân hàng
+            </button>
+          </div>
+        </div>
+
+        <!-- Cashflow Financial Banner -->
+        <div class="cashflow-banner">
+          <div class="cf-metric-item">
+            <span>Tổng dòng tiền vào (Inflow)</span>
+            <strong>1.420.000.000đ</strong>
+            <small>↑ 18.2% từ thanh toán khách</small>
+          </div>
+          <div class="cf-metric-item">
+            <span>Tổng dòng tiền ra (Outflow)</span>
+            <strong>890.500.000đ</strong>
+            <small>Đã chi trả cho Provider</small>
+          </div>
+          <div class="cf-metric-item">
+            <span>Hoa hồng sàn giữ lại (10%)</span>
+            <strong>142.000.000đ</strong>
+            <small>Lợi nhuận ròng của sàn</small>
+          </div>
+          <div class="cf-metric-item">
+            <span>Ký quỹ Escrow đang giữ</span>
+            <strong>387.500.000đ</strong>
+            <small>Đang bảo lãnh cho các đơn active</small>
+          </div>
+        </div>
+
+        <!-- Payout Requests Table -->
+        <div class="card">
+          <div class="panel-header">
+            <div>
+              <h2>Yêu cầu rút tiền từ Provider cần duyệt</h2>
+              <p>Kiểm tra số dư khả dụng và phê duyệt lệnh chuyển khoản ngân hàng</p>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã giao dịch</th>
+                    <th>Provider</th>
+                    <th>Ngân hàng thụ hưởng</th>
+                    <th>Số tài khoản</th>
+                    <th>Số tiền rút</th>
+                    <th>Ngày gửi lệnh</th>
+                    <th>Trạng thái</th>
+                    <th style="text-align:right">Thao tác duyệt</th>
+                  </tr>
+                </thead>
+                <tbody id="payouts-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPayoutsTable();
+    });
+
+    function renderPayoutsTable() {
+      const state = getAppState();
+      const tbody = document.getElementById('payouts-tbody');
+      if (!tbody) return;
+
+      tbody.innerHTML = state.payouts.map(p => `
+        <tr>
+          <td><strong>${p.id}</strong></td>
+          <td>${p.provider}</td>
+          <td>${p.bank}</td>
+          <td><strong>${p.account}</strong></td>
+          <td><strong style="color:var(--primary); font-size:14px;">${p.amount}</strong></td>
+          <td>${p.date}</td>
+          <td>
+            ${p.status === 'pending' 
+              ? '<span class="badge badge-warning">Chờ lệnh chuyển</span>' 
+              : p.status === 'paid' 
+              ? '<span class="badge badge-success">Đã thanh toán</span>' 
+              : '<span class="badge badge-danger">Đã từ chối</span>'}
+          </td>
+          <td style="text-align:right">
+            ${p.status === 'pending' ? `
+              <button class="btn btn-primary btn-xs" onclick="approvePayout('${p.id}')">Duyệt chuyển</button>
+              <button class="btn btn-danger-outline btn-xs" onclick="rejectPayout('${p.id}')">Từ chối</button>
+            ` : `<span style="color:var(--text-secondary); font-size:12px;">Đã hoàn tất</span>`}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function approvePayout(id) {
+      const state = getAppState();
+      const p = state.payouts.find(x => x.id === id);
+      if (p) {
+        p.status = 'paid';
+        if (window.adminApi) {
+          window.adminApi.approvePayout(id).catch(console.warn);
+        }
+        saveAppState(state);
+        renderPayoutsTable();
+        showToast('Duyệt lệnh rút tiền', `Đã giải ngân ${p.amount} tới STK ${p.account} (${p.bank}) của ${p.provider}!`, 'success');
+      }
+    }
+
+    function rejectPayout(id) {
+      const state = getAppState();
+      const p = state.payouts.find(x => x.id === id);
+      if (p) {
+        p.status = 'rejected';
+        if (window.adminApi) {
+          window.adminApi.rejectPayout(id, 'Admin từ chối').catch(console.warn);
+        }
+        saveAppState(state);
+        renderPayoutsTable();
+        showToast('Từ chối lệnh rút tiền', `Lệnh rút ${p.id} đã bị từ chối và hoàn tiền về ví Provider.`, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -159,7 +159,7 @@
             </div>
             <div>
               <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Ngân Sách Dự Kiến (VNĐ) <span style="color:#EF4444;">*</span></label>
-              <input type="number" id="jobBudget" required placeholder="VD: 5000000" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+              <input type="number" id="jobBudget" required placeholder="Nhập ngân sách dự kiến (VND)" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
             </div>
           </div>
 
@@ -597,7 +597,11 @@
 
     async function acceptApplicant(jobId, providerId, providerName, priceFormatted) {
       if (!requireCustomerLogin()) return;
-      const priceNum = Number(priceFormatted.replace(/[^0-9]/g, '')) || 5000000;
+      const priceNum = Number(String(priceFormatted || '').replace(/[^0-9]/g, ''));
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        showToast('Thiếu giá đề xuất', 'Không thể checkout khi hồ sơ ứng tuyển chưa có mức giá hợp lệ.', 'error');
+        return;
+      }
       
       const res = await apiRequest(`/api/jobs/${jobId}/accept-applicant`, {
         method: 'POST',

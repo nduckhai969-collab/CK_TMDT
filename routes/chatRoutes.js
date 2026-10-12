@@ -28,9 +28,9 @@ router.get('/threads', requireSignedIn, (req, res) => {
     return {
       partnerId: pid,
       providerId: prov.id || pid,
-      name: partner.name || prov.name || 'Nguyễn Văn Minh',
-      avatar: partner.avatar || prov.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-      role: prov.specialty || partner.role || 'Senior Java / Spring Boot Developer',
+      name: partner.name || prov.name || 'Tài khoản',
+      avatar: partner.avatar || prov.avatar || '',
+      role: prov.specialty || partner.role || '',
       lastMessage: lastMsg ? lastMsg.text : '',
       lastTime: lastMsg ? lastMsg.time : '',
       unread: 0

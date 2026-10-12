@@ -129,20 +129,19 @@
       <div class="chat-header">
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="position:relative;">
-            <img id="chatPartnerAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" alt="Avatar" style="width:44px; height:44px; border-radius:12px; object-fit:cover; border:2px solid #E2E8F0;">
-            <div style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:#22C55E; border:2px solid #FFF;"></div>
+            <img id="chatPartnerAvatar" src="" alt="" style="display:none;width:44px;height:44px;border-radius:12px;object-fit:cover;border:2px solid #E2E8F0;">
           </div>
           <div>
-            <div style="font-weight:800; font-size:15px; color:#0F172A;" id="chatPartnerName">Nguyễn Văn An</div>
-            <div style="font-size:12px; color:#16A34A; font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px;"></i> Đang hoạt động • Phản hồi tức thì</div>
+            <div style="font-weight:800; font-size:15px; color:#0F172A;" id="chatPartnerName">Chọn cuộc trò chuyện</div>
+            <div id="chatPartnerStatus" style="font-size:12px; color:#64748B; font-weight:600;">Hội thoại</div>
           </div>
         </div>
 
         <div style="display:flex; gap:10px;">
-          <a id="btnViewProfile" href="customer_provider.html?id=PRV001" class="btn btn-outline btn-sm" style="font-weight:600;">
+          <a id="btnViewProfile" href="#" class="btn btn-outline btn-sm" style="display:none;font-weight:600;">
             <i class="fa-solid fa-user"></i> Xem Hồ Sơ
           </a>
-          <a id="btnBookFromChat" href="customer_provider.html?id=PRV001" class="btn btn-primary btn-sm" style="font-weight:700;">
+          <a id="btnBookFromChat" href="#" class="btn btn-primary btn-sm" style="display:none;font-weight:700;">
             <i class="fa-solid fa-calendar-check"></i> Đặt Lịch & Ký Quỹ
           </a>
         </div>
@@ -172,19 +171,8 @@
 
   <script src="customer.js"></script>
   <script>
-    let currentPartner = {
-      id: 'USR001',
-      providerId: 'PRV001',
-      name: 'Nguyễn Văn An',
-      specialty: 'Senior Fullstack Web Dev',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-    };
-
-    const contacts = [
-      { id: 'USR001', providerId: 'PRV001', name: 'Nguyễn Văn An', specialty: 'Senior Fullstack Web Dev', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100', lastMsg: 'Chưa có tin nhắn' },
-      { id: 'USR002', providerId: 'PRV002', name: 'Trần Thị Lan', specialty: 'Senior UI/UX Designer', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100', lastMsg: 'Chưa có tin nhắn' },
-      { id: 'USR005', providerId: 'PRV003', name: 'Phạm Hữu Cường', specialty: 'Gia sư IELTS 8.5', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100', lastMsg: 'Chưa có tin nhắn' }
-    ];
+    let currentPartner = null;
+    const contacts = [];
 
     document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('chat');
@@ -203,7 +191,8 @@
         return;
       }
 
-      // Check partner from URL query
+      await loadChatThreads();
+      // Resolve a requested Provider or select the newest real conversation.
       const urlParams = new URLSearchParams(window.location.search);
       const withId = urlParams.get('with');
       if (withId) {
@@ -224,20 +213,32 @@
           }
         }
         if (found) currentPartner = found;
+      } else if (contacts.length) {
+        currentPartner = contacts[0];
       }
 
-      await loadChatThreads();
       renderConversationsList();
-      selectPartner(currentPartner);
+      if (currentPartner) selectPartner(currentPartner);
+      else {
+        document.getElementById('chatPartnerName').textContent = 'Chưa có cuộc trò chuyện';
+        document.getElementById('messagesContainer').innerHTML = '<div style="margin:auto;padding:28px;text-align:center;color:#64748B">Mở hồ sơ Provider và nhấn Nhắn tin để bắt đầu cuộc trò chuyện.</div>';
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('chatInput').placeholder = 'Chọn Provider để bắt đầu nhắn tin';
+        document.querySelector('.chat-main > div:last-child').style.display = 'none';
+      }
     });
 
     async function loadChatThreads() {
       const result = await apiRequest('/api/chat/threads');
       if (!result.success || !Array.isArray(result.threads)) return;
-      result.threads.forEach(thread => {
-        const contact = contacts.find(item => item.id === thread.partnerId || item.providerId === thread.providerId);
-        if (contact) contact.lastMsg = thread.lastMessage || 'Chưa có tin nhắn';
-      });
+      contacts.splice(0, contacts.length, ...result.threads.map(thread => ({
+        id: thread.partnerId,
+        providerId: thread.providerId,
+        name: thread.name || 'Tài khoản',
+        specialty: thread.role || '',
+        avatar: thread.avatar || '',
+        lastMsg: thread.lastMessage || ''
+      })));
     }
 
     function renderConversationsList() {
@@ -247,10 +248,14 @@
         container.innerHTML = '<div style="padding:22px 18px;text-align:center;color:#64748B"><i class="fa-solid fa-lock" style="font-size:22px;color:#16A34A"></i><p>Đăng nhập để xem các cuộc trò chuyện.</p><button class="btn btn-primary btn-sm" onclick="openAuthModal(\'login\')">Đăng nhập</button></div>';
         return;
       }
+      if (!contacts.length) {
+        container.innerHTML = '<div style="padding:22px 18px;text-align:center;color:#64748B">Chưa có cuộc trò chuyện.</div>';
+        return;
+      }
       container.innerHTML = contacts.map(c => `
         <div class="conversation-item ${c.id === currentPartner.id ? 'active' : ''}" onclick="selectPartnerById('${c.id}')">
           <div style="position:relative;">
-            <img src="${c.avatar}" alt="${c.name}" style="width:42px; height:42px; border-radius:10px; object-fit:cover; border:1px solid #E2E8F0;">
+            <img src="${c.avatar || ''}" alt="${c.name}" onerror="this.style.display='none'" style="width:42px;height:42px;border-radius:10px;object-fit:cover;border:1px solid #E2E8F0;${c.avatar ? '' : 'display:none;'}">
             <div style="position:absolute; bottom:-1px; right:-1px; width:10px; height:10px; border-radius:50%; background:#22C55E; border:1.5px solid #FFF;"></div>
           </div>
           <div style="flex:1; min-width:0;">
@@ -269,17 +274,27 @@
 
     function selectPartner(partner) {
       if (!requireCustomerLogin()) return;
+      if (!partner) return;
       currentPartner = partner;
       document.getElementById('chatPartnerName').textContent = partner.name;
-      document.getElementById('chatPartnerAvatar').src = partner.avatar;
+      document.getElementById('chatPartnerStatus').textContent = partner.specialty || 'Hội thoại';
+      const avatar = document.getElementById('chatPartnerAvatar');
+      avatar.src = partner.avatar || '';
+      avatar.style.display = partner.avatar ? 'block' : 'none';
       document.getElementById('btnViewProfile').href = `customer_provider.html?id=${partner.providerId}`;
       document.getElementById('btnBookFromChat').href = `customer_provider.html?id=${partner.providerId}`;
+      document.getElementById('btnViewProfile').style.display = '';
+      document.getElementById('btnBookFromChat').style.display = '';
+      document.getElementById('chatInput').disabled = false;
+      document.getElementById('chatInput').placeholder = 'Nhập tin nhắn trao đổi yêu cầu với chuyên gia...';
+      document.querySelector('.chat-main > div:last-child').style.display = '';
 
       renderConversationsList();
       loadMessages();
     }
 
     async function loadMessages() {
+      if (!currentPartner) return;
       const user = getCurrentCustomer();
       if (!user || user.role !== 'Customer') {
         document.getElementById('messagesContainer').innerHTML = '<div style="padding:28px;text-align:center;color:#64748B"><i class="fa-solid fa-lock" style="font-size:28px"></i><p>Đăng nhập bằng tài khoản khách hàng để xem cuộc trò chuyện.</p><button class="btn btn-primary" onclick="openAuthModal(\'login\')">Đăng nhập</button></div>';
@@ -313,6 +328,7 @@
 
     async function sendMessage() {
       if (!requireCustomerLogin()) return;
+      if (!currentPartner) return;
       const input = document.getElementById('chatInput');
       const text = input.value.trim();
       if (!text) return;

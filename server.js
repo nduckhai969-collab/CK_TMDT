@@ -35,10 +35,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 3. Phục vụ tĩnh toàn bộ thư mục Frontend (HTML, CSS, JS, Images)
+// 3. Avatar là file riêng trên backend; Firestore chỉ lưu URL của file.
+const avatarStorageDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'));
+app.use('/uploads', express.static(avatarStorageDir, {
+  fallthrough: false,
+  index: false,
+  maxAge: '1d',
+  setHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// 4. Phục vụ tĩnh toàn bộ thư mục Frontend (HTML, CSS, JS, Images)
 app.use(express.static(path.join(__dirname, 'Frontend')));
 
-// 4. API Routes
+// 5. API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', requireAdmin, adminRoutes);
 app.use('/api/providers', providerRoutes);

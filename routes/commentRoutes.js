@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
 const { requireSignedIn } = require('./customerAuth');
+const { notifyProvider } = require('../services/notificationService');
 
 // List comments
 router.get('/', (req, res) => {
@@ -24,31 +25,31 @@ router.get('/', (req, res) => {
 // Create a comment
 router.post('/', requireSignedIn, (req, res) => {
   const { targetType, targetId, content, parentId } = req.body;
-  if (!targetType || !targetId || !content) {
+  const cleanContent = typeof content === 'string' ? content.trim() : '';
+  if (targetType !== 'service' || !targetId || !cleanContent) {
     return res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
+  }
+  if (cleanContent.length > 1500) {
+    return res.status(400).json({ success: false, message: 'Bình luận không được vượt quá 1.500 ký tự.' });
   }
 
   const comments = db.getCollection('comments') || [];
+  const service = (db.getCollection('services') || []).find(item => item.id === targetId);
+  if (!service) return res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ.' });
   
   if (parentId) {
-    const parentComment = comments.find(c => c.id === parentId);
+    const parentComment = comments.find(c => c.id === parentId && c.targetType === targetType && c.targetId === targetId && c.status !== 'hidden');
     if (!parentComment) {
       return res.status(404).json({ success: false, message: 'Bình luận gốc không tồn tại.' });
     }
     
     // Check reply permission
-    if (targetType === 'service') {
-      const services = db.getCollection('services') || [];
-      const service = services.find(s => s.id === targetId);
-      const providers = db.getCollection('providers') || [];
-      const serviceProvider = service ? providers.find(p => p.id === service.providerId) : null;
-      
-      const isServiceProvider = serviceProvider && serviceProvider.userId === req.authUser.id;
-      const isParentAuthor = parentComment.userId === req.authUser.id;
-      
-      if (!isServiceProvider && !isParentAuthor) {
-        return res.status(403).json({ success: false, message: 'Chỉ chủ dịch vụ hoặc tác giả bình luận gốc mới được phản hồi.' });
-      }
+    const providers = db.getCollection('providers') || [];
+    const serviceProvider = providers.find(p => p.id === service.providerId);
+    const isServiceProvider = serviceProvider && serviceProvider.userId === req.authUser.id;
+    const isParentAuthor = parentComment.userId === req.authUser.id;
+    if (!isServiceProvider && !isParentAuthor) {
+      return res.status(403).json({ success: false, message: 'Chỉ chủ dịch vụ hoặc tác giả bình luận gốc mới được phản hồi.' });
     }
   }
 
@@ -59,7 +60,7 @@ router.post('/', requireSignedIn, (req, res) => {
     targetId,
     userId: req.authUser.id,
     userName: req.authUser.name,
-    content: content.trim(),
+    content: cleanContent,
     parentId: parentId || null,
     status: 'active',
     createdAt: new Date().toISOString()
@@ -67,6 +68,7 @@ router.post('/', requireSignedIn, (req, res) => {
 
   comments.push(newComment);
   db.saveCollection('comments', comments);
+  if (!parentId) notifyProvider(service.providerId, 'Bình luận dịch vụ mới', `${req.authUser.name || 'Khách hàng'} đã bình luận về dịch vụ ${service.title || ''}.`, 'info');
 
   res.status(201).json({ success: true, message: 'Đã gửi bình luận.', comment: newComment });
 });

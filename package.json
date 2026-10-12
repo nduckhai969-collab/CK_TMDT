@@ -12,7 +12,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "seed": "node scripts/seedFirebase.js"
+    "seed": "node scripts/seedFirebase.js",
+    "seed:cart-demo": "node scripts/seedCartDemo.js"
   },
   "repository": {
     "type": "git",

@@ -164,13 +164,19 @@ async function apiRequest(
     }
 
 
+    const requestOptions = { ...options, headers };
+    const body = requestOptions.body;
+    if (body && typeof body === 'object') {
+      const prototype = Object.getPrototypeOf(body);
+      if (prototype === Object.prototype || prototype === null) {
+        requestOptions.body = JSON.stringify(body);
+      }
+    }
+
     const response =
         await fetch(
             `${API_BASE}${endpoint}`,
-            {
-              ...options,
-              headers
-            }
+            requestOptions
         );
 
 
@@ -540,7 +546,7 @@ function getCategoryBadge(cat) {
 function renderCustomerNavbar(activePage = 'home') {
   const user = getCurrentCustomer();
 
-  return `
+  const markup = `
 <div aria-hidden="true" style="height:64px;"></div>
 <header class="customer-navbar landing-header" style="position:fixed !important; top:0; left:0; right:0; z-index:1000; width:100%; background:rgba(255,255,255,.98); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid #E2E8F0; box-shadow:0 1px 3px rgba(15,23,42,.04);">
   <div style="max-width:1360px; margin:0 auto; padding:10px 24px; display:flex; align-items:center; justify-content:space-between; gap:14px; box-sizing:border-box;">
@@ -594,45 +600,35 @@ function renderCustomerNavbar(activePage = 'home') {
       <!-- Giỏ hàng (Cart) -->
       <a href="customer_cart.html" style="background:none; border:none; color:#64748B; font-size:15px; cursor:pointer; padding:6px; position:relative; text-decoration:none;" title="Giỏ hàng">
         <i class="fa-solid fa-cart-shopping"></i>
-        <span style="position:absolute; top:2px; right:0px; width:14px; height:14px; background:#F59E0B; color:#fff; border-radius:50%; font-size:9px; display:flex; align-items:center; justify-content:center; font-weight:bold;">3</span>
+        <span id="customerCartCount" aria-label="Số dịch vụ trong giỏ" style="display:none; position:absolute; top:2px; right:0px; min-width:14px; height:14px; padding:0 2px; box-sizing:border-box; background:#F59E0B; color:#fff; border-radius:999px; font-size:9px; line-height:14px; text-align:center; font-weight:700;"></span>
       </a>
 
       <!-- Notification Bell -->
       <div style="position:relative;">
-        <button type="button" onclick="document.getElementById('notifDropdown').style.display = document.getElementById('notifDropdown').style.display === 'none' ? 'block' : 'none'" style="background:none; border:none; color:#64748B; font-size:15px; cursor:pointer; padding:6px; position:relative;" title="Thông báo">
+        <button type="button" aria-label="Thông báo" aria-expanded="false" onclick="toggleCustomerNotifications()" style="background:none; border:none; color:#64748B; font-size:15px; cursor:pointer; padding:6px; position:relative;" title="Thông báo">
           <i class="fa-regular fa-bell"></i>
-          <span style="position:absolute; top:4px; right:4px; width:7px; height:7px; background:#EF4444; border-radius:50%;"></span>
+          <span id="customerNotificationBadge" style="display:none;position:absolute;top:1px;right:0;min-width:15px;height:15px;padding:0 3px;box-sizing:border-box;background:#EF4444;color:#fff;border-radius:999px;font-size:9px;line-height:15px;text-align:center;font-weight:700;"></span>
         </button>
         <!-- Dropdown Thông báo -->
-        <div id="notifDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:-50px; width:300px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,.1); z-index:2000;">
-          <div style="padding:12px; font-weight:700; border-bottom:1px solid #F1F5F9;">Thông báo mới</div>
-          <div style="max-height:300px; overflow-y:auto;">
-            <div style="padding:12px; border-bottom:1px solid #F1F5F9; font-size:13px; display:flex; gap:10px;">
-              <div style="color:#16A34A;"><i class="fa-solid fa-circle-check"></i></div>
-              <div><strong>Provider Nguyễn Văn A</strong> đã chấp nhận yêu cầu của bạn.<div style="color:#64748B; font-size:11px; margin-top:4px;">10 phút trước</div></div>
-            </div>
-            <div style="padding:12px; border-bottom:1px solid #F1F5F9; font-size:13px; display:flex; gap:10px;">
-              <div style="color:#F59E0B;"><i class="fa-solid fa-bell"></i></div>
-              <div>Hệ thống đã nhận thanh toán qua <strong>VNPay</strong>.<div style="color:#64748B; font-size:11px; margin-top:4px;">1 giờ trước</div></div>
-            </div>
-          </div>
-          <div style="padding:8px; text-align:center;"><a href="#" style="font-size:12px; color:#16A34A; text-decoration:none;">Xem tất cả</a></div>
+        <div id="notifDropdown" style="display:none; position:absolute; top:calc(100% + 8px); right:-50px; width:min(340px, calc(100vw - 24px)); background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,.1); z-index:2000;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid #F1F5F9;"><strong style="font-size:13px;">Thông báo</strong><button type="button" onclick="markAllCustomerNotificationsRead()" style="border:0;background:none;color:#16A34A;font-size:11px;font-weight:600;cursor:pointer;">Đánh dấu đã đọc</button></div>
+          <div id="customerNotificationList" style="max-height:330px;overflow-y:auto;"><div style="padding:18px;text-align:center;color:#64748B;font-size:12px;">Đang tải thông báo...</div></div>
         </div>
       </div>
 
       ${user ? `<!-- User Profile -->
       <div style="position:relative;">
         <button type="button" id="customerAccountButton" onclick="toggleCustomerAccountMenu()" style="display:flex; align-items:center; gap:8px; padding:3px 8px 3px 3px; border:1px solid transparent; border-radius:9999px; background:transparent; cursor:pointer;" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='transparent'">
-          <img src="${user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}" alt="Avatar" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1.5px solid #E2E8F0;">
-          <span style="font-weight:700; font-size:13px; color:#0F172A;">${user.name || 'Lê Tuấn Anh'}</span>
+          ${renderCustomerNavbarAvatar(user, 28)}
+          <span style="font-weight:700; font-size:13px; color:#0F172A;">${escapeCustomerNavbarValue(user.name || 'Tài khoản')}</span>
           <i class="fa-solid fa-chevron-down" style="font-size:10px; color:#94A3B8;"></i>
         </button>
 
         <!-- Dropdown Menu -->
         <div id="customerAccountMenu" style="display:none; position:absolute; top:calc(100% + 8px); right:0; width:210px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,.1); padding:8px; z-index:2000;">
           <div style="padding:8px 10px; border-bottom:1px solid #F1F5F9; margin-bottom:6px;">
-            <div style="font-weight:700; font-size:13px; color:#0F172A;">${user.name || 'Lê Tuấn Anh'}</div>
-            <div style="font-size:11px; color:#64748B;">Số dư: ${formatVND(user.balance || 0)}</div>
+            <div style="font-weight:700; font-size:13px; color:#0F172A;">${escapeCustomerNavbarValue(user.name || 'Tài khoản')}</div>
+            <div id="customerAccountBalance" style="font-size:11px; color:#64748B;">Số dư: Đang tải...</div>
           </div>
           <a href="customer_profile.html" style="display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:13px; color:#334155; text-decoration:none; border-radius:6px;" onmouseover="this.style.background='#F1F5F9'" onmouseout="this.style.background='transparent'">
             <i class="fa-regular fa-user" style="color:#64748B;"></i> Hồ Sơ Của Tôi
@@ -664,6 +660,172 @@ function renderCustomerNavbar(activePage = 'home') {
   </div>
 </header>
 `;
+  setTimeout(refreshCustomerCartBadge, 0);
+  setTimeout(refreshCustomerNotificationBadge, 0);
+  setTimeout(refreshCustomerAccountSummary, 0);
+  return markup;
+}
+
+function escapeCustomerNavbarValue(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+}
+
+function renderCustomerNavbarAvatar(user, size = 28) {
+  const name = String(user?.name || '').trim();
+  const initials = name ? name.split(/\s+/).slice(-2).map(part => Array.from(part)[0]).join('').toUpperCase() : '•';
+  const common = `width:${size}px;height:${size}px;flex:0 0 ${size}px;border-radius:50%;border:1.5px solid #E2E8F0;`;
+  if (user?.avatar) {
+    const avatarUrl = escapeCustomerNavbarValue(user.avatar);
+    return `<span style="position:relative;display:inline-block;${common}"><img src="${avatarUrl}" alt="Ảnh đại diện của ${escapeCustomerNavbarValue(name || 'tài khoản')}" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'" style="position:absolute;inset:0;${common}object-fit:cover;"><span aria-hidden="true" style="${common}display:none;align-items:center;justify-content:center;background:#DCFCE7;color:#15803D;font-size:11px;font-weight:800;">${escapeCustomerNavbarValue(initials)}</span></span>`;
+  }
+  return `<span aria-label="Ảnh đại diện ${escapeCustomerNavbarValue(name || 'tài khoản')}" style="${common}display:inline-flex;align-items:center;justify-content:center;background:#DCFCE7;color:#15803D;font-size:11px;font-weight:800;">${escapeCustomerNavbarValue(initials)}</span>`;
+}
+
+async function refreshCustomerCartBadge() {
+  const badge = document.getElementById('customerCartCount');
+  if (!badge) return;
+  const customer = getCurrentCustomer();
+  if (!customer || customer.role !== 'Customer') {
+    badge.style.display = 'none';
+    return;
+  }
+  const result = await apiRequest('/api/booking-list');
+  if (!badge.isConnected) return;
+  const count = result.success && result.bookingList
+    ? (result.bookingList.items || []).reduce((sum, item) => sum + (Number(item.hours) || 1), 0)
+    : 0;
+  badge.textContent = count > 99 ? '99+' : String(count);
+  badge.style.display = count ? 'flex' : 'none';
+  badge.setAttribute('aria-label', `${count} dịch vụ trong giỏ`);
+}
+
+async function refreshCustomerNotificationBadge() {
+  const badge = document.getElementById('customerNotificationBadge');
+  if (!badge) return;
+  const user = getCurrentCustomer();
+  if (!user) {
+    badge.style.display = 'none';
+    return;
+  }
+  const result = await apiRequest('/api/notifications');
+  if (!badge.isConnected) return;
+  const unread = result.success ? (result.notifications || []).filter(item => !item.isRead).length : 0;
+  badge.textContent = unread > 99 ? '99+' : String(unread);
+  badge.style.display = unread ? 'block' : 'none';
+}
+
+async function refreshCustomerAccountSummary() {
+  const balanceLabel = document.getElementById('customerAccountBalance');
+  if (!balanceLabel) return;
+  const cachedUser = getCurrentCustomer();
+  if (!cachedUser) return;
+  const result = await apiRequest('/api/auth/me');
+  if (!result.success || !result.user || !balanceLabel.isConnected) {
+    balanceLabel.textContent = 'Số dư: Chưa tải được';
+    return;
+  }
+  const freshUser = { ...cachedUser, ...result.user };
+  setCurrentCustomer(freshUser);
+  balanceLabel.textContent = `Số dư: ${formatVND(Number(freshUser.balance) || 0)}`;
+}
+
+async function toggleCustomerNotifications() {
+  const dropdown = document.getElementById('notifDropdown');
+  const button = document.querySelector('[aria-label="Thông báo"]');
+  if (!dropdown) return;
+  const opening = dropdown.style.display !== 'block';
+  dropdown.style.display = opening ? 'block' : 'none';
+  if (button) button.setAttribute('aria-expanded', String(opening));
+  if (opening) await loadCustomerNotifications();
+}
+
+async function loadCustomerNotifications() {
+  const list = document.getElementById('customerNotificationList');
+  if (!list) return;
+  const user = getCurrentCustomer();
+  if (!user) {
+    list.innerHTML = '<div style="padding:18px;text-align:center;color:#64748B;font-size:12px;">Đăng nhập để xem thông báo.</div>';
+    return;
+  }
+  list.innerHTML = '<div style="padding:18px;text-align:center;color:#64748B;font-size:12px;">Đang tải thông báo...</div>';
+  const result = await apiRequest('/api/notifications');
+  if (!result.success) {
+    list.innerHTML = `<div style="padding:18px;text-align:center;color:#64748B;font-size:12px;">${escapeCustomerNavbarValue(result.message || 'Không thể tải thông báo.')}</div>`;
+    return;
+  }
+  const notifications = result.notifications || [];
+  window.customerNotificationsCache = notifications;
+  if (!notifications.length) {
+    list.innerHTML = '<div style="padding:22px 14px;text-align:center;color:#64748B;font-size:12px;"><i class="fa-regular fa-bell-slash" style="display:block;font-size:20px;margin-bottom:8px;color:#CBD5E1"></i>Chưa có thông báo.</div>';
+    await refreshCustomerNotificationBadge();
+    return;
+  }
+  const iconByType = { success:'fa-circle-check', warning:'fa-triangle-exclamation', error:'fa-circle-exclamation', info:'fa-circle-info' };
+  const colorByType = { success:'#16A34A', warning:'#D97706', error:'#DC2626', info:'#3B82F6' };
+  list.innerHTML = notifications.slice(0, 20).map(item => {
+    const icon = iconByType[item.type] || iconByType.info;
+    const color = colorByType[item.type] || colorByType.info;
+    const detailAction = `<button type="button" onclick="openCustomerNotification('${escapeCustomerNavbarValue(item.id)}')" style="margin-top:7px;padding:0;border:0;background:none;color:#15803D;font-size:11px;font-weight:700;cursor:pointer;">Xem chi tiết</button>`;
+    return `<article style="display:flex;gap:10px;padding:12px;border-bottom:1px solid #F1F5F9;background:${item.isRead ? '#fff' : '#F0FDF4'};font-size:12px;"><i class="fa-solid ${icon}" style="color:${color};margin-top:2px;"></i><div style="min-width:0;flex:1;"><strong style="color:#0F172A;">${escapeCustomerNavbarValue(item.title || 'Thông báo')}</strong><div style="color:#475569;margin-top:3px;line-height:1.45;">${escapeCustomerNavbarValue(item.message || '')}</div><div style="color:#94A3B8;font-size:10px;margin-top:5px;">${escapeCustomerNavbarValue(item.createdAt || '')}</div>${detailAction}</div>${item.isRead ? '' : `<button type="button" aria-label="Đánh dấu đã đọc" title="Đánh dấu đã đọc" onclick="markCustomerNotificationRead('${escapeCustomerNavbarValue(item.id)}')" style="align-self:flex-start;border:0;background:none;color:#16A34A;cursor:pointer;padding:2px;"><i class="fa-solid fa-check"></i></button>`}</article>`;
+  }).join('');
+  await refreshCustomerNotificationBadge();
+}
+
+async function markCustomerNotificationRead(notificationId) {
+  const result = await apiRequest(`/api/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'PUT' });
+  if (result.success) await loadCustomerNotifications();
+}
+
+function ensureCustomerNotificationDetailModal() {
+  let modal = document.getElementById('customerNotificationDetailModal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'customerNotificationDetailModal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'customerNotificationDetailTitle');
+  modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:5000;background:rgba(15,23,42,.48);align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = '<section style="width:min(480px,100%);max-height:80vh;overflow:auto;background:#fff;border:1px solid #E2E8F0;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.22);padding:20px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;"><h2 id="customerNotificationDetailTitle" style="margin:0;color:#0F172A;font-size:18px;line-height:1.4;"></h2><button type="button" onclick="closeCustomerNotificationDetail()" aria-label="Đóng" style="border:0;background:#F1F5F9;color:#475569;border-radius:8px;width:32px;height:32px;cursor:pointer;flex:0 0 auto;"><i class="fa-solid fa-xmark"></i></button></div><div id="customerNotificationDetailDate" style="margin-top:8px;color:#94A3B8;font-size:12px;"></div><p id="customerNotificationDetailMessage" style="margin:16px 0 0;color:#334155;font-size:14px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;"></p><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:22px;"><a id="customerNotificationRelatedLink" href="#" style="display:none;align-items:center;gap:7px;padding:9px 13px;border-radius:8px;background:#16A34A;color:#fff;text-decoration:none;font-size:13px;font-weight:700;">Đi tới trang liên quan <i class="fa-solid fa-arrow-up-right-from-square"></i></a><button type="button" onclick="closeCustomerNotificationDetail()" style="padding:9px 13px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;color:#475569;font-size:13px;font-weight:600;cursor:pointer;">Đóng</button></div></section>';
+  modal.addEventListener('click', event => { if (event.target === modal) closeCustomerNotificationDetail(); });
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function closeCustomerNotificationDetail() {
+  const modal = document.getElementById('customerNotificationDetailModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function openCustomerNotification(notificationId) {
+  const notification = (window.customerNotificationsCache || []).find(item => String(item.id) === String(notificationId));
+  if (!notification) return;
+  const modal = ensureCustomerNotificationDetailModal();
+  document.getElementById('customerNotificationDetailTitle').textContent = notification.title || 'Thông báo';
+  document.getElementById('customerNotificationDetailMessage').textContent = notification.message || 'Không có nội dung chi tiết.';
+  document.getElementById('customerNotificationDetailDate').textContent = notification.createdAt || '';
+  const relatedLink = document.getElementById('customerNotificationRelatedLink');
+  relatedLink.style.display = 'none';
+  relatedLink.removeAttribute('href');
+  if (notification.detailsUrl) {
+    try {
+      const target = new URL(notification.detailsUrl, window.location.origin);
+      if (target.origin === window.location.origin) {
+        relatedLink.href = target.href;
+        relatedLink.style.display = 'inline-flex';
+      }
+    } catch (_) {}
+  }
+  modal.style.display = 'flex';
+  const result = await apiRequest(`/api/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'PUT' });
+  if (result.success) {
+    notification.isRead = true;
+    await loadCustomerNotifications();
+  }
+}
+
+async function markAllCustomerNotificationsRead() {
+  const result = await apiRequest('/api/notifications/read-all', { method: 'PUT' });
+  if (result.success) await loadCustomerNotifications();
 }
 
 let customerSearchProviders = null;
@@ -2111,79 +2273,17 @@ async function handleModalRegister(e) {
     `;
 
   try {
-    const response =
-        await fetch(
-            `${API_BASE}/api/auth/register`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                name,
-                email,
-                phone,
-                password,
-                role
-              })
-            }
-        );
-
-    const text = await response.text();
-    let data = {};
-
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch (parseError) {
-      console.error('Register API trả về không phải JSON:', text);
-      throw new Error(`Server trả về dữ liệu không hợp lệ (${response.status})`);
-    }
-
-    if (response.ok && data.success && data.user) {
-      const saved = setCurrentCustomer(data.user);
-      if (!saved) {
-        throw new Error('Không thể lưu phiên đăng ký.');
-      }
-
-      showToast(
-          'Tạo Tài Khoản Thành Công!',
-          `Chào mừng ${name} đến với SkillRental.`,
-          'success'
-      );
-
-      closeAuthModal();
-
-      setTimeout(() => {
-        redirectAfterLogin(data.user);
-      }, 300);
+    if (!window.SkillAuth) throw new Error('Firebase Authentication chưa sẵn sàng.');
+    const result = await SkillAuth.register({ name, email, phone, password, role });
+    if (!result.success) {
+      showToast('Đăng Ký Thất Bại', result.message || 'Không thể tạo tài khoản!', 'error');
       return;
-    } else {
-      showToast(
-          'Đăng Ký Thất Bại',
-          data.message || 'Không thể tạo tài khoản!',
-          'error'
-      );
     }
-  } catch (error) {
-    console.warn('Lỗi kết nối máy chủ, kích hoạt tạo tài khoản demo:', error);
-
-    const newUser = {
-      id: 'USR_' + Date.now(),
-      name,
-      email,
-      phone,
-      role,
-      balance: role === 'Customer' ? 5000000 : 0,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-    };
-
-    setCurrentCustomer(newUser);
-    showToast('Tạo Tài Khoản Thành Công!', `Chào mừng ${name} đến với SkillRental.`, 'success');
+    showToast('Xác nhận email', result.message || 'Hãy xác nhận email trước khi đăng nhập.', 'success');
     closeAuthModal();
-
-    setTimeout(() => {
-      redirectAfterLogin(newUser);
-    }, 300);
+  } catch (error) {
+    console.error('Không thể đăng ký tài khoản:', error);
+    showToast('Không thể đăng ký', error.message || 'Vui lòng thử lại khi có kết nối.', 'error');
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = `
@@ -2454,10 +2554,11 @@ window.toggleFavoriteProvider = toggleFavoriteProvider;
 // ============================================================
 // FLOATING CHAT WIDGET (Matching Design Screenshot)
 // ============================================================
-let activeFloatingChat = { providerId: 'PRV001', userId: 'USR001', name: 'Nguyễn Văn An', specialty: '', avatar: '' };
+let activeFloatingChat = { providerId: '', userId: '', name: '', specialty: '', avatar: '' };
 
-function initFloatingChat(targetProviderId = 'PRV001', targetProviderName = 'Nguyễn Văn An', specialty = '', avatar = '') {
-  activeFloatingChat = { providerId: targetProviderId || 'PRV001', userId: '', name: targetProviderName || 'Chuyên gia', specialty: specialty || '', avatar: avatar || '' };
+function initFloatingChat(targetProviderId = '', targetProviderName = '', specialty = '', avatar = '') {
+  if (!targetProviderId) return;
+  activeFloatingChat = { providerId: targetProviderId, userId: '', name: targetProviderName || 'Provider', specialty: specialty || '', avatar: avatar || '' };
   let widget = document.getElementById('srFloatingChatContainer');
   if (!widget) {
     widget = document.createElement('div');
@@ -2487,7 +2588,7 @@ function initFloatingChat(targetProviderId = 'PRV001', targetProviderName = 'Ngu
       <!-- Active Contact Bar (matching screenshot) -->
       <div style="background:#F0FDF4; border-bottom:1px solid #DCFCE7; padding:8px 14px; display:flex; align-items:center; gap:10px;">
         <div style="position:relative;">
-          <img id="srChatPartnerAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+          <img id="srChatPartnerAvatar" src="" alt="" style="display:none;width:32px;height:32px;border-radius:50%;object-fit:cover;">
           <span style="position:absolute; bottom:0; right:0; width:8px; height:8px; background:#16A34A; border-radius:50%; border:1.5px solid #FFF;"></span>
         </div>
         <div style="flex:1;">
@@ -2524,6 +2625,7 @@ function initFloatingChat(targetProviderId = 'PRV001', targetProviderName = 'Ngu
 
 async function resolveFloatingChatProvider() {
   const target = activeFloatingChat;
+  if (!target.providerId) return;
   const response = await apiRequest(`/api/providers/${encodeURIComponent(target.providerId)}`);
   if (target !== activeFloatingChat || !response.success || !response.provider) return;
   const provider = response.provider;
@@ -2536,7 +2638,10 @@ async function resolveFloatingChatProvider() {
   const avatarImage = document.getElementById('srChatPartnerAvatar');
   if (name) name.textContent = target.name;
   if (role) role.textContent = target.specialty;
-  if (avatarImage) avatarImage.src = target.avatar || avatarImage.src;
+  if (avatarImage) {
+    avatarImage.src = target.avatar || '';
+    avatarImage.style.display = target.avatar ? 'block' : 'none';
+  }
   await loadFloatingChatMessages();
 }
 
@@ -2580,7 +2685,8 @@ function toggleFloatingChat(show = null) {
   const willOpen = show === true || (show === null && (!win || win.style.display === 'none' || !win.style.display));
   if (willOpen && !requireCustomerLogin()) return;
   if (!win) {
-    initFloatingChat();
+    if (!activeFloatingChat.providerId) return;
+    initFloatingChat(activeFloatingChat.providerId, activeFloatingChat.name, activeFloatingChat.specialty, activeFloatingChat.avatar);
     win = document.getElementById('srChatWindow');
   }
   if (show === null) {
@@ -2628,6 +2734,10 @@ async function handleSendFloatingMessage(e) {
 
 function openChatWithProvider(providerId, providerName, specialty, avatar) {
   if (!requireCustomerLogin()) return;
+  if (!providerId) {
+    showToast('Chưa chọn Provider', 'Mở hồ sơ Provider trước khi bắt đầu chat.', 'error');
+    return;
+  }
   initFloatingChat(providerId, providerName, specialty, avatar);
   toggleFloatingChat(true);
 }

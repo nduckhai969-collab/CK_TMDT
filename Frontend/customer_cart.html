@@ -2,7 +2,11 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Giỏ hàng - SkillRental</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giỏ dịch vụ - SkillRental</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -10,48 +14,203 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-client.js"></script>
   <style>
-    body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #0f172a; }
-    .cart-container { max-width: 800px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .cart-item { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding: 15px 0; }
-    .cart-item:last-child { border-bottom: none; }
-    .item-info { display: flex; align-items: center; gap: 15px; }
-    .item-info img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
-    .item-details h4 { margin: 0 0 5px; font-size: 15px; }
-    .item-details p { margin: 0; color: #64748b; font-size: 13px; }
-    .item-price { font-weight: 700; color: #16A34A; }
-    .cart-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 800; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #e2e8f0; }
-    .btn-checkout { width: 100%; background: #16A34A; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: 700; margin-top: 20px; cursor: pointer; }
+    body{background:#f8fafc;color:#0f172a;font-family:Inter,Arial,sans-serif}
+    [hidden]{display:none!important}
+    .cart-container{max-width:1000px;margin:36px auto;padding:0 20px 48px}
+    .cart-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px}
+    .cart-heading h1{font-size:26px;margin:0 0 6px}.cart-heading p{margin:0;color:#64748b;font-size:14px}
+    .cart-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:20px;align-items:start}
+    .cart-panel,.summary-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;box-shadow:0 4px 12px #0f172a08}
+    .cart-item{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 0;border-bottom:1px solid #edf1f5}
+    .cart-item:first-child{padding-top:0}.cart-item:last-child{border:0;padding-bottom:0}
+    .cart-item img{width:90px;height:72px;object-fit:cover;border-radius:9px;background:#f1f5f9}
+    .cart-item .item-placeholder{width:90px;height:72px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:#f1f5f9;color:#94a3b8;font-size:21px}
+    .item-title{font-size:15px;font-weight:700;color:#0f172a;text-decoration:none}.item-title:hover{color:#16a34a}
+    .item-meta{font-size:12px;color:#64748b;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+    .item-price{font-weight:800;color:#16a34a;white-space:nowrap;text-align:right}
+    .item-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:8px}
+    .qty-input{width:65px;border:1px solid #cbd5e1;border-radius:7px;padding:6px;text-align:center}
+    .remove-btn{border:0;background:transparent;color:#ef4444;cursor:pointer;padding:6px}
+    .empty-cart,.cart-message{text-align:center;padding:46px 16px;color:#64748b}.empty-cart i{font-size:38px;color:#cbd5e1;margin-bottom:12px}
+    .empty-cart h2{color:#0f172a;font-size:18px}.empty-cart a{color:#16a34a;font-weight:700}
+    .summary-panel{position:sticky;top:20px}.summary-panel h2{font-size:17px;margin:0 0 18px}
+    .summary-row{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#475569;margin:12px 0}
+    .summary-row.total{padding-top:14px;border-top:1px dashed #cbd5e1;font-size:16px;font-weight:800;color:#0f172a}.summary-row.total strong{color:#16a34a}
+    .checkout-fields{margin-top:18px}.checkout-fields label{display:block;font-size:12px;font-weight:700;margin:12px 0 6px}
+    .checkout-fields input,.checkout-fields textarea,.checkout-fields select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:13px Inter,Arial,sans-serif;box-sizing:border-box}
+    .checkout-fields textarea{min-height:72px;resize:vertical}.btn-checkout{width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:8px;background:#16a34a;color:#fff;padding:13px;font:800 14px/1.3 Inter,Arial,sans-serif;letter-spacing:0;cursor:pointer;margin-top:16px}.btn-checkout:disabled{opacity:.6;cursor:wait}
+    .provider-schedule{padding:12px;margin:12px 0;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc}.provider-schedule strong{display:block;font-size:12px;margin-bottom:8px}.provider-schedule select{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:7px;margin:4px 0;font:13px Inter,Arial,sans-serif}
+    .secure-note{font-size:11px;line-height:1.5;color:#64748b;margin-top:12px}
+    @media(max-width:760px){.cart-layout{grid-template-columns:1fr}.summary-panel{position:static}.cart-heading{align-items:flex-start;flex-direction:column}}
+    @media(max-width:480px){.cart-container{padding:0 12px 32px}.cart-panel,.summary-panel{padding:16px}.cart-item{grid-template-columns:64px minmax(0,1fr);gap:12px}.cart-item img{width:64px;height:64px}.item-side{grid-column:2;display:flex;align-items:center;justify-content:space-between}.item-price{text-align:left}}
   </style>
 </head>
 <body>
   <div id="navbar-placeholder"></div>
-  <div class="cart-container">
-    <h2><i class="fa-solid fa-cart-shopping"></i> Giỏ hàng của bạn</h2>
-    <div id="cartItems">
-      <!-- Mock Cart Item -->
-      <div class="cart-item">
-        <div class="item-info">
-          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" alt="Provider">
-          <div class="item-details">
-            <h4>Dịch vụ Lập trình Website</h4>
-            <p>Provider: Nguyễn Văn An</p>
-          </div>
+  <main class="cart-container">
+    <div class="cart-heading"><div><h1><i class="fa-solid fa-cart-shopping" style="color:#16a34a"></i> Giỏ dịch vụ đã chọn</h1><p>Gom dịch vụ từ nhiều Provider và thanh toán trong một lần.</p></div><a href="find_provider.html" style="color:#16a34a;font-weight:700;text-decoration:none"><i class="fa-solid fa-plus"></i> Chọn thêm dịch vụ</a></div>
+    <div id="cartMessage" class="cart-message">Đang tải giỏ dịch vụ...</div>
+    <div id="cartLayout" class="cart-layout" hidden>
+      <section class="cart-panel"><div id="cartItems"></div></section>
+      <aside class="summary-panel">
+        <h2>Tóm tắt thanh toán</h2>
+        <div class="summary-row"><span id="itemCount">0 dịch vụ</span><strong id="subtotal">0đ</strong></div>
+        <div class="summary-row"><span>Phí nền tảng (5%)</span><strong id="platformFee">0đ</strong></div>
+        <div class="summary-row total"><span>Tổng ký quỹ</span><strong id="grandTotal">0đ</strong></div>
+        <p id="checkoutStatus" class="secure-note" aria-live="polite">Đang kiểm tra điều kiện thanh toán...</p>
+        <div class="checkout-fields">
+          <label for="customerPhone">Số điện thoại liên hệ</label><input id="customerPhone" type="tel" autocomplete="tel" placeholder="Số điện thoại">
+          <div id="providerSchedules"></div>
+          <label for="checkoutNotes">Ghi chú cho các Provider</label><textarea id="checkoutNotes" placeholder="Yêu cầu chung cho các dịch vụ..."></textarea>
         </div>
-        <div class="item-price">4.500.000đ</div>
-        <button style="background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
-      </div>
+        <button id="checkoutButton" class="btn-checkout" type="button" onclick="checkoutCart()"><i class="fa-solid fa-lock"></i> Tiếp tục thanh toán</button>
+        <div class="secure-note"><i class="fa-solid fa-shield-halved"></i> Mỗi Provider nhận một đơn riêng. Khoản ký quỹ bao gồm phí nền tảng 5%.</div>
+      </aside>
     </div>
-    <div class="cart-total">
-      <span>Tổng cộng:</span>
-      <span>4.500.000đ</span>
-    </div>
-    <button class="btn-checkout" onclick="alert('Đang chuyển tới trang thanh toán...')">Tiến hành đặt lịch & thanh toán</button>
-  </div>
+  </main>
   <script src="customer.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    let cartItems = [];
+    let schedulesByProvider = {};
+    document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
+      const customer = getCurrentCustomer();
+      if (!customer || customer.role !== 'Customer') {
+        document.getElementById('cartMessage').innerHTML = 'Đăng nhập bằng tài khoản khách hàng để xem giỏ dịch vụ. <a href="index.html?auth=login">Đăng nhập</a>';
+        if (!customer) setTimeout(() => { if (typeof openAuthModal === 'function') openAuthModal('login'); }, 250);
+        return;
+      }
+      document.getElementById('cartItems').addEventListener('click', event => {
+        const button = event.target.closest('[data-remove-service]');
+        if (button) deleteCartItem(button.dataset.removeService, button);
+      });
+      document.getElementById('customerPhone').value = customer.phone || '';
+      await loadCart();
     });
+    function money(value){return `${Number(value||0).toLocaleString('vi-VN')}đ`}
+    function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+    async function loadCart(){
+      const result=await apiRequest('/api/booking-list');
+      if(!result.success){document.getElementById('cartMessage').textContent=result.message||'Không thể tải giỏ dịch vụ.';document.getElementById('checkoutButton').disabled=true;return}
+      cartItems=result.bookingList?.items||[];renderCart();
+    }
+    function renderCart(){
+      refreshCustomerCartBadge();
+      const message=document.getElementById('cartMessage'),layout=document.getElementById('cartLayout');
+      if(!cartItems.length){document.getElementById('cartItems').innerHTML='';layout.hidden=true;message.hidden=false;message.innerHTML='<div class="empty-cart"><i class="fa-solid fa-basket-shopping"></i><h2>Giỏ dịch vụ đang trống</h2><p>Khám phá Provider và thêm dịch vụ bạn muốn đặt.</p><a href="find_provider.html">Tìm dịch vụ</a></div>';message.style.padding='0';return}
+      message.hidden=true;layout.hidden=false;
+      document.getElementById('cartItems').innerHTML=cartItems.map(item=>{
+        const qty=Math.max(1,Number(item.hours)||1),price=Number(item.price)||0;
+        const image=item.thumbnail||item.providerAvatar;
+        return `<article class="cart-item">${image?`<img src="${escapeHtml(image)}" alt="">`:'<div class="item-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></div>'}<div><a class="item-title" href="customer_booking.html?id=${encodeURIComponent(item.providerId||'')}">${escapeHtml(item.serviceTitle||'Dịch vụ')}</a><div class="item-meta"><span><i class="fa-solid fa-user"></i> ${escapeHtml(item.providerName||'Provider')}</span><span>${money(price)} / đơn vị</span></div></div><div class="item-side"><div class="item-price">${money(price*qty)}</div><div class="item-actions"><label for="qty-${escapeHtml(item.serviceId)}" style="font-size:11px;color:#64748b">SL</label><input class="qty-input" id="qty-${escapeHtml(item.serviceId)}" type="number" min="1" max="99" value="${qty}" onchange="updateQuantity('${escapeHtml(item.serviceId)}',this.value)" aria-label="Số lượng"><button class="remove-btn" type="button" data-remove-service="${escapeHtml(item.serviceId)}" aria-label="Xóa ${escapeHtml(item.serviceTitle||'dịch vụ')} khỏi giỏ"><i class="fa-solid fa-trash"></i></button></div></div></article>`;
+      }).join('');
+      renderProviderSchedules();
+      const totals=calculateCheckoutTotals();
+      document.getElementById('itemCount').textContent=`${cartItems.length} dịch vụ`;
+      document.getElementById('subtotal').textContent=money(totals.subtotal);document.getElementById('platformFee').textContent=money(totals.fee);document.getElementById('grandTotal').textContent=money(totals.total);
+      updateCheckoutAvailability();
+    }
+    function renderProviderSchedules(){
+      const host=document.getElementById('providerSchedules');
+      const providers=[...new Map(cartItems.map(item=>[item.providerId,{id:item.providerId,name:item.providerName||'Provider'}])).values()];
+      host.innerHTML='<label>Lịch hẹn (bắt buộc)</label>'+providers.map(p=>`<div class="provider-schedule" data-provider-schedule="${escapeHtml(p.id)}"><strong>${escapeHtml(p.name)}</strong><select class="schedule-date" aria-label="Ngày hẹn với ${escapeHtml(p.name)}"><option value="">Đang tải lịch trống...</option></select><select class="schedule-time" aria-label="Giờ hẹn với ${escapeHtml(p.name)}" disabled><option value="">Chọn ngày trước</option></select></div>`).join('');
+      providers.forEach(loadProviderSchedule);
+    }
+    async function loadProviderSchedule(provider){
+      const box=document.querySelector(`[data-provider-schedule="${CSS.escape(provider.id)}"]`);if(!box)return;
+      const dateSelect=box.querySelector('.schedule-date'),timeSelect=box.querySelector('.schedule-time');
+      const now=new Date(),monthDate=new Date(now.getFullYear(),now.getMonth(),1);
+      const months=[0,1].map(offset=>{const d=new Date(monthDate.getFullYear(),monthDate.getMonth()+offset,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`});
+      try{
+      const results=await Promise.all(months.map(month=>apiRequest(`/api/providers/${encodeURIComponent(provider.id)}/availability?month=${month}`)));
+      if(!results.some(result=>result.success)){
+        box.dataset.loadError='true';
+        dateSelect.innerHTML='<option value="">Không tải được lịch trống</option>';
+        timeSelect.innerHTML='<option value="">Thử tải lại trang</option>';
+        updateCheckoutAvailability();
+        return;
+      }
+      box.dataset.loadError='false';
+      const slots=Object.assign({},...results.filter(result=>result.success).map(result=>result.availability||{}));
+      const todayIso=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      const dates=Object.keys(slots).filter(date=>date>=todayIso).sort();
+      dateSelect.innerHTML=dates.length?'<option value="">Chọn ngày hẹn</option>'+dates.map(date=>`<option value="${date}">${new Date(`${date}T12:00:00`).toLocaleDateString('vi-VN')}</option>`).join(''):'<option value="">Provider chưa có lịch trống tháng này</option>';
+      dateSelect.onchange=()=>{const times=slots[dateSelect.value]||[];timeSelect.innerHTML=times.length?'<option value="">Chọn giờ hẹn</option>'+times.map(t=>`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join(''):'<option value="">Không có khung giờ</option>';timeSelect.disabled=!times.length;updateCheckoutAvailability()};
+      updateCheckoutAvailability();
+      }catch(error){
+        box.dataset.loadError='true';
+        dateSelect.innerHTML='<option value="">Không tải được lịch trống</option>';
+        timeSelect.innerHTML='<option value="">Tải lại trang để thử lại</option>';
+        updateCheckoutAvailability();
+      }
+    }
+    function selectedProviderSchedules(){
+      const schedules={};let valid=true;
+      document.querySelectorAll('[data-provider-schedule]').forEach(box=>{const date=box.querySelector('.schedule-date').value,time=box.querySelector('.schedule-time').value;if(!date||!time)valid=false;schedules[box.dataset.providerSchedule]={scheduledDate:date,scheduledTime:time}});
+      return{valid,schedules};
+    }
+    function calculateCheckoutTotals(){
+      const providerTotals=new Map();let subtotal=0;
+      for(const item of cartItems){const line=Number(item.price)*Number(item.hours);subtotal+=line;providerTotals.set(item.providerId,(providerTotals.get(item.providerId)||0)+line)}
+      const fee=[...providerTotals.values()].reduce((sum,amount)=>sum+Math.round(amount*.05),0);
+      return{subtotal,fee,total:subtotal+fee};
+    }
+    function updateCheckoutAvailability(){
+      const status=document.getElementById('checkoutStatus'),button=document.getElementById('checkoutButton');
+      const scheduleSelection=selectedProviderSchedules();
+      if(!cartItems.length)status.textContent='Giỏ hàng đang trống.';
+      else if([...document.querySelectorAll('[data-provider-schedule]')].some(box=>box.dataset.loadError==='true'))status.textContent='Không tải được lịch Provider. Kiểm tra kết nối rồi tải lại trang.';
+      else if(!scheduleSelection.valid)status.textContent='Vui lòng chọn ngày và khung giờ còn trống cho từng Provider.';
+      else status.textContent='Lịch đã hợp lệ. Tiếp tục để chọn phương thức thanh toán.';
+      button.disabled=cartItems.length===0;
+    }
+    async function updateQuantity(serviceId,value){const qty=Number(value);if(!Number.isInteger(qty)||qty<1||qty>99){showToast('Số lượng không hợp lệ','Chọn số lượng từ 1 đến 99.','error');return loadCart()}const result=await apiRequest(`/api/booking-list/items/${encodeURIComponent(serviceId)}`,{method:'PUT',body:JSON.stringify({hours:qty})});if(!result.success)showToast('Không thể cập nhật',result.message||'','error');await loadCart()}
+    async function deleteCartItem(serviceId,button){
+      if(!serviceId||!button||button.disabled)return;
+      const previousItems=cartItems;
+      cartItems=cartItems.filter(item=>item.serviceId!==serviceId);
+      renderCart();
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000);
+      try{
+        const result=await apiRequest(`/api/booking-list/items/${encodeURIComponent(serviceId)}`,{method:'DELETE',signal:controller.signal});
+        if(!result.success){
+          showToast('Không thể xóa',result.message||'Vui lòng thử lại.','error');
+          cartItems=previousItems;
+          renderCart();
+          return;
+        }
+        cartItems=Array.isArray(result.bookingList?.items)
+          ? result.bookingList.items
+          : cartItems;
+        renderCart();
+      }catch(error){
+        console.error('Không thể xóa dịch vụ khỏi giỏ:',error);
+        showToast('Không thể xóa','Không kết nối được với máy chủ.','error');
+        cartItems=previousItems;
+        renderCart();
+      }finally{
+        clearTimeout(timeout);
+      }
+    }
+    async function checkoutCart(){
+      if(!requireCustomerLogin())return;
+      updateCheckoutAvailability();
+      if(document.getElementById('checkoutButton').disabled)return;
+      const selection=selectedProviderSchedules();
+      if(!selection.valid){
+        showToast('Chưa chọn đủ lịch','Chọn ngày và khung giờ còn trống cho từng Provider trước khi tiếp tục.','error');
+        document.getElementById('providerSchedules').scrollIntoView({behavior:'smooth',block:'center'});
+        return;
+      }
+      const {schedules}=selection;
+      const totals=calculateCheckoutTotals();
+      localStorage.setItem('SKILLRENTAL_CHECKOUT_DRAFT',JSON.stringify({
+        kind:'cart',items:cartItems,schedulesByProvider:schedules,subtotal:totals.subtotal,fee:totals.fee,total:totals.total,
+        customerPhone:document.getElementById('customerPhone').value.trim(),notes:document.getElementById('checkoutNotes').value.trim()
+      }));
+      location.href='customer_checkout.html?cart=1';
+    }
   </script>
 </body>
 </html>

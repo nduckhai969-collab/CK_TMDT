@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Đánh giá của tôi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="style.css">
+  <style>
+    body{background:#f7f9f8;color:#172033;font-family:Inter,sans-serif}.reviews-wrap{max-width:1080px;margin:28px auto 60px;padding:0 22px}
+    .reviews-hero{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:26px 30px;border:1px solid #f4dfaa;border-radius:18px;background:linear-gradient(120deg,#fffbeb,#fff 70%);margin-bottom:18px}
+    .review-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:22px}.summary-card{background:#fff;border:1px solid #e4e9e6;border-radius:13px;padding:15px;display:flex;align-items:center;gap:12px}.summary-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#fef3c7;color:#b45309;font-size:16px}
+    .section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 12px}.section-heading h2{font-size:17px;margin:0;color:#172033}.review-card,.pending-card{background:#fff;border:1px solid #e1e8e4;border-radius:14px;padding:18px 20px;margin-bottom:11px}.review-card{display:grid;grid-template-columns:1fr auto;gap:14px}.review-stars{color:#e9a814;letter-spacing:1px;font-size:14px}.review-criteria{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.criteria-chip{padding:5px 8px;border-radius:999px;background:#f0fdf4;color:#15803d;font-size:10px;font-weight:700}.pending-card{display:flex;justify-content:space-between;align-items:center;gap:14px}.section-empty{padding:28px;text-align:center;color:#64748b;background:#fff;border:1px solid #e2e8f0;border-radius:14px}
+    @media(max-width:650px){.reviews-hero{padding:21px;align-items:flex-start;flex-direction:column}.review-summary{grid-template-columns:1fr}.review-card{grid-template-columns:1fr}.pending-card{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div id="navbar-placeholder"></div>
+  <main class="reviews-wrap">
+    <section class="reviews-hero"><div><div style="display:inline-flex;align-items:center;gap:7px;padding:5px 10px;background:#fef3c7;color:#a16207;border-radius:999px;font-size:11px;font-weight:800;margin-bottom:9px"><i class="fa-solid fa-star"></i> CHIA SẺ TRẢI NGHIỆM</div><h1 style="font-size:clamp(24px,4vw,31px);margin:0">Đánh giá của tôi</h1><p style="font-size:13px;color:#64748b;line-height:1.6;margin:7px 0 0">Xem lại phản hồi bạn đã gửi và đánh giá những đơn hàng hoàn tất.</p></div><a href="customer_orders.html" class="btn btn-outline" style="font-weight:700"><i class="fa-solid fa-receipt"></i> Đơn hàng</a></section>
+    <section class="review-summary"><div class="summary-card"><div class="summary-icon"><i class="fa-solid fa-star"></i></div><div><div style="font-size:11px;color:#64748b">Số đánh giá đã gửi</div><strong id="reviewCount" style="font-size:21px">0</strong></div></div><div class="summary-card"><div class="summary-icon"><i class="fa-solid fa-ranking-star"></i></div><div><div style="font-size:11px;color:#64748b">Điểm trung bình</div><strong id="reviewAverage" style="font-size:21px">—</strong></div></div><div class="summary-card"><div class="summary-icon" style="background:#dcfce7;color:#15803d"><i class="fa-solid fa-pen-to-square"></i></div><div><div style="font-size:11px;color:#64748b">Đơn chờ đánh giá</div><strong id="pendingReviewCount" style="font-size:21px">0</strong></div></div></section>
+    <section><div class="section-heading"><h2><i class="fa-solid fa-pen-to-square" style="color:#15803d;margin-right:7px"></i>Đơn hàng cần đánh giá</h2></div><div id="pendingReviews"><div class="section-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải đơn hàng...</div></div></section>
+    <section><div class="section-heading"><h2><i class="fa-solid fa-star" style="color:#d97706;margin-right:7px"></i>Đánh giá đã gửi</h2></div><div id="submittedReviews"><div class="section-empty"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải đánh giá...</div></div></section>
+  </main>
+  <div id="footer-placeholder"></div>
+  <script src="customer.js"></script>
+  <script>
+    let submittedReviews = [];
+    const escapeReview = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+      loadReviewManagement();
+    });
+    async function loadReviewManagement() {
+      const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        document.getElementById('pendingReviews').innerHTML = document.getElementById('submittedReviews').innerHTML = '<div class="section-empty"><i class="fa-solid fa-lock" style="font-size:25px"></i><p>Đăng nhập để quản lý đánh giá của bạn.</p><button class="btn btn-primary" onclick="openAuthModal(\'login\')">Đăng nhập</button></div>';
+        return;
+      }
+      const [reviewResult, orderResult] = await Promise.all([
+        apiRequest(`/api/reviews?customerId=${encodeURIComponent(user.id)}`),
+        apiRequest(`/api/orders?customerId=${encodeURIComponent(user.id)}`)
+      ]);
+      if (!reviewResult.success || !orderResult.success) {
+        document.getElementById('pendingReviews').innerHTML = document.getElementById('submittedReviews').innerHTML = '<div class="section-empty" style="color:#b91c1c">Không tải được dữ liệu. Vui lòng tải lại trang.</div>';
+        return;
+      }
+      submittedReviews = reviewResult.reviews || [];
+      const orders = orderResult.orders || [];
+      const reviewedOrders = new Set(submittedReviews.map(review => review.orderId));
+      const pending = orders.filter(order => order.orderStatus === 'completed' && !reviewedOrders.has(order.id));
+      const avg = submittedReviews.length ? (submittedReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / submittedReviews.length).toFixed(1) : '—';
+      document.getElementById('reviewCount').textContent = submittedReviews.length;
+      document.getElementById('reviewAverage').textContent = avg === '—' ? avg : `${avg} / 5`;
+      document.getElementById('pendingReviewCount').textContent = pending.length;
+      renderPendingReviews(pending);
+      renderSubmittedReviews();
+    }
+    function renderPendingReviews(orders) {
+      const container = document.getElementById('pendingReviews');
+      if (!orders.length) { container.innerHTML = '<div class="section-empty"><i class="fa-solid fa-circle-check" style="color:#16a34a;font-size:22px"></i><p style="margin-bottom:0">Bạn đã đánh giá tất cả đơn hàng hoàn tất.</p></div>'; return; }
+      container.innerHTML = orders.map(order => `<article class="pending-card"><div><div style="font-size:10px;color:#64748b;font-weight:800;text-transform:uppercase">Đơn ${escapeReview(order.id)}</div><h3 style="font-size:14px;margin:5px 0;color:#172033">${escapeReview(order.serviceTitle || 'Dịch vụ đã hoàn tất')}</h3><div style="font-size:12px;color:#64748b">Provider: ${escapeReview(order.providerName || 'Chuyên gia')} · ${escapeReview(order.date || '')}</div></div><a href="customer_review.html?orderId=${encodeURIComponent(order.id)}" class="btn btn-primary btn-sm"><i class="fa-solid fa-star"></i> Viết đánh giá</a></article>`).join('');
+    }
+    function renderSubmittedReviews() {
+      const container = document.getElementById('submittedReviews');
+      if (!submittedReviews.length) { container.innerHTML = '<div class="section-empty"><i class="fa-regular fa-star" style="font-size:22px"></i><p style="margin-bottom:0">Bạn chưa gửi đánh giá nào.</p></div>'; return; }
+      container.innerHTML = submittedReviews.map(review => {
+        const rating = Math.max(0, Math.min(5, Number(review.rating) || 0));
+        const criteria = Array.isArray(review.criteria) ? review.criteria : [];
+        return `<article class="review-card"><div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><strong style="font-size:14px">${escapeReview(review.providerName || 'Chuyên gia')}</strong><span class="review-stars" aria-label="${rating} trên 5 sao">${'★'.repeat(rating)}${'☆'.repeat(5-rating)}</span><span style="font-size:11px;color:#64748b">${rating}/5</span></div><div style="font-size:11px;color:#64748b;margin-top:5px">${escapeReview(review.serviceTitle || 'Dịch vụ')} · Đơn ${escapeReview(review.orderId || '—')}</div><p style="font-size:13px;line-height:1.65;color:#475569;margin:12px 0 0;white-space:pre-wrap">${escapeReview(review.content || '')}</p>${criteria.length ? `<div class="review-criteria">${criteria.map(item => `<span class="criteria-chip">${escapeReview(item)}</span>`).join('')}</div>` : ''}</div><div style="font-size:11px;color:#94a3b8;white-space:nowrap">${escapeReview(review.date || '')}</div></article>`;
+      }).join('');
+    }
+  </script>
+</body>
+</html>

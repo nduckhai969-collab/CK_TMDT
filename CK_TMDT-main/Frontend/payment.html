@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thanh toán & Phí sàn - SkillRental Partner</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="brand-icon">S</div>
+        <span>SkillRental</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Tổng quan</div>
+        <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+
+        <div class="nav-section-title">Hồ sơ & Dịch vụ</div>
+        <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-card-clip"></i><span>Hồ Sơ & Dịch Vụ</span></a>
+
+        <div class="nav-section-title">Công việc & Đơn hàng</div>
+        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);">6</span></a>
+        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);">2</span></a>
+
+        <div class="nav-section-title">Kinh doanh & Khách hàng</div>
+        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count">3</span></a>
+        <a href="payment.html" class="nav-link active"><i class="fa-solid fa-credit-card"></i><span>Thanh toán & Phí sàn</span></a>
+        <a href="income.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Ví & Thu nhập</span></a>
+        <a href="review.html" class="nav-link"><i class="fa-solid fa-star"></i><span>Đánh giá & Uy tín</span></a>
+        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);">1</span></a>
+
+        <div class="nav-section-title">Dịch vụ hệ thống</div>
+        <a href="package.html" class="nav-link"><i class="fa-solid fa-box-archive"></i><span>Mua dịch vụ</span></a>
+        <a href="post.html" class="nav-link"><i class="fa-solid fa-newspaper"></i><span>Bài viết & Portfolio</span></a>
+      </nav>
+
+      <div class="sidebar-profile">
+        <div class="avatar">NV</div>
+        <div class="profile-info">
+          <div class="profile-name">Nguyễn Văn Pro</div>
+          <div class="profile-role">Senior UI/UX & Web Dev</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-wrapper">
+      <header class="top-header">
+        <div class="header-title">Thanh Toán & Phí Duy Trì Sàn</div>
+        <div class="header-actions">
+          <span class="badge badge-success"><span class="badge-dot"></span> Tài Khoản Đã Xác Thực</span>
+          <!-- Switcher to Admin Portal -->
+          <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
+            <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
+          </a>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <div class="grid-3" style="margin-bottom: 24px;">
+          <div class="card" style="grid-column: span 2;">
+            <div class="card-header">
+              <div class="card-title"><i class="fa-solid fa-credit-card" style="color: var(--primary-accent);"></i> Thanh Toán Phí Duy Trì Tài Khoản Provider</div>
+              <span class="badge badge-warning">Hạn duy trì: 20/09/2026</span>
+            </div>
+
+            <div style="background-color: var(--bg-subtle); padding: 18px; border-radius: 8px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight: 700; font-size: 15px;">Gói VIP Partner (Hàng Tháng)</div>
+                <div style="color: var(--text-muted); font-size: 12px;">Đăng tối đa 20 dịch vụ kỹ năng • Giảm phí hoa hồng sàn xuống 5%</div>
+              </div>
+              <div style="font-size: 22px; font-weight: 800; color: var(--primary-accent);">299.000đ <span style="font-size: 12px; color: var(--text-muted); font-weight: 400;">/ tháng</span></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Chọn phương thức thanh toán</label>
+              <div class="grid-3">
+                <div class="payment-card-method selected">
+                  <i class="fa-solid fa-qrcode" style="font-size: 24px; color: var(--primary-accent);"></i>
+                  <div>
+                    <div style="font-weight: 600;">VNPay QR</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Quét app ngân hàng</div>
+                  </div>
+                </div>
+
+                <div class="payment-card-method">
+                  <i class="fa-solid fa-wallet" style="font-size: 24px; color: #A50064;"></i>
+                  <div>
+                    <div style="font-weight: 600;">Ví MoMo</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Thanh toán Ví MoMo</div>
+                  </div>
+                </div>
+
+                <div class="payment-card-method">
+                  <i class="fa-solid fa-building-columns" style="font-size: 24px; color: var(--info);"></i>
+                  <div>
+                    <div style="font-weight: 600;">Thẻ ATM / Banking</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Chuyển khoản trực tiếp</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="confirmPartnerPayment()">
+              <i class="fa-solid fa-lock"></i> XÁC NHẬN THANH TOÁN 299.000đ
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Quyền Lợi Đối Tác VIP</div>
+            </div>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px;">
+              <li style="display:flex; gap:8px; align-items:center;">
+                <i class="fa-solid fa-circle-check" style="color: var(--primary-accent);"></i> Huy hiệu Đối Tác Xác Thực
+              </li>
+              <li style="display:flex; gap:8px; align-items:center;">
+                <i class="fa-solid fa-circle-check" style="color: var(--primary-accent);"></i> Ưu tiên hiển thị top kết quả tìm kiếm
+              </li>
+              <li style="display:flex; gap:8px; align-items:center;">
+                <i class="fa-solid fa-circle-check" style="color: var(--primary-accent);"></i> Phí hoa hồng sàn giảm còn 5% (Gốc 10%)
+              </li>
+              <li style="display:flex; gap:8px; align-items:center;">
+                <i class="fa-solid fa-circle-check" style="color: var(--primary-accent);"></i> Hỗ trợ ưu tiên 24/7
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Lịch Sử Gia Hạn & Phí Sàn</div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Mã Hóa Đơn</th>
+                <th>Tên Gói Duy Trì</th>
+                <th>Số Tiền</th>
+                <th>Phương Thức</th>
+                <th>Ngày Thanh Toán</th>
+                <th>Trạng Thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#INV-2026-08</td>
+                <td>Gói VIP Partner (Tháng 8)</td>
+                <td>299.000đ</td>
+                <td>VNPay QR</td>
+                <td>15/08/2026</td>
+                <td><span class="badge badge-success"><span class="badge-dot"></span> Thành công</span></td>
+              </tr>
+              <tr>
+                <td>#INV-2026-07</td>
+                <td>Gói VIP Partner (Tháng 7)</td>
+                <td>299.000đ</td>
+                <td>Ví MoMo</td>
+                <td>15/07/2026</td>
+                <td><span class="badge badge-success"><span class="badge-dot"></span> Thành công</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="provider.js"></script>
+  <script>
+    document.querySelectorAll('.payment-card-method').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.payment-card-method').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+      });
+    });
+
+    async function confirmPartnerPayment() {
+      showToast('Đang kết nối cổng thanh toán Escrow...', 'info');
+      setTimeout(() => {
+        showToast('Thanh toán duy trì phí sàn 299.000đ thành công!');
+      }, 800);
+    }
+  </script>
+</body>
+</html>

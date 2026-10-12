@@ -1192,567 +1192,21 @@ function renderCustomerFooter() {
 // ============================================================
 
 function injectGlobalAuthModal() {
-
-  if (
-      document.getElementById(
-          'globalAuthModalOverlay'
-      )
-  ) {
-
-    return;
-  }
-
-
-  const modalHtml = `
-
-<div
-    id="globalAuthModalOverlay"
-    style="
-        position:fixed;
-        inset:0;
-        background:rgba(15,23,42,.7);
-        backdrop-filter:blur(5px);
-        z-index:99999;
-        display:none;
-        align-items:center;
-        justify-content:center;
-        padding:20px;
-    "
->
-
-    <div style="
-        background:#FFFFFF;
-        border-radius:16px;
-        width:100%;
-        max-width:480px;
-        max-height:90vh;
-        overflow-y:auto;
-        box-shadow:
-            0 20px 40px -10px
-            rgba(15,23,42,.35);
-        border:1px solid #E2E8F0;
-        position:relative;
-    ">
-
-
-        <!-- CLOSE -->
-
-        <button
-            type="button"
-            onclick="closeAuthModal()"
-            style="
-                position:absolute;
-                top:16px;
-                right:16px;
-                width:32px;
-                height:32px;
-                border-radius:50%;
-                background:#F1F5F9;
-                border:none;
-                cursor:pointer;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                color:#64748B;
-                z-index:10;
-            "
-        >
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-
-
-        <!-- HEADER -->
-
-        <div style="
-            background:
-                linear-gradient(
-                    135deg,
-                    #0F172A 0%,
-                    #15803D 100%
-                );
-            color:#FFF;
-            padding:24px 28px;
-        ">
-
-            <h4
-                id="gamTitle"
-                style="
-                    font-size:20px;
-                    font-weight:800;
-                    margin:0 0 4px;
-                "
-            >
-                Chào Mừng Đến Với SkillRental
-            </h4>
-
-            <p
-                id="gamSubtitle"
-                style="
-                    font-size:13px;
-                    color:#DCFCE7;
-                    margin:0;
-                "
-            >
-                Đăng nhập để thuê kỹ năng
-                hoặc quản lý dịch vụ
-            </p>
-
-        </div>
-
-
-        <!-- TABS -->
-
-        <div style="
-            display:flex;
-            border-bottom:1px solid #E2E8F0;
-            background:#F8FAFC;
-        ">
-
-            <button
-                type="button"
-                id="gamTabLogin"
-                onclick="switchAuthTab('login')"
-                style="
-                    flex:1;
-                    padding:14px;
-                    text-align:center;
-                    font-size:14px;
-                    font-weight:700;
-                    color:#16A34A;
-                    border:none;
-                    background:#FFFFFF;
-                    border-bottom:2px solid #16A34A;
-                    cursor:pointer;
-                "
-            >
-                <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                Đăng Nhập
-            </button>
-
-
-            <button
-                type="button"
-                id="gamTabRegister"
-                onclick="switchAuthTab('register')"
-                style="
-                    flex:1;
-                    padding:14px;
-                    text-align:center;
-                    font-size:14px;
-                    font-weight:700;
-                    color:#64748B;
-                    border:none;
-                    background:transparent;
-                    border-bottom:2px solid transparent;
-                    cursor:pointer;
-                "
-            >
-                <i class="fa-solid fa-user-plus"></i>
-                Đăng Ký
-            </button>
-
-        </div>
-
-
-        <!-- BODY -->
-
-        <div style="
-            padding:24px 28px;
-        ">
-
-
-            <!-- LOGIN -->
-
-            <form
-                id="loginForm"
-                onsubmit="handleModalLogin(event)"
-            >
-
-                <div style="
-                    margin-bottom:16px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Email / Tài khoản
-                    </label>
-
-                    <input
-                        type="email"
-                        id="loginEmail"
-                        required
-                        autocomplete="email"
-                        placeholder="long.le@example.com"
-                        style="
-                            width:100%;
-                            height:42px;
-                            padding:0 14px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            font-size:14px;
-                            box-sizing:border-box;
-                            outline:none;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:16px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Mật khẩu
-                    </label>
-
-                    <input
-                        type="password"
-                        id="loginPassword"
-                        required
-                        autocomplete="current-password"
-                        placeholder="••••••••"
-                        style="
-                            width:100%;
-                            height:42px;
-                            padding:0 14px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            font-size:14px;
-                            box-sizing:border-box;
-                            outline:none;
-                        "
-                    >
-
-                </div>
-
-
-                <button
-                    type="submit"
-                    id="loginSubmitBtn"
-                    style="
-                        width:100%;
-                        height:44px;
-                        background:#16A34A;
-                        color:#FFFFFF;
-                        border:none;
-                        border-radius:8px;
-                        font-weight:700;
-                        font-size:15px;
-                        cursor:pointer;
-                    "
-                >
-                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                    Đăng Nhập Ngay
-                </button>
-
-            </form>
-
-
-            <!-- REGISTER -->
-
-            <form
-                id="registerForm"
-                onsubmit="handleModalRegister(event)"
-                style="display:none;"
-            >
-
-                <div style="
-                    margin-bottom:14px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Họ và tên
-                    </label>
-
-                    <input
-                        type="text"
-                        id="regName"
-                        required
-                        autocomplete="name"
-                        placeholder="Nguyễn Văn A"
-                        style="
-                            width:100%;
-                            height:40px;
-                            padding:0 12px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            box-sizing:border-box;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:14px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Email
-                    </label>
-
-                    <input
-                        type="email"
-                        id="regEmail"
-                        required
-                        autocomplete="email"
-                        placeholder="name@example.com"
-                        style="
-                            width:100%;
-                            height:40px;
-                            padding:0 12px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            box-sizing:border-box;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:14px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Số điện thoại
-                    </label>
-
-                    <input
-                        type="tel"
-                        id="regPhone"
-                        required
-                        autocomplete="tel"
-                        placeholder="0912 345 678"
-                        style="
-                            width:100%;
-                            height:40px;
-                            padding:0 12px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            box-sizing:border-box;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:14px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Mật khẩu
-                    </label>
-
-                    <input
-                        type="password"
-                        id="regPassword"
-                        required
-                        minlength="6"
-                        autocomplete="new-password"
-                        placeholder="Ít nhất 6 ký tự"
-                        style="
-                            width:100%;
-                            height:40px;
-                            padding:0 12px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            box-sizing:border-box;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:16px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:8px;
-                    ">
-                        Vai trò tham gia
-                    </label>
-
-
-                    <div style="
-                        display:grid;
-                        grid-template-columns:1fr 1fr;
-                        gap:10px;
-                    ">
-
-                        <label style="
-                            display:flex;
-                            align-items:center;
-                            gap:6px;
-                            font-size:13px;
-                            color:#334155;
-                        ">
-
-                            <input
-                                type="radio"
-                                name="regRole"
-                                value="Customer"
-                                checked
-                            >
-
-                            Khách hàng
-
-                        </label>
-
-
-                        <label style="
-                            display:flex;
-                            align-items:center;
-                            gap:6px;
-                            font-size:13px;
-                            color:#334155;
-                        ">
-
-                            <input
-                                type="radio"
-                                name="regRole"
-                                value="Provider"
-                            >
-
-                            Provider
-
-                        </label>
-
-                    </div>
-
-                </div>
-
-
-                <button
-                    type="submit"
-                    id="registerSubmitBtn"
-                    style="
-                        width:100%;
-                        height:44px;
-                        background:#16A34A;
-                        color:#FFFFFF;
-                        border:none;
-                        border-radius:8px;
-                        font-weight:700;
-                        font-size:15px;
-                        cursor:pointer;
-                    "
-                >
-                    <i class="fa-solid fa-user-plus"></i>
-                    Hoàn Tất Đăng Ký
-                </button>
-
-            </form>
-
-        </div>
-
-    </div>
-
-</div>
-
-    `;
-
-
-  document.body.insertAdjacentHTML(
-      'beforeend',
-      modalHtml
-  );
-
-
-  const overlay =
-      document.getElementById(
-          'globalAuthModalOverlay'
-      );
-
-
-  overlay.addEventListener(
-      'click',
-      function(event) {
-
-        if (
-            event.target ===
-            overlay
-        ) {
-
-          closeAuthModal();
-        }
-      }
-  );
+  // Modal chuẩn được tự động cung cấp bởi firebase-client.js
 }
 
-
-// ============================================================
-// OPEN AUTH MODAL
-// ============================================================
-
-function openAuthModal(
-    tab = 'login'
-) {
-
-  injectGlobalAuthModal();
-
-
-  const overlay =
-      document.getElementById(
-          'globalAuthModalOverlay'
-      );
-
-
-  if (!overlay) {
+function openAuthModal(tab = 'login') {
+  if (typeof window.openAuthModal === 'function' && window.openAuthModal !== openAuthModal) {
+    window.openAuthModal(tab);
     return;
   }
-
-
-  overlay.style.display =
-      'flex';
-
-  document.body.style.overflow =
-      'hidden';
-
-
-  switchAuthTab(tab);
+  const modal = document.getElementById('authModal') || document.getElementById('globalAuthModalOverlay');
+  if (modal) {
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    if (typeof window.switchAuthTab === 'function') window.switchAuthTab(tab);
+  }
 }
 
 
@@ -1773,20 +1227,11 @@ function openCustomerAuthModal(
 // ============================================================
 
 function closeAuthModal() {
-
-  const overlay =
-      document.getElementById(
-          'globalAuthModalOverlay'
-      );
-
-
+  const overlay = document.getElementById('authModal') || document.getElementById('globalAuthModalOverlay');
   if (overlay) {
-
-    overlay.style.display =
-        'none';
-
-    document.body.style.overflow =
-        '';
+    overlay.classList.remove('active');
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
   }
 }
 
@@ -1969,97 +1414,47 @@ function redirectAfterLogin(user) {
 // ============================================================
 
 async function handleModalLogin(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
 
-  const email =
-      document
-          .getElementById('loginEmail')
-          .value
-          .trim();
-
-  const password =
-      document
-          .getElementById('loginPassword')
-          .value;
-
-  const submitBtn =
-      document.getElementById('loginSubmitBtn');
+  const email = document.getElementById('loginEmail')?.value?.trim();
+  const password = document.getElementById('loginPassword')?.value;
+  const submitBtn = document.getElementById('loginSubmitBtn');
 
   if (!email || !password) {
-    showToast(
-        'Đăng Nhập Thất Bại',
-        'Vui lòng nhập đầy đủ email và mật khẩu.',
-        'error'
-    );
+    showToast('Đăng Nhập Thất Bại', 'Vui lòng nhập đầy đủ email và mật khẩu.', 'error');
     return;
   }
 
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = `
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        Đang xác thực...
-    `;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...';
+  }
 
   try {
-    const response =
-        await fetch(
-            `${API_BASE}/api/auth/login`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                email,
-                password
-              })
-            }
-        );
+    const data = await SkillAuth.login(email, password);
 
-    const text = await response.text();
-    let data = {};
-
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch (parseError) {
-      console.error('Login API trả về không phải JSON:', text);
-      throw new Error(`Server trả về dữ liệu không hợp lệ (${response.status})`);
-    }
-
-    if (response.ok && data.success && data.user) {
-      const saved = setCurrentCustomer(data.user);
-      if (!saved) {
-        throw new Error('Không thể lưu phiên đăng nhập.');
-      }
-
-      showToast(
-          'Đăng Nhập Thành Công!',
-          `Chào mừng ${data.user.name || 'bạn'} đã quay trở lại.`,
-          'success'
-      );
-
+    if (data.success && data.user) {
+      setCurrentCustomer(data.user);
+      showToast('Đăng Nhập Thành Công!', `Chào mừng ${data.user.name || 'bạn'} đã quay trở lại.`, 'success');
       closeAuthModal();
-
-      setTimeout(() => {
-        redirectAfterLogin(data.user);
-      }, 300);
+      setTimeout(() => redirectAfterLogin(data.user), 300);
       return;
-    } else {
-      showToast(
-          'Đăng Nhập Thất Bại',
-          data.message || 'Sai email hoặc mật khẩu!',
-          'error'
-      );
     }
+
+    if (data.code === 'EMAIL_NOT_VERIFIED') {
+      showToast('Email Chưa Kích Hoạt', data.message, 'warning');
+      return;
+    }
+
+    showToast('Đăng Nhập Thất Bại', data.message || 'Sai email hoặc mật khẩu!', 'error');
   } catch (error) {
-    console.error('Không thể kết nối máy chủ đăng nhập:', error);
+    console.error('Lỗi kết nối máy chủ đăng nhập:', error);
     showToast('Không thể đăng nhập', 'Không kết nối được máy chủ. Vui lòng thử lại khi server hoạt động.', 'error');
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `
-            <i class="fa-solid fa-arrow-right-to-bracket"></i>
-            Đăng Nhập Ngay
-        `;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng Nhập Ngay';
+    }
   }
 }
 
@@ -2069,134 +1464,61 @@ function handleGlobalLogin(e) {
 }
 
 // ============================================================
-// REGISTER - ĐỒNG BỘ VỚI INDEX
+// REGISTER - ĐỒNG BỘ VỚI FIREBASE
 // ============================================================
 
 async function handleModalRegister(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
 
-  const name =
-      document
-          .getElementById('regName')
-          .value
-          .trim();
+  const name = document.getElementById('regName')?.value?.trim();
+  const email = document.getElementById('regEmail')?.value?.trim();
+  const phone = document.getElementById('regPhone')?.value?.trim();
+  const password = document.getElementById('regPassword')?.value;
+  const role = document.querySelector('input[name="regRole"]:checked')?.value || 'Customer';
+  const submitBtn = document.getElementById('registerSubmitBtn');
 
-  const email =
-      document
-          .getElementById('regEmail')
-          .value
-          .trim();
+  if (!name || !email || !password) {
+    showToast('Thiếu thông tin', 'Vui lòng điền đầy đủ họ tên, email và mật khẩu.', 'error');
+    return;
+  }
 
-  const phone =
-      document
-          .getElementById('regPhone')
-          .value
-          .trim();
-
-  const password =
-      document
-          .getElementById('regPassword')
-          .value;
-
-  const role =
-      document.querySelector('input[name="regRole"]:checked')?.value || 'Customer';
-
-  const submitBtn =
-      document.getElementById('registerSubmitBtn');
-
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = `
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        Đang tạo tài khoản...
-    `;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo tài khoản...';
+  }
 
   try {
-    const response =
-        await fetch(
-            `${API_BASE}/api/auth/register`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                name,
-                email,
-                phone,
-                password,
-                role
-              })
-            }
-        );
+    const data = await SkillAuth.register({ name, email, phone, password, role });
 
-    const text = await response.text();
-    let data = {};
-
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch (parseError) {
-      console.error('Register API trả về không phải JSON:', text);
-      throw new Error(`Server trả về dữ liệu không hợp lệ (${response.status})`);
-    }
-
-    if (response.ok && data.success && data.user) {
-      const saved = setCurrentCustomer(data.user);
-      if (!saved) {
-        throw new Error('Không thể lưu phiên đăng ký.');
+    if (data.success && data.verifyEmail) {
+      showToast('Đăng Ký Thành Công!', data.message, 'success');
+      if (typeof switchAuthTab === 'function') {
+        switchAuthTab('verify');
       }
-
-      showToast(
-          'Tạo Tài Khoản Thành Công!',
-          `Chào mừng ${name} đến với SkillRental.`,
-          'success'
-      );
-
-      closeAuthModal();
-
-      setTimeout(() => {
-        redirectAfterLogin(data.user);
-      }, 300);
       return;
-    } else {
-      showToast(
-          'Đăng Ký Thất Bại',
-          data.message || 'Không thể tạo tài khoản!',
-          'error'
-      );
     }
+
+    if (data.success && data.user) {
+      setCurrentCustomer(data.user);
+      showToast('Tạo Tài Khoản Thành Công!', `Chào mừng ${name} đến với SkillRental.`, 'success');
+      closeAuthModal();
+      setTimeout(() => redirectAfterLogin(data.user), 300);
+      return;
+    }
+
+    showToast('Đăng Ký Thất Bại', data.message || 'Không thể tạo tài khoản!', 'error');
   } catch (error) {
-    console.warn('Lỗi kết nối máy chủ, kích hoạt tạo tài khoản demo:', error);
-
-    const newUser = {
-      id: 'USR_' + Date.now(),
-      name,
-      email,
-      phone,
-      role,
-      balance: role === 'Customer' ? 5000000 : 0,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'
-    };
-
-    setCurrentCustomer(newUser);
-    showToast('Tạo Tài Khoản Thành Công!', `Chào mừng ${name} đến với SkillRental.`, 'success');
-    closeAuthModal();
-
-    setTimeout(() => {
-      redirectAfterLogin(newUser);
-    }, 300);
+    console.error('Lỗi tạo tài khoản:', error);
+    showToast('Đăng Ký Thất Bại', 'Không thể hoàn tất đăng ký lúc này.', 'error');
   } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `
-            <i class="fa-solid fa-user-plus"></i>
-            Hoàn Tất Đăng Ký
-        `;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Hoàn Tất Đăng Ký';
+    }
   }
 }
 
-
-// Alias cũ
 function handleGlobalRegister(e) {
-
   return handleModalRegister(e);
 }
 

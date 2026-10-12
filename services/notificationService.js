@@ -2,7 +2,7 @@ const db = require('../data/db');
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
 
-function createNotification(userId, title, message, type = 'info') {
+function createNotification(userId, title, message, type = 'info', detailsUrl = '') {
   if (!userId) return null;
   const notifications = db.getCollection('notifications') || [];
 
@@ -12,6 +12,7 @@ function createNotification(userId, title, message, type = 'info') {
     title,
     message,
     type, // 'info', 'success', 'warning', 'error'
+    detailsUrl: typeof detailsUrl === 'string' ? detailsUrl : '',
     isRead: false,
     createdAt: formatDateTime(new Date())
   };
@@ -23,10 +24,10 @@ function createNotification(userId, title, message, type = 'info') {
 
 // Thông báo được lưu theo id TÀI KHOẢN (USRxxx). Đơn hàng chỉ lưu id hồ sơ người bán (PRVxxx)
 // nên phải đổi sang userId trước khi gửi.
-function notifyProvider(providerId, title, message, type = 'info') {
+function notifyProvider(providerId, title, message, type = 'info', detailsUrl = '') {
   const provider = (db.getCollection('providers') || []).find(p => p.id === providerId);
   if (!provider || !provider.userId) return null;
-  return createNotification(provider.userId, title, message, type);
+  return createNotification(provider.userId, title, message, type, detailsUrl);
 }
 
 function getNotifications(userId) {

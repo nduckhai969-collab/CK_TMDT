@@ -817,7 +817,7 @@
             <i class="fa-solid fa-chart-pie" style="color:#86EFAC;"></i> Data Analyst
           </div>
           <div style="font-size:10px; color:#A7F3D0; margin-top:2px;">
-            <i class="fa-solid fa-star" style="color:#FDE047;"></i> 4.8 • 76 đánh giá
+            Hồ sơ được cập nhật trên SkillRental
           </div>
         </div>
 
@@ -827,7 +827,7 @@
             <i class="fa-solid fa-palette" style="color:#86EFAC;"></i> UI/UX Designer
           </div>
           <div style="font-size:10px; color:#A7F3D0; margin-top:2px;">
-            <i class="fa-solid fa-star" style="color:#FDE047;"></i> 4.9 • 128 đánh giá
+            Đánh giá xác thực từ khách hàng
           </div>
         </div>
 
@@ -843,19 +843,19 @@
     <!-- 2. STAT STRIP -->
     <section class="stat-strip" id="statStrip">
       <div class="stat-card">
-        <div class="stat-number" id="statProviders">120+</div>
+        <div class="stat-number" id="statProviders">—</div>
         <div class="stat-label">Provider đang hoạt động</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number" id="statSkills">350+</div>
+        <div class="stat-number" id="statSkills">—</div>
         <div class="stat-label">Kỹ năng chuyên môn</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number" id="statRequests">1.2K+</div>
+        <div class="stat-number" id="statRequests">—</div>
         <div class="stat-label">Request đã tạo</div>
       </div>
       <div class="stat-card">
-        <div class="stat-number" id="statRating">4.8/5</div>
+        <div class="stat-number" id="statRating">—</div>
         <div class="stat-label">Điểm đánh giá trung bình</div>
       </div>
     </section>
@@ -1068,8 +1068,6 @@
       // 1. Render unified navbar with 'home' active
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('home');
 
-      // Khung chat nhanh dùng chung hộp thư và dữ liệu hội thoại.
-      if (typeof initFloatingChat === 'function') initFloatingChat();
       loadFavoriteProviderIds();
 
       // 2. Load stats from Backend API
@@ -1090,13 +1088,13 @@
       try {
         const res = await apiRequest('/api/providers/stats');
         if (res.success && res.stats) {
-          document.getElementById('statProviders').textContent = res.stats.activeProviders || '120+';
-          document.getElementById('statSkills').textContent = res.stats.skillsCount || '350+';
-          document.getElementById('statRequests').textContent = res.stats.requestsCreated || '1.2K+';
-          document.getElementById('statRating').textContent = res.stats.avgRating || '4.8/5';
+          document.getElementById('statProviders').textContent = res.stats.activeProviders ?? '—';
+          document.getElementById('statSkills').textContent = res.stats.skillsCount ?? '—';
+          document.getElementById('statRequests').textContent = res.stats.requestsCreated ?? '—';
+          document.getElementById('statRating').textContent = res.stats.avgRating ?? '—';
         }
       } catch (err) {
-        console.warn('Using default stats');
+        ['statProviders','statSkills','statRequests','statRating'].forEach(id => { document.getElementById(id).textContent = '—'; });
       }
     }
 
@@ -1133,7 +1131,7 @@
           <div>
             <!-- Header Row -->
             <div class="provider-header-row">
-              <img src="${p.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" alt="${p.name}" class="provider-avatar-img">
+              ${p.avatar ? `<img src="${p.avatar}" alt="${p.name}" class="provider-avatar-img">` : `<div class="provider-avatar-img" aria-hidden="true" style="display:flex;align-items:center;justify-content:center;background:#DCFCE7;color:#15803D;font-weight:800;">${String(p.name||'').trim().split(/\s+/).slice(-2).map(part=>part[0]||'').join('').toUpperCase()}</div>`}
               <div class="provider-name-box">
                 <div class="provider-name">
                   ${p.name}
@@ -1141,8 +1139,8 @@
                 </div>
               <div class="provider-rating-row">
                   <i class="fa-solid fa-star" style="color:#F59E0B;"></i>
-                  <span>${p.rating || '4.9'}</span>
-                  <span style="color:#64748B; font-weight:400; font-size:11.5px;">(${p.reviewCount || 40} đánh giá)</span>
+                  <span>${p.rating ?? '—'}</span>
+                  <span style="color:#64748B; font-weight:400; font-size:11.5px;">(${Number(p.reviewCount)||0} đánh giá)</span>
                 </div>
               </div>
               <button type="button" class="favorite-heart-button" data-favorite-provider="${p.id}" aria-label="Thêm vào Provider yêu thích" onclick="event.stopPropagation();toggleFavoriteProvider('${String(p.id).replace(/'/g, "\\'")}',this)"><i class="fa-regular fa-heart"></i></button>
@@ -1160,15 +1158,15 @@
             <!-- Working Schedule -->
             <div class="provider-schedule-info">
               <i class="fa-regular fa-clock" style="color:#94A3B8;"></i>
-              <span>${p.workingHours || 'T2-T7, 19:00-23:00'}</span>
+              <span>${p.workingHours || 'Liên hệ để xác nhận lịch'}</span>
             </div>
           </div>
 
           <!-- Price & Actions -->
           <div>
             <div class="provider-price-row">
-              <span class="provider-price-amount">${formatVND(p.hourlyRate || 250000)}</span>
-              <span class="provider-price-unit">/ giờ</span>
+              <span class="provider-price-amount">${p.hourlyRate == null ? 'Chưa cập nhật giá' : formatVND(p.hourlyRate)}</span>
+              ${p.hourlyRate == null ? '' : '<span class="provider-price-unit">/ giờ</span>'}
             </div>
 
             <div class="provider-card-actions">
@@ -1206,7 +1204,7 @@
       }
 
       container.innerHTML = jobs.slice(0, 3).map(j => {
-        const tags = j.tags && j.tags.length > 0 ? j.tags : [j.category, j.deadline || '3 ngày'];
+        const tags = j.tags && j.tags.length > 0 ? j.tags : [j.category, j.deadline || 'Chưa có hạn'];
         const appCount = j.applicantCount || (j.applicants ? j.applicants.length : 0);
 
         return `
@@ -1226,7 +1224,7 @@
             <div class="request-footer-info">
               <div>
                 <div class="request-budget-label">Ngân sách dự kiến</div>
-                <div class="request-budget-val">${j.budget || formatVND(j.budgetNum || 2000000)}</div>
+                <div class="request-budget-val">${j.budget || (j.budgetNum == null ? 'Thỏa thuận' : formatVND(j.budgetNum))}</div>
               </div>
               <div class="request-applicants-count">
                 ${appCount} Provider đã ứng tuyển
@@ -1246,7 +1244,7 @@
         
         container.innerHTML = list.slice(0, 3).map(p => `
           <a href="customer_provider.html?id=${p.id}" class="new-provider-row-card">
-            <img src="${p.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" alt="${p.name}" class="new-provider-avatar">
+            ${p.avatar ? `<img src="${p.avatar}" alt="${p.name}" class="new-provider-avatar">` : `<span class="new-provider-avatar" aria-hidden="true" style="display:flex;align-items:center;justify-content:center;background:#DCFCE7;color:#15803D;font-weight:800;">${String(p.name||'').trim().split(/\s+/).slice(-2).map(part=>part[0]||'').join('').toUpperCase()}</span>`}
             <div style="flex:1; min-width:0;">
               <div style="font-weight:700; font-size:14px; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                 ${p.name}
@@ -1257,7 +1255,7 @@
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:12px; font-weight:700; color:#B45309; display:flex; align-items:center; gap:3px;">
-                <i class="fa-solid fa-star" style="color:#F59E0B; font-size:11px;"></i> ${p.rating || '4.8'}
+                <i class="fa-solid fa-star" style="color:#F59E0B; font-size:11px;"></i> ${p.rating ?? '—'}
               </span>
               <i class="fa-solid fa-chevron-right" style="color:#CBD5E1; font-size:12px;"></i>
             </div>

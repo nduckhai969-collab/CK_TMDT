@@ -23,7 +23,7 @@
   <div class="wallet-container">
     <div class="wallet-icon"><i class="fa-solid fa-wallet"></i></div>
     <h2>Ví của bạn</h2>
-    <div class="balance" id="currentBalance">0đ</div>
+    <div class="balance" id="currentBalance">Đang tải số dư...</div>
     
     <h3 style="margin-bottom:15px; text-align:left; font-size:15px;">Nạp tiền qua VNPay</h3>
     <input type="number" id="topupAmount" placeholder="Nhập số tiền cần nạp (VND)..." min="10000" step="10000">
@@ -31,10 +31,21 @@
   </div>
   <script src="customer.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
       const user = getCurrentCustomer();
-      if (user) document.getElementById('currentBalance').textContent = formatVND(user.balance || 0);
+      if (!user || user.role !== 'Customer') {
+        document.getElementById('currentBalance').textContent = 'Đăng nhập để xem số dư';
+        return;
+      }
+      const result = await apiRequest('/api/auth/me');
+      if (result.success && result.user) {
+        const freshUser = { ...user, ...result.user };
+        setCurrentCustomer(freshUser);
+        document.getElementById('currentBalance').textContent = formatVND(Number(freshUser.balance) || 0);
+      } else {
+        document.getElementById('currentBalance').textContent = 'Không tải được số dư';
+      }
     });
 
     async function topupVNPay() {
@@ -43,7 +54,7 @@
       
       const res = await apiRequest('/api/payments/vnpay/create', {
         method: 'POST',
-        body: { amount: parseInt(amount), orderDescription: 'Nạp tiền vào ví SkillRental', orderType: 'topup', language: 'vn', bankCode: '' }
+        body: JSON.stringify({ amount: parseInt(amount), orderDescription: 'Nạp tiền vào ví SkillRental', orderType: 'topup', language: 'vn', bankCode: '' })
       });
       if (res.success && (res.paymentUrl || res.url)) {
         window.location.href = res.paymentUrl || res.url;

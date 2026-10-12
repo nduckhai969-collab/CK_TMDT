@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
 const { requireCustomer } = require('./customerAuth');
+const { slotsForDate } = require('./providerAvailability');
 
 function getBookingList(customerId) {
   const bookingLists = db.getCollection('bookingLists') || [];
@@ -41,7 +42,10 @@ router.get('/', requireCustomer, (req, res) => {
       serviceTitle: s.title,
       price: Number(s.price),
       providerId: s.providerId,
-      providerName: s.providerName
+      providerName: s.providerName,
+      providerAvatar: s.providerAvatar || '',
+      thumbnail: s.thumbnail || '',
+      status: s.status || 'active'
     };
   });
   
@@ -67,13 +71,23 @@ router.post('/items', requireCustomer, (req, res) => {
   if (!s) {
     return res.status(404).json({ success: false, message: 'Dịch vụ không tồn tại.' });
   }
+  if (s.status && s.status !== 'active') {
+    return res.status(400).json({ success: false, message: 'Dịch vụ hiện không nhận đặt hàng.' });
+  }
 
   const bookingList = getBookingList(req.authUser.id);
-  const qty = Number(hours) || 1;
+  const qty = hours === undefined ? 1 : Number(hours);
+  if (!Number.isInteger(qty) || qty < 1 || qty > 99) {
+    return res.status(400).json({ success: false, message: 'Số lượng phải là số nguyên từ 1 đến 99.' });
+  }
 
   const existingItem = bookingList.items.find(i => i.serviceId === serviceId);
   if (existingItem) {
-    existingItem.hours += qty;
+    const nextQty = Number(existingItem.hours || 0) + qty;
+    if (nextQty > 99) {
+      return res.status(400).json({ success: false, message: 'Tổng số lượng của một dịch vụ không được vượt quá 99.' });
+    }
+    existingItem.hours = nextQty;
   } else {
     bookingList.items.push({
       serviceId,
@@ -96,7 +110,10 @@ router.put('/items/:serviceId', requireCustomer, (req, res) => {
   }
 
   const qty = Number(hours);
-  if (qty <= 0) {
+  if (!Number.isInteger(qty) || qty < 0 || qty > 99) {
+    return res.status(400).json({ success: false, message: 'Số lượng phải là số nguyên từ 0 đến 99.' });
+  }
+  if (qty === 0) {
     bookingList.items = bookingList.items.filter(i => i.serviceId !== req.params.serviceId);
   } else {
     item.hours = qty;
@@ -117,7 +134,7 @@ router.delete('/items/:serviceId', requireCustomer, (req, res) => {
 
 // Thanh toán toàn bộ danh sách đặt lịch
 router.post('/checkout', requireCustomer, (req, res) => {
-  const { customerPhone, notes, paymentMethod, scheduledDate, scheduledTime } = req.body;
+  const { customerPhone, notes, paymentMethod, schedulesByProvider } = req.body;
   const bookingList = getBookingList(req.authUser.id);
 
   if (bookingList.items.length === 0) {
@@ -125,9 +142,24 @@ router.post('/checkout', requireCustomer, (req, res) => {
   }
 
   const services = db.getCollection('services') || [];
-  const providers = db.getCollection('providers') || [];
   const users = db.getCollection('users') || [];
   const orders = db.getCollection('orders') || [];
+  const walletPayment = paymentMethod === 'Số dư tài khoản (Escrow)';
+  const supportedPaymentMethods = ['Số dư tài khoản (Escrow)', 'Chuyển khoản VietQR (Escrow)', 'Ví VNPay / MoMo (Escrow)', 'Thẻ Tín Dụng Quốc Tế (Escrow)'];
+  if (!supportedPaymentMethods.includes(paymentMethod)) {
+    return res.status(400).json({ success: false, message: 'Vui lòng chọn một phương thức thanh toán hợp lệ.' });
+  }
+  if (!walletPayment) {
+    return res.status(501).json({
+      success: false,
+      code: 'ORDER_PAYMENT_NOT_CONFIGURED',
+      message: paymentMethod === 'Chuyển khoản VietQR (Escrow)'
+        ? 'VietQR chưa được cấu hình xác nhận thanh toán. Chưa tạo đơn hàng.'
+        : paymentMethod === 'Thẻ Tín Dụng Quốc Tế (Escrow)'
+          ? 'Thanh toán thẻ chưa được kết nối cổng xử lý. Chưa tạo đơn hàng.'
+          : 'VNPay/MoMo hiện chỉ hỗ trợ nạp ví, chưa thanh toán đơn trực tiếp. Hãy nạp ví rồi checkout bằng số dư. Chưa tạo đơn hàng.'
+    });
+  }
 
   const customer = users.find(u => u.id === req.authUser.id);
   if (!customer) {
@@ -140,8 +172,16 @@ router.post('/checkout', requireCustomer, (req, res) => {
 
   for (const item of bookingList.items) {
     const srv = services.find(s => s.id === item.serviceId);
-    if (!srv) continue;
-
+    if (!srv || (srv.status && srv.status !== 'active')) {
+      return res.status(400).json({ success: false, message: `Dịch vụ ${item.serviceId} không còn khả dụng. Hãy cập nhật giỏ rồi thử lại.` });
+    }
+    const qty = Number(item.hours);
+    if (!Number.isInteger(qty) || qty < 1 || qty > 99 || !Number.isFinite(Number(srv.price)) || Number(srv.price) < 0) {
+      return res.status(400).json({ success: false, message: `Thông tin dịch vụ ${item.serviceId} trong giỏ không hợp lệ.` });
+    }
+    if (!srv.providerId) {
+      return res.status(400).json({ success: false, message: `Dịch vụ ${item.serviceId} chưa được gán Provider.` });
+    }
     if (!providerGroups[srv.providerId]) {
       providerGroups[srv.providerId] = {
         providerId: srv.providerId,
@@ -151,11 +191,11 @@ router.post('/checkout', requireCustomer, (req, res) => {
       };
     }
     
-    const itemPrice = Number(srv.price) * (Number(item.hours) || 1);
+    const itemPrice = Number(srv.price) * qty;
     providerGroups[srv.providerId].items.push({
       serviceId: srv.id,
       serviceTitle: srv.title,
-      hours: item.hours,
+      quantity: qty,
       itemPrice
     });
     providerGroups[srv.providerId].totalPrice += itemPrice;
@@ -163,6 +203,22 @@ router.post('/checkout', requireCustomer, (req, res) => {
 
   for (const pid in providerGroups) {
     const pGroup = providerGroups[pid];
+    const schedule = schedulesByProvider?.[pid];
+    if (!schedule || !/^\d{4}-\d{2}-\d{2}$/.test(schedule.scheduledDate || '') || !schedule.scheduledTime) {
+      return res.status(400).json({ success: false, message: `Chọn ngày và giờ hẹn cho Provider ${pGroup.providerName || pid}.` });
+    }
+    const [year, month, day] = schedule.scheduledDate.split('-').map(Number);
+    const appointmentDate = new Date(year, month - 1, day, 12);
+    const provider = (db.getCollection('providers') || []).find(item => item.id === pid);
+    if (!provider || appointmentDate.getFullYear() !== year || appointmentDate.getMonth() !== month - 1 || appointmentDate.getDate() !== day) {
+      return res.status(400).json({ success: false, message: `Ngày hẹn của Provider ${pGroup.providerName || pid} không hợp lệ.` });
+    }
+    const availableSlots = slotsForDate(provider, appointmentDate, orders);
+    if (!availableSlots.includes(schedule.scheduledTime)) {
+      return res.status(409).json({ success: false, message: `Khung giờ của Provider ${pGroup.providerName || pid} không còn trống. Hãy chọn lịch khác.` });
+    }
+    pGroup.scheduledDate = schedule.scheduledDate;
+    pGroup.scheduledTime = schedule.scheduledTime;
     const platformFee = Math.round(pGroup.totalPrice * 0.05);
     const escrowDeposit = pGroup.totalPrice + platformFee;
     totalEscrowNeeded += escrowDeposit;
@@ -171,10 +227,11 @@ router.post('/checkout', requireCustomer, (req, res) => {
     pGroup.escrowDeposit = escrowDeposit;
   }
 
-  if (customer.balance < totalEscrowNeeded) {
+  const customerBalance = Number(customer.balance);
+  if (!Number.isFinite(customerBalance) || customerBalance < 0 || customerBalance < totalEscrowNeeded) {
     return res.status(400).json({ 
       success: false, 
-      message: `Số dư không đủ. Bạn cần ${totalEscrowNeeded.toLocaleString('vi-VN')}đ, nhưng số dư hiện tại là ${(customer.balance || 0).toLocaleString('vi-VN')}đ.`
+      message: `Số dư không đủ. Bạn cần ${totalEscrowNeeded.toLocaleString('vi-VN')}đ, nhưng số dư hiện tại là ${(Number.isFinite(customerBalance) ? customerBalance : 0).toLocaleString('vi-VN')}đ.`
     });
   }
 
@@ -190,9 +247,12 @@ router.post('/checkout', requireCustomer, (req, res) => {
   for (const pid in providerGroups) {
     const pGroup = providerGroups[pid];
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const newId = `DH00${randomSuffix}`;
+    let newId = `DH00${randomSuffix}`;
+    while (orders.some(order => order.id === newId) || createdOrders.some(order => order.id === newId)) {
+      newId = `DH00${Math.floor(1000 + Math.random() * 9000)}`;
+    }
 
-    const titles = pGroup.items.map(i => `${i.serviceTitle} (${i.hours}h)`).join(', ');
+    const titles = pGroup.items.map(i => `${i.serviceTitle} (×${i.quantity})`).join(', ');
 
     const newOrder = {
       id: newId,
@@ -203,17 +263,19 @@ router.post('/checkout', requireCustomer, (req, res) => {
       providerName: pGroup.providerName,
       serviceId: pGroup.items[0].serviceId, 
       serviceTitle: titles,
+      items: pGroup.items,
       price: pGroup.totalPrice,
       priceFormatted: pGroup.totalPrice.toLocaleString('vi-VN') + 'đ',
       platformFee: pGroup.platformFee,
       escrowDeposit: pGroup.escrowDeposit,
-      escrowStatus: 'escrow_held', 
+      escrowStatus: 'escrow_held',
+      paymentStatus: 'paid',
       orderStatus: 'pending',
       paymentMethod: paymentMethod || 'Ví điện tử VNPay (Escrow 100%)',
       date: dateStr,
       deadline: '7 ngày sau đặt cọc',
-      scheduledDate: scheduledDate || '',
-      scheduledTime: scheduledTime || '',
+      scheduledDate: pGroup.scheduledDate,
+      scheduledTime: pGroup.scheduledTime,
       notes: notes || '',
       milestones: [
         { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: dateStr },
@@ -228,8 +290,8 @@ router.post('/checkout', requireCustomer, (req, res) => {
 
     const { createNotification } = require('../services/notificationService');
     createNotification(
-      pGroup.providerId, 
-      'Đơn đặt lịch mới', 
+      pGroup.providerId,
+      'Đơn đặt lịch mới',
       `Bạn có lịch đặt mới từ ${req.authUser.name}. Tổng giá trị: ${pGroup.totalPrice.toLocaleString('vi-VN')}đ.`,
       'info'
     );

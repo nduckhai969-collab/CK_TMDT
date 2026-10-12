@@ -40,9 +40,11 @@ router.get('/', requireCustomer, (req, res) => {
 // Post review
 router.post('/', requireCustomer, (req, res) => {
   const { orderId, providerId, providerName, serviceTitle, rating, content, criteria } = req.body;
+  const reviewContent = typeof content === 'string' ? content.trim() : '';
+  const numericRating = Number(rating);
 
-  if (!rating || !content) {
-    return res.status(400).json({ success: false, message: 'Vui lòng chọn số sao và nhập nội dung đánh giá!' });
+  if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5 || reviewContent.length < 3 || reviewContent.length > 2000) {
+    return res.status(400).json({ success: false, message: 'Chọn từ 1 đến 5 sao và nhập đánh giá từ 3 đến 2.000 ký tự.' });
   }
 
   const order = (db.getCollection('orders') || []).find(item => item.id === orderId && item.customerId === req.authUser.id);
@@ -69,11 +71,12 @@ router.post('/', requireCustomer, (req, res) => {
     orderId: order.id,
     customerId: req.authUser.id,
     customerName: req.authUser.name,
+    serviceId: order.serviceId || null,
     providerId: order.providerId,
     providerName: order.providerName || providerName || 'Chuyên gia SkillRental',
     serviceTitle: order.serviceTitle || serviceTitle || 'Dịch vụ hoàn tất',
-    rating: Math.min(5, Math.max(1, Number(rating) || 5)),
-    content: content.trim(),
+    rating: numericRating,
+    content: reviewContent,
     date: dateStr,
     criteria: Array.isArray(criteria) ? criteria : ['Chuyên nghiệp', 'Đúng hẹn']
   };
@@ -91,6 +94,19 @@ router.post('/', requireCustomer, (req, res) => {
     provider.reviewCount = provReviews.length;
     db.saveCollection('providers', providers);
   }
+  if (newReview.serviceId) {
+    const services = db.getCollection('services') || [];
+    const service = services.find(item => item.id === newReview.serviceId);
+    if (service) {
+      const serviceReviews = reviews.filter(item => item.serviceId === service.id);
+      service.rating = Math.round(serviceReviews.reduce((sum, item) => sum + item.rating, 0) / serviceReviews.length * 10) / 10;
+      service.reviewCount = serviceReviews.length;
+      db.saveCollection('services', services);
+    }
+  }
+
+  const { notifyProvider } = require('../services/notificationService');
+  notifyProvider(order.providerId, 'Khách hàng đã đánh giá dịch vụ', `Bạn nhận được đánh giá ${numericRating}/5 cho đơn ${order.id}.`, 'success');
 
   res.status(201).json({
     success: true,

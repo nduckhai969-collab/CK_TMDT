@@ -295,6 +295,8 @@ function saveAppState(state) {
 }
 
 // Auto-sync state with backend server ONLY IF localStorage has no state yet!
+// Uses the public /api/data/seed endpoint (no auth required) which reads
+// directly from data/database.json and maps fields to admin-compatible format.
 async function syncStateWithServer() {
   try {
     // If localStorage already has state, do NOT overwrite user data with demo seed!
@@ -304,20 +306,28 @@ async function syncStateWithServer() {
       return;
     }
 
-    const res = await fetch(`${API_BASE}/api/admin/state`);
+    // Primary: public seed endpoint backed by data/database.json
+    const res = await fetch(`${API_BASE}/api/data/seed`);
     if (res.ok) {
       const data = await res.json();
       if (data && data.success && data.state) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
-        updateSidebarBadges();
+        // Reload once so all page render functions use the real database.json data.
+        // The second load will skip this block (localStorage already set above).
         if (typeof window.onServerStateSynced === 'function') {
           window.onServerStateSynced(data.state);
+        } else {
+          location.reload();
         }
+        return;
       }
     }
   } catch (err) {
-    console.log('Server sync: Running offline or cached mode');
+    console.log('Server sync: Running offline or cached mode — using DEFAULT_STATE seed');
   }
+  // Fallback: seed from DEFAULT_STATE when server is unavailable
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_STATE));
+  updateSidebarBadges();
 }
 
 // Admin API client methods
@@ -496,17 +506,103 @@ function showToast(title, message, type = 'success') {
   }, 4000);
 }
 
+/**
+ * exportDataSimulation — Xuất dữ liệu thực tế từ localStorage ra file CSV
+ * Hỗ trợ 3 loại báo cáo: đơn hàng, người dùng, và doanh thu.
+ * Không dùng Firebase hay dịch vụ nào bên ngoài.
+ */
 function exportDataSimulation(filename) {
-  showToast('Xuất báo cáo (UC-67)', `Đang tạo và tải tệp [${filename}.xlsx]... Vui lòng đợi trong giây lát.`, 'info');
+  showToast('Xuất báo cáo (UC-67)', `Đang tạo tệp [${filename}.csv] từ dữ liệu hệ thống...`, 'info');
+
   setTimeout(() => {
-    const csvContent = "data:text/csv;charset=utf-8,ID,Tieu_De,Thoi_Gian,Trang_Thai\n1,Bao_Cao_He_Thong," + new Date().toLocaleDateString() + ",Thanh_Cong";
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${filename}_${Date.now()}.csv`);
+    const state = getAppState();
+    let csvRows = [];
+    let recordCount = 0;
+
+    // Xác định loại báo cáo dựa theo tên file
+    const nameLower = filename.toLowerCase();
+
+    if (nameLower.includes('don_hang') || nameLower.includes('orders') || nameLower.includes('bao_cao_don')) {
+      // Báo cáo đơn hàng
+      const orders = Array.isArray(state.orders) ? state.orders : [];
+      csvRows.push(['Mã đơn hàng', 'Khách hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn', 'Trạng thái Escrow', 'Trạng thái đơn', 'Ngày tạo', 'Hạn chót']);
+      orders.forEach(o => {
+        const statusText = {
+          pending: 'Chờ xử lý', confirmed: 'Đã xác nhận', processing: 'Đang thực hiện',
+          delivered: 'Đã bàn giao', completed: 'Hoàn thành', disputed: 'Khiếu nại', cancelled: 'Đã hủy'
+        }[o.orderStatus] || o.orderStatus || '';
+        csvRows.push([
+          o.id || '', o.customer || '', o.provider || '', o.service || '',
+          o.price || '', o.escrowStatus || '', statusText, o.date || '', o.deadline || ''
+        ]);
+      });
+      recordCount = orders.length;
+
+    } else if (nameLower.includes('nguoi_dung') || nameLower.includes('users')) {
+      // Báo cáo người dùng
+      const users = Array.isArray(state.users) ? state.users : [];
+      csvRows.push(['Mã người dùng', 'Họ tên', 'Email', 'Số điện thoại', 'Vai trò', 'Ngày tham gia', 'Doanh thu/Chi tiêu', 'Trạng thái', 'Lý do khóa']);
+      users.forEach(u => {
+        csvRows.push([
+          u.id || '', u.name || '', u.email || '', u.phone || '',
+          u.role || '', u.joinDate || '', u.spentOrEarned || '',
+          u.status === 'active' ? 'Hoạt động' : 'Bị khóa', u.lockReason || ''
+        ]);
+      });
+      recordCount = users.length;
+
+    } else if (nameLower.includes('doanh_thu') || nameLower.includes('revenue') || nameLower.includes('doanh thu')) {
+      // Báo cáo doanh thu - tổng hợp từ đơn hàng
+      const orders = Array.isArray(state.orders) ? state.orders : [];
+      csvRows.push(['Mã đơn hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn (VNĐ)', 'Phí hoa hồng 10% (VNĐ)', 'Trạng thái đơn', 'Ngày tạo']);
+      orders.filter(o => o.orderStatus !== 'cancelled').forEach(o => {
+        const rawPrice = String(o.price || '0').replace(/[^\d]/g, '');
+        const price = parseInt(rawPrice, 10) || 0;
+        const fee = Math.round(price * 0.1);
+        const statusText = {
+          pending: 'Chờ xử lý', confirmed: 'Đã xác nhận', processing: 'Đang thực hiện',
+          delivered: 'Đã bàn giao', completed: 'Hoàn thành', disputed: 'Khiếu nại'
+        }[o.orderStatus] || o.orderStatus || '';
+        csvRows.push([o.id || '', o.provider || '', o.service || '', price, fee, statusText, o.date || '']);
+      });
+      recordCount = csvRows.length - 1;
+
+    } else {
+      // Mặc định: xuất toàn bộ đơn hàng
+      const orders = Array.isArray(state.orders) ? state.orders : [];
+      csvRows.push(['Mã đơn hàng', 'Khách hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn', 'Trạng thái đơn', 'Ngày tạo']);
+      orders.forEach(o => {
+        csvRows.push([o.id || '', o.customer || '', o.provider || '', o.service || '', o.price || '', o.orderStatus || '', o.date || '']);
+      });
+      recordCount = orders.length;
+    }
+
+    if (recordCount === 0) {
+      showToast('Không có dữ liệu', 'Không tìm thấy bản ghi nào để xuất. Vui lòng kiểm tra bộ lọc.', 'warning');
+      return;
+    }
+
+    // Chuyển mảng rows thành nội dung CSV chuẩn UTF-8
+    const csvContent = '\uFEFF' + csvRows.map(row =>
+      row.map(cell => {
+        const val = String(cell == null ? '' : cell);
+        // Bao ngoặc kép nếu chứa dấu phẩy, xuống dòng hoặc ngoặc kép
+        return (val.includes(',') || val.includes('"') || val.includes('\n'))
+          ? '"' + val.replace(/"/g, '""') + '"'
+          : val;
+      }).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('Tải dữ liệu hoàn tất', `Tệp báo cáo ${filename}.csv đã được lưu thành công!`, 'success');
-  }, 1000);
+    URL.revokeObjectURL(url);
+
+    showToast('Xuất dữ liệu thành công', `Đã xuất ${recordCount} bản ghi vào tệp ${filename}.csv`, 'success');
+  }, 600);
 }

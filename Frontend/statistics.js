@@ -158,6 +158,26 @@ function getStatisticsData(start, end) {
   };
 }
 
+// Đếm trạng thái đơn toàn bộ hệ thống (KHÔNG lọc ngày) — dùng riêng cho biểu đồ tròn
+function getAllOrderStatusCounts() {
+  const state = typeof getAppState === 'function' ? getAppState() : { orders: [] };
+  const allOrders = Array.isArray(state.orders) ? state.orders : [];
+
+  const statusCounts = {};
+  STATUS_CONFIG.forEach(s => { statusCounts[s.key] = 0; });
+
+  allOrders.forEach(o => {
+    const rawSt = String(o.orderStatus || 'pending').toLowerCase();
+    if (statusCounts.hasOwnProperty(rawSt)) {
+      statusCounts[rawSt]++;
+    } else {
+      statusCounts[rawSt] = (statusCounts[rawSt] || 0) + 1;
+    }
+  });
+
+  return { statusCounts, totalOrders: allOrders.length };
+}
+
 // Gom các ngày trong khoảng vào buckets (ngày không có đơn vẫn hiển thị giá trị 0)
 function buildBuckets(revenueByDay, start, end) {
   const spanDays = Math.round((end - start) / 86400000) + 1;
@@ -313,7 +333,7 @@ function renderPieChart(data) {
     if (total === 0) {
       listEl.innerHTML = `
         <div style="text-align:center; padding:16px; background:#F8FAFC; border-radius:8px; border:1px solid #E2E8F0; color:var(--text-secondary); font-size:12.5px;">
-          Chưa có đơn hàng nào trong khoảng thời gian này để thống kê trạng thái.
+          Hệ thống chưa có đơn hàng nào để thống kê trạng thái.
         </div>`;
     } else {
       listEl.innerHTML = items
@@ -425,6 +445,10 @@ function loadStatistics() {
   const fromVal = fromInput.value;
   const toVal = toInput.value;
 
+  // Luôn cập nhật biểu đồ tròn từ toàn bộ dữ liệu (không phụ thuộc bộ lọc ngày)
+  const allStatus = getAllOrderStatusCounts();
+  renderPieChart(allStatus);
+
   if (!fromVal || !toVal) {
     showFeedback('Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc để xem thống kê.', 'warning');
     return;
@@ -448,7 +472,6 @@ function loadStatistics() {
   try {
     const data = getStatisticsData(start, end);
     renderBarChart(data, start, end);
-    renderPieChart(data);
 
     if (data.totalOrders === 0) {
       showFeedback('Không có đơn hàng nào trong khoảng thời gian đã chọn.', 'warning');

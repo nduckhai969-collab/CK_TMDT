@@ -212,6 +212,13 @@
           <input type="number" class="form-control" id="pkg-posts-input" value="15">
         </div>
         <div class="form-group">
+          <label class="form-label">Trạng thái gói</label>
+          <select class="form-control" id="pkg-status-input">
+            <option value="active">Đang áp dụng (Hoạt động)</option>
+            <option value="inactive">Tạm ngừng (Ngừng cung cấp)</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">Các tính năng đặc quyền (phân cách bằng dấu phẩy)</label>
           <textarea class="form-control" id="pkg-features-input" placeholder="Huy hiệu Pro, Đẩy tin top 3 lần/tháng, Ưu tiên hỗ trợ 24/7"></textarea>
         </div>
@@ -219,6 +226,20 @@
       <div class="modal-footer">
         <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-package-form')">Hủy</button>
         <button class="btn btn-primary btn-sm" id="btn-save-package">Lưu cấu hình gói</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Chi Tiết Gói Đăng Tin -->
+  <div class="modal-overlay" id="modal-package-detail">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Chi tiết Gói Dịch Vụ / Đăng Tin</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-package-detail')">×</button>
+      </div>
+      <div class="modal-body" id="modal-package-detail-body"></div>
+      <div class="modal-footer" id="modal-package-detail-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-package-detail')">Đóng</button>
       </div>
     </div>
   </div>
@@ -238,9 +259,25 @@
       const container = document.getElementById('packages-cards');
       if (!container) return;
 
-      container.innerHTML = state.packages.map(pkg => `
-        <div class="package-card ${pkg.highlight ? 'highlight' : ''}">
-          ${pkg.badgeText ? `<span class="package-tag">${pkg.badgeText}</span>` : ''}
+      if (!state.packages || state.packages.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: 1/-1; text-align:center; padding:40px; background:#fff; border-radius:12px; border:1px solid #e2e8f0; color:var(--text-secondary);">
+            Chưa có gói đăng tin nào trong hệ thống. Nhấn "Thêm gói mới" để khởi tạo.
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = state.packages.map(pkg => {
+        const isInactive = pkg.status === 'inactive';
+        return `
+        <div class="package-card ${pkg.highlight ? 'highlight' : ''}" style="${isInactive ? 'opacity:0.75; filter:grayscale(0.2);' : ''}">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            ${pkg.badgeText ? `<span class="package-tag">${pkg.badgeText}</span>` : '<span></span>'}
+            <span class="badge ${isInactive ? 'badge-danger' : 'badge-success'}">
+              ${isInactive ? 'Tạm ngừng' : 'Đang áp dụng'}
+            </span>
+          </div>
+
           <div class="package-header">
             <h3>${pkg.name}</h3>
             <p>Thời hạn: ${pkg.duration} ngày • Tối đa ${pkg.postsCount} bài đăng</p>
@@ -250,13 +287,30 @@
             ${pkg.price > 0 ? '<span>/ tháng</span>' : ''}
           </div>
           <ul class="package-features">
-            ${pkg.features.map(f => `<li><span class="check-icon">✓</span> ${f}</li>`).join('')}
+            ${(pkg.features || []).map(f => `<li><span class="check-icon">✓</span> ${f}</li>`).join('')}
           </ul>
-          <button class="btn ${pkg.highlight ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="openPackageForm('${pkg.id}')">
-            Cấu hình quyền lợi
-          </button>
+
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px;">
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="viewPackageDetail('${pkg.id}')">
+                Chi tiết
+              </button>
+              <button class="btn ${pkg.highlight ? 'btn-primary' : 'btn-secondary'} btn-sm" style="flex:1;" onclick="openPackageForm('${pkg.id}')">
+                Cấu hình
+              </button>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn ${isInactive ? 'btn-primary' : 'btn-warning-outline'} btn-xs" style="flex:1;" onclick="togglePackageStatus('${pkg.id}')">
+                ${isInactive ? 'Kích hoạt' : 'Tạm ngừng'}
+              </button>
+              <button class="btn btn-danger-outline btn-xs" style="flex:1;" onclick="deletePackage('${pkg.id}')">
+                Xóa gói
+              </button>
+            </div>
+          </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function renderPurchasesTable() {
@@ -264,7 +318,7 @@
       const tbody = document.getElementById('purchases-tbody');
       if (!tbody) return;
 
-      tbody.innerHTML = state.packagePurchases.map(p => `
+      tbody.innerHTML = (state.packagePurchases || []).map(p => `
         <tr>
           <td><strong>${p.id}</strong></td>
           <td>${p.provider}</td>
@@ -277,46 +331,169 @@
       `).join('');
     }
 
+    // Xem chi tiết gói dịch vụ
+    function viewPackageDetail(id) {
+      const state = getAppState();
+      const pkg = (state.packages || []).find(p => p.id === id);
+      if (!pkg) return;
+
+      const isInactive = pkg.status === 'inactive';
+      const body = document.getElementById('modal-package-detail-body');
+      const footer = document.getElementById('modal-package-detail-footer');
+
+      body.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border);">
+          <div>
+            <h4 style="margin:0 0 4px 0; font-size:17px; color:var(--secondary);">${pkg.name}</h4>
+            <span style="font-size:12px; color:var(--text-secondary);">Mã cấu hình: <strong>${pkg.id}</strong></span>
+          </div>
+          <span class="badge ${isInactive ? 'badge-danger' : 'badge-success'}">
+            ${isInactive ? 'Tạm ngừng cung cấp' : 'Đang áp dụng'}
+          </span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:16px;">
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Mức giá niêm yết:</span>
+            <strong style="font-size:15px; color:var(--primary);">${pkg.price === 0 ? 'Miễn phí' : pkg.price.toLocaleString('vi-VN') + 'đ'}</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Thời hạn hiệu lực:</span>
+            <strong style="font-size:14px; color:var(--secondary);">${pkg.duration} ngày</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Số lượt đăng bài tối đa:</span>
+            <strong style="font-size:14px; color:var(--secondary);">${pkg.postsCount} bài</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Nhãn nổi bật:</span>
+            <span style="font-size:13px;">${pkg.badgeText || (pkg.highlight ? 'Có' : 'Không')}</span>
+          </div>
+        </div>
+
+        <div>
+          <span class="form-label" style="margin-bottom:6px;">Danh sách tính năng & đặc quyền:</span>
+          <ul class="package-features" style="background:#F8FAFC; border:1px solid var(--border); border-radius:8px; padding:12px 14px;">
+            ${(pkg.features || []).map(f => `<li><span class="check-icon">✓</span> ${f}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-package-detail')">Đóng</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="closeModal('modal-package-detail'); deletePackage('${pkg.id}')">Xóa gói</button>
+        <button class="btn btn-primary btn-sm" onclick="closeModal('modal-package-detail'); openPackageForm('${pkg.id}')">Chỉnh sửa</button>
+      `;
+
+      openModal('modal-package-detail');
+    }
+
     function openPackageForm(id = null) {
       document.getElementById('pkg-id-input').value = id || '';
       if (id) {
         const state = getAppState();
-        const pkg = state.packages.find(p => p.id === id);
+        const pkg = (state.packages || []).find(p => p.id === id);
         if (pkg) {
           document.getElementById('modal-package-title').textContent = 'Chỉnh sửa Gói Đăng Tin (UC-70)';
           document.getElementById('pkg-name-input').value = pkg.name;
           document.getElementById('pkg-price-input').value = pkg.price;
           document.getElementById('pkg-duration-input').value = pkg.duration;
           document.getElementById('pkg-posts-input').value = pkg.postsCount;
-          document.getElementById('pkg-features-input').value = pkg.features.join(', ');
+          document.getElementById('pkg-status-input').value = pkg.status || 'active';
+          document.getElementById('pkg-features-input').value = (pkg.features || []).join(', ');
         }
       } else {
         document.getElementById('modal-package-title').textContent = 'Thêm Gói Đăng Tin Mới (UC-70)';
         document.getElementById('pkg-name-input').value = '';
-        document.getElementById('pkg-price-input').value = '';
+        document.getElementById('pkg-price-input').value = '199000';
         document.getElementById('pkg-duration-input').value = 30;
         document.getElementById('pkg-posts-input').value = 10;
-        document.getElementById('pkg-features-input').value = 'Huy hiệu chuyên nghiệp, Đẩy tin Top tuần';
+        document.getElementById('pkg-status-input').value = 'active';
+        document.getElementById('pkg-features-input').value = 'Huy hiệu chuyên nghiệp, Đẩy tin Top tuần, Hỗ trợ 24/7';
       }
       openModal('modal-package-form');
+    }
+
+    // Xóa gói với xác nhận
+    function deletePackage(id) {
+      const state = getAppState();
+      const idx = (state.packages || []).findIndex(p => p.id === id);
+      if (idx === -1) return;
+
+      const pkg = state.packages[idx];
+      if (confirm(`Bạn có chắc chắn muốn xóa gói "${pkg.name}" (${pkg.id})? Hành động này sẽ xóa vĩnh viễn cấu hình gói khỏi hệ thống.`)) {
+        state.packages.splice(idx, 1);
+        saveAppState(state);
+        renderPackagesGrid();
+        showToast('Xóa gói thành công', `Đã xóa gói "${pkg.name}" khỏi hệ thống.`, 'success');
+      }
+    }
+
+    // Chuyển đổi trạng thái gói (Đang áp dụng <-> Tạm ngừng)
+    function togglePackageStatus(id) {
+      const state = getAppState();
+      const pkg = (state.packages || []).find(p => p.id === id);
+      if (!pkg) return;
+
+      pkg.status = pkg.status === 'inactive' ? 'active' : 'inactive';
+      saveAppState(state);
+      renderPackagesGrid();
+      const statusText = pkg.status === 'inactive' ? 'Tạm ngừng cung cấp' : 'Đang áp dụng';
+      showToast('Cập nhật trạng thái', `Gói "${pkg.name}" đã chuyển sang: ${statusText}.`, 'info');
     }
 
     function setupPackageEvents() {
       document.getElementById('btn-save-package').addEventListener('click', () => {
         const id = document.getElementById('pkg-id-input').value;
         const name = document.getElementById('pkg-name-input').value.trim();
-        const price = parseInt(document.getElementById('pkg-price-input').value) || 0;
-        const duration = parseInt(document.getElementById('pkg-duration-input').value) || 30;
-        const postsCount = parseInt(document.getElementById('pkg-posts-input').value) || 10;
+        const priceVal = document.getElementById('pkg-price-input').value.trim();
+        const durationVal = document.getElementById('pkg-duration-input').value.trim();
+        const postsVal = document.getElementById('pkg-posts-input').value.trim();
+        const status = document.getElementById('pkg-status-input').value || 'active';
         const featuresStr = document.getElementById('pkg-features-input').value.trim();
-        const features = featuresStr.split(',').map(f => f.trim()).filter(Boolean);
 
+        // 1. Kiểm tra bắt buộc: Tên gói
         if (!name) {
-          alert('Vui lòng nhập tên gói');
+          alert('Vui lòng nhập tên gói dịch vụ!');
+          document.getElementById('pkg-name-input').focus();
+          return;
+        }
+
+        // 2. Kiểm tra bắt buộc & số hợp lệ: Mức giá niêm yết
+        const price = parseInt(priceVal, 10);
+        if (priceVal === '' || isNaN(price) || price < 0) {
+          alert('Mức giá niêm yết không hợp lệ! Vui lòng nhập số tiền từ 0 VNĐ trở lên.');
+          document.getElementById('pkg-price-input').focus();
+          return;
+        }
+
+        // 3. Kiểm tra bắt buộc & số hợp lệ: Thời hạn hiệu lực
+        const duration = parseInt(durationVal, 10);
+        if (durationVal === '' || isNaN(duration) || duration <= 0) {
+          alert('Thời hạn hiệu lực không hợp lệ! Thời hạn phải lớn hơn 0 ngày.');
+          document.getElementById('pkg-duration-input').focus();
+          return;
+        }
+
+        // 4. Kiểm tra bắt buộc & số hợp lệ: Số lượt đăng bài
+        const postsCount = parseInt(postsVal, 10);
+        if (postsVal === '' || isNaN(postsCount) || postsCount < 0) {
+          alert('Số lượt đăng bài không hợp lệ! Vui lòng nhập số nguyên >= 0.');
+          document.getElementById('pkg-posts-input').focus();
+          return;
+        }
+
+        // 5. Kiểm tra bắt buộc: Tính năng đặc quyền
+        const features = featuresStr.split(',').map(f => f.trim()).filter(Boolean);
+        if (features.length === 0) {
+          alert('Vui lòng nhập ít nhất một tính năng / đặc quyền cho gói (phân cách bằng dấu phẩy)!');
+          document.getElementById('pkg-features-input').focus();
           return;
         }
 
         const state = getAppState();
+        if (!Array.isArray(state.packages)) state.packages = [];
+
         if (id) {
           const pkg = state.packages.find(p => p.id === id);
           if (pkg) {
@@ -324,6 +501,7 @@
             pkg.price = price;
             pkg.duration = duration;
             pkg.postsCount = postsCount;
+            pkg.status = status;
             pkg.features = features;
           }
         } else {
@@ -333,6 +511,7 @@
             price,
             duration,
             postsCount,
+            status,
             features,
             highlight: false
           });
@@ -341,7 +520,19 @@
         saveAppState(state);
         closeModal('modal-package-form');
         renderPackagesGrid();
-        showToast('Cập nhật gói thành công (UC-70)', `Đã lưu cấu hình gói: ${name}`, 'success');
+        showToast('Lưu cấu hình gói thành công', `Đã lưu thành công gói: ${name}`, 'success');
+      });
+
+      // Lắng nghe cập nhật từ các trang khác
+      window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === 'SKILL_RENTAL_ADMIN_STATE_V1') {
+          renderPackagesGrid();
+          renderPurchasesTable();
+        }
+      });
+      window.addEventListener('appStateUpdated', () => {
+        renderPackagesGrid();
+        renderPurchasesTable();
       });
     }
   </script>

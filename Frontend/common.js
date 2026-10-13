@@ -203,6 +203,52 @@ const DEFAULT_STATE = {
 // ============================================================================
 const API_BASE = (typeof window !== 'undefined' && window.location.protocol.startsWith('http') && (window.location.port === '3000' || window.location.port === '')) ? '' : 'http://localhost:3000';
 
+// Utility helpers for dates, prices and admin session
+window.adminUtils = {
+  parsePrice(val) {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const num = String(val).replace(/[^\d]/g, '');
+    return parseInt(num, 10) || 0;
+  },
+  formatMoney(num) {
+    return Number(num || 0).toLocaleString('vi-VN') + 'đ';
+  },
+  parseOrderDate(dateStr) {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return dateStr;
+    const s = String(dateStr).trim();
+    const dmyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmyMatch) {
+      const day = parseInt(dmyMatch[1], 10);
+      const month = parseInt(dmyMatch[2], 10) - 1;
+      const year = parseInt(dmyMatch[3], 10);
+      return new Date(year, month, day);
+    }
+    const ymdMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (ymdMatch) {
+      const year = parseInt(ymdMatch[1], 10);
+      const month = parseInt(ymdMatch[2], 10) - 1;
+      const day = parseInt(ymdMatch[3], 10);
+      return new Date(year, month, day);
+    }
+    const parsed = new Date(s);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  },
+  toISO(d) {
+    if (!d || !(d instanceof Date)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  },
+  isAdminAccount(user) {
+    if (!user) return false;
+    const role = String(user.role || '').toLowerCase();
+    const id = String(user.id || '').toUpperCase();
+    const email = String(user.email || '').toLowerCase();
+    return role === 'admin' || id.startsWith('ADM') || email.includes('admin@');
+  }
+};
+
 function getAppState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -210,7 +256,19 @@ function getAppState() {
       saveAppState(DEFAULT_STATE);
       return JSON.parse(JSON.stringify(DEFAULT_STATE));
     }
-    return JSON.parse(raw);
+    const state = JSON.parse(raw);
+    if (!state || typeof state !== 'object') {
+      saveAppState(DEFAULT_STATE);
+      return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    }
+    // Ensure all required collections exist
+    const collections = ['users', 'orders', 'packages', 'services', 'reviews', 'complaints', 'reports', 'payouts', 'pendingProviders', 'skillApprovals', 'packagePurchases'];
+    collections.forEach(key => {
+      if (!Array.isArray(state[key])) {
+        state[key] = Array.isArray(DEFAULT_STATE[key]) ? JSON.parse(JSON.stringify(DEFAULT_STATE[key])) : [];
+      }
+    });
+    return state;
   } catch (err) {
     console.error('Error reading localStorage state:', err);
     return JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -220,22 +278,32 @@ function getAppState() {
 function saveAppState(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    // Asynchronously push changes to backend
-    fetch(`${API_BASE}/api/admin/state`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state)
-    }).catch(err => {
-      console.warn('Backend state sync warning:', err);
-    });
+    window.dispatchEvent(new CustomEvent('appStateUpdated', { detail: state }));
+    // Asynchronously push changes to backend if available
+    if (typeof fetch !== 'undefined') {
+      fetch(`${API_BASE}/api/admin/state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      }).catch(() => {
+        // Silently ignore offline backend sync warnings
+      });
+    }
   } catch (err) {
     console.error('Error saving state to localStorage:', err);
   }
 }
 
-// Auto-sync state with backend server
+// Auto-sync state with backend server ONLY IF localStorage has no state yet!
 async function syncStateWithServer() {
   try {
+    // If localStorage already has state, do NOT overwrite user data with demo seed!
+    const existing = localStorage.getItem(STORAGE_KEY);
+    if (existing) {
+      updateSidebarBadges();
+      return;
+    }
+
     const res = await fetch(`${API_BASE}/api/admin/state`);
     if (res.ok) {
       const data = await res.json();

@@ -286,6 +286,20 @@
         <button class="btn btn-danger btn-sm" id="confirm-lock-btn">Xác nhận khóa tài khoản</button>
       </div>
     </div>
+  <!-- Modal Xem Chi tiết Người dùng -->
+  <div class="modal-overlay" id="modal-user-detail">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Thông tin chi tiết người dùng</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-user-detail')">×</button>
+      </div>
+      <div class="modal-body" id="user-detail-body">
+        <!-- Render chi tiết động -->
+      </div>
+      <div class="modal-footer" id="user-detail-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-user-detail')">Đóng</button>
+      </div>
+    </div>
   </div>
 
   <div class="toast-container" id="toast-container"></div>
@@ -494,7 +508,9 @@
         return;
       }
 
-      tbody.innerHTML = filtered.map(u => `
+      tbody.innerHTML = filtered.map(u => {
+        const isAdmin = (window.adminUtils && window.adminUtils.isAdminAccount(u)) || u.role === 'Admin';
+        return `
         <tr>
           <td>
             <div class="user-cell">
@@ -517,20 +533,115 @@
               : `<span class="badge badge-danger"><span class="badge-dot-indicator"></span> Đã khóa (${u.lockDuration || 'Vi phạm'})</span>`}
           </td>
           <td style="text-align:right">
-            <div class="table-actions" style="justify-content:flex-end">
-              ${u.status === 'active'
-                ? `<button class="btn btn-danger-outline btn-xs" onclick="triggerLockUser('${u.id}')">Khóa tài khoản</button>`
-                : `<a href="users.html?filter=unlock-requests" class="btn btn-primary btn-xs">Xem khiếu nại</a>`}
+            <div class="table-actions" style="justify-content:flex-end; gap:6px;">
+              <button class="btn btn-secondary btn-xs" onclick="viewUserDetail('${u.id}')">Chi tiết</button>
+              ${isAdmin
+                ? '<span class="badge badge-neutral" style="font-size:11px;">Quản trị</span>'
+                : (u.status === 'active'
+                  ? `<button class="btn btn-danger-outline btn-xs" onclick="triggerLockUser('${u.id}')">Khóa</button>`
+                  : `<button class="btn btn-primary btn-xs" onclick="triggerUnlockUser('${u.id}')">Mở khóa</button>`
+                )}
             </div>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
+    }
+
+    // Xem chi tiết người dùng
+    function viewUserDetail(id) {
+      const state = getAppState();
+      const u = state.users.find(user => user.id === id);
+      if (!u) return;
+
+      const isAdmin = (window.adminUtils && window.adminUtils.isAdminAccount(u)) || u.role === 'Admin';
+      const body = document.getElementById('user-detail-body');
+      const footer = document.getElementById('user-detail-footer');
+
+      body.innerHTML = `
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+          <div class="avatar-sm ${u.role === 'Provider' ? 'green' : 'blue'}" style="width:48px; height:48px; font-size:16px; font-weight:700;">
+            ${u.name.split(' ').map(n=>n[0]).slice(-2).join('')}
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h4 style="margin:0; font-size:16px; color:var(--secondary);">${u.name}</h4>
+              <span style="font-size:12px; color:var(--text-secondary);">(${u.id})</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+              <span class="badge ${u.role === 'Provider' ? 'badge-success' : 'badge-info'}">${u.role}</span>
+              ${u.status === 'active'
+                ? '<span class="badge badge-success"><span class="badge-dot-indicator"></span> Đang hoạt động</span>'
+                : `<span class="badge badge-danger"><span class="badge-dot-indicator"></span> Đã khóa (${u.lockDuration || 'Vi phạm'})</span>`}
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:16px;">
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Email:</span>
+            <strong style="font-size:13px; color:var(--secondary);">${u.email}</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Số điện thoại:</span>
+            <strong style="font-size:13px; color:var(--secondary);">${u.phone || 'Chưa cập nhật'}</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Ngày tham gia:</span>
+            <strong style="font-size:13px; color:var(--secondary);">${u.joinDate || 'N/A'}</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Tổng chi / Thu nhập:</span>
+            <strong style="font-size:13px; color:var(--primary);">${u.spentOrEarned || '0đ'}</strong>
+          </div>
+        </div>
+
+        ${u.status === 'locked' ? `
+          <div class="appeal-box appeal-box-lock" style="margin-top:12px;">
+            <strong>Lý do khóa tài khoản:</strong> ${u.lockReason || 'Không có lý do cụ thể'}<br>
+            <strong>Thời hạn áp dụng:</strong> ${u.lockDuration || 'Chưa xác định'}
+          </div>
+        ` : ''}
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-user-detail')">Đóng</button>
+        ${isAdmin ? '' : (u.status === 'active'
+          ? `<button class="btn btn-danger btn-sm" onclick="closeModal('modal-user-detail'); triggerLockUser('${u.id}')">Khóa tài khoản</button>`
+          : `<button class="btn btn-primary btn-sm" onclick="closeModal('modal-user-detail'); triggerUnlockUser('${u.id}')">Mở khóa tài khoản</button>`
+        )}
+      `;
+
+      openModal('modal-user-detail');
+    }
+
+    // Mở khóa tài khoản
+    function triggerUnlockUser(id) {
+      const state = getAppState();
+      const user = state.users.find(u => u.id === id);
+      if (!user) return;
+
+      if (confirm(`Bạn có chắc chắn muốn mở khóa quyền truy cập cho tài khoản ${user.name} (${user.id}) không?`)) {
+        user.status = 'active';
+        user.lockReason = '';
+        user.lockDuration = '';
+
+        saveAppState(state);
+        renderUsersTable();
+        showToast('Mở khóa thành công', `Tài khoản ${user.name} đã được khôi phục quyền hoạt động.`, 'success');
+      }
     }
 
     function triggerLockUser(id) {
       const state = getAppState();
       const user = state.users.find(u => u.id === id);
       if (!user) return;
+
+      // Không cho phép vô tình khóa tài khoản quản trị viên
+      if ((window.adminUtils && window.adminUtils.isAdminAccount(user)) || user.role === 'Admin') {
+        showToast('Không thể thao tác', 'Không thể khóa tài khoản Quản trị viên hệ thống!', 'error');
+        return;
+      }
 
       activeTargetUserId = id;
       document.getElementById('lock-target-name').textContent = `${user.name} (${user.role})`;
@@ -579,6 +690,14 @@
           showToast('Khóa tài khoản thành công', `Tài khoản ${user.name} đã bị khóa (${durationText}).`, 'warning');
         }
       });
+
+      // Lắng nghe cập nhật từ các trang khác
+      window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === 'SKILL_RENTAL_ADMIN_STATE_V1') {
+          renderUsersTable();
+        }
+      });
+      window.addEventListener('appStateUpdated', renderUsersTable);
     }
   </script>
 </body>

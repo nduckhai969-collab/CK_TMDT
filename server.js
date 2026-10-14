@@ -68,6 +68,66 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 
+// ============================================================================
+// PUBLIC SEED ENDPOINT — No auth required
+// Returns all admin-relevant data from database.json with field mapping.
+// Used by common.js syncStateWithServer() to seed localStorage.
+// ============================================================================
+app.get('/api/data/seed', (req, res) => {
+  try {
+    const fmt = (n) => Number(n) ? Number(n).toLocaleString('vi-VN') + 'đ' : (n || '0đ');
+    const escrowLabel = (s) => {
+      const map = {
+        escrow_held: 'Đã giữ ký quỹ',
+        completed: 'Đã giải ngân',
+        refunded: 'Đã hoàn tiền',
+        disputed: 'Đang tranh chấp',
+        force_released: 'Giải ngân bắt buộc',
+        pending: 'Chờ xử lý'
+      };
+      return map[s] || s || 'Chờ xử lý';
+    };
+
+    const rawOrders = db.getCollection('orders').map(o => ({
+      id: o.id,
+      customer: o.customerName || o.customer || '',
+      customerId: o.customerId || '',
+      provider: o.providerName || o.provider || '',
+      providerId: o.providerId || '',
+      service: o.serviceTitle || o.service || '',
+      price: o.priceFormatted || fmt(o.price),
+      priceRaw: Number(o.price) || 0,
+      platformFee: o.platformFee || Math.round((Number(o.price) || 0) * 0.05),
+      escrowDeposit: o.escrowDeposit || ((Number(o.price) || 0) + (o.platformFee || Math.round((Number(o.price) || 0) * 0.05))),
+      escrowStatus: escrowLabel(o.escrowStatus),
+      orderStatus: o.orderStatus || 'pending',
+      date: o.date || '',
+      deadline: o.deadline || '',
+      note: o.note || ''
+    }));
+
+    res.json({
+      success: true,
+      state: {
+        users: db.getCollection('users'),
+        pendingProviders: db.getCollection('pendingProviders'),
+        skillApprovals: db.getCollection('skillApprovals'),
+        services: db.getCollection('services'),
+        orders: rawOrders,
+        reviews: db.getCollection('reviews'),
+        complaints: db.getCollection('complaints'),
+        reports: db.getCollection('reports'),
+        payouts: db.getCollection('payouts'),
+        packages: db.getCollection('packages'),
+        packagePurchases: db.getCollection('packagePurchases'),
+        unlockRequests: db.getCollection('unlockRequests')
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Không thể đọc dữ liệu hệ thống.' });
+  }
+});
+
 // Test server API
 app.get('/api', (req, res) => {
   res.json({

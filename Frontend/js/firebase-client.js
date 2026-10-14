@@ -292,9 +292,10 @@
     },
 
     // H. ĐĂNG NHẬP BẰNG GOOGLE
-    async loginWithGoogle() {
+    async loginWithGoogle(preferredRole) {
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
         const cred = await fbAuth.signInWithPopup(provider);
         const token = await cred.user.getIdToken(true);
         const data = await callApi('/api/auth/login', 'POST', token);
@@ -315,6 +316,20 @@
           }
           await fbAuth.signOut();
           return data;
+        }
+
+        // Nếu người dùng chọn vai trò cụ thể khi đăng ký bằng Google (vd: Provider)
+        if (preferredRole && preferredRole !== data.user.role && (preferredRole === 'Provider' || preferredRole === 'Customer')) {
+          try {
+            const updateRes = await callApi('/api/auth/profile', 'PUT', token, {
+              name: data.user.name,
+              phone: data.user.phone,
+              role: preferredRole
+            });
+            if (updateRes.success && updateRes.user) {
+              data.user = updateRes.user;
+            }
+          } catch (_) {}
         }
 
         localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
@@ -345,7 +360,22 @@
       }
     },
 
-    // J. LẤY USER ĐANG ĐĂNG NHẬP
+    // J. CẬP NHẬT THÔNG TIN CÁ NHÂN
+    async updateProfile({ name, phone, address, avatar, role }) {
+      if (!name || !String(name).trim()) {
+        return { success: false, message: 'Vui lòng nhập họ và tên!' };
+      }
+      const user = fbAuth.currentUser;
+      const token = user ? await user.getIdToken() : null;
+      const res = await callApi('/api/auth/profile', 'PUT', token, { name, phone, address, avatar, role });
+      if (res.success && res.user) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(res.user));
+        window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: res.user } }));
+      }
+      return res;
+    },
+
+    // K. LẤY USER ĐANG ĐĂNG NHẬP
     getCurrentUser() {
       try {
         const raw = localStorage.getItem(SESSION_KEY);
@@ -926,6 +956,15 @@
             <i class="fa-solid fa-user-plus"></i> Hoàn Tất Đăng Ký
           </button>
 
+          <div style="text-align:center; margin:16px 0; font-size:12px; color:#94A3B8; position:relative;">
+            <hr style="border:none; border-top:1px solid #E2E8F0; position:absolute; top:50%; width:100%; margin:0; z-index:1;">
+            <span style="background:#FFF; padding:0 12px; position:relative; z-index:2;">HOẶC ĐĂNG KÝ NHANH</span>
+          </div>
+
+          <button type="button" class="sr-btn-outline" onclick="handleGoogleLogin(event, true)" style="margin-bottom:12px;">
+            <i class="fa-brands fa-google" style="color:#DB4437; font-size:16px;"></i> Đăng Ký Nhanh Bằng Google
+          </button>
+
           <div style="text-align:center; margin-top:14px; font-size:13px; color:#64748B;">
             Đã có tài khoản? <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color:#16A34A; font-weight:700; text-decoration:none;">Đăng nhập ngay</a>
           </div>
@@ -1288,11 +1327,15 @@
     }
   };
 
-  // Đăng nhập bằng Google
-  window.handleGoogleLogin = async function (e) {
+  // Đăng nhập / Đăng ký bằng Google
+  window.handleGoogleLogin = async function (e, isRegister = false) {
     if (e) e.preventDefault();
     try {
-      const data = await SkillAuth.loginWithGoogle();
+      const selectedRole = isRegister
+        ? (document.querySelector('input[name="regRole"]:checked')?.value || 'Customer')
+        : undefined;
+
+      const data = await SkillAuth.loginWithGoogle(selectedRole);
       if (data.success && data.user) {
         showToastMsg('Đăng Nhập Thành Công!', `Chào mừng ${data.user.name}.`, 'success');
         closeAuthModal();

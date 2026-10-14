@@ -2,8 +2,11 @@ const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
 const { requireCustomer } = require('./customerAuth');
+
 const vnpay = require('../services/vnpayService');
 const { buildCartSpecs, createOrders, startGatewayCheckout, expireUnpaidOrders } = require('../services/checkoutService');
+const { slotsForDate } = require('./providerAvailability');
+const { notifyProvider } = require('../services/notificationService');
 
 function getBookingList(customerId) {
   const bookingLists = db.getCollection('bookingLists') || [];

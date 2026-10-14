@@ -53,18 +53,32 @@ function authenticate({ allowNoProfile = false, allowUnverified = false } = {}) 
     const users = db.getCollection('users');
     let profile = users.find(u => u.uid === decoded.uid) || null;
 
-    // Liên kết tài khoản cũ (chưa có uid) theo email đã được xác nhận
+    // Liên kết tài khoản cũ theo email đã được xác nhận (đặc biệt khi đăng nhập bằng Google)
     if (!profile && decoded.email && decoded.email_verified) {
       const email = decoded.email.toLowerCase();
       const byEmail = users.find(u => String(u.email || '').toLowerCase() === email);
-      if (byEmail && !byEmail.uid) {
-        byEmail.uid = decoded.uid;
+      if (byEmail) {
+        if (!byEmail.uid || byEmail.uid !== decoded.uid) {
+          byEmail.uid = decoded.uid;
+        }
+        if (decoded.picture && (!byEmail.avatar || byEmail.avatar.includes('unsplash'))) {
+          byEmail.avatar = decoded.picture;
+        }
+        if (decoded.name && (!byEmail.name || byEmail.name.includes('@'))) {
+          byEmail.name = decoded.name;
+        }
         db.saveCollection('users', users);
         profile = byEmail;
       }
     }
 
-    // Tự động tạo hồ sơ cho tài khoản Firebase đã xác thực email nhưng chưa có trong Firestore
+    // Nếu profile đã có, tự động đồng bộ avatar từ Google nếu đang dùng placeholder
+    if (profile && decoded.picture && (!profile.avatar || profile.avatar.includes('unsplash'))) {
+      profile.avatar = decoded.picture;
+      db.saveCollection('users', users);
+    }
+
+    // Tự động tạo hồ sơ cho tài khoản Firebase đã xác thực email nhưng chưa có trong Firestore (vd: Google Sign-In)
     if (!profile && !allowNoProfile && decoded.email && decoded.email_verified) {
       const email = decoded.email.toLowerCase();
       const now = new Date();
@@ -88,6 +102,10 @@ function authenticate({ allowNoProfile = false, allowUnverified = false } = {}) 
       users.push(newProf);
       db.saveCollection('users', users);
       profile = newProf;
+
+      try {
+        await auth.setCustomUserClaims(decoded.uid, { role: safeRole });
+      } catch (_) {}
     }
 
     if (!profile) {

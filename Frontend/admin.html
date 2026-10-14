@@ -519,7 +519,18 @@
       }
     }
 
+    function updateDashboardFromLocalState() {
+      if (typeof getAppState === 'function') {
+        const state = getAppState();
+        if (state && Array.isArray(state.users)) {
+          const el = document.getElementById('kpi-total-users');
+          if (el) el.textContent = state.users.length.toLocaleString('vi-VN');
+        }
+      }
+    }
+
     async function loadAdminDashboard() {
+      updateDashboardFromLocalState();
       try {
         if (window.adminApi) {
           const res = await window.adminApi.getDashboard();
@@ -548,6 +559,14 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       loadAdminDashboard();
+
+      window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === 'SKILL_RENTAL_ADMIN_STATE_V1') {
+          updateDashboardFromLocalState();
+        }
+      });
+      window.addEventListener('appStateUpdated', updateDashboardFromLocalState);
+      window.addEventListener('skillrental:users-synced', updateDashboardFromLocalState);
     });
   </script>
 </body>

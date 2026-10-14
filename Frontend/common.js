@@ -15,7 +15,10 @@ const DEFAULT_STATE = {
     { id: 'USR004', name: 'Hoàng Văn Nam', email: 'nam.hoang@example.com', phone: '0933 221 100', role: 'Customer', joinDate: '20/05/2024', spentOrEarned: '5.200.000đ', status: 'locked', lockReason: 'Hủy đơn hàng liên tục 5 lần không lý do', lockDuration: '7 ngày' },
     { id: 'USR005', name: 'Phạm Hữu Cường', email: 'cuong.pham@example.com', phone: '0977 445 566', role: 'Provider', joinDate: '18/06/2024', spentOrEarned: '74.000.000đ', status: 'active', lockReason: '' },
     { id: 'USR006', name: 'Vũ Thị Minh', email: 'minh.vu@example.com', phone: '0944 889 900', role: 'Customer', joinDate: '02/08/2024', spentOrEarned: '18.400.000đ', status: 'active', lockReason: '' },
-    { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', status: 'locked', lockReason: 'Gian lận đánh giá và sử dụng tài khoản ảo', lockDuration: 'Vĩnh viễn' }
+    { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', status: 'locked', lockReason: 'Gian lận đánh giá và sử dụng tài khoản ảo', lockDuration: 'Vĩnh viễn' },
+    { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', joinDate: '10/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
+    { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', joinDate: '15/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
+    { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', status: 'active', lockReason: '' }
   ],
 
   // UC-54, UC-55: Provider Approvals
@@ -136,10 +139,50 @@ const DEFAULT_STATE = {
       defendant: 'Đặng Quốc Huy (Provider)',
       reason: 'Cài đặt phần mềm độc hại làm treo hệ điều hành và không hoàn thành cam kết',
       priority: 'urgent',
-      status: 'pending',
+      status: 'resolved',
       amount: '600.000đ',
+      verdict: 'Hoàn tiền 100% cho Khách hàng',
+      resolvedAt: '25/04/2025 15:40',
       userClaim: 'Provider cài tool crack làm máy bị nhiễm mã độc tống tiền ransomware. Đơn hàng hoàn toàn không đạt yêu cầu.',
       providerClaim: 'Khách hàng yêu cầu bẻ khóa game lậu, tôi đã cảnh báo trước nhưng khách vẫn đồng ý tiến hành.'
+    },
+    {
+      id: 'KN-2025-03',
+      orderId: 'DH001233',
+      complainant: 'Lê Minh Hoàng (Khách)',
+      defendant: 'Trần Thị Lan (Provider)',
+      reason: 'Chậm deadline bàn giao bản thiết kế bộ nhận diện thương hiệu hơn 5 ngày',
+      priority: 'normal',
+      status: 'pending',
+      amount: '2.800.000đ',
+      userClaim: 'Theo thỏa thuận ban đầu hạn chót bàn giao logo là ngày 02/05, đến nay Provider không phản hồi tin nhắn và trễ hạn làm ảnh hưởng chiến dịch ra mắt thương hiệu.',
+      providerClaim: 'Tôi có nhắn tin xin gia hạn 2 ngày do mất điện khu vực làm hỏng ổ cứng đang render file vector. Tôi đã khôi phục xong và sẵn sàng bàn giao file gốc kèm 3 mẫu thiết kế bù.'
+    },
+    {
+      id: 'KN-2025-04',
+      orderId: 'DH001234',
+      complainant: 'Trần Thị Mai (Khách)',
+      defendant: 'Nguyễn Văn An (Provider)',
+      reason: 'Giao diện website không responsive đúng chuẩn trên màn hình điện thoại di động',
+      priority: 'high',
+      status: 'pending',
+      amount: '4.500.000đ',
+      userClaim: 'Website chạy trên máy tính rất tốt nhưng khi mở trên iPhone bị vỡ khung menu và lỗi hiển thị giỏ hàng. Yêu cầu sửa gấp hoặc hoàn trả một phần chi phí.',
+      providerClaim: 'Tôi đã kiểm tra, menu bị tràn do khách hàng tự ý chèn ảnh banner kích thước quá lớn không đúng tài liệu hướng dẫn. Tôi đồng ý hỗ trợ sửa CSS lại miễn phí cho khách.'
+    },
+    {
+      id: 'KN-2025-05',
+      orderId: 'DH001231',
+      complainant: 'Phạm Thị Lan (Khách)',
+      defendant: 'Phạm Hữu Cường (Provider)',
+      reason: 'Hủy lịch học Speaking không báo trước và không sắp xếp buổi học bù',
+      priority: 'normal',
+      status: 'resolved',
+      amount: '700.000đ',
+      verdict: 'Chia bồi thường 50 / 50 giữa hai bên',
+      resolvedAt: '26/04/2025 18:20',
+      userClaim: 'Thầy Cường hủy 2 buổi học liên tiếp sát giờ khiến tôi không kịp chuẩn bị cho kỳ thi IELTS tuần tới.',
+      providerClaim: 'Tôi bị sốt xuất huyết đột xuất phải nhập viện cấp cứu, đã nhờ trợ giảng gửi tài liệu tự học và sẵn sàng dạy bù 3 buổi sau khi xuất viện.'
     }
   ],
 
@@ -261,13 +304,32 @@ function getAppState() {
       saveAppState(DEFAULT_STATE);
       return JSON.parse(JSON.stringify(DEFAULT_STATE));
     }
-    // Ensure all required collections exist
+    // Ensure all required collections exist and smart-merge missing default items (like newly added complaints)
     const collections = ['users', 'orders', 'packages', 'services', 'reviews', 'complaints', 'reports', 'payouts', 'pendingProviders', 'skillApprovals', 'packagePurchases'];
+    let stateChanged = false;
+
     collections.forEach(key => {
       if (!Array.isArray(state[key])) {
         state[key] = Array.isArray(DEFAULT_STATE[key]) ? JSON.parse(JSON.stringify(DEFAULT_STATE[key])) : [];
+        stateChanged = true;
+      } else if (Array.isArray(DEFAULT_STATE[key])) {
+        // Tự động bổ sung các bản ghi mặc định mới nếu trong localStorage chưa có mã ID đó
+        const existingIds = new Set(state[key].map(item => item && item.id).filter(Boolean));
+        DEFAULT_STATE[key].forEach(defaultItem => {
+          if (defaultItem && defaultItem.id && !existingIds.has(defaultItem.id)) {
+            state[key].push(JSON.parse(JSON.stringify(defaultItem)));
+            stateChanged = true;
+          }
+        });
       }
     });
+
+    if (stateChanged) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+
     return state;
   } catch (err) {
     console.error('Error reading localStorage state:', err);
@@ -293,6 +355,99 @@ function saveAppState(state) {
     console.error('Error saving state to localStorage:', err);
   }
 }
+
+/**
+ * Đồng bộ người dùng (Đăng ký mới hoặc Đăng nhập Google) vào SKILL_RENTAL_ADMIN_STATE_V1
+ * Đảm bảo:
+ * - ID người dùng ổn định (dạng USRxxx, không đổi khi đăng nhập lại)
+ * - Không trùng lặp tài khoản
+ * - Bảo toàn vai trò (role), số dư, trạng thái nếu tài khoản đã tồn tại
+ * - Không cho phép tự nâng quyền Admin
+ * - Phát sự kiện appStateUpdated & skillrental:users-synced để cập nhật Admin ngay lập tức
+ */
+function syncUserToAdminState(userData) {
+  if (!userData || !userData.email) return null;
+
+  const state = getAppState();
+  const cleanEmail = String(userData.email || '').trim().toLowerCase();
+  const uid = userData.uid ? String(userData.uid) : null;
+
+  // Tìm tài khoản đã tồn tại theo email hoặc theo UID
+  const existingIndex = state.users.findIndex(u => {
+    const uEmail = String(u.email || '').trim().toLowerCase();
+    const uUid = u.uid ? String(u.uid) : null;
+    return (cleanEmail && uEmail === cleanEmail) || (uid && uUid === uid);
+  });
+
+  let targetUser;
+
+  if (existingIndex !== -1) {
+    // Tài khoản ĐÃ TỒN TẠI: Liên kết & cập nhật an toàn, không tạo mới, không ghi đè vai trò
+    const existing = state.users[existingIndex];
+
+    if (uid && (!existing.uid || existing.uid !== uid)) {
+      existing.uid = uid;
+    }
+    if (userData.authProvider && !existing.authProvider) {
+      existing.authProvider = userData.authProvider;
+    }
+    if (userData.avatar && (!existing.avatar || existing.avatar.includes('unsplash'))) {
+      existing.avatar = userData.avatar;
+    }
+    if (userData.name && (!existing.name || existing.name.includes('@'))) {
+      existing.name = String(userData.name).trim();
+    }
+    if (userData.phone && !existing.phone) {
+      existing.phone = String(userData.phone).trim();
+    }
+
+    targetUser = existing;
+  } else {
+    // Tài khoản MỚI: Sinh ID USRxxx tiếp theo an toàn
+    const maxNum = state.users.reduce((m, u) => {
+      const match = /^USR(\d+)$/.exec(u.id || '');
+      return match ? Math.max(m, parseInt(match[1], 10)) : m;
+    }, 0);
+    const assignedId = userData.id || `USR${String(maxNum + 1).padStart(3, '0')}`;
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+    // Bảo mật: Người dùng mới chỉ được là Customer hoặc Provider, tuyệt đối không được tự chọn Admin
+    const requestedRole = userData.role || 'Customer';
+    const safeRole = requestedRole === 'Provider' ? 'Provider' : 'Customer';
+
+    targetUser = {
+      id: assignedId,
+      uid: uid || '',
+      name: String(userData.name || '').trim() || cleanEmail.split('@')[0],
+      email: userData.email.trim(),
+      phone: userData.phone ? String(userData.phone).trim() : '',
+      role: safeRole,
+      joinDate: userData.joinDate || dateStr,
+      spentOrEarned: userData.spentOrEarned || '0đ',
+      balance: typeof userData.balance === 'number' ? userData.balance : (safeRole === 'Customer' ? 5000000 : 0),
+      status: userData.status || 'active',
+      lockReason: userData.lockReason || '',
+      lockDuration: userData.lockDuration || '',
+      avatar: userData.avatar || '',
+      authProvider: userData.authProvider || 'email'
+    };
+
+    state.users.push(targetUser);
+  }
+
+  saveAppState(state);
+  window.dispatchEvent(new CustomEvent('skillrental:users-synced', { detail: { user: targetUser, state } }));
+  return targetUser;
+}
+
+window.syncUserToAdminState = syncUserToAdminState;
+if (window.adminUtils) {
+  window.adminUtils.syncUserToAdminState = syncUserToAdminState;
+}
+window.DEFAULT_STATE = DEFAULT_STATE;
+window.STORAGE_KEY = STORAGE_KEY;
 
 // Auto-sync state with backend server ONLY IF localStorage has no state yet!
 // Uses the public /api/data/seed endpoint (no auth required) which reads

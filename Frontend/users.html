@@ -490,8 +490,12 @@
       const role = document.getElementById('user-role-filter')?.value || 'all';
       const status = document.getElementById('user-status-filter')?.value || 'all';
 
-      const filtered = state.users.filter(u => {
-        const matchQ = u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.phone.includes(q) || u.id.toLowerCase().includes(q);
+      const filtered = (state.users || []).filter(u => {
+        const uName = String(u.name || '').toLowerCase();
+        const uEmail = String(u.email || '').toLowerCase();
+        const uPhone = String(u.phone || '').toLowerCase();
+        const uId = String(u.id || '').toLowerCase();
+        const matchQ = !q || uName.includes(q) || uEmail.includes(q) || uPhone.includes(q) || uId.includes(q);
         const matchR = (role === 'all') || (u.role === role);
         const matchS = (status === 'all') || (u.status === status);
         return matchQ && matchR && matchS;
@@ -499,7 +503,7 @@
 
       const tbody = document.getElementById('users-table-tbody');
       const countEl = document.getElementById('users-count-info');
-      if (countEl) countEl.textContent = `Hiển thị ${filtered.length} / ${state.users.length} người dùng`;
+      if (countEl) countEl.textContent = `Hiển thị ${filtered.length} / ${(state.users || []).length} người dùng`;
 
       if (!tbody) return;
 
@@ -510,23 +514,24 @@
 
       tbody.innerHTML = filtered.map(u => {
         const isAdmin = (window.adminUtils && window.adminUtils.isAdminAccount(u)) || u.role === 'Admin';
+        const initials = String(u.name || u.email || 'U').split(' ').filter(Boolean).map(n => n[0]).slice(-2).join('').toUpperCase() || 'U';
         return `
         <tr>
           <td>
             <div class="user-cell">
               <div class="avatar-sm ${u.role === 'Provider' ? 'green' : 'blue'}">
-                ${u.name.split(' ').map(n=>n[0]).slice(-2).join('')}
+                ${initials}
               </div>
               <div class="user-cell-meta">
-                <strong>${u.name}</strong>
-                <span>${u.email}</span>
+                <strong>${u.name || 'Người dùng'}</strong>
+                <span>${u.email || ''}</span>
               </div>
             </div>
           </td>
-          <td><span class="badge ${u.role === 'Provider' ? 'badge-success' : 'badge-info'}">${u.role}</span></td>
-          <td>${u.phone}</td>
-          <td>${u.joinDate}</td>
-          <td><strong>${u.spentOrEarned}</strong></td>
+          <td><span class="badge ${u.role === 'Provider' ? 'badge-success' : 'badge-info'}">${u.role || 'Customer'}</span></td>
+          <td>${u.phone || 'Chưa cập nhật'}</td>
+          <td>${u.joinDate || 'N/A'}</td>
+          <td><strong>${u.spentOrEarned || '0đ'}</strong></td>
           <td>
             ${u.status === 'active' 
               ? '<span class="badge badge-success"><span class="badge-dot-indicator"></span> Hoạt động</span>' 
@@ -698,6 +703,7 @@
         }
       });
       window.addEventListener('appStateUpdated', renderUsersTable);
+      window.addEventListener('skillrental:users-synced', renderUsersTable);
     }
   </script>
 </body>

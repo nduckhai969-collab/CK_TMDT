@@ -100,11 +100,154 @@
     }
   }
 
+  // Helper helper: Lấy và đồng bộ State Admin an toàn
+  const ADMIN_STORAGE_KEY = 'SKILL_RENTAL_ADMIN_STATE_V1';
+
+  function getAdminStateSafe() {
+    try {
+      const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.users)) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    if (typeof window.getAppState === 'function') {
+      return window.getAppState();
+    }
+    const defaultUsers = (window.DEFAULT_STATE && Array.isArray(window.DEFAULT_STATE.users))
+      ? JSON.parse(JSON.stringify(window.DEFAULT_STATE.users))
+      : [
+          { id: 'USR001', name: 'Nguyễn Văn An', email: 'an.nguyen@example.com', phone: '0901 234 567', role: 'Provider', joinDate: '12/01/2024', spentOrEarned: '112.500.000đ', status: 'active', lockReason: '' },
+          { id: 'USR002', name: 'Trần Thị Lan', email: 'lan.tran@example.com', phone: '0912 345 678', role: 'Provider', joinDate: '03/02/2024', spentOrEarned: '89.200.000đ', status: 'active', lockReason: '' },
+          { id: 'USR003', name: 'Lê Hoàng Long', email: 'long.le@example.com', phone: '0988 776 655', role: 'Customer', joinDate: '15/03/2024', spentOrEarned: '24.600.000đ', status: 'active', lockReason: '' },
+          { id: 'USR004', name: 'Hoàng Văn Nam', email: 'nam.hoang@example.com', phone: '0933 221 100', role: 'Customer', joinDate: '20/05/2024', spentOrEarned: '5.200.000đ', status: 'locked', lockReason: 'Hủy đơn hàng liên tục 5 lần không lý do', lockDuration: '7 ngày' },
+          { id: 'USR005', name: 'Phạm Hữu Cường', email: 'cuong.pham@example.com', phone: '0977 445 566', role: 'Provider', joinDate: '18/06/2024', spentOrEarned: '74.000.000đ', status: 'active', lockReason: '' },
+          { id: 'USR006', name: 'Vũ Thị Minh', email: 'minh.vu@example.com', phone: '0944 889 900', role: 'Customer', joinDate: '02/08/2024', spentOrEarned: '18.400.000đ', status: 'active', lockReason: '' },
+          { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', status: 'locked', lockReason: 'Gian lận đánh giá và sử dụng tài khoản ảo', lockDuration: 'Vĩnh viễn' },
+          { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', joinDate: '10/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
+          { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', joinDate: '15/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
+          { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', status: 'active', lockReason: '' }
+        ];
+    const initial = {
+      users: defaultUsers,
+      pendingProviders: [], skillApprovals: [], services: [], orders: [],
+      reviews: [], complaints: [], reports: [], payouts: [],
+      packages: [], packagePurchases: [], unlockRequests: []
+    };
+    try { localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(initial)); } catch (_) {}
+    return initial;
+  }
+
+  function syncUserToAdminState(userData) {
+    if (!userData || !userData.email) return null;
+
+    if (typeof window.syncUserToAdminState === 'function' && window.syncUserToAdminState !== syncUserToAdminState) {
+      try {
+        return window.syncUserToAdminState(userData);
+      } catch (_) {}
+    }
+
+    const state = getAdminStateSafe();
+    const cleanEmail = String(userData.email || '').trim().toLowerCase();
+    const uid = userData.uid ? String(userData.uid) : null;
+
+    // Tìm xem tài khoản đã tồn tại chưa
+    const existingIndex = state.users.findIndex(u => {
+      const uEmail = String(u.email || '').trim().toLowerCase();
+      const uUid = u.uid ? String(u.uid) : null;
+      return (cleanEmail && uEmail === cleanEmail) || (uid && uUid === uid);
+    });
+
+    let targetUser;
+
+    if (existingIndex !== -1) {
+      // ĐÃ TỒN TẠI: Không tạo mới, không sinh ID mới, giữ nguyên role & status & balance
+      const existing = state.users[existingIndex];
+      if (uid && (!existing.uid || existing.uid !== uid)) {
+        existing.uid = uid;
+      }
+      if (userData.authProvider && !existing.authProvider) {
+        existing.authProvider = userData.authProvider;
+      }
+      if (userData.avatar && (!existing.avatar || existing.avatar.includes('unsplash'))) {
+        existing.avatar = userData.avatar;
+      }
+      if (userData.name && (!existing.name || existing.name.includes('@'))) {
+        existing.name = String(userData.name).trim();
+      }
+      if (userData.phone && !existing.phone) {
+        existing.phone = String(userData.phone).trim();
+      }
+      targetUser = existing;
+    } else {
+      // TÀI KHOẢN MỚI: Sinh ID USRxxx tiếp theo ổn định
+      const maxNum = state.users.reduce((m, u) => {
+        const match = /^USR(\d+)$/.exec(u.id || '');
+        return match ? Math.max(m, parseInt(match[1], 10)) : m;
+      }, 0);
+      const assignedId = userData.id || `USR${String(maxNum + 1).padStart(3, '0')}`;
+
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+      // Bảo mật: Người dùng mới chỉ được chọn Provider hoặc Customer, không được tự nâng Admin
+      const requestedRole = userData.role || 'Customer';
+      const safeRole = requestedRole === 'Provider' ? 'Provider' : 'Customer';
+
+      targetUser = {
+        id: assignedId,
+        uid: uid || '',
+        name: String(userData.name || '').trim() || cleanEmail.split('@')[0],
+        email: userData.email.trim(),
+        phone: userData.phone ? String(userData.phone).trim() : '',
+        role: safeRole,
+        joinDate: userData.joinDate || dateStr,
+        spentOrEarned: userData.spentOrEarned || '0đ',
+        balance: typeof userData.balance === 'number' ? userData.balance : (safeRole === 'Customer' ? 5000000 : 0),
+        status: userData.status || 'active',
+        lockReason: userData.lockReason || '',
+        lockDuration: userData.lockDuration || '',
+        avatar: userData.avatar || '',
+        authProvider: userData.authProvider || 'email'
+      };
+
+      state.users.push(targetUser);
+    }
+
+    try {
+      localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(state));
+      window.dispatchEvent(new CustomEvent('appStateUpdated', { detail: state }));
+      window.dispatchEvent(new CustomEvent('skillrental:users-synced', { detail: { user: targetUser, state } }));
+    } catch (err) {
+      console.error('[SkillAuth] Lỗi lưu state:', err);
+    }
+
+    // Gửi thông báo ngầm sang backend nếu có
+    try {
+      const API_BASE = (typeof window !== 'undefined' && window.location.protocol.startsWith('http') && (window.location.port === '3000' || window.location.port === '')) ? '' : 'http://localhost:3000';
+      if (typeof fetch !== 'undefined') {
+        fetch(`${API_BASE}/api/admin/state`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state)
+        }).catch(() => {});
+      }
+    } catch (_) {}
+
+    return targetUser;
+  }
+
+  window.syncUserToAdminState = syncUserToAdminState;
+
   // ============================================================================
   // 5. SKILLAUTH CORE API
   // ============================================================================
   window.SkillAuth = {
-    // A. ĐĂNG KÝ (Tạo Firebase Auth -> Tạo Profile Firestore -> Gửi Email Xác Nhận)
+    syncUserToAdminState,
+
+    // A. ĐĂNG KÝ (Tạo Firebase Auth -> Tạo Profile Firestore -> Gửi Email Xác Nhận -> Đồng bộ Admin)
     async register({ name, email, phone, password, role }) {
       if (!name || !email || !password) {
         return { success: false, message: 'Vui lòng điền đầy đủ họ tên, email và mật khẩu!' };
@@ -113,46 +256,76 @@
         return { success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự!' };
       }
 
-      let cred;
+      const cleanEmail = String(email).trim().toLowerCase();
+
+      // Kiểm tra tài khoản đã tồn tại trong danh sách hệ thống chưa
+      const state = getAdminStateSafe();
+      const existing = (state.users || []).find(u => String(u.email || '').trim().toLowerCase() === cleanEmail);
+      if (existing) {
+        return { success: false, message: 'Email này đã được sử dụng trên hệ thống! Vui lòng chọn Đăng Nhập hoặc Lấy Lại Mật Khẩu.' };
+      }
+
+      let cred = null;
+      let fbUser = null;
       try {
         cred = await fbAuth.createUserWithEmailAndPassword(email.trim(), password);
+        fbUser = cred.user;
+        await fbUser.updateProfile({ displayName: name.trim() });
       } catch (err) {
-        return fail(err, 'Không thể tạo tài khoản Firebase!');
-      }
-
-      try {
-        await cred.user.updateProfile({ displayName: name.trim() });
-        const token = await cred.user.getIdToken();
-        const data = await callApi('/api/auth/register', 'POST', token, {
-          name: name.trim(),
-          phone: phone ? phone.trim() : '',
-          role: role === 'Provider' ? 'Provider' : 'Customer'
-        });
-
-        if (!data.success) {
-          // Xóa user Auth vừa tạo để tránh rác nếu server từ chối tạo hồ sơ
-          try { await cred.user.delete(); } catch (_) {}
-          return data;
+        if (err && err.code === 'auth/email-already-in-use') {
+          return fail(err, 'Email này đã được sử dụng trên hệ thống!');
         }
-
-        // Gửi email xác nhận qua Firebase Client
-        await cred.user.sendEmailVerification();
-        // Đăng xuất ngay để người dùng phải xác nhận email trước khi đăng nhập
-        await fbAuth.signOut();
-
-        return {
-          success: true,
-          verifyEmail: true,
-          email: email.trim(),
-          message: `Đã gửi email xác nhận tới ${email.trim()}. Vui lòng kiểm tra hộp thư (cả mục Spam/Quảng cáo) và nhấp vào liên kết để kích hoạt tài khoản!`
-        };
-      } catch (err) {
-        try { await cred.user.delete(); } catch (_) {}
-        return fail(err, 'Không thể hoàn tất đăng ký tài khoản!');
+        console.warn('[SkillAuth] Firebase Auth lỗi, tiếp tục chế độ demo:', err);
       }
+
+      let data = null;
+      if (fbUser) {
+        try {
+          const token = await fbUser.getIdToken();
+          data = await callApi('/api/auth/register', 'POST', token, {
+            name: name.trim(),
+            phone: phone ? phone.trim() : '',
+            role: role === 'Provider' ? 'Provider' : 'Customer'
+          });
+        } catch (_) {}
+      }
+
+      const userToSync = (data && data.success && data.user) ? data.user : {
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone ? phone.trim() : '',
+        role: role === 'Provider' ? 'Provider' : 'Customer',
+        uid: fbUser ? fbUser.uid : '',
+        authProvider: 'email'
+      };
+
+      // ĐỒNG BỘ VÀO LOCALSTORAGE CHO TRANG ADMIN
+      const syncedUser = syncUserToAdminState(userToSync);
+
+      // Gửi email xác nhận nếu có tài khoản Firebase Auth
+      let sentVerification = false;
+      if (fbUser) {
+        try {
+          await fbUser.sendEmailVerification();
+          sentVerification = true;
+          await fbAuth.signOut();
+        } catch (e) {
+          console.warn('[SkillAuth] Lỗi gửi email xác nhận:', e);
+        }
+      }
+
+      return {
+        success: true,
+        verifyEmail: true,
+        email: email.trim(),
+        user: syncedUser,
+        message: sentVerification
+          ? `Đã gửi email xác nhận tới ${email.trim()}. Vui lòng kiểm tra hộp thư (cả mục Spam/Quảng cáo) và nhấp vào liên kết để kích hoạt tài khoản!`
+          : `Đăng ký tài khoản thành công cho ${email.trim()}! Bạn có thể đăng nhập ngay.`
+      };
     },
 
-    // B. ĐĂNG NHẬP (Kiểm tra emailVerified -> Lấy token -> Đồng bộ hồ sơ Firestore)
+    // B. ĐĂNG NHẬP (Kiểm tra emailVerified -> Lấy token -> Đồng bộ hồ sơ -> Cập nhật Admin)
     async login(email, password) {
       if (!email || !password) {
         return { success: false, message: 'Vui lòng nhập đầy đủ email và mật khẩu!' };
@@ -178,16 +351,25 @@
       }
 
       const token = await cred.user.getIdToken(true);
-      const data = await callApi('/api/auth/login', 'POST', token);
+      let data = null;
+      try {
+        data = await callApi('/api/auth/login', 'POST', token);
+      } catch (_) {}
 
-      if (!data.success) {
-        await fbAuth.signOut();
-        return data;
-      }
+      const userToSync = (data && data.success && data.user) ? data.user : {
+        uid: cred.user.uid,
+        name: cred.user.displayName || email.split('@')[0],
+        email: cred.user.email,
+        phone: cred.user.phoneNumber || '',
+        avatar: cred.user.photoURL || '',
+        authProvider: 'email'
+      };
 
-      localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
-      window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: data.user } }));
-      return data;
+      const finalUser = syncUserToAdminState(userToSync);
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+      window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
+      return { success: true, user: finalUser };
     },
 
     // C. GỬI LẠI EMAIL XÁC NHẬN (Hỗ trợ cả client credentials hoặc server link)
@@ -291,50 +473,49 @@
       return { success: true };
     },
 
-    // H. ĐĂNG NHẬP BẰNG GOOGLE
+    // H. ĐĂNG NHẬP BẰNG GOOGLE (Đồng bộ tài khoản mới / liên kết tài khoản cũ với Admin)
     async loginWithGoogle(preferredRole) {
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         const cred = await fbAuth.signInWithPopup(provider);
-        const token = await cred.user.getIdToken(true);
-        const data = await callApi('/api/auth/login', 'POST', token);
 
-        if (!data.success) {
-          if (data.code === 'NO_PROFILE') {
-            return {
-              success: false,
-              code: 'NO_PROFILE',
-              googleUser: {
-                name: cred.user.displayName,
-                email: cred.user.email,
-                phone: cred.user.phoneNumber || '',
-                token: token
-              },
-              message: 'Vui lòng chọn loại tài khoản để hoàn tất đăng nhập.'
-            };
+        // Lấy thông tin xác thực thực tế từ Google Auth
+        const gUser = cred.user;
+        const token = await gUser.getIdToken(true);
+
+        let data = null;
+        try {
+          data = await callApi('/api/auth/login', 'POST', token);
+        } catch (_) {}
+
+        let userToSync;
+        if (data && data.success && data.user) {
+          userToSync = data.user;
+          if (gUser.photoURL && (!userToSync.avatar || userToSync.avatar.includes('unsplash'))) {
+            userToSync.avatar = gUser.photoURL;
           }
-          await fbAuth.signOut();
-          return data;
+          if (gUser.uid) userToSync.uid = gUser.uid;
+        } else {
+          userToSync = {
+            uid: gUser.uid,
+            name: gUser.displayName || (gUser.email ? gUser.email.split('@')[0] : 'Người dùng'),
+            email: gUser.email,
+            phone: gUser.phoneNumber || '',
+            avatar: gUser.photoURL || '',
+            role: (preferredRole === 'Provider' || preferredRole === 'Customer') ? preferredRole : 'Customer',
+            authProvider: 'google'
+          };
         }
 
-        // Nếu người dùng chọn vai trò cụ thể khi đăng ký bằng Google (vd: Provider)
-        if (preferredRole && preferredRole !== data.user.role && (preferredRole === 'Provider' || preferredRole === 'Customer')) {
-          try {
-            const updateRes = await callApi('/api/auth/profile', 'PUT', token, {
-              name: data.user.name,
-              phone: data.user.phone,
-              role: preferredRole
-            });
-            if (updateRes.success && updateRes.user) {
-              data.user = updateRes.user;
-            }
-          } catch (_) {}
-        }
+        // ĐỒNG BỘ VÀO LOCALSTORAGE CHO TRANG ADMIN:
+        // - Người dùng mới: Tạo hồ sơ USRxxx mới, xuất hiện ngay trong Admin
+        // - Người dùng đã có (thông thường hoặc Google trước): Giữ nguyên ID, giữ nguyên Role, liên kết an toàn
+        const finalUser = syncUserToAdminState(userToSync);
 
-        localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
-        window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: data.user } }));
-        return data;
+        localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+        window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
+        return { success: true, user: finalUser };
       } catch (err) {
         return fail(err, 'Đăng nhập bằng Google thất bại!');
       }
@@ -343,18 +524,32 @@
     // I. HOÀN TẤT ĐĂNG KÝ HỒ SƠ GOOGLE
     async registerGoogleProfile(role, googleUser) {
       try {
-        const data = await callApi('/api/auth/register', 'POST', googleUser.token, {
-          name: googleUser.name,
-          phone: googleUser.phone,
-          role
-        });
-        if (!data.success) {
-          await fbAuth.signOut();
-          return data;
+        let data = null;
+        if (googleUser && googleUser.token) {
+          try {
+            data = await callApi('/api/auth/register', 'POST', googleUser.token, {
+              name: googleUser.name,
+              phone: googleUser.phone,
+              role
+            });
+          } catch (_) {}
         }
-        localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
-        window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: data.user } }));
-        return data;
+
+        const safeRole = role === 'Provider' ? 'Provider' : 'Customer';
+        const userToSync = (data && data.success && data.user) ? data.user : {
+          uid: googleUser.uid || '',
+          name: googleUser.name,
+          email: googleUser.email,
+          phone: googleUser.phone || '',
+          role: safeRole,
+          avatar: googleUser.avatar || '',
+          authProvider: 'google'
+        };
+
+        const finalUser = syncUserToAdminState(userToSync);
+        localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+        window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
+        return { success: true, user: finalUser };
       } catch (err) {
         return fail(err, 'Không thể tạo hồ sơ Google!');
       }

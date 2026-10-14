@@ -11,11 +11,31 @@
   <script src="js/firebase-client.js"></script>
   <style>
     body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #0f172a; }
-    .wallet-container { max-width: 600px; margin: 50px auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
+    .wallet-container { max-width: 760px; margin: 50px auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
     .wallet-icon { font-size: 48px; color: #16A34A; margin-bottom: 20px; }
     .balance { font-size: 36px; font-weight: 800; color: #0f172a; margin-bottom: 30px; }
     input[type=number] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
     .btn-vnpay { background: #005A9E; color: #fff; font-weight: 700; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    select.channel { width: 100%; padding: 12px; font-size: 15px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px; box-sizing: border-box; background: #fff; }
+    .quick-amounts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .quick-amounts button { flex: 1; min-width: 90px; padding: 8px 10px; border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; }
+    .quick-amounts button:hover { border-color: #005A9E; color: #005A9E; }
+    #paymentBanner { display: none; text-align: left; padding: 12px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
+    #paymentBanner.ok { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
+    #paymentBanner.fail { background: #FEE2E2; color: #B91C1C; border: 1px solid #FCA5A5; }
+    .history { margin-top: 34px; text-align: left; }
+    .history h3 { font-size: 15px; margin: 0 0 12px; }
+    .txn-table-wrap { overflow-x: auto; }
+    table.txn { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.txn th { text-align: left; color: #64748b; font-weight: 700; padding: 8px 6px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    table.txn td { padding: 10px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    .amt-in { color: #15803D; font-weight: 700; white-space: nowrap; }
+    .amt-out { color: #B91C1C; font-weight: 700; white-space: nowrap; }
+    .amt-neutral { color: #64748b; font-weight: 700; white-space: nowrap; }
+    .st { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .st-ok { background: #DCFCE7; color: #15803D; } .st-wait { background: #FEF3C7; color: #B45309; }
+    .st-bad { background: #FEE2E2; color: #B91C1C; } .st-off { background: #F1F5F9; color: #475569; }
+    .txn-note { font-size: 11px; color: #94a3b8; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -24,20 +44,61 @@
     <div class="wallet-icon"><i class="fa-solid fa-wallet"></i></div>
     <h2>Ví của bạn</h2>
     <div class="balance" id="currentBalance">Đang tải số dư...</div>
+    <div id="paymentBanner"></div>
     
     <h3 style="margin-bottom:15px; text-align:left; font-size:15px;">Nạp tiền qua VNPay</h3>
-    <input type="number" id="topupAmount" placeholder="Nhập số tiền cần nạp (VND)..." min="10000" step="10000">
+    <div class="quick-amounts">
+      <button type="button" onclick="setAmount(100000)">100.000đ</button>
+      <button type="button" onclick="setAmount(500000)">500.000đ</button>
+      <button type="button" onclick="setAmount(1000000)">1.000.000đ</button>
+      <button type="button" onclick="setAmount(5000000)">5.000.000đ</button>
+    </div>
+    <input type="number" id="topupAmount" placeholder="Nhập số tiền cần nạp (VND)..." min="10000" max="50000000" step="10000">
+    <select class="channel" id="topupChannel" aria-label="Kênh thanh toán">
+      <option value="">Chọn kênh ngay trên cổng VNPay (ví, QR, ngân hàng, thẻ)</option>
+      <option value="VNPAYQR">Quét mã QR (VNPAYQR)</option>
+      <option value="VNBANK">Thẻ ATM / Tài khoản ngân hàng nội địa</option>
+      <option value="INTCARD">Thẻ quốc tế (Visa / Mastercard / JCB)</option>
+    </select>
     <button class="btn-vnpay" onclick="topupVNPay()"><i class="fa-solid fa-credit-card"></i> Nạp Tiền Bằng VNPay</button>
+    <div style="font-size:12px;color:#94a3b8;margin-top:10px;">Nạp từ 10.000đ đến 50.000.000đ mỗi lần. Tiền vào ví sau khi VNPay xác nhận thành công.</div>
+
+    <div class="history">
+      <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử giao dịch</h3>
+      <div class="txn-table-wrap">
+        <table class="txn">
+          <thead><tr><th>Thời gian</th><th>Giao dịch</th><th>Số tiền</th><th>Trạng thái</th></tr></thead>
+          <tbody id="txnBody"><tr><td colspan="4" style="color:#94a3b8;padding:18px 6px;">Đang tải lịch sử...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div>
   <script src="customer.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
+    const TXN_TYPES = {
+      deposit:          { label: 'Nạp ví qua VNPay',         sign: '+' },
+      order_payment:    { label: 'Thanh toán đơn qua VNPay', sign: '',  note: 'Thanh toán trực tiếp qua cổng, không trừ ví' },
+      escrow:           { label: 'Ký quỹ đơn hàng (từ ví)',  sign: '-' },
+      refund:           { label: 'Hoàn tiền vào ví',         sign: '+' },
+      refund_reversal:  { label: 'Thu hồi khoản hoàn tiền',  sign: '-' },
+      disbursement:     { label: 'Giải ngân',                sign: '+' },
+      withdraw:         { label: 'Rút tiền',                 sign: '-' },
+      package_purchase: { label: 'Mua gói dịch vụ',          sign: '-' }
+    };
+    const TXN_STATUS = {
+      success:   ['Thành công', 'st-ok'],  completed: ['Thành công', 'st-ok'],
+      pending:   ['Chờ thanh toán', 'st-wait'], failed: ['Thất bại', 'st-bad'],
+      expired:   ['Hết hạn', 'st-off']
+    };
+
+    function esc(value) {
+      return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function setAmount(value) { document.getElementById('topupAmount').value = value; }
+
+    async function loadBalance() {
       const user = getCurrentCustomer();
-      if (!user || user.role !== 'Customer') {
-        document.getElementById('currentBalance').textContent = 'Đăng nhập để xem số dư';
-        return;
-      }
       const result = await apiRequest('/api/auth/me');
       if (result.success && result.user) {
         const freshUser = { ...user, ...result.user };
@@ -46,15 +107,85 @@
       } else {
         document.getElementById('currentBalance').textContent = 'Không tải được số dư';
       }
+    }
+
+    async function loadTransactions() {
+      const body = document.getElementById('txnBody');
+      const res = await apiRequest('/api/payments/transactions?limit=50');
+      if (!res.success) {
+        body.innerHTML = '<tr><td colspan="4" style="color:#B91C1C;padding:18px 6px;">Không tải được lịch sử giao dịch.</td></tr>';
+        return;
+      }
+      if (!res.transactions.length) {
+        body.innerHTML = '<tr><td colspan="4" style="color:#94a3b8;padding:18px 6px;">Chưa có giao dịch nào.</td></tr>';
+        return;
+      }
+      body.innerHTML = res.transactions.map(t => {
+        const meta = TXN_TYPES[t.type] || { label: t.type, sign: '' };
+        const done = t.status === 'success' || t.status === 'completed';
+        const abs = formatVND(Math.abs(Number(t.amount) || 0));
+        let amountHtml;
+        if (!meta.sign || !done) amountHtml = `<span class="amt-neutral">${abs}</span>`;
+        else {
+          const negative = meta.sign === '-' || Number(t.amount) < 0;
+          amountHtml = `<span class="${negative ? 'amt-out' : 'amt-in'}">${negative ? '−' : '+'}${abs}</span>`;
+        }
+        const [stLabel, stClass] = TXN_STATUS[t.status] || [t.status || '—', 'st-off'];
+        const note = meta.note ? `<div class="txn-note">${esc(meta.note)}</div>` : '';
+        return `<tr>
+          <td>${esc(t.createdAt || '')}</td>
+          <td><strong>${esc(meta.label)}</strong><div class="txn-note">${esc(t.description || '')}</div>${note}<div class="txn-note">Mã: ${esc(t.id)}</div></td>
+          <td>${amountHtml}</td>
+          <td><span class="st ${stClass}">${esc(stLabel)}</span></td>
+        </tr>`;
+      }).join('');
+    }
+
+    // VNPay chuyển trình duyệt về đây kèm ?payment=success|failed&txn=...&code=...
+    async function showPaymentResult() {
+      const params = new URLSearchParams(window.location.search);
+      const result = params.get('payment');
+      if (!result) return;
+      const banner = document.getElementById('paymentBanner');
+      banner.style.display = 'block';
+      if (result === 'success') {
+        banner.className = 'ok';
+        banner.innerHTML = '<i class="fa-solid fa-circle-check"></i> Nạp tiền thành công! Số dư ví đã được cập nhật.';
+      } else {
+        banner.className = 'fail';
+        let reason = 'Giao dịch chưa hoàn tất. Bạn chưa bị trừ tiền.';
+        const txn = params.get('txn');
+        if (txn) {
+          const status = await apiRequest(`/api/payments/status/${encodeURIComponent(txn)}`);
+          if (status.success && status.message) reason = `${status.message} Bạn chưa bị trừ tiền.`;
+        }
+        banner.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${esc(reason)}`;
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
+      const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        document.getElementById('currentBalance').textContent = 'Đăng nhập để xem số dư';
+        document.getElementById('txnBody').innerHTML = '<tr><td colspan="4" style="color:#94a3b8;padding:18px 6px;">Đăng nhập để xem lịch sử giao dịch.</td></tr>';
+        return;
+      }
+      await showPaymentResult();
+      await Promise.all([loadBalance(), loadTransactions()]);
     });
 
     async function topupVNPay() {
       const amount = document.getElementById('topupAmount').value;
-      if (!amount || amount < 10000) return alert('Vui lòng nhập số tiền hợp lệ (tối thiểu 10.000đ)');
-      
+      const value = Number(amount);
+      if (!Number.isInteger(value) || value < 10000 || value > 50000000) {
+        return alert('Vui lòng nhập số tiền nguyên từ 10.000đ đến 50.000.000đ');
+      }
+
       const res = await apiRequest('/api/payments/vnpay/create', {
         method: 'POST',
-        body: JSON.stringify({ amount: parseInt(amount), orderDescription: 'Nạp tiền vào ví SkillRental', orderType: 'topup', language: 'vn', bankCode: '' })
+        body: JSON.stringify({ amount: value, bankCode: document.getElementById('topupChannel').value })
       });
       if (res.success && (res.paymentUrl || res.url)) {
         window.location.href = res.paymentUrl || res.url;

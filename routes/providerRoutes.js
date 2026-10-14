@@ -8,6 +8,7 @@ const { requireCustomer, requireProvider, requireSignedIn } = require('./custome
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
 const { processAcceptOrder, processDeliverOrder, processProgressOrder } = require('../services/orderService');
+const { isVisibleToProvider } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 
 function getMyProvider(req) {
@@ -135,7 +136,7 @@ router.get('/dashboard/stats', requireProvider, (req, res) => {
   const provider = getMyProvider(req);
   const orders = db.getCollection('orders') || [];
   
-  const myOrders = orders.filter(o => o.providerId === provider.id);
+  const myOrders = orders.filter(o => o.providerId === provider.id && isVisibleToProvider(o));
   
   const pending = myOrders.filter(o => o.orderStatus === 'pending').length;
   const processing = myOrders.filter(o => o.orderStatus === 'processing').length;
@@ -167,7 +168,7 @@ router.get('/me/services', requireProvider, (req, res) => {
 
 router.get('/me/orders', requireProvider, (req, res) => {
   const provider = getMyProvider(req);
-  const orders = (db.getCollection('orders') || []).filter(o => o.providerId === provider.id);
+  const orders = (db.getCollection('orders') || []).filter(o => o.providerId === provider.id && isVisibleToProvider(o));
   res.json({ success: true, orders });
 });
 

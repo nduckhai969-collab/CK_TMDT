@@ -3,413 +3,596 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkillRental - Đơn hàng của tôi</title>
-  <!-- Google Fonts Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- FontAwesome Icons -->
+  <title>Đơn hàng của tôi - Sàn Dịch Vụ</title>
+  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Design System CSS -->
-  <link rel="stylesheet" href="style.css">
+  
   <style>
-    body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
-    .order-card {
-      background: #FFFFFF;
-      border: 1px solid #DDE7E2;
-      border-radius: 16px;
+    * {
+      box-sizing: border-box;
+      margin: 0;
       padding: 0;
-      margin-bottom: 18px;
-      overflow:hidden;
-      box-shadow: 0 3px 12px rgba(15,23,42,.035);
-      transition: box-shadow .2s ease, border-color .2s ease;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .order-card:hover {
-      border-color:#9bd3ae;
-      box-shadow: 0 10px 26px -6px rgba(15,23,42,0.1);
+
+    body {
+      background-color: #f8fafc;
+      color: #334155;
+      padding-bottom: 60px;
     }
-    .orders-hero { display:flex;justify-content:space-between;align-items:center;gap:22px;padding:26px 30px;margin-bottom:22px;border:1px solid #ccebd7;border-radius:18px;background:linear-gradient(115deg,#f0fdf4,#fff 68%); }
-    .order-head { display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:20px 22px;background:#fbfdfc;border-bottom:1px solid #e7eeea; }
-    .order-badges { display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px; }
-    .order-id { font-size:16px;font-weight:800;color:#0f172a; }
-    .order-meta { display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#64748b;font-size:11px; }
-    .order-meta span { display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid #e2e8f0;border-radius:8px;background:#fff; }
-    .order-total { flex:0 0 auto;min-width:170px;padding:11px 14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4; }
-    .order-body { display:grid;grid-template-columns:minmax(0,1.5fr) minmax(230px,.8fr);gap:14px;padding:18px 22px; }
-    .order-service-box,.escrow-info { padding:15px;border:1px solid #e5ece8;border-radius:12px;background:#fff; }
-    .order-service-title { margin:5px 0 12px;font-size:16px;line-height:1.45;font-weight:800;color:#172033; }
-    .provider-info { display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#475569; }
-    .provider-info strong { color:#0f172a; }
-    .order-notes { margin-top:12px;padding:10px 12px;border-left:3px solid #a7f3d0;background:#f8fafc;color:#64748b;border-radius:0 8px 8px 0;font-size:12px;line-height:1.5; }
-    .escrow-info { background:#f6fcf8;border-color:#d8eee0; }
-    .milestones-panel { margin:0 22px 18px;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc; }
-    .milestones-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px; }
-    .order-actions { display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 22px;border-top:1px solid #e7eeea;background:#fcfdfc; }
-    .order-action-group { display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap; }
-    .status-tab {
-      padding: 9px 13px;
-      border-radius: 9px;
-      font-size: 13.5px;
-      font-weight: 600;
-      color: #64748B;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      white-space:nowrap;
-      border:1px solid transparent;
-      background:transparent;
+
+    .container {
+      max-width: 1100px;
+      margin: 30px auto;
+      padding: 0 16px;
     }
-    .status-tab.active {
-      background: #FFFFFF;
-      color: #16A34A;
-      border-color:#d6eade;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    .status-tab span { display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 4px;margin-left:3px;border-radius:7px;background:#e2e8f0;color:#475569;font-size:10px;font-weight:800; }
-    .status-tab.active span { background:#dcfce7;color:#15803d; }
-    .milestone-step {
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 20px;
       display: flex;
       align-items: center;
       gap: 10px;
-      position: relative;
     }
-    .milestone-dot {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
+
+    /* FILTER TABS */
+    .filter-bar {
+      background: #eef2f5;
+      padding: 6px;
+      border-radius: 12px;
+      display: flex;
+      gap: 6px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+      width: max-content;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .status-tab {
+      border: none;
+      background: transparent;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      justify-content: center;
+      gap: 6px;
+    }
+
+    .status-tab span {
+      background: rgba(100, 116, 139, 0.15);
+      color: #475569;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .status-tab:hover {
+      background: rgba(255, 255, 255, 0.6);
+      color: #1e293b;
+    }
+
+    .status-tab.active {
+      background: #ffffff;
+      color: #005A9E;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .status-tab.active span {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    /* ORDER CARD */
+    .orders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .order-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      transition: box-shadow 0.2s ease;
+    }
+
+    .order-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .order-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 14px;
+      border-bottom: 1px dashed #e2e8f0;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .order-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .order-id {
+      font-weight: 800;
+      font-size: 15px;
+      color: #0f172a;
+    }
+
+    .badge-status {
+      padding: 4px 10px;
+      border-radius: 20px;
       font-size: 12px;
       font-weight: 700;
-      flex-shrink: 0;
     }
-    .milestone-dot.done {
-      background: #16A34A;
-      color: #FFF;
+
+    .status-pending { background: #fef3c7; color: #b45309; }
+    .status-processing { background: #e0f2fe; color: #0369a1; }
+    .status-delivered { background: #fef9c3; color: #a16207; }
+    .status-completed { background: #dcfce7; color: #15803d; }
+    .status-cancelled { background: #fee2e2; color: #b91c1c; }
+
+    .badge-escrow {
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
-    .milestone-dot.pending {
-      background: #E2E8F0;
-      color: #94A3B8;
+
+    .order-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: #64748b;
+      flex-wrap: wrap;
     }
-    @media(max-width:800px){.order-body{grid-template-columns:1fr}.milestones-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:600px){.orders-hero{padding:21px;align-items:flex-start;flex-direction:column}.order-head{padding:16px;flex-direction:column}.order-total{width:100%;box-sizing:border-box}.order-body{padding:14px 16px}.milestones-panel{margin:0 16px 14px;padding:13px}.order-actions{padding:13px 16px;align-items:flex-start;flex-direction:column}.order-action-group{width:100%;justify-content:flex-start}.order-action-group .btn{flex:1;justify-content:center}.status-tab{font-size:12px;padding:8px 10px}}
+
+    .order-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .order-body {
+      padding: 16px 0;
+    }
+
+    .service-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+
+    .provider-info {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .order-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid #f1f5f9;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .order-action-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* BUTTONS */
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .btn-primary {
+      background: #005A9E;
+      color: #ffffff;
+      border-color: #005A9E;
+    }
+
+    .btn-primary:hover {
+      background: #004578;
+    }
+
+    .btn-outline {
+      background: #ffffff;
+      border-color: #cbd5e1;
+      color: #334155;
+    }
+
+    .btn-outline:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px dashed #cbd5e1;
+    }
+
+    .empty-state i {
+      font-size: 42px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+
+    /* TOAST NOTIFICATION */
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: #1e293b;
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 280px;
+      animation: slideIn 0.3s ease forwards;
+    }
+
+    .toast.success { border-left: 4px solid #22c55e; }
+    .toast.error { border-left: 4px solid #ef4444; }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
 </head>
 <body>
 
-  <!-- Top Navbar -->
+  <!-- NAVBAR PLACEHOLDER -->
   <div id="navbar-placeholder"></div>
 
-  <main style="max-width: 1160px; margin: 28px auto 60px; padding: 0 24px;">
-
-    <section class="orders-hero">
-      <div>
-        <div style="display:inline-flex;align-items:center;gap:7px;padding:5px 10px;background:#dcfce7;color:#15803d;border-radius:999px;font-size:11px;font-weight:800;margin-bottom:9px"><i class="fa-solid fa-shield-halved"></i> KÝ QUỸ ĐƯỢC BẢO VỆ</div>
-        <h1 style="font-size:clamp(24px,4vw,32px);font-weight:800;color:#0f172a;margin:0">Đơn hàng của tôi</h1>
-        <p style="font-size:13px;color:#64748b;line-height:1.6;margin:7px 0 0">Theo dõi tiến độ, nghiệm thu và quản lý khoản ký quỹ của bạn.</p>
-      </div>
-      <div style="display:flex;gap:9px;flex-wrap:wrap">
-        <a href="customer_requests.html" class="btn btn-outline" style="font-weight:700"><i class="fa-solid fa-rectangle-list" style="color:#15803d"></i> Yêu cầu của tôi</a>
-        <a href="customer.html" class="btn btn-primary" style="font-weight:700"><i class="fa-solid fa-plus"></i> Đặt dịch vụ</a>
-      </div>
-    </section>
+  <div class="container">
+    <div class="page-title">
+      <i class="fa-solid fa-receipt" style="color: #005A9E;"></i> Đơn hàng của tôi
+    </div>
 
     <!-- FILTER TABS -->
-    <div style="background:#eef2f5;padding:5px;border-radius:12px;display:flex;gap:4px;margin-bottom:20px;overflow-x:auto;width:max-content;max-width:100%;box-sizing:border-box">
+    <div class="filter-bar">
       <button type="button" class="status-tab active" onclick="filterOrders('all', this)">Tất cả <span id="countAll">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('payment_pending', this)">Chờ thanh toán <span id="countPaymentPending">0</span></button>
       <button type="button" class="status-tab" onclick="filterOrders('processing', this)">Đang làm <span id="countProcessing">0</span></button>
       <button type="button" class="status-tab" onclick="filterOrders('delivered', this)">Chờ nghiệm thu <span id="countDelivered">0</span></button>
       <button type="button" class="status-tab" onclick="filterOrders('completed', this)">Hoàn tất <span id="countCompleted">0</span></button>
-      <button type="button" class="status-tab" onclick="filterOrders('disputed', this)">Tranh chấp <span id="countDisputed">0</span></button>
     </div>
 
     <!-- ORDERS LIST CONTAINER -->
-    <div id="ordersContainer">
-      <div style="text-align:center; padding:40px; color:#64748B;">
-        <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
-        <div style="margin-top:10px;">Đang tải danh sách đơn hàng...</div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- CONFIRM RELEASE ESCROW MODAL -->
-  <div id="releaseModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-    <div style="background:#FFFFFF; border-radius:16px; max-width:480px; width:90%; padding:32px; box-shadow:0 20px 35px -5px rgba(0,0,0,0.2); animation:modalIn 0.3s ease-out;">
-      <div style="width:60px; height:60px; border-radius:50%; background:#DCFCE7; color:#16A34A; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 16px;">
-        <i class="fa-solid fa-hand-holding-dollar"></i>
-      </div>
-      <h3 style="font-size:19px; font-weight:800; color:#0F172A; text-align:center; margin-bottom:8px;">Xác Nhận Nghiệm Thu & Giải Ngân</h3>
-      <p style="font-size:13.5px; color:#64748B; text-align:center; line-height:1.5; margin-bottom:20px;">
-        Bạn xác nhận chuyên gia đã hoàn thành đúng chất lượng cam kết? Sau khi bấm xác nhận, số tiền <strong id="modalReleaseAmount" style="color:#16A34A;">—</strong> đang ký quỹ sẽ được mở khóa và chuyển vào ví chuyên gia ngay lập tức.
-      </p>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <button onclick="closeReleaseModal()" class="btn btn-outline" style="border-color:#CBD5E1; color:#0F172A; font-weight:600; padding:12px 0;">
-          Kiểm Tra Lại
-        </button>
-        <button id="btnConfirmRelease" onclick="confirmReleaseEscrow()" class="btn btn-primary" style="font-weight:700; padding:12px 0;">
-          <i class="fa-solid fa-check"></i> Xác Nhận Giải Ngân
-        </button>
+    <div id="ordersList" class="orders-list">
+      <div class="empty-state">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>Đang tải danh sách đơn hàng...</p>
       </div>
     </div>
   </div>
 
+  <!-- FOOTER PLACEHOLDER -->
   <div id="footer-placeholder"></div>
 
-  <script src="customer.js"></script>
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container"></div>
+
   <script>
     let myOrders = [];
-    let reviewedOrderIds = new Set();
     let currentFilter = 'all';
-    let targetOrderId = null;
 
+    // Khởi tạo trang
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
-      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
-      loadCustomerOrders();
+      if (typeof renderCustomerNavbar === 'function') {
+        document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
+      }
+      if (typeof renderCustomerFooter === 'function') {
+        document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+      }
+      loadCustomerOrders().then(handlePaymentReturn);
     });
 
+    // Helper gọi API
+    async function apiRequest(endpoint, options = {}) {
+      const defaultHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      };
+      const config = {
+        ...options,
+        headers: { ...defaultHeaders, ...options.headers }
+      };
+      
+      const response = await fetch(endpoint, config);
+      return await response.json();
+    }
+
+    // Lấy danh sách đơn hàng từ backend
     async function loadCustomerOrders() {
-      const user = getCurrentCustomer();
-      if (!user || user.role !== 'Customer') {
-        document.getElementById('ordersContainer').innerHTML = `
-          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:40px; text-align:center;">
-            <i class="fa-solid fa-lock" style="font-size:32px;color:#94A3B8"></i>
-            <h3 style="margin:12px 0 6px;color:#0F172A">Đăng nhập để xem đơn hàng</h3>
-            <p style="color:#64748B;margin-bottom:16px">Bạn có thể xem trang công khai, còn đơn hàng cá nhân cần tài khoản khách hàng.</p>
-            <button class="btn btn-primary" onclick="openAuthModal('login')">Đăng nhập</button>
-          </div>`;
-        return;
-      }
-      const [res, reviewsRes] = await Promise.all([
-        apiRequest(`/api/orders?customerId=${encodeURIComponent(user.id)}`),
-        apiRequest('/api/reviews')
-      ]);
-      if (res.success && res.orders) {
-        myOrders = res.orders;
-        reviewedOrderIds = new Set((reviewsRes.success ? reviewsRes.reviews : []).map(review => review.orderId));
-        updateCounts();
-        renderOrders();
-      } else {
-        document.getElementById('ordersContainer').innerHTML = `
-          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:40px; text-align:center; color:#EF4444;">
-            <i class="fa-solid fa-triangle-exclamation fa-2x"></i>
-            <div style="margin-top:10px;">Không thể tải danh sách đơn hàng.</div>
-          </div>
-        `;
+      try {
+        const res = await apiRequest('/api/orders');
+        if (res.success && Array.isArray(res.orders)) {
+          myOrders = res.orders;
+          updateCounts();
+          filterOrders(currentFilter);
+        } else {
+          showOrdersEmpty('Không thể lấy danh sách đơn hàng.');
+        }
+      } catch (err) {
+        showOrdersEmpty('Lỗi kết nối máy chủ.');
       }
     }
 
+    // Cập nhật số lượng đếm trên từng tab
     function updateCounts() {
       document.getElementById('countAll').textContent = myOrders.length;
+      document.getElementById('countPaymentPending').textContent = myOrders.filter(isAwaitingPayment).length;
       document.getElementById('countProcessing').textContent = myOrders.filter(o => o.orderStatus === 'processing' || o.orderStatus === 'confirmed').length;
       document.getElementById('countDelivered').textContent = myOrders.filter(o => o.orderStatus === 'delivered').length;
       document.getElementById('countCompleted').textContent = myOrders.filter(o => o.orderStatus === 'completed').length;
-      document.getElementById('countDisputed').textContent = myOrders.filter(o => o.orderStatus === 'disputed').length;
     }
 
-    function filterOrders(status, el) {
+    // Lọc danh sách đơn hàng
+    function filterOrders(status, tabElem) {
       currentFilter = status;
-      document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
-      if (el) el.classList.add('active');
-      renderOrders();
-    }
 
-    function renderOrders() {
-      const container = document.getElementById('ordersContainer');
+      if (tabElem) {
+        document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+        tabElem.classList.add('active');
+      }
+
       let filtered = myOrders;
-
       if (currentFilter === 'processing') {
         filtered = myOrders.filter(o => o.orderStatus === 'processing' || o.orderStatus === 'confirmed');
+      } else if (currentFilter === 'payment_pending') {
+        filtered = myOrders.filter(isAwaitingPayment);
       } else if (currentFilter !== 'all') {
         filtered = myOrders.filter(o => o.orderStatus === currentFilter);
       }
 
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:48px; text-align:center;">
-            <i class="fa-solid fa-box-open" style="font-size:44px; color:#94A3B8; margin-bottom:14px;"></i>
-            <h3 style="font-size:17px; font-weight:700; color:#0F172A; margin-bottom:6px;">Không có đơn hàng nào trong mục này</h3>
-            <p style="font-size:13.5px; color:#64748B; margin-bottom:18px;">Bạn có thể khám phá danh sách chuyên gia hoặc đăng yêu cầu tuyển việc mới.</p>
-            <a href="customer.html" class="btn btn-primary" style="font-weight:600;"><i class="fa-solid fa-magnifying-glass"></i> Khám Phá Chuyên Gia</a>
-          </div>
-        `;
+      renderOrdersList(filtered);
+    }
+
+    // Render danh sách đơn hàng ra HTML
+    function renderOrdersList(orders) {
+      const container = document.getElementById('ordersList');
+      if (!orders || orders.length === 0) {
+        showOrdersEmpty('Chưa có đơn hàng nào trong mục này.');
         return;
       }
 
-      container.innerHTML = filtered.map(o => {
-        const isEscrowHeld = o.escrowStatus === 'escrow_held';
-        const isCompleted = o.orderStatus === 'completed';
-        const isDelivered = o.orderStatus === 'delivered';
-        const isDisputed = o.orderStatus === 'disputed';
-        const isCancelled = o.orderStatus === 'cancelled';
-        const canUndoCancellation = isCancelled && o.cancelledBy === 'Customer' && Number.isFinite(Date.parse(o.cancellationUndoUntil || '')) && Date.parse(o.cancellationUndoUntil) > Date.now();
+      container.innerHTML = orders.map(o => renderOrderCard(o)).join('');
+    }
 
-        let badgeStatus = '';
-        if (o.paymentStatus === 'pending') {
-          badgeStatus = `<span style="background:#FEF3C7; color:#B45309; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-clock"></i> Chờ thanh toán</span>`;
-        } else if (isCompleted) {
-          badgeStatus = `<span style="background:#DCFCE7; color:#15803D; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-circle-check"></i> Hoàn tất</span>`;
-        } else if (isDelivered) {
-          badgeStatus = `<span style="background:#FEF3C7; color:#B45309; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-bell"></i> Chờ nghiệm thu</span>`;
-        } else if (isDisputed) {
-          badgeStatus = `<span style="background:#FEE2E2; color:#B91C1C; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-scale-balanced"></i> Đang tranh chấp</span>`;
-        } else if (isCancelled) {
-          badgeStatus = `<span style="background:#F1F5F9; color:#475569; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-ban"></i> Đã hủy</span>`;
-        } else {
-          badgeStatus = `<span style="background:#EFF6FF; color:#1D4ED8; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-bars-progress"></i> Đang thực hiện</span>`;
-        }
+    // HTML cho từng thẻ đơn hàng
+    function renderOrderCard(o) {
+      const badgeStatus = renderStatusBadge(o);
+      const isPending = isAwaitingPayment(o);
 
-        return `
-          <div class="order-card" id="customer-order-${o.id}" data-order-id="${o.id}">
-            <div class="order-head">
-              <div style="min-width:0;flex:1">
-                <div class="order-badges"><span class="order-id">Đơn ${o.id}</span>${badgeStatus}<span class="badge-escrow"><i class="fa-solid fa-lock"></i> ${o.paymentStatus === 'pending' ? 'Chưa ký quỹ' : o.escrowStatus === 'payment_cancelled' ? 'Chưa thanh toán' : o.escrowStatus === 'completed' ? 'Đã giải ngân' : 'Đang ký quỹ'}</span></div>
-                <div class="order-meta"><span><i class="fa-regular fa-calendar"></i> Tạo ngày ${o.date || '—'}</span><span><i class="fa-regular fa-clock"></i> Hạn ${o.deadline || 'Thỏa thuận'}</span></div>
+      return `
+        <div class="order-card">
+          <div class="order-head">
+            <div style="min-width:0; flex:1">
+              <div class="order-badges">
+                <span class="order-id">Đơn #${o.id}</span>
+                ${badgeStatus}
+                <span class="badge-escrow">
+                  <i class="fa-solid fa-lock"></i> 
+                  ${o.paymentStatus === 'pending' ? 'Chưa ký quỹ' : o.escrowStatus === 'payment_cancelled' ? 'Chưa thanh toán' : o.escrowStatus === 'completed' ? 'Đã giải ngân' : 'Đang ký quỹ'}
+                </span>
               </div>
-              <div class="order-total"><div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Tiền ký quỹ</div><div style="font-size:20px;font-weight:800;color:#15803d;margin-top:4px">${formatVND(o.escrowDeposit || o.price)}</div></div>
-            </div>
-
-            <div class="order-body">
-              <div class="order-service-box">
-                <div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:.05em">Dịch vụ</div>
-                <h3 class="order-service-title">${o.serviceTitle || 'Dịch vụ theo yêu cầu'}</h3>
-                <div class="provider-info"><i class="fa-solid fa-user-tie" style="color:#16A34A"></i><span>Chuyên gia</span><strong>${o.providerName || 'Chưa cập nhật'}</strong>${o.providerPhone ? `<span style="color:#94a3b8">•</span><span><i class="fa-solid fa-phone" style="color:#94a3b8"></i> ${o.providerPhone}</span>` : ''}</div>
-                ${o.notes ? `<div class="order-notes"><strong>Ghi chú:</strong> ${o.notes}</div>` : ''}
-              </div>
-                <div class="escrow-info"><div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:.05em;margin-bottom:8px">Bảo vệ thanh toán</div><div style="display:flex;gap:10px;align-items:flex-start;color:${o.paymentStatus === 'pending' ? '#B45309' : '#15803d'};font-size:12px;font-weight:700;line-height:1.5"><i class="fa-solid ${o.paymentStatus === 'pending' ? 'fa-clock' : 'fa-shield-halved'}" style="font-size:17px;margin-top:1px"></i><span>${o.paymentStatus === 'pending' ? 'Chờ xác nhận thanh toán. Provider chưa nhận được yêu cầu.' : 'Tiền được giữ an toàn cho đến khi bạn nghiệm thu công việc.'}</span></div></div>
-            </div>
-
-            <div class="milestones-panel">
-              <div style="font-weight:800;font-size:12px;color:#0f172a;margin-bottom:13px;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-list-check" style="color:#16A34A"></i> Tiến độ công việc</div>
-              <div class="milestones-grid">
-                ${(o.milestones || []).length ? (o.milestones || []).map((m, idx) => `
-                  <div class="milestone-step">
-                    <div class="milestone-dot ${m.done ? 'done' : 'pending'}">
-                      ${m.done ? '<i class="fa-solid fa-check"></i>' : idx + 1}
-                    </div>
-                    <div>
-                      <div style="font-size:12.5px; font-weight:700; color:${m.done ? '#0F172A' : '#94A3B8'}; line-height:1.3;">
-                        ${m.title}
-                      </div>
-                      <div style="font-size:11px; color:#64748B; margin-top:2px;">
-                        ${m.time || ''}
-                      </div>
-                    </div>
-                  </div>
-                `).join('') : '<div style="font-size:12px;color:#64748b">Chưa có mốc tiến độ được cập nhật.</div>'}
+              <div class="order-meta">
+                <span><i class="fa-regular fa-calendar"></i> Tạo ngày ${o.date || '—'}</span>
+                <span><i class="fa-regular fa-clock"></i> Hạn ${o.deadline || 'Thỏa thuận'}</span>
+                ${isPending && o.paymentExpiresAt ? `
+                  <span style="color:#b45309; font-weight:700">
+                    <i class="fa-regular fa-hourglass-half"></i> Thanh toán trước ${new Date(o.paymentExpiresAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                ` : ''}
               </div>
             </div>
-
-            <div class="order-actions">
-              <a href="customer_chat.html?with=${o.providerId || ''}" class="btn btn-outline btn-sm" style="font-weight:700"><i class="fa-solid fa-comments" style="color:#16A34A"></i> Nhắn chuyên gia</a>
-              <div class="order-action-group">
-                ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') ? `
-                  <button onclick="cancelCustomerOrder('${o.id}', ${o.paymentStatus === 'pending'})" class="btn btn-outline btn-sm" style="border-color:#94a3b8;color:#475569;font-weight:700">
-                    <i class="fa-solid fa-xmark"></i> Hủy đơn
-                  </button>
-                ` : ''}
-                ${!isCompleted && !isDisputed && !isCancelled && o.paymentStatus !== 'pending' ? `
-                  <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fecaca;color:#b91c1c;font-weight:700">
-                    <i class="fa-solid fa-shield-halved"></i> Khiếu nại
-                  </a>
-                ` : ''}
-
-                ${canUndoCancellation ? `
-                  <button onclick="undoCustomerOrderCancellation('${o.id}')" class="btn btn-outline btn-sm" style="border-color:#16a34a;color:#15803d;font-weight:700">
-                    <i class="fa-solid fa-rotate-left"></i> Hoàn tác hủy
-                  </button>
-                ` : ''}
-
-                ${isDelivered || (isEscrowHeld && !isCompleted && !isDisputed) ? `
-                  <button onclick="openReleaseModal('${o.id}', ${o.price})" class="btn btn-primary" style="font-weight:700">
-                    <i class="fa-solid fa-circle-check"></i> Nghiệm thu & giải ngân
-                  </button>
-                ` : ''}
-
-                ${isCompleted && !reviewedOrderIds.has(o.id) ? `
-                  <a href="customer_review.html?orderId=${o.id}" class="btn btn-primary" style="font-weight:700;background:#F59E0B;border-color:#F59E0B">
-                    <i class="fa-solid fa-star"></i> Đánh giá
-                  </a>
-                ` : isCompleted ? '<span class="btn btn-outline btn-sm" aria-label="Đã đánh giá"><i class="fa-solid fa-check" style="color:#16a34a"></i> Đã đánh giá</span>' : ''}
-              </div>
+            <div style="text-align: right">
+              <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:.04em">Tiền ký quỹ</div>
+              <div style="font-size:20px; font-weight:800; color:#15803d; margin-top:4px">${formatVND(o.escrowDeposit || o.price)}</div>
             </div>
-
           </div>
-        `;
-      }).join('');
-      const requestedOrderId = new URLSearchParams(window.location.search).get('orderId');
-      if (requestedOrderId) {
-        const target = Array.from(container.querySelectorAll('[data-order-id]')).find(card => card.dataset.orderId === requestedOrderId);
-        if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+
+          <div class="order-body">
+            <div class="service-title">${o.serviceTitle || 'Dịch vụ đã đặt'}</div>
+            <div class="provider-info"><i class="fa-solid fa-user-gear"></i> Chuyên gia: <strong>${o.providerName || 'N/A'}</strong></div>
+          </div>
+
+          <div class="order-actions">
+            <a href="customer_chat.html?with=${o.providerId || ''}" class="btn btn-outline btn-sm" style="font-weight:700">
+              <i class="fa-solid fa-comments" style="color:#16A34A"></i> Nhắn chuyên gia
+            </a>
+            <div class="order-action-group">
+              ${isPending ? `
+                <button onclick="payOrderNow('${o.id}')" class="btn btn-primary btn-sm" style="font-weight:700; background:#005A9E; border-color:#005A9E">
+                  <i class="fa-solid fa-credit-card"></i> Thanh toán ngay
+                </button>
+              ` : ''}
+              ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') ? `
+                <button onclick="cancelCustomerOrder('${o.id}',${o.paymentStatus === 'pending'})" class="btn btn-outline btn-sm" style="border-color:#94a3b8; color:#475569; font-weight:700">
+                  <i class="fa-solid fa-xmark"></i> Hủy đơn
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // RENDER BADGE TRẠNG THÁI
+    function renderStatusBadge(o) {
+      if (o.paymentStatus === 'pending') {
+        return `<span class="badge-status status-pending">Chờ thanh toán</span>`;
+      }
+      switch (o.orderStatus) {
+        case 'pending': return `<span class="badge-status status-pending">Chờ tiếp nhận</span>`;
+        case 'processing':
+        case 'confirmed': return `<span class="badge-status status-processing">Đang thực hiện</span>`;
+        case 'delivered': return `<span class="badge-status status-delivered">Chờ nghiệm thu</span>`;
+        case 'completed': return `<span class="badge-status status-completed">Hoàn tất</span>`;
+        case 'cancelled': return `<span class="badge-status status-cancelled">Đã hủy</span>`;
+        default: return `<span class="badge-status status-pending">${o.orderStatus || 'Không xác định'}</span>`;
       }
     }
 
-    function openReleaseModal(orderId, amount) {
-      targetOrderId = orderId;
-      document.getElementById('modalReleaseAmount').textContent = formatVND(amount);
-      document.getElementById('releaseModal').style.display = 'flex';
+    // CHECK ĐƠN CHỜ THANH TOÁN
+    function isAwaitingPayment(o) {
+      return o.paymentStatus === 'pending' && o.orderStatus === 'pending';
     }
 
-    function closeReleaseModal() {
-      targetOrderId = null;
-      document.getElementById('releaseModal').style.display = 'none';
+    // CHUYỂN KHÁCH SANG VNPAY
+    async function payOrderNow(orderId) {
+      try {
+        const res = await apiRequest(`/api/payments/vnpay/orders/${encodeURIComponent(orderId)}`, {
+          method: 'POST',
+          body: JSON.stringify({})
+        });
+
+        if (res.success && res.paymentUrl) {
+          showToast('Đang chuyển tới VNPay', 'Vui lòng hoàn tất thanh toán trên cổng VNPay.', 'success');
+          window.location.href = res.paymentUrl;
+        } else {
+          showToast('Chưa thể thanh toán', res.message || 'Vui lòng thử lại.', 'error');
+          loadCustomerOrders();
+        }
+      } catch (err) {
+        showToast('Lỗi hệ thống', 'Không thể kết nối cổng thanh toán.', 'error');
+      }
     }
 
-    async function confirmReleaseEscrow() {
-      if (!targetOrderId) return;
-      const btn = document.getElementById('btnConfirmRelease');
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Xử Lý...`;
+    // XỬ LÝ REDIRECT TỪ VNPAY VỀ
+    async function handlePaymentReturn() {
+      const params = new URLSearchParams(window.location.search);
+      const result = params.get('payment');
+      if (!result) return;
 
-      const res = await apiRequest(`/api/orders/${targetOrderId}/release-escrow`, {
-        method: 'PUT'
-      });
-
-      if (res.success) {
-        showToast('Nghiệm Thu Thành Công', res.message, 'success');
-        closeReleaseModal();
-        setTimeout(() => {
-          window.location.href = `customer_review.html?orderId=${targetOrderId}`;
-        }, 1200);
+      const txn = params.get('txn');
+      if (result === 'success') {
+        showToast('Thanh toán thành công', 'Đơn hàng đã được ký quỹ an toàn. Chuyên gia sẽ sớm tiếp nhận.', 'success');
       } else {
-        showToast('Lỗi', res.message || 'Không thể giải ngân tiền ký quỹ', 'error');
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-check"></i> Xác Nhận Giải Ngân`;
+        let reason = 'Giao dịch chưa hoàn tất. Bạn có thể bấm "Thanh toán ngay" để thử lại.';
+        if (txn) {
+          const status = await apiRequest(`/api/payments/status/${encodeURIComponent(txn)}`);
+          if (status.success && status.message) {
+            reason = `${status.message} Bạn có thể bấm "Thanh toán ngay" để thử lại.`;
+          }
+        }
+        showToast('Thanh toán chưa thành công', reason, 'error');
+      }
+
+      // Bỏ query params khỏi URL để reload không lặp lại thông báo
+      params.delete('payment'); 
+      params.delete('txn'); 
+      params.delete('code');
+      const rest = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (rest ? `?${rest}` : ''));
+    }
+
+    // HỦY ĐƠN HÀNG
+    async function cancelCustomerOrder(orderId, isUnpaid) {
+      const confirmMsg = isUnpaid 
+        ? 'Bạn có chắc chắn muốn hủy đơn hàng chờ thanh toán này?' 
+        : 'Bạn có chắc chắn muốn hủy đơn? Tiền ký quỹ sẽ được hoàn về ví của bạn.';
+      
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const res = await apiRequest(`/api/orders/${orderId}/cancel`, { method: 'POST' });
+        if (res.success) {
+          showToast('Đã hủy đơn hàng', res.message || 'Hủy đơn hàng thành công.', 'success');
+          loadCustomerOrders();
+        } else {
+          showToast('Không thể hủy đơn', res.message || 'Vui lòng thử lại.', 'error');
+        }
+      } catch (err) {
+        showToast('Lỗi hệ thống', 'Không thể thực hiện hủy đơn.', 'error');
       }
     }
 
-    async function cancelCustomerOrder(orderId, paymentPending = false) {
-      const prompt = paymentPending
-        ? 'Hủy đơn đang chờ thanh toán? Chưa có khoản tiền nào bị trừ.'
-        : 'Bạn có chắc chắn muốn hủy đơn hàng này không? Tiền ký quỹ sẽ được hoàn vào ví.';
-      if (!confirm(prompt)) return;
-      const res = await apiRequest(`/api/orders/${orderId}/cancel`, {
-        method: 'PUT',
-        body: JSON.stringify({ reason: 'Khách hàng hủy đơn' })
-      });
-      if (res.success) {
-        showToast('Thành công', res.message || 'Đã cập nhật trạng thái đơn hàng.', 'success');
-        await loadCustomerOrders();
-      } else {
-        showToast('Lỗi', res.message || 'Không thể hủy đơn hàng', 'error');
-      }
+    // HIỂN THỊ TRẠNG THÁI RỖNG
+    function showOrdersEmpty(msg) {
+      document.getElementById('ordersList').innerHTML = `
+        <div class="empty-state">
+          <i class="fa-regular fa-folder-open"></i>
+          <p>${msg}</p>
+        </div>
+      `;
     }
 
-    async function undoCustomerOrderCancellation(orderId) {
-      if (!confirm('Hoàn tác việc hủy đơn? Nếu tiền đã được hoàn, số tiền đó sẽ được thu lại từ ví và cần đủ số dư.')) return;
-      const result = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}/undo-cancel`, { method: 'PUT' });
-      if (result.success) {
-        showToast('Đã khôi phục đơn', result.message || 'Đơn hàng đã được khôi phục.', 'success');
-        await loadCustomerOrders();
-      } else {
-        showToast('Không thể hoàn tác', result.message || 'Vui lòng thử lại.', 'error');
-      }
+    // FORMAT TIỀN TỆ VND
+    function formatVND(amount) {
+      return (Number(amount) || 0).toLocaleString('vi-VN') + 'đ';
+    }
+
+    // TOAST NOTIFICATION HELPER
+    function showToast(title, message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i>
+        <div>
+          <div style="font-weight:700">${title}</div>
+          <div style="font-size:12px; opacity:0.9">${message}</div>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
     }
   </script>
 </body>

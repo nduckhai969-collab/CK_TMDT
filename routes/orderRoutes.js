@@ -5,9 +5,12 @@ const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
 const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processUndoCancelOrder, processReleaseEscrow } = require('../services/orderService');
 const { createNotification, notifyProvider } = require('../services/notificationService');
+const vnpay = require('../services/vnpayService');
+const { startGatewayCheckout, expireUnpaidOrders } = require('../services/checkoutService');
 
 // List orders
 router.get('/', requireCustomer, (req, res) => {
+  expireUnpaidOrders();
   const { customerId, providerId, status, escrowStatus } = req.query;
   let orders = db.getCollection('orders');
 
@@ -115,7 +118,46 @@ router.post('/', requireCustomer, (req, res) => {
 
   const users = db.getCollection('users');
   const customer = users.find(u => u.id === req.authUser.id);
-  
+
+  // Thanh toán qua cổng VNPay (ví VNPay / VietQR / thẻ quốc tế): tạo đơn chờ thanh toán, trả về paymentUrl
+  if (vnpay.isGatewayMethod(paymentMethod)) {
+    if (!customer) {
+      return res.status(401).json({ success: false, message: 'Không tìm thấy thông tin khách hàng.' });
+    }
+    try {
+      const { orders: created, txn, paymentUrl } = startGatewayCheckout({
+        customer,
+        specs: [{
+          providerId,
+          providerName: provider.name || providerName || 'Provider',
+          providerPhone: provider.phone || '',
+          serviceId: serviceId || null,
+          serviceTitle: (service ? service.title : serviceTitle) || 'Hợp đồng dịch vụ',
+          price: priceNum,
+          platformFee,
+          escrowDeposit,
+          deadline,
+          scheduledDate: scheduledDate || '',
+          scheduledTime: scheduledTime || ''
+        }],
+        paymentMethod,
+        customerPhone,
+        notes,
+        ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+      });
+      return res.status(201).json({
+        success: true,
+        requiresPayment: true,
+        message: 'Đã tạo đơn chờ thanh toán. Đang chuyển tới cổng VNPay...',
+        paymentUrl,
+        txnRef: txn.id,
+        order: created[0]
+      });
+    } catch (err) {
+      return res.status(err.status || 400).json({ success: false, message: err.message });
+    }
+  }
+
   if (!customer || customer.balance < escrowDeposit) {
     return res.status(400).json({ 
       success: false, 

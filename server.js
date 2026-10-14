@@ -22,6 +22,9 @@ const db = require('./data/db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Khai báo biến server ở đây để hàm shutdown có thể truy cập được (Sửa lỗi Scope)
+let server; 
+
 // 1. CORS Middleware - BẮT BUỘC ĐẶT TRƯỚC TẤT CẢ ROUTES để hỗ trợ WebStorm (port 63342), Live Server (port 5500)
 const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
 app.use(cors({
@@ -151,7 +154,8 @@ app.get('/', (req, res) => {
 
 // Khởi động server (nạp dữ liệu từ Firestore trước khi nhận request)
 db.init().then(() => {
-  const server = app.listen(PORT, () => {
+  // Gán trực tiếp vào biến server toàn cục đã khai báo ở trên
+  server = app.listen(PORT, () => {
     console.log(`====================================================`);
     console.log(`  SKILL RENTAL PLATFORM - FULL-STACK NODE.JS SERVER `);
     console.log(`====================================================`);
@@ -164,9 +168,25 @@ db.init().then(() => {
     console.log(`====================================================`);
   });
 
+  // Mỗi phút tự hủy các đơn chờ thanh toán đã quá hạn (Sửa lỗi Async/Await)
+  const expiryTimer = setInterval(async () => {
+    try {
+      // Đợi hàm async hoàn thành để lấy số lượng đơn chính xác
+      const count = await require('./services/checkoutService').expireUnpaidOrders();
+      if (count) console.log(`[Payment] Đã tự hủy ${count} đơn quá hạn thanh toán.`);
+    } catch (err) {
+      console.error('[Payment] Lỗi dọn đơn quá hạn:', err.message);
+    }
+  }, 60 * 1000);
+  expiryTimer.unref();
+
   const shutdown = async () => {
     await db.flush();
-    server.close(() => process.exit(0));
+    if (server) {
+      server.close(() => process.exit(0));
+    } else {
+      process.exit(0);
+    }
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);

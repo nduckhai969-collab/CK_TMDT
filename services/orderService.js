@@ -39,10 +39,15 @@ function assertProviderOwnsOrder(order, userId) {
   }
 }
 
+function assertOrderPaid(order) {
+  if (order.paymentStatus === 'pending') throw httpError(409, 'Đơn hàng chưa được khách thanh toán.');
+}
+
 function processAcceptOrder(orderId, userId) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
+  assertOrderPaid(order);
   if (order.orderStatus !== 'pending') throw httpError(409, 'Đơn hàng không ở trạng thái chờ tiếp nhận');
 
   order.orderStatus = 'processing';
@@ -58,6 +63,7 @@ function processDeliverOrder(orderId, userId) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
+  assertOrderPaid(order);
   if (order.orderStatus !== 'processing') throw httpError(409, 'Đơn hàng chưa được xử lý hoặc đã giao');
 
   order.orderStatus = 'delivered';
@@ -73,6 +79,7 @@ function processProgressOrder(orderId, userId, note) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
+  assertOrderPaid(order);
   if (order.orderStatus !== 'processing') throw httpError(409, 'Chỉ có thể cập nhật tiến độ khi đơn đang xử lý');
 
   updateOrderMilestone(order, `Cập nhật tiến độ: ${note}`);
@@ -219,6 +226,10 @@ function processUndoCancelOrder(orderId, customerId) {
   order.orderStatus = order.previousOrderStatus || 'pending';
   order.paymentStatus = order.previousPaymentStatus || 'paid';
   order.escrowStatus = order.previousEscrowStatus || 'escrow_held';
+  if (order.paymentStatus === 'pending') {
+    // Đơn chờ thanh toán được khôi phục: cho thêm thời gian để thanh toán (nếu không sẽ bị tự hủy lại ngay)
+    order.paymentExpiresAt = new Date(Date.now() + (Number(process.env.ORDER_PAYMENT_WINDOW_MINUTES) || 30) * 60 * 1000).toISOString();
+  }
   order.lastCancellationUndoneAt = new Date().toISOString();
   order.refundAmount = 0;
   order.refundedAt = null;

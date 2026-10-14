@@ -3259,10 +3259,13 @@
 
   }
 
-  async function handleGoogleLogin(e) {
-    e.preventDefault();
+  async function handleGoogleLogin(e, isRegister = false) {
+    if (e) e.preventDefault();
     try {
-      const data = await SkillAuth.loginWithGoogle();
+      const selectedRole = isRegister
+        ? (document.querySelector('input[name="regRole"]:checked')?.value || 'Customer')
+        : undefined;
+      const data = await SkillAuth.loginWithGoogle(selectedRole);
       if (data.success && data.user) {
         showToastMsg('Đăng Nhập Thành Công!', `Chào mừng ${data.user.name}.`, 'success');
         closeAuthModal();

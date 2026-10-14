@@ -265,9 +265,13 @@
               : '<span class="badge badge-success">Đã giải quyết</span>'}
           </td>
           <td style="text-align:right">
-            <button class="btn btn-primary btn-xs" onclick="openVerdictModal('${c.id}')">
-              Phán quyết
-            </button>
+            ${c.status === 'pending'
+              ? `<button class="btn btn-primary btn-xs" onclick="openVerdictModal('${c.id}')">
+                   Phán quyết
+                 </button>`
+              : `<button class="btn btn-secondary btn-xs" onclick="openVerdictModal('${c.id}')" style="opacity:0.85;">
+                   Xem phán quyết
+                 </button>`}
           </td>
         </tr>
       `).join('');
@@ -298,12 +302,21 @@
       if (!comp) return;
 
       activeCompId = id;
+      const isResolved = comp.status === 'resolved';
+
       const body = document.getElementById('modal-complaint-body');
       body.innerHTML = `
         <div style="margin-bottom:14px;">
           <h4>Khiếu nại: ${comp.id} (Đơn hàng ${comp.orderId})</h4>
           <p style="color:var(--error); font-weight:600;">Lý do: ${comp.reason}</p>
           <p style="color:var(--text-secondary); margin-top:2px;">Số tiền tranh chấp: <strong>${comp.amount}</strong></p>
+          ${isResolved ? `
+            <div style="margin-top:10px; padding:10px 14px; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; color:#166534; font-size:13px;">
+              <strong>✓ Vụ khiếu nại này đã có phán quyết cuối cùng:</strong>
+              <div style="margin-top:4px; font-weight:600;">${comp.verdict || comp.resolutionText || 'Đã giải quyết tranh chấp'}</div>
+              ${comp.resolvedAt ? `<div style="font-size:11px; color:#15803D; margin-top:2px;">Thời gian phán quyết: ${comp.resolvedAt}</div>` : ''}
+            </div>
+          ` : ''}
         </div>
 
         <div class="dispute-box">
@@ -325,6 +338,15 @@
           </div>
         </div>
       `;
+
+      // Ẩn hoặc hiện các nút hành động phán quyết trong Modal Footer
+      const splitBtn = document.getElementById('btn-verdict-split');
+      const refundBtn = document.getElementById('btn-verdict-refund');
+      const providerBtn = document.getElementById('btn-verdict-provider');
+      if (splitBtn) splitBtn.style.display = isResolved ? 'none' : 'inline-block';
+      if (refundBtn) refundBtn.style.display = isResolved ? 'none' : 'inline-block';
+      if (providerBtn) providerBtn.style.display = isResolved ? 'none' : 'inline-block';
+
       openModal('modal-complaint-detail');
     }
 
@@ -332,30 +354,44 @@
       if (!activeCompId) return;
       const state = getAppState();
       const comp = state.complaints.find(c => c.id === activeCompId);
-      if (comp) {
-        comp.status = 'resolved';
-        const order = state.orders.find(o => o.id === comp.orderId);
-        if (order) {
-          if (decisionText.includes('Hoàn tiền 100%')) {
-            order.escrowStatus = 'Đã hoàn tiền';
-            order.orderStatus = 'cancelled';
-          } else if (decisionText.includes('Giải ngân')) {
-            order.escrowStatus = 'Đã giải ngân';
-            order.orderStatus = 'completed';
-          } else {
-            order.escrowStatus = 'Đã hoàn tất bồi thường';
-          }
-        }
-        if (window.adminApi) {
-          const resolution = decisionText.includes('Hoàn tiền 100%') ? 'refund_customer' : (decisionText.includes('Giải ngân') ? 'pay_provider' : 'partial_refund');
-          window.adminApi.resolveComplaint(activeCompId, resolution, 50, decisionText).catch(console.warn);
-        }
-        saveAppState(state);
+      if (!comp) return;
+
+      // Chặn nếu khiếu nại đã được giải quyết từ trước
+      if (comp.status === 'resolved') {
+        showToast('Thông báo', 'Khiếu nại này đã có phán quyết trước đó. Không thể phán quyết lại!', 'warning');
         closeModal('modal-complaint-detail');
-        renderComplaintsTable();
-        updateSidebarBadges();
-        showToast('Phán quyết giải quyết khiếu nại', `Kết quả: ${decisionText}. Đã gửi biên bản cho các bên.`, toastType);
+        return;
       }
+
+      comp.status = 'resolved';
+      comp.verdict = decisionText;
+      comp.resolutionText = decisionText;
+      const now = new Date();
+      comp.resolvedAt = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const order = state.orders.find(o => o.id === comp.orderId);
+      if (order) {
+        if (decisionText.includes('Hoàn tiền 100%')) {
+          order.escrowStatus = 'Đã hoàn tiền';
+          order.orderStatus = 'cancelled';
+        } else if (decisionText.includes('Giải ngân')) {
+          order.escrowStatus = 'Đã giải ngân';
+          order.orderStatus = 'completed';
+        } else {
+          // Bồi thường 50/50: Giữ nguyên tranh chấp hoặc hoàn tất một phần, không tự động cộng đơn hoàn thành nếu chưa nghiệm thu
+          order.escrowStatus = 'Đã hoàn tất bồi thường (50/50)';
+          order.orderStatus = 'cancelled';
+        }
+      }
+      if (window.adminApi) {
+        const resolution = decisionText.includes('Hoàn tiền 100%') ? 'refund_customer' : (decisionText.includes('Giải ngân') ? 'pay_provider' : 'partial_refund');
+        window.adminApi.resolveComplaint(activeCompId, resolution, 50, decisionText).catch(console.warn);
+      }
+      saveAppState(state);
+      closeModal('modal-complaint-detail');
+      renderComplaintsTable();
+      updateSidebarBadges();
+      showToast('Phán quyết giải quyết khiếu nại', `Kết quả: ${decisionText}. Đã gửi biên bản cho các bên.`, toastType);
     }
   </script>
 </body>

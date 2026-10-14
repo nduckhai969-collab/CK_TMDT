@@ -139,10 +139,50 @@ const DEFAULT_STATE = {
       defendant: 'Đặng Quốc Huy (Provider)',
       reason: 'Cài đặt phần mềm độc hại làm treo hệ điều hành và không hoàn thành cam kết',
       priority: 'urgent',
-      status: 'pending',
+      status: 'resolved',
       amount: '600.000đ',
+      verdict: 'Hoàn tiền 100% cho Khách hàng',
+      resolvedAt: '25/04/2025 15:40',
       userClaim: 'Provider cài tool crack làm máy bị nhiễm mã độc tống tiền ransomware. Đơn hàng hoàn toàn không đạt yêu cầu.',
       providerClaim: 'Khách hàng yêu cầu bẻ khóa game lậu, tôi đã cảnh báo trước nhưng khách vẫn đồng ý tiến hành.'
+    },
+    {
+      id: 'KN-2025-03',
+      orderId: 'DH001233',
+      complainant: 'Lê Minh Hoàng (Khách)',
+      defendant: 'Trần Thị Lan (Provider)',
+      reason: 'Chậm deadline bàn giao bản thiết kế bộ nhận diện thương hiệu hơn 5 ngày',
+      priority: 'normal',
+      status: 'pending',
+      amount: '2.800.000đ',
+      userClaim: 'Theo thỏa thuận ban đầu hạn chót bàn giao logo là ngày 02/05, đến nay Provider không phản hồi tin nhắn và trễ hạn làm ảnh hưởng chiến dịch ra mắt thương hiệu.',
+      providerClaim: 'Tôi có nhắn tin xin gia hạn 2 ngày do mất điện khu vực làm hỏng ổ cứng đang render file vector. Tôi đã khôi phục xong và sẵn sàng bàn giao file gốc kèm 3 mẫu thiết kế bù.'
+    },
+    {
+      id: 'KN-2025-04',
+      orderId: 'DH001234',
+      complainant: 'Trần Thị Mai (Khách)',
+      defendant: 'Nguyễn Văn An (Provider)',
+      reason: 'Giao diện website không responsive đúng chuẩn trên màn hình điện thoại di động',
+      priority: 'high',
+      status: 'pending',
+      amount: '4.500.000đ',
+      userClaim: 'Website chạy trên máy tính rất tốt nhưng khi mở trên iPhone bị vỡ khung menu và lỗi hiển thị giỏ hàng. Yêu cầu sửa gấp hoặc hoàn trả một phần chi phí.',
+      providerClaim: 'Tôi đã kiểm tra, menu bị tràn do khách hàng tự ý chèn ảnh banner kích thước quá lớn không đúng tài liệu hướng dẫn. Tôi đồng ý hỗ trợ sửa CSS lại miễn phí cho khách.'
+    },
+    {
+      id: 'KN-2025-05',
+      orderId: 'DH001231',
+      complainant: 'Phạm Thị Lan (Khách)',
+      defendant: 'Phạm Hữu Cường (Provider)',
+      reason: 'Hủy lịch học Speaking không báo trước và không sắp xếp buổi học bù',
+      priority: 'normal',
+      status: 'resolved',
+      amount: '700.000đ',
+      verdict: 'Chia bồi thường 50 / 50 giữa hai bên',
+      resolvedAt: '26/04/2025 18:20',
+      userClaim: 'Thầy Cường hủy 2 buổi học liên tiếp sát giờ khiến tôi không kịp chuẩn bị cho kỳ thi IELTS tuần tới.',
+      providerClaim: 'Tôi bị sốt xuất huyết đột xuất phải nhập viện cấp cứu, đã nhờ trợ giảng gửi tài liệu tự học và sẵn sàng dạy bù 3 buổi sau khi xuất viện.'
     }
   ],
 
@@ -264,13 +304,32 @@ function getAppState() {
       saveAppState(DEFAULT_STATE);
       return JSON.parse(JSON.stringify(DEFAULT_STATE));
     }
-    // Ensure all required collections exist
+    // Ensure all required collections exist and smart-merge missing default items (like newly added complaints)
     const collections = ['users', 'orders', 'packages', 'services', 'reviews', 'complaints', 'reports', 'payouts', 'pendingProviders', 'skillApprovals', 'packagePurchases'];
+    let stateChanged = false;
+
     collections.forEach(key => {
       if (!Array.isArray(state[key])) {
         state[key] = Array.isArray(DEFAULT_STATE[key]) ? JSON.parse(JSON.stringify(DEFAULT_STATE[key])) : [];
+        stateChanged = true;
+      } else if (Array.isArray(DEFAULT_STATE[key])) {
+        // Tự động bổ sung các bản ghi mặc định mới nếu trong localStorage chưa có mã ID đó
+        const existingIds = new Set(state[key].map(item => item && item.id).filter(Boolean));
+        DEFAULT_STATE[key].forEach(defaultItem => {
+          if (defaultItem && defaultItem.id && !existingIds.has(defaultItem.id)) {
+            state[key].push(JSON.parse(JSON.stringify(defaultItem)));
+            stateChanged = true;
+          }
+        });
       }
     });
+
+    if (stateChanged) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+
     return state;
   } catch (err) {
     console.error('Error reading localStorage state:', err);

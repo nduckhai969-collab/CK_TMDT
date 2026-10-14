@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { requireCustomer } = require('./customerAuth');
 const { slotsForDate } = require('./providerAvailability');
+const { notifyProvider } = require('../services/notificationService');
 
 function getBookingList(customerId) {
   const bookingLists = db.getCollection('bookingLists') || [];
@@ -288,8 +289,7 @@ router.post('/checkout', requireCustomer, (req, res) => {
     orders.unshift(newOrder);
     createdOrders.push(newOrder);
 
-    const { createNotification } = require('../services/notificationService');
-    createNotification(
+    notifyProvider(
       pGroup.providerId,
       'Đơn đặt lịch mới',
       `Bạn có lịch đặt mới từ ${req.authUser.name}. Tổng giá trị: ${pGroup.totalPrice.toLocaleString('vi-VN')}đ.`,

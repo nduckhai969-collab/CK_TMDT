@@ -145,10 +145,50 @@ const STATE = {
       defendant: 'Đặng Quốc Huy (Provider)',
       reason: 'Cài đặt phần mềm độc hại làm treo hệ điều hành và không hoàn thành cam kết',
       priority: 'urgent',
-      status: 'pending',
+      status: 'resolved',
       amount: '600.000đ',
+      verdict: 'Hoàn tiền 100% cho Khách hàng',
+      resolvedAt: '25/04/2025 15:40',
       userClaim: 'Provider cài tool crack làm máy bị nhiễm mã độc tống tiền ransomware. Đơn hàng hoàn toàn không đạt yêu cầu.',
       providerClaim: 'Khách hàng yêu cầu bẻ khóa game lậu, tôi đã cảnh báo trước nhưng khách vẫn đồng ý tiến hành.'
+    },
+    {
+      id: 'KN-2025-03',
+      orderId: 'DH001233',
+      complainant: 'Lê Minh Hoàng (Khách)',
+      defendant: 'Trần Thị Lan (Provider)',
+      reason: 'Chậm deadline bàn giao bản thiết kế bộ nhận diện thương hiệu hơn 5 ngày',
+      priority: 'normal',
+      status: 'pending',
+      amount: '2.800.000đ',
+      userClaim: 'Theo thỏa thuận ban đầu hạn chót bàn giao logo là ngày 02/05, đến nay Provider không phản hồi tin nhắn và trễ hạn làm ảnh hưởng chiến dịch ra mắt thương hiệu.',
+      providerClaim: 'Tôi có nhắn tin xin gia hạn 2 ngày do mất điện khu vực làm hỏng ổ cứng đang render file vector. Tôi đã khôi phục xong và sẵn sàng bàn giao file gốc kèm 3 mẫu thiết kế bù.'
+    },
+    {
+      id: 'KN-2025-04',
+      orderId: 'DH001234',
+      complainant: 'Trần Thị Mai (Khách)',
+      defendant: 'Nguyễn Văn An (Provider)',
+      reason: 'Giao diện website không responsive đúng chuẩn trên màn hình điện thoại di động',
+      priority: 'high',
+      status: 'pending',
+      amount: '4.500.000đ',
+      userClaim: 'Website chạy trên máy tính rất tốt nhưng khi mở trên iPhone bị vỡ khung menu và lỗi hiển thị giỏ hàng. Yêu cầu sửa gấp hoặc hoàn trả một phần chi phí.',
+      providerClaim: 'Tôi đã kiểm tra, menu bị tràn do khách hàng tự ý chèn ảnh banner kích thước quá lớn không đúng tài liệu hướng dẫn. Tôi đồng ý hỗ trợ sửa CSS lại miễn phí cho khách.'
+    },
+    {
+      id: 'KN-2025-05',
+      orderId: 'DH001231',
+      complainant: 'Phạm Thị Lan (Khách)',
+      defendant: 'Phạm Hữu Cường (Provider)',
+      reason: 'Hủy lịch học Speaking không báo trước và không sắp xếp buổi học bù',
+      priority: 'normal',
+      status: 'resolved',
+      amount: '700.000đ',
+      verdict: 'Chia bồi thường 50 / 50 giữa hai bên',
+      resolvedAt: '26/04/2025 18:20',
+      userClaim: 'Thầy Cường hủy 2 buổi học liên tiếp sát giờ khiến tôi không kịp chuẩn bị cho kỳ thi IELTS tuần tới.',
+      providerClaim: 'Tôi bị sốt xuất huyết đột xuất phải nhập viện cấp cứu, đã nhờ trợ giảng gửi tài liệu tự học và sẵn sàng dạy bù 3 buổi sau khi xuất viện.'
     }
   ],
 
@@ -1195,7 +1235,13 @@ function setupEventListeners() {
 function resolveComplaint(decisionText, toastType) {
   const comp = STATE.complaints.find(c => c.id === activeComplaintId);
   if (comp) {
+    if (comp.status === 'resolved') {
+      showToast('Thông báo', 'Khiếu nại này đã có phán quyết trước đó. Không thể phán quyết lại!', 'warning');
+      closeModal('modal-complaint-detail');
+      return;
+    }
     comp.status = 'resolved';
+    comp.verdict = decisionText;
     const order = STATE.orders.find(o => o.id === comp.orderId);
     if (order) {
       if (decisionText.includes('Hoàn tiền 100%')) {
@@ -1205,7 +1251,8 @@ function resolveComplaint(decisionText, toastType) {
         order.escrowStatus = 'Đã giải ngân';
         order.orderStatus = 'completed';
       } else {
-        order.escrowStatus = 'Đã hoàn tất bồi thường';
+        order.escrowStatus = 'Đã hoàn tất bồi thường (50/50)';
+        order.orderStatus = 'cancelled';
       }
     }
     renderComplaints();

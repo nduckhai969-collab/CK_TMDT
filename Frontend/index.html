@@ -2637,19 +2637,19 @@
           <i class="fa-solid fa-envelope-circle-check"></i>
         </div>
 
-        <h4 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">Kích Hoạt Tài Khoản Qua Email</h4>
+        <h4 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">Kiểm Tra Hộp Thư Của Bạn</h4>
         <p style="font-size:13px; color:#475569; line-height:1.5; margin:0 0 16px;">
-          Email dùng để xác minh tài khoản:
+          Chúng tôi đã gửi email kích hoạt tài khoản tới:
           <br><strong id="verifyNoticeEmail" style="color:#16A34A; font-size:14px;">email@example.com</strong>
         </p>
 
         <div style="background:#FEF3C7; border:1px solid #FCD34D; color:#92400E; padding:12px 14px; border-radius:10px; font-size:13px; text-align:left; margin-bottom:16px; display:flex; gap:10px;">
           <i class="fa-solid fa-circle-exclamation" style="font-size:16px; margin-top:2px;"></i>
-          <div id="verifyNoticeMessage">Mở email Firebase gửi tới địa chỉ trên và nhấn liên kết xác minh để kích hoạt tài khoản. Sau đó quay lại đây để đăng nhập. Nhớ kiểm tra cả mục Spam / Thư rác.</div>
+          <div>Vui lòng mở email và nhấn vào nút <strong>Verify your email</strong> để kích hoạt tài khoản trước khi đăng nhập. Nhớ kiểm tra cả mục Spam / Thư rác!</div>
         </div>
 
         <button type="button" class="btn btn-primary btn-block" onclick="switchAuthTab('login')" style="width:100%; height:44px; margin-bottom:10px; font-weight:700;">
-          <i class="fa-solid fa-arrow-right-to-bracket"></i> Quay Lại Đăng Nhập
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Tôi Đã Xác Nhận, Đăng Nhập Ngay
         </button>
 
         <button type="button" class="btn btn-outline btn-block" id="btnResendVerification" onclick="triggerResendVerification()" style="width:100%; height:42px; font-weight:600;">
@@ -3439,11 +3439,7 @@
 
 
       if (data.success && data.verifyEmail) {
-        const verifyMessage = document.getElementById('verifyNoticeMessage');
-        if (verifyMessage && !data.verificationSent) {
-          verifyMessage.textContent = 'Firebase chưa gửi được email kích hoạt. Bấm “Gửi Lại Email Xác Nhận” bên dưới; sau khi nhận thư, nhấn liên kết xác minh rồi quay lại đăng nhập.';
-        }
-        showToastMsg(data.verificationSent ? 'Đã gửi email kích hoạt' : 'Chưa gửi được email kích hoạt', data.message, data.verificationSent ? 'success' : 'warning');
+        showToastMsg('Đăng Ký Thành Công!', data.message, 'success');
         document.getElementById('registerForm').reset();
         document.getElementById('loginEmail').value = email;
         const emailLabel = document.getElementById('verifyNoticeEmail');

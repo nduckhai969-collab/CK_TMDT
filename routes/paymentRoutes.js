@@ -6,6 +6,7 @@ const vnpay = require('../services/vnpayService');
 const checkout = require('../services/checkoutService');
 const { createNotification } = require('../services/notificationService');
 const { formatDateTime } = require('../utils/dates');
+const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
 // ---------------------------------------------------------------------------
 // Cấu hình VNPay nằm trong .env (xem .env.example):
@@ -37,6 +38,7 @@ router.post('/vnpay/create', requireSignedIn, (req, res) => {
     amount,
     description: 'Nạp tiền ví qua VNPay',
     bankCode: req.body.bankCode,
+    returnOrigin: allowedFrontendOrigin(req.headers.origin),
     ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
     orderInfo: `Nap tien vi SkillRental ${req.authUser.id}`,
     orderType: 'other'
@@ -54,6 +56,7 @@ router.post('/vnpay/orders/:orderId', requireCustomer, (req, res) => {
       orderId: req.params.orderId,
       customerId: req.authUser.id,
       ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      returnOrigin: allowedFrontendOrigin(req.headers.origin),
       bankCode: req.body.bankCode
     });
     res.json({ success: true, paymentUrl, txnRef: txn.id, order });
@@ -140,7 +143,8 @@ router.get('/vnpay/return', (req, res) => {
     txn: txn.id,
     code: String(req.query.vnp_ResponseCode || txn.responseCode || '')
   });
-  res.redirect(`${page}?${query.toString()}`);
+  const returnOrigin = allowedFrontendOrigin(txn.returnOrigin);
+  res.redirect(`${returnOrigin}${page}?${query.toString()}`);
 });
 
 // IPN: VNPay gọi ngầm từ máy chủ của họ (cần địa chỉ công khai, ví dụ ngrok khi chạy local).

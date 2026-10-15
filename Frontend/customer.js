@@ -2279,7 +2279,20 @@ async function handleModalRegister(e) {
       showToast('Đăng Ký Thất Bại', result.message || 'Không thể tạo tài khoản!', 'error');
       return;
     }
-    showToast('Xác nhận email', result.message || 'Hãy xác nhận email trước khi đăng nhập.', 'success');
+    if (result.verifyEmail) {
+      const emailLabel = document.getElementById('verifyNoticeEmail');
+      const loginEmail = document.getElementById('loginEmail');
+      const verifyMessage = document.getElementById('verifyNoticeMessage');
+      if (emailLabel) emailLabel.textContent = result.email || email;
+      if (loginEmail) loginEmail.value = result.email || email;
+      if (verifyMessage && !result.verificationSent) {
+        verifyMessage.textContent = 'Firebase chưa gửi được email kích hoạt. Bấm “Gửi Lại Email Xác Nhận” bên dưới; sau khi nhận thư, nhấn liên kết xác minh rồi quay lại đăng nhập.';
+      }
+      showToast(result.verificationSent ? 'Đã gửi email kích hoạt' : 'Chưa gửi được email kích hoạt', result.message || 'Hãy mở email, nhấn liên kết xác minh rồi quay lại đăng nhập.', result.verificationSent ? 'success' : 'warning');
+      switchAuthTab('verify');
+      return;
+    }
+    showToast('Tạo tài khoản thành công', result.message || 'Đăng ký thành công.', 'success');
     closeAuthModal();
   } catch (error) {
     console.error('Không thể đăng ký tài khoản:', error);

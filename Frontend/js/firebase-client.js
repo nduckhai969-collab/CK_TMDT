@@ -205,7 +205,7 @@
         role: safeRole,
         joinDate: userData.joinDate || dateStr,
         spentOrEarned: userData.spentOrEarned || '0đ',
-        balance: typeof userData.balance === 'number' ? userData.balance : (safeRole === 'Customer' ? 5000000 : 0),
+        balance: typeof userData.balance === 'number' ? userData.balance : 0,
         status: userData.status || 'active',
         lockReason: userData.lockReason || '',
         lockDuration: userData.lockDuration || '',
@@ -308,20 +308,24 @@
         try {
           await fbUser.sendEmailVerification();
           sentVerification = true;
-          await fbAuth.signOut();
         } catch (e) {
           console.warn('[SkillAuth] Lỗi gửi email xác nhận:', e);
+        } finally {
+          try { await fbAuth.signOut(); } catch (_) {}
         }
       }
 
       return {
         success: true,
-        verifyEmail: true,
+        verifyEmail: Boolean(fbUser),
+        verificationSent: sentVerification,
         email: email.trim(),
         user: syncedUser,
         message: sentVerification
-          ? `Đã gửi email xác nhận tới ${email.trim()}. Vui lòng kiểm tra hộp thư (cả mục Spam/Quảng cáo) và nhấp vào liên kết để kích hoạt tài khoản!`
-          : `Đăng ký tài khoản thành công cho ${email.trim()}! Bạn có thể đăng nhập ngay.`
+          ? `Firebase đã gửi liên kết kích hoạt tới ${email.trim()}. Hãy mở email, nhấn liên kết xác minh rồi quay lại đăng nhập.`
+          : fbUser
+            ? `Tài khoản đã được tạo nhưng chưa gửi được email kích hoạt tới ${email.trim()}. Hãy dùng nút Gửi lại email xác nhận.`
+            : `Tài khoản demo đã được tạo cho ${email.trim()}; Firebase không khả dụng nên không có email kích hoạt.`
       };
     },
 
@@ -1196,19 +1200,19 @@
             <i class="fa-solid fa-envelope-circle-check"></i>
           </div>
 
-          <h4 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">Kiểm Tra Hộp Thư Của Bạn</h4>
+          <h4 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">Kích Hoạt Tài Khoản Qua Email</h4>
           <p style="font-size:13px; color:#475569; line-height:1.5; margin:0 0 16px;">
-            Chúng tôi đã gửi email kích hoạt tài khoản tới:
+            Email dùng để xác minh tài khoản:
             <br><strong id="verifyNoticeEmail" style="color:#16A34A; font-size:14px;">email@example.com</strong>
           </p>
 
           <div class="sr-alert-box sr-alert-warning" style="text-align:left;">
             <i class="fa-solid fa-circle-exclamation" style="font-size:16px; margin-top:2px;"></i>
-            <div>Vui lòng mở email và nhấn vào nút <strong>Verify your email</strong> để kích hoạt tài khoản trước khi đăng nhập. Nhớ kiểm tra cả mục Spam / Thư rác!</div>
+            <div id="verifyNoticeMessage">Mở email Firebase gửi tới địa chỉ trên và nhấn liên kết xác minh để kích hoạt tài khoản. Sau đó quay lại đây để đăng nhập. Nhớ kiểm tra cả mục Spam / Thư rác.</div>
           </div>
 
           <button type="button" class="sr-btn-primary" onclick="switchAuthTab('login')" style="margin-bottom:10px;">
-            <i class="fa-solid fa-arrow-right-to-bracket"></i> Tôi Đã Xác Nhận, Đăng Nhập Ngay
+            <i class="fa-solid fa-arrow-right-to-bracket"></i> Quay Lại Đăng Nhập
           </button>
 
           <button type="button" class="sr-btn-outline" id="btnResendVerification" onclick="triggerResendVerification()">
@@ -1388,7 +1392,11 @@
       const data = await SkillAuth.register({ name, email, phone, password, role });
 
       if (data.success && data.verifyEmail) {
-        showToastMsg('Đăng Ký Thành Công!', data.message, 'success');
+        const verifyMessage = document.getElementById('verifyNoticeMessage');
+        if (verifyMessage && !data.verificationSent) {
+          verifyMessage.textContent = 'Firebase chưa gửi được email kích hoạt. Bấm “Gửi Lại Email Xác Nhận” bên dưới; sau khi nhận thư, nhấn liên kết xác minh rồi quay lại đăng nhập.';
+        }
+        showToastMsg(data.verificationSent ? 'Đã gửi email kích hoạt' : 'Chưa gửi được email kích hoạt', data.message, data.verificationSent ? 'success' : 'warning');
         const emailLabel = document.getElementById('verifyNoticeEmail');
         if (emailLabel) emailLabel.innerText = email;
         // Điền sẵn email vào form login

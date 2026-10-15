@@ -7,6 +7,7 @@ const vnpay = require('../services/vnpayService');
 const { buildCartSpecs, createOrders, startGatewayCheckout, expireUnpaidOrders } = require('../services/checkoutService');
 const { slotsForDate } = require('./providerAvailability');
 const { notifyProvider } = require('../services/notificationService');
+const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
 function getBookingList(customerId) {
   const bookingLists = db.getCollection('bookingLists') || [];
@@ -142,7 +143,7 @@ router.delete('/items/:serviceId', requireCustomer, (req, res) => {
 router.post('/checkout', requireCustomer, (req, res) => {
   try {
     expireUnpaidOrders();
-    const { customerPhone, notes, paymentMethod, schedulesByProvider, bankCode } = req.body;
+    const { customerPhone, customerAddress, notes, paymentMethod, schedulesByProvider, bankCode } = req.body;
     const bookingList = getBookingList(req.authUser.id);
 
     if (bookingList.items.length === 0) {
@@ -170,7 +171,7 @@ router.post('/checkout', requireCustomer, (req, res) => {
           message: `Số dư không đủ. Bạn cần ${total.toLocaleString('vi-VN')}đ, nhưng số dư hiện tại là ${(Number.isFinite(customerBalance) ? customerBalance : 0).toLocaleString('vi-VN')}đ.`
         });
       }
-      const orders = createOrders(customer, specs, { mode: 'wallet', paymentMethod, customerPhone, notes });
+      const orders = createOrders(customer, specs, { mode: 'wallet', paymentMethod, customerPhone, customerAddress, notes });
       bookingList.items = [];
       updateBookingList(bookingList);
       return res.json({ success: true, message: 'Thanh toán & Ký quỹ Escrow thành công!', orders });
@@ -182,8 +183,10 @@ router.post('/checkout', requireCustomer, (req, res) => {
       specs,
       paymentMethod,
       customerPhone,
+      customerAddress,
       notes,
       bankCode,
+      returnOrigin: allowedFrontendOrigin(req.headers.origin),
       ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress
     });
     bookingList.items = [];

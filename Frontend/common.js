@@ -426,7 +426,7 @@ function syncUserToAdminState(userData) {
       role: safeRole,
       joinDate: userData.joinDate || dateStr,
       spentOrEarned: userData.spentOrEarned || '0đ',
-      balance: typeof userData.balance === 'number' ? userData.balance : (safeRole === 'Customer' ? 5000000 : 0),
+      balance: typeof userData.balance === 'number' ? userData.balance : 0,
       status: userData.status || 'active',
       lockReason: userData.lockReason || '',
       lockDuration: userData.lockDuration || '',

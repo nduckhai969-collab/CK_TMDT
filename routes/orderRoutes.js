@@ -7,6 +7,7 @@ const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCa
 const { createNotification, notifyProvider } = require('../services/notificationService');
 const vnpay = require('../services/vnpayService');
 const { startGatewayCheckout, expireUnpaidOrders } = require('../services/checkoutService');
+const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
 // List orders
 router.get('/', requireCustomer, (req, res) => {
@@ -62,6 +63,7 @@ router.get('/:id', requireCustomer, (req, res) => {
 router.post('/', requireCustomer, (req, res) => {
   const {
     customerPhone,
+    customerAddress,
     providerId,
     providerName,
     serviceId,
@@ -142,7 +144,9 @@ router.post('/', requireCustomer, (req, res) => {
         }],
         paymentMethod,
         customerPhone,
+        customerAddress,
         notes,
+        returnOrigin: allowedFrontendOrigin(req.headers.origin),
         ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress
       });
       return res.status(201).json({
@@ -177,6 +181,7 @@ router.post('/', requireCustomer, (req, res) => {
     customerId: req.authUser.id,
     customerName: req.authUser.name,
     customerPhone: customerPhone || customer.phone || '',
+    customerAddress: customerAddress || customer.address || '',
     providerId: providerId,
     providerName: provider.name || providerName || 'Provider',
     providerPhone: provider.phone || '',

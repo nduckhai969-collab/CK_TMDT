@@ -114,6 +114,7 @@
             <label style="font-size:12.5px; font-weight:700; color:#0F172A; display:block; margin-bottom:6px;">Địa Chỉ / Ghi Chú Liên Lạc</label>
             <input type="text" id="custAddress" value="Quận 1, TP. Hồ Chí Minh (Hoặc trao đổi qua Google Meet / Zoom)" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
           </div>
+          <div style="margin-top:10px;color:#64748b;font-size:11px"><i class="fa-solid fa-floppy-disk"></i> Thông tin được tự động lưu trong bản nháp trên thiết bị này.</div>
         </div>
 
         <!-- Box 2: Chọn phương thức thanh toán ký quỹ -->
@@ -303,9 +304,26 @@
     let draft = null;
     let selectedMethod = 'vietqr';
 
+    function saveCheckoutDraft() {
+      if (!draft) return;
+      draft.customerName = document.getElementById('custName').value.trim();
+      draft.customerPhone = document.getElementById('custPhone').value.trim();
+      draft.customerAddress = document.getElementById('custAddress').value.trim();
+      draft.checkoutMethod = selectedMethod;
+      try {
+        localStorage.setItem('SKILLRENTAL_CHECKOUT_DRAFT', JSON.stringify(draft));
+      } catch (error) {
+        console.warn('Không thể lưu bản nháp checkout:', error);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
       document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+      ['custName', 'custPhone', 'custAddress'].forEach(id => {
+        document.getElementById(id).addEventListener('input', saveCheckoutDraft);
+        document.getElementById(id).addEventListener('change', saveCheckoutDraft);
+      });
 
       // Read draft from localStorage
       try {
@@ -339,7 +357,7 @@
       document.getElementById('summaryPrice').textContent = formatVND(price);
       document.getElementById('summaryFee').textContent = formatVND(fee);
       document.getElementById('summaryTotal').textContent = formatVND(total);
-      if (cartMode && ['vietqr','vnpay','balance','card'].includes(draft.checkoutMethod)) {
+      if (['vietqr','vnpay','balance','card'].includes(draft.checkoutMethod)) {
         selectedMethod = draft.checkoutMethod;
         document.querySelectorAll('.payment-method-card').forEach(card => {
           const selected = card.getAttribute('onclick')?.includes(`'${selectedMethod}'`);
@@ -359,6 +377,7 @@
           setCurrentCustomer(freshUser);
           document.getElementById('custName').value = freshUser.name || '';
           document.getElementById('custPhone').value = freshUser.phone || '';
+          document.getElementById('custAddress').value = freshUser.address || document.getElementById('custAddress').value;
           document.getElementById('custBalanceText').textContent = `Số dư khả dụng: ${formatVND(Number(freshUser.balance) || 0)} (Trừ trực tiếp)`;
         } else {
           document.getElementById('custBalanceText').textContent = 'Không tải được số dư';
@@ -367,6 +386,10 @@
       if (cartMode) {
         document.getElementById('custPhone').value = draft.customerPhone || document.getElementById('custPhone').value;
       }
+      if (draft.customerName) document.getElementById('custName').value = draft.customerName;
+      if (draft.customerPhone) document.getElementById('custPhone').value = draft.customerPhone;
+      if (draft.customerAddress) document.getElementById('custAddress').value = draft.customerAddress;
+      saveCheckoutDraft();
     });
 
     // Ví số dư: ký quỹ ngay. Các phương thức còn lại: chuyển sang cổng VNPay để thanh toán.
@@ -382,6 +405,7 @@
     function selectPaymentMethod(method, el) {
       if (!requireCustomerLogin()) return;
       selectedMethod = method;
+      saveCheckoutDraft();
       updateSubmitLabel();
       document.querySelectorAll('.payment-method-card').forEach(c => {
         c.classList.remove('selected');
@@ -397,6 +421,7 @@
 
     async function submitEscrowOrder() {
       if (!requireCustomerLogin()) return;
+      saveCheckoutDraft();
       const btn = document.getElementById('btnSubmitEscrow');
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Ký Quỹ Escrow...`;
@@ -414,6 +439,7 @@
           method: 'POST',
           body: JSON.stringify({
             customerPhone: document.getElementById('custPhone').value.trim(),
+            customerAddress: document.getElementById('custAddress').value.trim(),
             notes: draft.notes || '',
             paymentMethod: paymentMethods[selectedMethod],
             schedulesByProvider: draft.schedulesByProvider
@@ -448,6 +474,7 @@
         customerId: user.id,
         customerName: document.getElementById('custName').value,
         customerPhone: document.getElementById('custPhone').value,
+        customerAddress: document.getElementById('custAddress').value.trim(),
         providerId: draft.providerId,
         providerName: draft.providerName,
         serviceTitle: draft.serviceTitle,

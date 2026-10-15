@@ -120,6 +120,7 @@ function buildOrderDocument(spec, ctx) {
     customerId: ctx.customer.id,
     customerName: ctx.customer.name,
     customerPhone: ctx.customerPhone || ctx.customer.phone || '',
+    customerAddress: ctx.customerAddress || ctx.customer.address || '',
     providerId: spec.providerId,
     providerName: spec.providerName,
     ...(spec.providerPhone ? { providerPhone: spec.providerPhone } : {}),
@@ -157,7 +158,7 @@ function buildOrderDocument(spec, ctx) {
 
 // mode = 'wallet'  -> trừ ví + ký quỹ ngay
 // mode = 'gateway' -> đơn chờ thanh toán (chưa trừ ví, chưa báo cho Provider)
-function createOrders(customer, specs, { mode, paymentMethod, customerPhone, notes, paymentRef }) {
+function createOrders(customer, specs, { mode, paymentMethod, customerPhone, customerAddress, notes, paymentRef }) {
   const users = db.getCollection('users');
   const orders = db.getCollection('orders');
   const customerRecord = users.find((u) => u.id === customer.id);
@@ -169,7 +170,7 @@ function createOrders(customer, specs, { mode, paymentMethod, customerPhone, not
 
   for (const spec of specs) {
     const id = nextOrderId(orders, created);
-    const order = buildOrderDocument(spec, { id, mode, now, customer: customerRecord, customerPhone, notes, paymentMethod, paymentRef });
+    const order = buildOrderDocument(spec, { id, mode, now, customer: customerRecord, customerPhone, customerAddress, notes, paymentMethod, paymentRef });
     created.push(order);
 
     if (mode === 'wallet') {
@@ -201,7 +202,7 @@ function createOrders(customer, specs, { mode, paymentMethod, customerPhone, not
 // ---------------------------------------------------------------------------
 // 3) Thanh toán qua cổng VNPay
 // ---------------------------------------------------------------------------
-function createGatewayTransaction({ userId, type, amount, description, orderIds, bankCode, ipAddr, orderInfo, orderType }) {
+function createGatewayTransaction({ userId, type, amount, description, orderIds, bankCode, ipAddr, orderInfo, orderType, returnOrigin }) {
   const now = new Date();
   const txnRef = generateId('VNP');
   const txn = {
@@ -212,6 +213,7 @@ function createGatewayTransaction({ userId, type, amount, description, orderIds,
     status: 'pending',
     method: 'VNPAY',
     bankCode: vnpay.sanitizeBankCode(bankCode),
+    ...(returnOrigin ? { returnOrigin } : {}),
     description,
     ...(orderIds ? { orderIds } : {}),
     createdAt: formatDateTime(now),
@@ -236,7 +238,7 @@ function assertPayableAmount(amount) {
 }
 
 // Tạo đơn "chờ thanh toán" + giao dịch VNPay + URL thanh toán.
-function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, notes, ipAddr, bankCode }) {
+function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, customerAddress, notes, ipAddr, bankCode, returnOrigin }) {
   const total = specs.reduce((sum, s) => sum + s.escrowDeposit, 0);
   assertPayableAmount(total);
 
@@ -245,7 +247,7 @@ function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, n
     : vnpay.bankCodeForMethod(paymentMethod);
 
   const paymentRef = generateId('PAY');
-  const orders = createOrders(customer, specs, { mode: 'gateway', paymentMethod, customerPhone, notes, paymentRef });
+  const orders = createOrders(customer, specs, { mode: 'gateway', paymentMethod, customerPhone, customerAddress, notes, paymentRef });
   const orderIds = orders.map((o) => o.id);
 
   const { txn, paymentUrl } = createGatewayTransaction({
@@ -255,6 +257,7 @@ function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, n
     description: `Thanh toán đơn ${orderIds.join(', ')} qua VNPay`,
     orderIds,
     bankCode: channel,
+    returnOrigin,
     ipAddr,
     orderInfo: `Thanh toan don hang ${orderIds.join(' ')}`,
     orderType: 'billpayment'
@@ -276,7 +279,7 @@ function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, n
 }
 
 // Thanh toán lại cho một đơn đang chờ thanh toán.
-function startGatewayRetry({ orderId, customerId, ipAddr, bankCode }) {
+function startGatewayRetry({ orderId, customerId, ipAddr, bankCode, returnOrigin }) {
   expireUnpaidOrders();
   const orders = db.getCollection('orders');
   const order = orders.find((o) => o.id === orderId);
@@ -306,6 +309,7 @@ function startGatewayRetry({ orderId, customerId, ipAddr, bankCode }) {
     description: `Thanh toán đơn ${orderId} qua VNPay`,
     orderIds: [orderId],
     bankCode: channel,
+    returnOrigin,
     ipAddr,
     orderInfo: `Thanh toan don hang ${orderId}`,
     orderType: 'billpayment'

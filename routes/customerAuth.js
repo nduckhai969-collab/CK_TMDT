@@ -95,7 +95,7 @@ function authenticate({ allowNoProfile = false, allowUnverified = false } = {}) 
         role: safeRole,
         joinDate: dateStr,
         spentOrEarned: '0đ',
-        balance: safeRole === 'Customer' ? 5000000 : 0,
+        balance: 0,
         status: 'active',
         avatar: decoded.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
       };

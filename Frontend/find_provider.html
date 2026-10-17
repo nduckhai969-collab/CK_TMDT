@@ -2792,17 +2792,13 @@
                       provider;
 
 
-              const avatar =
-                      p.avatar ||
-                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
+              const avatar = p.avatar || '';
 
 
-              const rating =
-                      p.rating || '4.9';
+              const rating = p.rating ?? '—';
 
 
-              const reviewCount =
-                      p.reviewCount || 30;
+              const reviewCount = Number(p.reviewCount) || 0;
 
 
               const specialty =
@@ -2815,17 +2811,13 @@
                       'Toàn quốc / Online';
 
 
-              const workingHours =
-                      p.workingHours ||
-                      'T2-T7, 08:00-18:00';
+              const workingHours = p.workingHours || 'Liên hệ Provider để xác nhận lịch';
 
 
-              const hourlyRate =
-                      p.hourlyRate || 200000;
+              const hourlyRate = p.hourlyRate != null && p.hourlyRate !== '' && Number.isFinite(Number(p.hourlyRate)) ? Number(p.hourlyRate) : null;
 
 
-              const completedOrders =
-                      p.completedOrders || 35;
+              const completedOrders = Number(p.completedOrders) || 0;
 
 
               const skills =
@@ -2862,6 +2854,7 @@
               src="${avatar}"
               alt="${p.name || 'Provider'}"
               class="provider-avatar"
+              onerror="this.style.display='none'"
               >
 
 
@@ -3038,11 +3031,9 @@
 
               <div class="provider-price">
 
-              ${formatProviderVND(hourlyRate)}
+              ${hourlyRate === null ? 'Chưa cập nhật giá' : formatProviderVND(hourlyRate)}
 
-              <span>
-              / giờ
-              </span>
+              ${hourlyRate === null ? '' : '<span>/ giờ</span>'}
 
               </div>
 

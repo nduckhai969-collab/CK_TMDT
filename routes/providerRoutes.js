@@ -2,11 +2,13 @@ const express = require('express');
 const router = express.Router();
 
 const db = require('../data/db');
+const { auth } = require('../firebase');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireProvider, requireSignedIn } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
 const { processAcceptOrder, processDeliverOrder, processProgressOrder } = require('../services/orderService');
+const { isVisibleToProvider } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 
 function getMyProvider(req) {
@@ -76,13 +78,16 @@ router.get('/me', requireProvider, (req, res) => {
   res.json({ success: true, provider });
 });
 
-router.put('/profile', requireProvider, (req, res) => {
+router.put('/profile', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
   const providers = db.getCollection('providers');
   const index = providers.findIndex(p => p.id === provider.id);
   
   if (index !== -1) {
-    const { bio, specialty, category, location, skills, hourlyRate, bankAccount, bankName } = req.body;
+    const { name, phone, avatar, bio, specialty, category, location, skills, hourlyRate, bankAccount, bankName } = req.body;
+    if (name !== undefined && String(name).trim()) providers[index].name = String(name).trim();
+    if (phone !== undefined) providers[index].phone = String(phone).trim();
+    if (avatar !== undefined && avatar) providers[index].avatar = avatar;
     if (bio !== undefined) providers[index].bio = bio;
     if (specialty !== undefined) providers[index].specialty = specialty;
     if (category !== undefined) providers[index].category = category;
@@ -93,6 +98,34 @@ router.put('/profile', requireProvider, (req, res) => {
     if (bankName !== undefined) providers[index].bankName = bankName;
     
     db.saveCollection('providers', providers);
+
+    // Đồng bộ sang collection 'users'
+    const users = db.getCollection('users');
+    const uIndex = users.findIndex(u => u.id === req.authUser.id);
+    if (uIndex !== -1) {
+      if (name !== undefined && String(name).trim()) users[uIndex].name = String(name).trim();
+      if (phone !== undefined) users[uIndex].phone = String(phone).trim();
+      if (avatar !== undefined && avatar) users[uIndex].avatar = avatar;
+      if (location !== undefined) users[uIndex].address = location;
+      db.saveCollection('users', users);
+    }
+
+    // Đồng bộ lên Firebase Auth
+    if (req.firebaseUser && req.firebaseUser.uid) {
+      try {
+        const fbUpdate = {};
+        if (name && String(name).trim()) fbUpdate.displayName = String(name).trim();
+        if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
+          fbUpdate.photoURL = avatar;
+        }
+        if (Object.keys(fbUpdate).length > 0) {
+          await auth.updateUser(req.firebaseUser.uid, fbUpdate);
+        }
+      } catch (err) {
+        console.warn('[provider] Cập nhật Firebase Auth profile thất bại:', err.message);
+      }
+    }
+
     res.json({ success: true, message: 'Cập nhật hồ sơ thành công!', provider: providers[index] });
   } else {
     res.status(404).json({ success: false, message: 'Lỗi đồng bộ hồ sơ.' });
@@ -103,7 +136,7 @@ router.get('/dashboard/stats', requireProvider, (req, res) => {
   const provider = getMyProvider(req);
   const orders = db.getCollection('orders') || [];
   
-  const myOrders = orders.filter(o => o.providerId === provider.id);
+  const myOrders = orders.filter(o => o.providerId === provider.id && isVisibleToProvider(o));
   
   const pending = myOrders.filter(o => o.orderStatus === 'pending').length;
   const processing = myOrders.filter(o => o.orderStatus === 'processing').length;
@@ -135,7 +168,7 @@ router.get('/me/services', requireProvider, (req, res) => {
 
 router.get('/me/orders', requireProvider, (req, res) => {
   const provider = getMyProvider(req);
-  const orders = (db.getCollection('orders') || []).filter(o => o.providerId === provider.id);
+  const orders = (db.getCollection('orders') || []).filter(o => o.providerId === provider.id && isVisibleToProvider(o));
   res.json({ success: true, orders });
 });
 

@@ -181,7 +181,6 @@
             const dateStr = dateObj.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const timeFull = isNaN(dateObj.getTime()) ? '13:46:45 - 17/10/2026' : `${timeStr} - ${dateStr}`;
 
-            // Lấy đúng tên người nạp từ bản ghi giao dịch, hoặc trích xuất từ description / sessionStorage
             let displayName = item.userName;
             if ((!displayName || displayName === 'Lê Hoàng Long') && sessionStorage.getItem('qr_user_' + item.id)) {
               displayName = sessionStorage.getItem('qr_user_' + item.id);

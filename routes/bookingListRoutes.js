@@ -3,6 +3,12 @@ const router = express.Router();
 const db = require('../data/db');
 const { requireCustomer } = require('./customerAuth');
 
+const vnpay = require('../services/vnpayService');
+const { buildCartSpecs, createOrders, startGatewayCheckout, expireUnpaidOrders } = require('../services/checkoutService');
+const { slotsForDate } = require('./providerAvailability');
+const { notifyProvider } = require('../services/notificationService');
+const { allowedFrontendOrigin } = require('../utils/webOrigin');
+
 function getBookingList(customerId) {
   const bookingLists = db.getCollection('bookingLists') || [];
   let bookingList = bookingLists.find(c => c.customerId === customerId);
@@ -41,7 +47,10 @@ router.get('/', requireCustomer, (req, res) => {
       serviceTitle: s.title,
       price: Number(s.price),
       providerId: s.providerId,
-      providerName: s.providerName
+      providerName: s.providerName,
+      providerAvatar: s.providerAvatar || '',
+      thumbnail: s.thumbnail || '',
+      status: s.status || 'active'
     };
   });
   
@@ -67,13 +76,23 @@ router.post('/items', requireCustomer, (req, res) => {
   if (!s) {
     return res.status(404).json({ success: false, message: 'Dịch vụ không tồn tại.' });
   }
+  if (s.status && s.status !== 'active') {
+    return res.status(400).json({ success: false, message: 'Dịch vụ hiện không nhận đặt hàng.' });
+  }
 
   const bookingList = getBookingList(req.authUser.id);
-  const qty = Number(hours) || 1;
+  const qty = hours === undefined ? 1 : Number(hours);
+  if (!Number.isInteger(qty) || qty < 1 || qty > 99) {
+    return res.status(400).json({ success: false, message: 'Số lượng phải là số nguyên từ 1 đến 99.' });
+  }
 
   const existingItem = bookingList.items.find(i => i.serviceId === serviceId);
   if (existingItem) {
-    existingItem.hours += qty;
+    const nextQty = Number(existingItem.hours || 0) + qty;
+    if (nextQty > 99) {
+      return res.status(400).json({ success: false, message: 'Tổng số lượng của một dịch vụ không được vượt quá 99.' });
+    }
+    existingItem.hours = nextQty;
   } else {
     bookingList.items.push({
       serviceId,
@@ -96,7 +115,10 @@ router.put('/items/:serviceId', requireCustomer, (req, res) => {
   }
 
   const qty = Number(hours);
-  if (qty <= 0) {
+  if (!Number.isInteger(qty) || qty < 0 || qty > 99) {
+    return res.status(400).json({ success: false, message: 'Số lượng phải là số nguyên từ 0 đến 99.' });
+  }
+  if (qty === 0) {
     bookingList.items = bookingList.items.filter(i => i.serviceId !== req.params.serviceId);
   } else {
     item.hours = qty;
@@ -116,136 +138,70 @@ router.delete('/items/:serviceId', requireCustomer, (req, res) => {
 });
 
 // Thanh toán toàn bộ danh sách đặt lịch
+//  - "Số dư tài khoản": trừ ví, ký quỹ ngay.
+//  - Ví VNPay / VietQR / Thẻ quốc tế: tạo đơn CHỜ THANH TOÁN rồi trả về paymentUrl để chuyển khách sang VNPay.
 router.post('/checkout', requireCustomer, (req, res) => {
-  const { customerPhone, notes, paymentMethod, scheduledDate, scheduledTime } = req.body;
-  const bookingList = getBookingList(req.authUser.id);
+  try {
+    expireUnpaidOrders();
+    const { customerPhone, customerAddress, notes, paymentMethod, schedulesByProvider, bankCode } = req.body;
+    const bookingList = getBookingList(req.authUser.id);
 
-  if (bookingList.items.length === 0) {
-    return res.status(400).json({ success: false, message: 'Danh sách đặt lịch đang trống.' });
-  }
-
-  const services = db.getCollection('services') || [];
-  const providers = db.getCollection('providers') || [];
-  const users = db.getCollection('users') || [];
-  const orders = db.getCollection('orders') || [];
-
-  const customer = users.find(u => u.id === req.authUser.id);
-  if (!customer) {
-    return res.status(401).json({ success: false, message: 'Không tìm thấy thông tin khách hàng.' });
-  }
-
-  // Bước 1: Tính toán tổng tiền và nhóm theo Provider
-  let totalEscrowNeeded = 0;
-  const providerGroups = {};
-
-  for (const item of bookingList.items) {
-    const srv = services.find(s => s.id === item.serviceId);
-    if (!srv) continue;
-
-    if (!providerGroups[srv.providerId]) {
-      providerGroups[srv.providerId] = {
-        providerId: srv.providerId,
-        providerName: srv.providerName,
-        items: [],
-        totalPrice: 0
-      };
+    if (bookingList.items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Danh sách đặt lịch đang trống.' });
     }
-    
-    const itemPrice = Number(srv.price) * (Number(item.hours) || 1);
-    providerGroups[srv.providerId].items.push({
-      serviceId: srv.id,
-      serviceTitle: srv.title,
-      hours: item.hours,
-      itemPrice
+
+    const walletPayment = vnpay.isWalletMethod(paymentMethod);
+    if (!walletPayment && !vnpay.isGatewayMethod(paymentMethod)) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn một phương thức thanh toán hợp lệ.' });
+    }
+
+    const customer = (db.getCollection('users') || []).find(u => u.id === req.authUser.id);
+    if (!customer) {
+      return res.status(401).json({ success: false, message: 'Không tìm thấy thông tin khách hàng.' });
+    }
+
+    // Giá, lịch và khung giờ đều được kiểm tra lại ở server
+    const { specs, total } = buildCartSpecs(bookingList, schedulesByProvider);
+
+    if (walletPayment) {
+      const customerBalance = Number(customer.balance);
+      if (!Number.isFinite(customerBalance) || customerBalance < 0 || customerBalance < total) {
+        return res.status(400).json({
+          success: false,
+          message: `Số dư không đủ. Bạn cần ${total.toLocaleString('vi-VN')}đ, nhưng số dư hiện tại là ${(Number.isFinite(customerBalance) ? customerBalance : 0).toLocaleString('vi-VN')}đ.`
+        });
+      }
+      const orders = createOrders(customer, specs, { mode: 'wallet', paymentMethod, customerPhone, customerAddress, notes });
+      bookingList.items = [];
+      updateBookingList(bookingList);
+      return res.json({ success: true, message: 'Thanh toán & Ký quỹ Escrow thành công!', orders });
+    }
+
+    // Thanh toán qua cổng VNPay: đơn ở trạng thái chờ thanh toán, chỉ vào ký quỹ khi VNPay xác nhận
+    const { orders, txn, paymentUrl } = startGatewayCheckout({
+      customer,
+      specs,
+      paymentMethod,
+      customerPhone,
+      customerAddress,
+      notes,
+      bankCode,
+      returnOrigin: allowedFrontendOrigin(req.headers.origin),
+      ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress
     });
-    providerGroups[srv.providerId].totalPrice += itemPrice;
-  }
-
-  for (const pid in providerGroups) {
-    const pGroup = providerGroups[pid];
-    const platformFee = Math.round(pGroup.totalPrice * 0.05);
-    const escrowDeposit = pGroup.totalPrice + platformFee;
-    totalEscrowNeeded += escrowDeposit;
-    
-    pGroup.platformFee = platformFee;
-    pGroup.escrowDeposit = escrowDeposit;
-  }
-
-  if (customer.balance < totalEscrowNeeded) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Số dư không đủ. Bạn cần ${totalEscrowNeeded.toLocaleString('vi-VN')}đ, nhưng số dư hiện tại là ${(customer.balance || 0).toLocaleString('vi-VN')}đ.`
+    bookingList.items = [];
+    updateBookingList(bookingList);
+    res.json({
+      success: true,
+      requiresPayment: true,
+      message: 'Đã tạo đơn chờ thanh toán. Đang chuyển tới cổng VNPay...',
+      paymentUrl,
+      txnRef: txn.id,
+      orders
     });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
   }
-
-  // Bước 2: Trừ tiền và tạo đơn hàng
-  customer.balance -= totalEscrowNeeded;
-  db.saveCollection('users', users);
-
-  const now = new Date();
-  const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  
-  const createdOrders = [];
-
-  for (const pid in providerGroups) {
-    const pGroup = providerGroups[pid];
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const newId = `DH00${randomSuffix}`;
-
-    const titles = pGroup.items.map(i => `${i.serviceTitle} (${i.hours}h)`).join(', ');
-
-    const newOrder = {
-      id: newId,
-      customerId: req.authUser.id,
-      customerName: req.authUser.name,
-      customerPhone: customerPhone || customer.phone || '',
-      providerId: pGroup.providerId,
-      providerName: pGroup.providerName,
-      serviceId: pGroup.items[0].serviceId, 
-      serviceTitle: titles,
-      price: pGroup.totalPrice,
-      priceFormatted: pGroup.totalPrice.toLocaleString('vi-VN') + 'đ',
-      platformFee: pGroup.platformFee,
-      escrowDeposit: pGroup.escrowDeposit,
-      escrowStatus: 'escrow_held', 
-      orderStatus: 'pending',
-      paymentMethod: paymentMethod || 'Ví điện tử VNPay (Escrow 100%)',
-      date: dateStr,
-      deadline: '7 ngày sau đặt cọc',
-      scheduledDate: scheduledDate || '',
-      scheduledTime: scheduledTime || '',
-      notes: notes || '',
-      milestones: [
-        { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: dateStr },
-        { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: false, time: 'Chờ tiếp nhận' },
-        { title: 'Bàn giao sản phẩm / hoàn thành dịch vụ', done: false, time: 'Chờ bàn giao' },
-        { title: 'Khách hàng nghiệm thu & Giải ngân Escrow', done: false, time: 'Chờ nghiệm thu' }
-      ]
-    };
-
-    orders.unshift(newOrder);
-    createdOrders.push(newOrder);
-
-    const { createNotification } = require('../services/notificationService');
-    createNotification(
-      pGroup.providerId, 
-      'Đơn đặt lịch mới', 
-      `Bạn có lịch đặt mới từ ${req.authUser.name}. Tổng giá trị: ${pGroup.totalPrice.toLocaleString('vi-VN')}đ.`,
-      'info'
-    );
-  }
-
-  db.saveCollection('orders', orders);
-
-  // Xóa danh sách đặt lịch
-  bookingList.items = [];
-  updateBookingList(bookingList);
-
-  res.json({
-    success: true,
-    message: 'Thanh toán & Ký quỹ Escrow thành công!',
-    orders: createdOrders
-  });
 });
 
 module.exports = router;

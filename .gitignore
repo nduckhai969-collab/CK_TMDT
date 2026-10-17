@@ -2,3 +2,7 @@ node_modules/
 .env
 serviceAccountKey.json
 *-firebase-adminsdk-*.json
+uploads/
+.idea/
+.idea_backup/
+.idea_old/

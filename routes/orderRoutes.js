@@ -3,11 +3,15 @@ const router = express.Router();
 const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processReleaseEscrow } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processUndoCancelOrder, processReleaseEscrow } = require('../services/orderService');
 const { createNotification, notifyProvider } = require('../services/notificationService');
+const vnpay = require('../services/vnpayService');
+const { startGatewayCheckout, expireUnpaidOrders } = require('../services/checkoutService');
+const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
 // List orders
 router.get('/', requireCustomer, (req, res) => {
+  expireUnpaidOrders();
   const { customerId, providerId, status, escrowStatus } = req.query;
   let orders = db.getCollection('orders');
 
@@ -59,6 +63,7 @@ router.get('/:id', requireCustomer, (req, res) => {
 router.post('/', requireCustomer, (req, res) => {
   const {
     customerPhone,
+    customerAddress,
     providerId,
     providerName,
     serviceId,
@@ -95,6 +100,11 @@ router.post('/', requireCustomer, (req, res) => {
   
   // Calculate price securely from backend
   const services = db.getCollection('services') || [];
+  const providers = db.getCollection('providers') || [];
+  const provider = providers.find(item => item.id === providerId);
+  if (!provider) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy Provider của đơn hàng.' });
+  }
   const service = services.find(s => s.id === serviceId);
   
   // Nạp 1 giá trị an toàn, mặc định dùng req.body.price nếu không tìm thấy nhưng cảnh báo
@@ -110,7 +120,48 @@ router.post('/', requireCustomer, (req, res) => {
 
   const users = db.getCollection('users');
   const customer = users.find(u => u.id === req.authUser.id);
-  
+
+  // Thanh toán qua cổng VNPay (ví VNPay / VietQR / thẻ quốc tế): tạo đơn chờ thanh toán, trả về paymentUrl
+  if (vnpay.isGatewayMethod(paymentMethod)) {
+    if (!customer) {
+      return res.status(401).json({ success: false, message: 'Không tìm thấy thông tin khách hàng.' });
+    }
+    try {
+      const { orders: created, txn, paymentUrl } = startGatewayCheckout({
+        customer,
+        specs: [{
+          providerId,
+          providerName: provider.name || providerName || 'Provider',
+          providerPhone: provider.phone || '',
+          serviceId: serviceId || null,
+          serviceTitle: (service ? service.title : serviceTitle) || 'Hợp đồng dịch vụ',
+          price: priceNum,
+          platformFee,
+          escrowDeposit,
+          deadline,
+          scheduledDate: scheduledDate || '',
+          scheduledTime: scheduledTime || ''
+        }],
+        paymentMethod,
+        customerPhone,
+        customerAddress,
+        notes,
+        returnOrigin: allowedFrontendOrigin(req.headers.origin),
+        ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+      });
+      return res.status(201).json({
+        success: true,
+        requiresPayment: true,
+        message: 'Đã tạo đơn chờ thanh toán. Đang chuyển tới cổng VNPay...',
+        paymentUrl,
+        txnRef: txn.id,
+        order: created[0]
+      });
+    } catch (err) {
+      return res.status(err.status || 400).json({ success: false, message: err.message });
+    }
+  }
+
   if (!customer || customer.balance < escrowDeposit) {
     return res.status(400).json({ 
       success: false, 
@@ -129,12 +180,13 @@ router.post('/', requireCustomer, (req, res) => {
     id: newId,
     customerId: req.authUser.id,
     customerName: req.authUser.name,
-    customerPhone: customerPhone || '0988 776 655',
+    customerPhone: customerPhone || customer.phone || '',
+    customerAddress: customerAddress || customer.address || '',
     providerId: providerId,
-    providerName: providerName || 'Chuyên gia SkillRental',
-    providerPhone: '0901 234 567',
-    serviceId: serviceId || 'SVC_CUSTOM',
-    serviceTitle: (service ? service.title : serviceTitle) || 'Dịch vụ kỹ năng chuyên nghiệp',
+    providerName: provider.name || providerName || 'Provider',
+    providerPhone: provider.phone || '',
+    serviceId: serviceId || null,
+    serviceTitle: (service ? service.title : serviceTitle) || 'Hợp đồng dịch vụ',
     price: priceNum,
     priceFormatted: priceNum.toLocaleString('vi-VN') + 'đ',
     platformFee: platformFee,
@@ -263,11 +315,22 @@ router.put('/:id/cancel', requireSignedIn, (req, res) => {
     const order = processCancelOrder(req.params.id, req.authUser.id, req.authUser.role, req.body.reason);
     res.json({
       success: true,
-      message: order.orderStatus === 'disputed' 
-        ? 'Đơn hàng đã được chuyển sang trạng thái Tranh chấp. Tiền ký quỹ Escrow được tạm khóa chờ Admin xử lý!'
-        : 'Đơn hàng đã bị hủy và hoàn tiền thành công!',
+      message: order.orderStatus === 'disputed'
+        ? 'Đơn hàng đã chuyển sang tranh chấp. Tiền ký quỹ được tạm khóa chờ Admin xử lý.'
+        : order.paymentStatus === 'cancelled'
+          ? 'Đơn hàng chờ thanh toán đã được hủy. Không có khoản tiền nào bị trừ.'
+          : 'Đơn hàng đã được hủy. Tiền ký quỹ đã hoàn vào ví khách hàng.',
       order
     });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/:id/undo-cancel', requireCustomer, (req, res) => {
+  try {
+    const order = processUndoCancelOrder(req.params.id, req.authUser.id);
+    res.json({ success: true, message: 'Đã hoàn tác hủy đơn và khôi phục đơn hàng.', order });
   } catch (err) {
     res.status(err.status || 400).json({ success: false, message: err.message });
   }

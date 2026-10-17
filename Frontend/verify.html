@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Xác Thực Email — SkillRental Platform</title>
+  <meta name="description" content="Trang xác thực tài khoản và bảo mật email chính thức của nền tảng SkillRental.">
+  
+  <!-- Favicon / Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    /* ==========================================================================
+       SkillRental Platform - Custom Verification Design System
+       ========================================================================== */
+    :root {
+      --primary: #16A34A;
+      --primary-dark: #15803D;
+      --primary-hover: #15803D;
+      --primary-light: #DCFCE7;
+      --primary-glow: rgba(22, 163, 74, 0.35);
+
+      --secondary: #0F172A;
+      --bg-page: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --border-color: #E2E8F0;
+      
+      --text-heading: #0F172A;
+      --text-main: #334155;
+      --text-secondary: #64748B;
+      --text-muted: #94A3B8;
+
+      --success: #22C55E;
+      --success-light: #F0FDF4;
+      --success-border: #86EFAC;
+
+      --danger: #EF4444;
+      --danger-dark: #DC2626;
+      --danger-light: #FEF2F2;
+      --danger-border: #FECACA;
+
+      --info: #3B82F6;
+      --info-light: #EFF6FF;
+      --info-border: #BFDBFE;
+
+      --radius-sm: 8px;
+      --radius-btn: 12px;
+      --radius-card: 24px;
+      --shadow-card: 0 20px 45px -12px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
+      --shadow-btn: 0 8px 20px -4px var(--primary-glow);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Floating Ambient Gradient Orbs */
+    .ambient-glow {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.45;
+      z-index: 0;
+      pointer-events: none;
+      animation: ambientFloat 8s ease-in-out infinite alternate;
+    }
+    .ambient-glow-1 {
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 480px;
+      height: 320px;
+      background: radial-gradient(circle, #86EFAC 0%, rgba(22, 163, 74, 0.2) 70%);
+    }
+    .ambient-glow-2 {
+      bottom: -60px;
+      right: -60px;
+      width: 360px;
+      height: 360px;
+      background: radial-gradient(circle, #93C5FD 0%, rgba(59, 130, 246, 0.15) 70%);
+    }
+    @keyframes ambientFloat {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(18px) scale(1.05); }
+    }
+
+    /* Top Brand Navigation */
+    .app-header {
+      position: relative;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-heading);
+      font-weight: 800;
+      font-size: 19px;
+      letter-spacing: -0.3px;
+    }
+    .brand-logo-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
+    }
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #F1F5F9;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid #E2E8F0;
+    }
+    .brand-badge i {
+      color: var(--primary);
+      font-size: 11px;
+    }
+
+    /* Center Container */
+    .verify-wrapper {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 18px 48px;
+    }
+
+    .verify-card {
+      background: var(--bg-surface);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      width: 100%;
+      max-width: 480px;
+      padding: 38px 28px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Decorative Top Card Accent */
+    .verify-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #22C55E 0%, #16A34A 50%, #3B82F6 100%);
+    }
+
+    /* Hero Icon & Pulsing Waves */
+    .hero-icon-container {
+      position: relative;
+      width: 88px;
+      height: 88px;
+      margin: 8px auto 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-pulse-ring {
+      position: absolute;
+      inset: -10px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(22, 163, 74, 0.35) 0%, rgba(22, 163, 74, 0) 72%);
+      animation: heroPulse 2.4s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+    }
+    @keyframes heroPulse {
+      0% { transform: scale(0.85); opacity: 0.9; }
+      50% { transform: scale(1.25); opacity: 0.2; }
+      100% { transform: scale(0.85); opacity: 0.9; }
+    }
+
+    .hero-icon-box {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Icon State Variants */
+    .hero-icon-box.state-prompt {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      color: #FFFFFF;
+      box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.45);
+      animation: floatSmooth 3.2s ease-in-out infinite;
+    }
+    .hero-icon-box.state-loading {
+      background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+      color: #2563EB;
+      box-shadow: 0 10px 24px -4px rgba(37, 99, 235, 0.25);
+    }
+    .hero-icon-box.state-success {
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 50%, #15803D 100%);
+      color: #FFFFFF;
+      box-shadow: 0 12px 30px -4px rgba(22, 163, 74, 0.5);
+      animation: popCheck 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    .hero-icon-box.state-error {
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      color: #FFFFFF;
+      box-shadow: 0 12px 28px -4px rgba(239, 68, 68, 0.4);
+      animation: shakeErr 0.5s ease-in-out;
+    }
+    .hero-icon-box.state-reset {
+      background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+      color: #FFFFFF;
+      box-shadow: 0 12px 28px -4px rgba(109, 40, 217, 0.4);
+    }
+
+    @keyframes floatSmooth {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    @keyframes popCheck {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes shakeErr {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    /* Small Corner Badge */
+    .hero-sub-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+      border: 2px solid #FFFFFF;
+    }
+    .hero-sub-badge.badge-success { color: #16A34A; }
+    .hero-sub-badge.badge-shield { color: #2563EB; }
+    .hero-sub-badge.badge-warn { color: #EF4444; }
+
+    /* Typography */
+    .card-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-heading);
+      letter-spacing: -0.4px;
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+    .card-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* Pill Card for Extra Details */
+    .info-card {
+      border-radius: 14px;
+      padding: 14px 16px;
+      text-align: left;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .info-card.success-info {
+      background: var(--success-light);
+      border: 1px solid var(--success-border);
+      color: #15803D;
+    }
+    .info-card.neutral-info {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      color: var(--text-main);
+    }
+    .info-card.error-info {
+      background: var(--danger-light);
+      border: 1px solid var(--danger-border);
+      color: var(--danger-dark);
+    }
+    .info-card-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .info-card-text {
+      flex: 1;
+      line-height: 1.45;
+    }
+    .info-card-text strong {
+      display: block;
+      color: var(--text-heading);
+      margin-bottom: 2px;
+      font-weight: 700;
+    }
+
+    /* Benefits Checklist */
+    .benefits-list {
+      list-style: none;
+      text-align: left;
+      margin-bottom: 24px;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 14px 18px;
+    }
+    .benefits-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-main);
+      padding: 6px 0;
+      font-weight: 500;
+    }
+    .benefits-item i {
+      color: var(--primary);
+      font-size: 14px;
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn-primary-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      height: 48px;
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-btn);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: var(--shadow-btn);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .btn-primary-action:hover {
+      background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
+      transform: translateY(-1.5px);
+      box-shadow: 0 10px 24px -4px rgba(22, 163, 74, 0.45);
+    }
+    .btn-primary-action:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 44px;
+      background: #FFFFFF;
+      border: 1.5px solid #E2E8F0;
+      border-radius: var(--radius-btn);
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .btn-secondary-action:hover {
+      border-color: #CBD5E1;
+      background: #F8FAFC;
+      color: var(--text-heading);
+    }
+
+    .btn-blue-action {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.35);
+    }
+    .btn-blue-action:hover {
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      box-shadow: 0 10px 24px -4px rgba(37, 99, 235, 0.45);
+    }
+
+    /* Spinner */
+    .spinner-ring {
+      width: 38px;
+      height: 38px;
+      border: 3.5px solid #DBEAFE;
+      border-top-color: #2563EB;
+      border-radius: 50%;
+      animation: spinRing 0.85s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spinRing {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Auto Redirect Countdown */
+    .redirect-timer {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .redirect-timer strong {
+      color: var(--primary-dark);
+    }
+
+    /* Form Inputs for Password Reset */
+    .input-group {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+    .input-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-heading);
+      margin-bottom: 6px;
+    }
+    .input-box {
+      position: relative;
+    }
+    .input-box i.input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .form-control-sr {
+      width: 100%;
+      height: 44px;
+      padding: 10px 42px 10px 40px;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-heading);
+      background: #FFFFFF;
+      transition: all 0.2s ease;
+    }
+    .form-control-sr:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+    }
+    .toggle-pwd-btn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+    }
+    .toggle-pwd-btn:hover {
+      color: var(--text-heading);
+    }
+
+    /* Resend Email In-Card Box */
+    .resend-box {
+      background: #F8FAFC;
+      border: 1px dashed #CBD5E1;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 18px;
+      text-align: left;
+    }
+    .resend-box-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-heading);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .resend-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    .resend-input-row input {
+      flex: 1;
+      height: 38px;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .resend-input-row button {
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: none;
+      background: var(--primary);
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 12.5px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease;
+    }
+    .resend-input-row button:hover {
+      background: var(--primary-dark);
+    }
+
+    /* Toast Notification inside Verify Page */
+    .verify-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      z-index: 99999;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .verify-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* App Footer */
+    .app-footer {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(226, 232, 240, 0.6);
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(8px);
+    }
+    .app-footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .app-header {
+        padding: 12px 16px;
+      }
+      .brand-logo {
+        font-size: 17px;
+      }
+      .verify-wrapper {
+        padding: 20px 14px 36px;
+      }
+      .verify-card {
+        padding: 28px 18px;
+        border-radius: 20px;
+      }
+      .card-title {
+        font-size: 20px;
+      }
+      .card-subtitle {
+        font-size: 13.5px;
+        margin-bottom: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Glow Backgrounds -->
+  <div class="ambient-glow ambient-glow-1"></div>
+  <div class="ambient-glow ambient-glow-2"></div>
+
+  <!-- Header Navigation -->
+  <header class="app-header">
+    <a href="index.html" class="brand-logo" title="Trang chủ SkillRental">
+      <div class="brand-logo-icon">
+        <i class="fa-solid fa-briefcase"></i>
+      </div>
+      <span>SkillRental</span>
+    </a>
+    <div class="brand-badge">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span>Xác thực an toàn</span>
+    </div>
+  </header>
+
+  <!-- Center Card Area -->
+  <main class="verify-wrapper">
+    <div class="verify-card" id="verifyCard">
+      <!-- Nội dung động được render bằng JavaScript dựa trên Mode -->
+      <div id="dynamicContent">
+        <!-- Default Loading Preview -->
+        <div class="hero-icon-container">
+          <div class="hero-pulse-ring"></div>
+          <div class="hero-icon-box state-loading">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+          </div>
+        </div>
+        <h1 class="card-title">Đang Khởi Tạo...</h1>
+        <p class="card-subtitle">Hệ thống đang kiểm tra mã xác thực với máy chủ Firebase.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="verifyToast" class="verify-toast">
+    <i class="fa-solid fa-circle-check" style="color: #4ADE80;"></i>
+    <span id="verifyToastMsg">Thông báo</span>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    © 2026 <strong>SkillRental Platform</strong> — Nền Tảng Kết Nối Chuyên Gia & Dịch Vụ Hàng Đầu.
+  </footer>
+
+  <!-- Firebase SDKs (v8/v9 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  
+  <!-- Firebase Project Configuration -->
+  <script src="js/firebase-config.js"></script>
+  
+  <!-- Canvas Confetti Effect (for celebration) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- Main Controller Logic -->
+  <script>
+    (function () {
+      // 1. Khởi tạo Firebase App
+      let fbApp, fbAuth;
+      try {
+        if (window.FIREBASE_CONFIG) {
+          fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(window.FIREBASE_CONFIG);
+          fbAuth = firebase.auth();
+          fbAuth.languageCode = 'vi';
+        }
+      } catch (err) {
+        console.error('[VerifyPage] Lỗi khởi tạo Firebase:', err);
+      }
+
+      const contentBox = document.getElementById('dynamicContent');
+      let countdownTimer = null;
+
+      function toast(msg, isError = false) {
+        const el = document.getElementById('verifyToast');
+        const txt = document.getElementById('verifyToastMsg');
+        if (!el || !txt) return;
+        txt.textContent = msg;
+        el.querySelector('i').className = isError ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-circle-check';
+        el.querySelector('i').style.color = isError ? '#EF4444' : '#4ADE80';
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3500);
+      }
+
+      function fireConfetti() {
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 80,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#16A34A', '#22C55E', '#3B82F6', '#F59E0B']
+          });
+        }
+      }
+
+      // ========================================================================
+      // RENDERERS FOR DIFFERENT STATES
+      // ========================================================================
+
+      // 1. PROMPT VERIFY STATE (Tương tự ảnh 1 nhưng thiết kế hiện đại sang xịn)
+      function renderVerifyPrompt(oobCode, continueUrl) {
+        contentBox.innerHTML = `
+          <div class="hero-icon-container">
+            <div class="hero-pulse-ring"></div>
+            <div class="hero-icon-box state-prompt">
+              <i class="fa-solid fa-envelope-circle-check"></i>
+              <div class="hero-sub-badge badge-shield">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+            </div>
+          </div>
+
+          <h1 class="card-title">Xác Thực Địa Chỉ Email</h1>
+          <p class="card-subtitle">
+            Bảo vệ tài khoản và kích hoạt đầy đủ tính năng giao dịch, thuê chuyên gia trên SkillRental.
+          </p>
+
+          <div class="info-card neutral-info">
+            <div class="info-card-icon" style="color: #2563EB;">
+              <i class="fa-solid fa-shield-heart"></i>
+            </div>
+            <div class="info-card-text">
+              <strong>Xác minh bảo mật 1 chạm</strong>
+              Nhấn nút bên dưới để hoàn tất việc xác thực địa chỉ email cho tài khoản của bạn.
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <button type="button" class="btn-primary-action btn-blue-action" id="btnDoVerify">
+              <span>HOÀN TẤT XÁC THỰC</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <a href="index.html" class="btn-secondary-action">
+              <span>Để sau / Quay về trang chủ</span>
+            </a>
+          </div>
+        `;
+
+        document.getElementById('btnDoVerify').addEventListener('click', () => {
+          executeVerification(oobCode, continueUrl);
+        });
+      }
+
+      // 2. LOADING STATE
+      function renderLoading(msg = 'Đang kích hoạt tài khoản của bạn...') {
+        contentBox.innerHTML = `
+          <div class="hero-icon-container">
+            <div class="hero-pulse-ring"></div>
+            <div class="hero-icon-box state-loading">
+              <div class="spinner-ring" style="margin:0;"></div>
+            </div>
+          </div>
+          <h1 class="card-title">Đang Xác Thực...</h1>
+          <p class="card-subtitle">${msg}</p>
+        `;
+      }
+
+      // 3. SUCCESS STATE (Nâng cấp ảnh 2 thành giao diện chuẩn Brand)
+      function renderVerifySuccess(continueUrl) {
+        fireConfetti();
+
+        const targetLoginUrl = continueUrl || 'index.html?auth=login&verified=1';
+        let secondsLeft = 5;
+
+        contentBox.innerHTML = `
+          <div class="hero-icon-container">
+            <div class="hero-pulse-ring"></div>
+            <div class="hero-icon-box state-success">
+              <i class="fa-solid fa-circle-check"></i>
+              <div class="hero-sub-badge badge-success">
+                <i class="fa-solid fa-check"></i>
+              </div>
+            </div>
+          </div>
+
+          <h1 class="card-title">Email Đã Được Xác Minh! 🎉</h1>
+          <p class="card-subtitle">
+            Chúc mừng bạn! Tài khoản đã được kích hoạt thành công. Giờ đây bạn có thể đăng nhập để trải nghiệm đầy đủ các dịch vụ.
+          </p>
+
+          <div class="benefits-list">
+            <div class="benefits-item">
+              <i class="fa-solid fa-check-circle"></i>
+              <span>Kích hoạt hồ sơ thành viên chính thức</span>
+            </div>
+            <div class="benefits-item">
+              <i class="fa-solid fa-check-circle"></i>
+              <span>Tự do thuê kỹ năng hoặc đăng ký làm Nhà Cung Cấp</span>
+            </div>
+            <div class="benefits-item">
+              <i class="fa-solid fa-check-circle"></i>
+              <span>Bảo vệ quyền lợi ký quỹ an toàn 100%</span>
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <a href="${targetLoginUrl}" class="btn-primary-action" id="btnGoLogin">
+              <span>ĐĂNG NHẬP NGAY</span>
+              <i class="fa-solid fa-right-to-bracket"></i>
+            </a>
+            <a href="customer.html" class="btn-secondary-action">
+              <i class="fa-solid fa-compass"></i>
+              <span>Khám Phá Dịch Vụ Ngay</span>
+            </a>
+          </div>
+
+          <div class="redirect-timer">
+            <i class="fa-regular fa-clock"></i>
+            <span>Tự động chuyển trang sau <strong id="secondsCountdown">${secondsLeft}</strong> giây</span>
+          </div>
+        `;
+
+        // Tự động đếm ngược chuyển trang
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = setInterval(() => {
+          secondsLeft--;
+          const counterEl = document.getElementById('secondsCountdown');
+          if (counterEl) counterEl.textContent = secondsLeft;
+          if (secondsLeft <= 0) {
+            clearInterval(countdownTimer);
+            window.location.href = targetLoginUrl;
+          }
+        }, 1000);
+      }
+
+      // 4. ERROR STATE
+      function renderVerifyError(errMessage) {
+        contentBox.innerHTML = `
+          <div class="hero-icon-container">
+            <div class="hero-icon-box state-error">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              <div class="hero-sub-badge badge-warn">
+                <i class="fa-solid fa-xmark"></i>
+              </div>
+            </div>
+          </div>
+
+          <h1 class="card-title">Xác Thực Không Thành Công</h1>
+          <p class="card-subtitle">
+            ${errMessage || 'Mã xác thực email đã hết hạn, không hợp lệ hoặc đã được sử dụng trước đó.'}
+          </p>
+
+          <div class="resend-box">
+            <div class="resend-box-title">
+              <i class="fa-solid fa-paper-plane" style="color:var(--primary);"></i>
+              <span>Gửi lại liên kết xác nhận mới:</span>
+            </div>
+            <div class="resend-input-row">
+              <input type="email" id="resendEmailInput" placeholder="Nhập địa chỉ email của bạn..." />
+              <button type="button" id="btnResendAction">Gửi Lại</button>
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <a href="index.html?auth=login" class="btn-primary-action">
+              <span>Thử Đăng Nhập Tài Khoản</span>
+              <i class="fa-solid fa-right-to-bracket"></i>
+            </a>
+            <a href="index.html" class="btn-secondary-action">
+              <i class="fa-solid fa-house"></i>
+              <span>Về Trang Chủ</span>
+            </a>
+          </div>
+        `;
+
+        document.getElementById('btnResendAction')?.addEventListener('click', async () => {
+          const email = document.getElementById('resendEmailInput')?.value?.trim();
+          if (!email) {
+            toast('Vui lòng nhập địa chỉ email!', true);
+            return;
+          }
+          const btn = document.getElementById('btnResendAction');
+          btn.disabled = true;
+          btn.textContent = 'Đang gửi...';
+
+          try {
+            const res = await fetch('/api/auth/resend-verification', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email })
+            }).then(r => r.json());
+
+            if (res.success) {
+              toast(res.message || 'Đã gửi lại email xác nhận!');
+              btn.textContent = 'Đã gửi ✓';
+            } else {
+              toast(res.message || 'Không thể gửi lại email.', true);
+              btn.disabled = false;
+              btn.textContent = 'Gửi Lại';
+            }
+          } catch (_) {
+            toast('Lỗi kết nối tới máy chủ.', true);
+            btn.disabled = false;
+            btn.textContent = 'Gửi Lại';
+          }
+        });
+      }
+
+      // 5. RESET PASSWORD FORM STATE
+      async function renderResetPassword(oobCode) {
+        renderLoading('Đang kiểm tra liên kết đặt lại mật khẩu...');
+
+        let accountEmail = '';
+        try {
+          if (fbAuth) {
+            accountEmail = await fbAuth.verifyPasswordResetCode(oobCode);
+          }
+        } catch (err) {
+          renderVerifyError('Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
+          return;
+        }
+
+        contentBox.innerHTML = `
+          <div class="hero-icon-container">
+            <div class="hero-pulse-ring" style="background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%);"></div>
+            <div class="hero-icon-box state-reset">
+              <i class="fa-solid fa-key"></i>
+            </div>
+          </div>
+
+          <h1 class="card-title">Đặt Lại Mật Khẩu</h1>
+          <p class="card-subtitle">
+            Cập nhật mật khẩu mới cho tài khoản <strong>${accountEmail || 'của bạn'}</strong>
+          </p>
+
+          <form id="resetPwdForm" style="text-align: left;">
+            <div class="input-group">
+              <label class="input-label" for="newPwd">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+              <div class="input-box">
+                <i class="fa-solid fa-lock input-icon"></i>
+                <input type="password" id="newPwd" class="form-control-sr" placeholder="Nhập mật khẩu mới" minlength="6" required />
+                <button type="button" class="toggle-pwd-btn" onclick="togglePwdVisibility('newPwd', this)">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label class="input-label" for="confirmPwd">Nhập lại mật khẩu mới</label>
+              <div class="input-box">
+                <i class="fa-solid fa-shield-halved input-icon"></i>
+                <input type="password" id="confirmPwd" class="form-control-sr" placeholder="Xác nhận lại mật khẩu" minlength="6" required />
+                <button type="button" class="toggle-pwd-btn" onclick="togglePwdVisibility('confirmPwd', this)">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="btn-group" style="margin-top: 20px;">
+              <button type="submit" class="btn-primary-action" id="btnSubmitNewPwd">
+                <i class="fa-solid fa-check"></i>
+                <span>LƯU MẬT KHẨU MỚI</span>
+              </button>
+              <a href="index.html?auth=login" class="btn-secondary-action">
+                <span>Hủy / Quay lại đăng nhập</span>
+              </a>
+            </div>
+          </form>
+        `;
+
+        document.getElementById('resetPwdForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const p1 = document.getElementById('newPwd').value;
+          const p2 = document.getElementById('confirmPwd').value;
+          if (p1 !== p2) {
+            toast('Mật khẩu nhập lại không khớp!', true);
+            return;
+          }
+          if (p1.length < 6) {
+            toast('Mật khẩu tối thiểu 6 ký tự!', true);
+            return;
+          }
+
+          const btn = document.getElementById('btnSubmitNewPwd');
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Đang lưu...</span>';
+
+          try {
+            await fbAuth.confirmPasswordReset(oobCode, p1);
+            fireConfetti();
+            contentBox.innerHTML = `
+              <div class="hero-icon-container">
+                <div class="hero-icon-box state-success">
+                  <i class="fa-solid fa-circle-check"></i>
+                </div>
+              </div>
+              <h1 class="card-title">Mật Khẩu Đã Được Thay Đổi!</h1>
+              <p class="card-subtitle">Bạn có thể sử dụng mật khẩu mới này để đăng nhập ngay bây giờ.</p>
+              <div class="btn-group">
+                <a href="index.html?auth=login" class="btn-primary-action">
+                  <span>Đăng Nhập Ngay</span>
+                  <i class="fa-solid fa-right-to-bracket"></i>
+                </a>
+              </div>
+            `;
+          } catch (err) {
+            toast(err.message || 'Không thể đổi mật khẩu.', true);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>LƯU MẬT KHẨU MỚI</span>';
+          }
+        });
+      }
+
+      // Helper show/hide password
+      window.togglePwdVisibility = function (fieldId, btn) {
+        const inp = document.getElementById(fieldId);
+        if (!inp) return;
+        const isPwd = inp.type === 'password';
+        inp.type = isPwd ? 'text' : 'password';
+        btn.innerHTML = isPwd ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+      };
+
+      // ========================================================================
+      // EXECUTE EMAIL VERIFICATION ACTION
+      // ========================================================================
+      async function executeVerification(oobCode, continueUrl) {
+        renderLoading('Đang kết nối với Firebase Authentication...');
+
+        if (!fbAuth) {
+          renderVerifyError('Không tìm thấy cấu hình Firebase Auth. Vui lòng tải lại trang.');
+          return;
+        }
+
+        try {
+          // Gọi hàm cốt lõi của Firebase Auth Client
+          await fbAuth.applyActionCode(oobCode);
+          renderVerifySuccess(continueUrl);
+        } catch (err) {
+          console.error('[VerifyPage] Lỗi applyActionCode:', err);
+          let userMsg = 'Mã xác thực email đã hết hạn hoặc đã được sử dụng trước đó.';
+          if (err.code === 'auth/invalid-action-code') {
+            userMsg = 'Liên kết xác minh không hợp lệ hoặc tài khoản của bạn đã được kích hoạt trước đó rồi.';
+          } else if (err.code === 'auth/expired-action-code') {
+            userMsg = 'Liên kết xác minh đã hết hạn. Vui lòng yêu cầu gửi lại email mới bên dưới.';
+          } else if (err.code === 'auth/user-disabled') {
+            userMsg = 'Tài khoản liên kết đã bị khóa hoặc tạm ngưng.';
+          }
+          renderVerifyError(userMsg);
+        }
+      }
+
+      // ========================================================================
+      // MAIN DISPATCHER (QUERY STRING PARSER)
+      // ========================================================================
+      document.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get('mode');
+        const oobCode = params.get('oobCode');
+        const continueUrl = params.get('continueUrl');
+        const verifiedParam = params.get('verified');
+
+        // Trường hợp đã hoàn tất xác nhận từ trước
+        if (verifiedParam === '1') {
+          renderVerifySuccess(continueUrl);
+          return;
+        }
+
+        // Bắt theo chế độ Firebase Auth Action
+        if (mode === 'verifyEmail' && oobCode) {
+          // Hiển thị giao diện xác thực đẹp mắt với nút Complete Verification
+          renderVerifyPrompt(oobCode, continueUrl);
+          return;
+        }
+
+        if (mode === 'resetPassword' && oobCode) {
+          renderResetPassword(oobCode);
+          return;
+        }
+
+        if (mode === 'recoverEmail' && oobCode) {
+          renderLoading('Đang khôi phục email của bạn...');
+          if (fbAuth) {
+            fbAuth.applyActionCode(oobCode).then(() => {
+              renderVerifySuccess(continueUrl);
+            }).catch(err => {
+              renderVerifyError('Không thể khôi phục email: ' + err.message);
+            });
+          }
+          return;
+        }
+
+        // Nếu người dùng truy cập trực tiếp không có tham số
+        contentBox.innerHTML = `
+          <div class="hero-icon-container">
+            <div class="hero-icon-box state-prompt">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+          </div>
+          <h1 class="card-title">Cổng Xác Thực SkillRental</h1>
+          <p class="card-subtitle">
+            Trang này dùng để xác thực email hoặc đặt lại mật khẩu khi bạn nhấp vào liên kết gửi từ hộp thư.
+          </p>
+          <div class="btn-group">
+            <a href="index.html?auth=login" class="btn-primary-action">
+              <span>Đăng Nhập Tài Khoản</span>
+              <i class="fa-solid fa-right-to-bracket"></i>
+            </a>
+            <a href="index.html" class="btn-secondary-action">
+              <i class="fa-solid fa-house"></i>
+              <span>Về Trang Chủ</span>
+            </a>
+          </div>
+        `;
+      });
+    })();
+  </script>
+</body>
+</html>

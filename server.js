@@ -22,6 +22,9 @@ const db = require('./data/db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Khai báo biến server ở đây để hàm shutdown có thể truy cập được (Sửa lỗi Scope)
+let server; 
+
 // 1. CORS Middleware - BẮT BUỘC ĐẶT TRƯỚC TẤT CẢ ROUTES để hỗ trợ WebStorm (port 63342), Live Server (port 5500)
 const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
 app.use(cors({
@@ -35,10 +38,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 3. Phục vụ tĩnh toàn bộ thư mục Frontend (HTML, CSS, JS, Images)
+// 3. Avatar là file riêng trên backend; Firestore chỉ lưu URL của file.
+const avatarStorageDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'));
+app.use('/uploads', express.static(avatarStorageDir, {
+  fallthrough: false,
+  index: false,
+  maxAge: '1d',
+  setHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// 4. Phục vụ tĩnh toàn bộ thư mục Frontend (HTML, CSS, JS, Images)
 app.use(express.static(path.join(__dirname, 'Frontend')));
 
-// 4. API Routes
+// 5. API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', requireAdmin, adminRoutes);
 app.use('/api/providers', providerRoutes);
@@ -52,6 +67,66 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+// ============================================================================
+// PUBLIC SEED ENDPOINT — No auth required
+// Returns all admin-relevant data from database.json with field mapping.
+// Used by common.js syncStateWithServer() to seed localStorage.
+// ============================================================================
+app.get('/api/data/seed', (req, res) => {
+  try {
+    const fmt = (n) => Number(n) ? Number(n).toLocaleString('vi-VN') + 'đ' : (n || '0đ');
+    const escrowLabel = (s) => {
+      const map = {
+        escrow_held: 'Đã giữ ký quỹ',
+        completed: 'Đã giải ngân',
+        refunded: 'Đã hoàn tiền',
+        disputed: 'Đang tranh chấp',
+        force_released: 'Giải ngân bắt buộc',
+        pending: 'Chờ xử lý'
+      };
+      return map[s] || s || 'Chờ xử lý';
+    };
+
+    const rawOrders = db.getCollection('orders').map(o => ({
+      id: o.id,
+      customer: o.customerName || o.customer || '',
+      customerId: o.customerId || '',
+      provider: o.providerName || o.provider || '',
+      providerId: o.providerId || '',
+      service: o.serviceTitle || o.service || '',
+      price: o.priceFormatted || fmt(o.price),
+      priceRaw: Number(o.price) || 0,
+      platformFee: o.platformFee || Math.round((Number(o.price) || 0) * 0.05),
+      escrowDeposit: o.escrowDeposit || ((Number(o.price) || 0) + (o.platformFee || Math.round((Number(o.price) || 0) * 0.05))),
+      escrowStatus: escrowLabel(o.escrowStatus),
+      orderStatus: o.orderStatus || 'pending',
+      date: o.date || '',
+      deadline: o.deadline || '',
+      note: o.note || ''
+    }));
+
+    res.json({
+      success: true,
+      state: {
+        users: db.getCollection('users'),
+        pendingProviders: db.getCollection('pendingProviders'),
+        skillApprovals: db.getCollection('skillApprovals'),
+        services: db.getCollection('services'),
+        orders: rawOrders,
+        reviews: db.getCollection('reviews'),
+        complaints: db.getCollection('complaints'),
+        reports: db.getCollection('reports'),
+        payouts: db.getCollection('payouts'),
+        packages: db.getCollection('packages'),
+        packagePurchases: db.getCollection('packagePurchases'),
+        unlockRequests: db.getCollection('unlockRequests')
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Không thể đọc dữ liệu hệ thống.' });
+  }
+});
 
 // Test server API
 app.get('/api', (req, res) => {
@@ -72,6 +147,11 @@ app.get(['/find-provider', '/find_provider', '/find_provider.html'], (req, res) 
   res.sendFile(path.join(__dirname, 'Frontend', 'find_provider.html'));
 });
 
+// Route xác thực tài khoản và Firebase email action handler
+app.get(['/verify', '/verify.html', '/__/auth/action'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Frontend', 'verify.html'));
+});
+
 // Route gốc vào trang chủ
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'Frontend', 'index.html'));
@@ -79,7 +159,8 @@ app.get('/', (req, res) => {
 
 // Khởi động server (nạp dữ liệu từ Firestore trước khi nhận request)
 db.init().then(() => {
-  const server = app.listen(PORT, () => {
+  // Gán trực tiếp vào biến server toàn cục đã khai báo ở trên
+  server = app.listen(PORT, () => {
     console.log(`====================================================`);
     console.log(`  SKILL RENTAL PLATFORM - FULL-STACK NODE.JS SERVER `);
     console.log(`====================================================`);
@@ -92,9 +173,25 @@ db.init().then(() => {
     console.log(`====================================================`);
   });
 
+  // Mỗi phút tự hủy các đơn chờ thanh toán đã quá hạn (Sửa lỗi Async/Await)
+  const expiryTimer = setInterval(async () => {
+    try {
+      // Đợi hàm async hoàn thành để lấy số lượng đơn chính xác
+      const count = await require('./services/checkoutService').expireUnpaidOrders();
+      if (count) console.log(`[Payment] Đã tự hủy ${count} đơn quá hạn thanh toán.`);
+    } catch (err) {
+      console.error('[Payment] Lỗi dọn đơn quá hạn:', err.message);
+    }
+  }, 60 * 1000);
+  expiryTimer.unref();
+
   const shutdown = async () => {
     await db.flush();
-    server.close(() => process.exit(0));
+    if (server) {
+      server.close(() => process.exit(0));
+    } else {
+      process.exit(0);
+    }
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);

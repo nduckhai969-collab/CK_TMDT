@@ -103,17 +103,18 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
             <div>
               <label style="font-size:12.5px; font-weight:700; color:#0F172A; display:block; margin-bottom:6px;">Họ và Tên</label>
-              <input type="text" id="custName" value="Lê Hoàng Long" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
+              <input type="text" id="custName" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
             </div>
             <div>
               <label style="font-size:12.5px; font-weight:700; color:#0F172A; display:block; margin-bottom:6px;">Số Điện Thoại</label>
-              <input type="text" id="custPhone" value="0988 776 655" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
+              <input type="text" id="custPhone" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
             </div>
           </div>
           <div style="margin-top:14px;">
             <label style="font-size:12.5px; font-weight:700; color:#0F172A; display:block; margin-bottom:6px;">Địa Chỉ / Ghi Chú Liên Lạc</label>
             <input type="text" id="custAddress" value="Quận 1, TP. Hồ Chí Minh (Hoặc trao đổi qua Google Meet / Zoom)" style="width:100%; padding:9px; border:1px solid #CBD5E1; border-radius:8px; font-size:13px; font-family:inherit;">
           </div>
+          <div style="margin-top:10px;color:#64748b;font-size:11px"><i class="fa-solid fa-floppy-disk"></i> Thông tin được tự động lưu trong bản nháp trên thiết bị này.</div>
         </div>
 
         <!-- Box 2: Chọn phương thức thanh toán ký quỹ -->
@@ -157,7 +158,7 @@
             </div>
             <div style="flex:1;">
               <div style="font-weight:700; font-size:14px; color:#0F172A;">Số Dư Khách Hàng SkillRental</div>
-              <div style="font-size:12px; color:#64748B;" id="custBalanceText">Số dư khả dụng: 15.000.000đ (Trừ trực tiếp)</div>
+              <div style="font-size:12px; color:#64748B;" id="custBalanceText">Đang tải số dư...</div>
             </div>
           </div>
 
@@ -178,9 +179,8 @@
             <div style="font-weight:700; font-size:13.5px; color:#0F172A; margin-bottom:8px;">
               Mã VietQR Ký Quỹ Escrow Tự Động
             </div>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=SKILLRENTAL_ESCROW_DEPOSIT_4725000" alt="VietQR" style="width:160px; height:160px; border-radius:8px; border:2px solid #E2E8F0; background:#FFF; padding:6px;">
-            <div style="font-size:12px; color:#64748B; margin-top:8px;">
-              Quét mã bằng app ngân hàng bất kỳ để hoàn tất ký quỹ tức thời
+            <div style="font-size:12px;color:#64748B;margin:12px auto;max-width:300px;">
+              Bạn sẽ được chuyển sang cổng VNPay để quét mã VietQR bằng ứng dụng ngân hàng. Đơn chỉ được ký quỹ khi VNPay xác nhận thanh toán thành công; nếu không thanh toán, đơn sẽ tự hủy sau 30 phút.
             </div>
           </div>
 
@@ -203,10 +203,10 @@
               </span>
             </div>
             <h3 id="summaryServiceTitle" style="font-size:16px; font-weight:800; margin:0; line-height:1.4;">
-              Thiết kế website chuẩn SEO & Tối ưu tốc độ
+              —
             </h3>
             <div style="font-size:13px; color:#94A3B8; margin-top:4px;">
-              Chuyên gia: <strong id="summaryProviderName" style="color:#FFF;">Nguyễn Văn An</strong>
+              Chuyên gia: <strong id="summaryProviderName" style="color:#FFF;">—</strong>
             </div>
           </div>
 
@@ -215,15 +215,15 @@
             <div style="font-size:13px; color:#475569; display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
               <div style="display:flex; justify-content:space-between;">
                 <span>Ngày hẹn làm việc:</span>
-                <strong id="summaryDate" style="color:#0F172A;">28/04/2025</strong>
+                <strong id="summaryDate" style="color:#0F172A;">—</strong>
               </div>
               <div style="display:flex; justify-content:space-between;">
                 <span>Khung giờ:</span>
-                <strong id="summaryTime" style="color:#0F172A;">14:00 - 17:00</strong>
+                <strong id="summaryTime" style="color:#0F172A;">—</strong>
               </div>
               <div style="display:flex; justify-content:space-between;">
                 <span>Khối lượng:</span>
-                <strong id="summaryQty" style="color:#0F172A;">1 Gói hoàn thiện</strong>
+                <strong id="summaryQty" style="color:#0F172A;">—</strong>
               </div>
             </div>
 
@@ -233,15 +233,15 @@
             <div style="display:flex; flex-direction:column; gap:10px; font-size:13.5px; margin-bottom:20px;">
               <div style="display:flex; justify-content:space-between;">
                 <span style="color:#64748B;">Giá tiền dịch vụ:</span>
-                <strong id="summaryPrice" style="color:#0F172A;">4.500.000đ</strong>
+                <strong id="summaryPrice" style="color:#0F172A;">—</strong>
               </div>
               <div style="display:flex; justify-content:space-between;">
                 <span style="color:#64748B;">Phí bảo lãnh ký quỹ Escrow (5%):</span>
-                <strong id="summaryFee" style="color:#0F172A;">225.000đ</strong>
+                <strong id="summaryFee" style="color:#0F172A;">—</strong>
               </div>
               <div style="border-top:2px dashed #E2E8F0; padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-weight:800; font-size:15px; color:#0F172A;">Tổng Ký Quỹ Đóng Băng:</span>
-                <span id="summaryTotal" style="font-size:22px; font-weight:800; color:#16A34A;">4.725.000đ</span>
+                <span id="summaryTotal" style="font-size:22px; font-weight:800; color:#16A34A;">—</span>
               </div>
             </div>
 
@@ -272,7 +272,7 @@
       </div>
       <h2 style="font-size:20px; font-weight:800; color:#0F172A; margin-bottom:8px;">Ký Quỹ Escrow Thành Công!</h2>
       <p style="font-size:13.5px; color:#64748B; line-height:1.5; margin-bottom:20px;">
-        Đơn hàng <strong id="modalOrderId" style="color:#16A34A;">DH001234</strong> đã được kích hoạt bảo vệ 100%. Tiền được giữ an toàn tại sàn và chuyên gia đã nhận được thông báo để triển khai công việc.
+        Đơn hàng <strong id="modalOrderId" style="color:#16A34A;">—</strong> đã được kích hoạt bảo vệ 100%. Tiền được giữ an toàn tại sàn và chuyên gia đã nhận được thông báo để triển khai công việc.
       </p>
 
       <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px; text-align:left; font-size:13px; margin-bottom:24px;">
@@ -304,9 +304,26 @@
     let draft = null;
     let selectedMethod = 'vietqr';
 
-    document.addEventListener('DOMContentLoaded', () => {
+    function saveCheckoutDraft() {
+      if (!draft) return;
+      draft.customerName = document.getElementById('custName').value.trim();
+      draft.customerPhone = document.getElementById('custPhone').value.trim();
+      draft.customerAddress = document.getElementById('custAddress').value.trim();
+      draft.checkoutMethod = selectedMethod;
+      try {
+        localStorage.setItem('SKILLRENTAL_CHECKOUT_DRAFT', JSON.stringify(draft));
+      } catch (error) {
+        console.warn('Không thể lưu bản nháp checkout:', error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
       document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+      ['custName', 'custPhone', 'custAddress'].forEach(id => {
+        document.getElementById(id).addEventListener('input', saveCheckoutDraft);
+        document.getElementById(id).addEventListener('change', saveCheckoutDraft);
+      });
 
       // Read draft from localStorage
       try {
@@ -318,45 +335,78 @@
         console.warn('Cannot read draft:', e);
       }
 
-      if (!draft) {
-        draft = {
-          providerId: 'PRV001',
-          providerName: 'Nguyễn Văn An',
-          serviceTitle: 'Thiết kế website chuẩn SEO & Tối ưu tốc độ',
-          price: 4500000,
-          date: '28/04/2025',
-          time: '14:00 - 17:00',
-          quantity: '1 Gói hoàn thiện',
-          notes: ''
-        };
+      const cartMode = draft?.kind === 'cart';
+      if (!draft || (cartMode ? !Array.isArray(draft.items) || !draft.items.length : !draft.providerId || !Number.isFinite(Number(draft.price)))) {
+        showToast('Không có thông tin thanh toán hợp lệ', 'Hãy chọn dịch vụ trước.', 'error');
+        location.href = 'customer_cart.html';
+        return;
       }
 
       // Populate UI
-      document.getElementById('summaryServiceTitle').textContent = draft.serviceTitle;
-      document.getElementById('summaryProviderName').textContent = draft.providerName;
-      document.getElementById('summaryDate').textContent = draft.date || 'Linh hoạt';
-      document.getElementById('summaryTime').textContent = draft.time || 'Theo thỏa thuận';
-      document.getElementById('summaryQty').textContent = draft.quantity || '1 Gói';
+      const providers = cartMode ? [...new Set(draft.items.map(item => item.providerId))] : [];
+      document.getElementById('summaryServiceTitle').textContent = cartMode ? `Giỏ hàng gồm ${draft.items.length} dịch vụ` : draft.serviceTitle;
+      document.getElementById('summaryProviderName').textContent = cartMode ? `${providers.length} Provider` : draft.providerName;
+      document.getElementById('summaryDate').textContent = cartMode ? 'Theo lịch đã chọn' : draft.date || 'Linh hoạt';
+      document.getElementById('summaryTime').textContent = cartMode ? 'Theo lịch từng Provider' : draft.time || 'Theo thỏa thuận';
+      document.getElementById('summaryQty').textContent = cartMode ? `${draft.items.reduce((sum,item)=>sum+(Number(item.hours)||1),0)} lượt dịch vụ` : draft.quantity || '—';
 
-      const price = Number(draft.price) || 4500000;
-      const fee = Math.round(price * 0.05);
-      const total = price + fee;
+      const price = cartMode ? Number(draft.subtotal) : Number(draft.price);
+      const fee = cartMode ? Number(draft.fee) : Math.round(price * 0.05);
+      const total = cartMode ? Number(draft.total) : price + fee;
 
       document.getElementById('summaryPrice').textContent = formatVND(price);
       document.getElementById('summaryFee').textContent = formatVND(fee);
       document.getElementById('summaryTotal').textContent = formatVND(total);
+      if (['vietqr','vnpay','balance','card'].includes(draft.checkoutMethod)) {
+        selectedMethod = draft.checkoutMethod;
+        document.querySelectorAll('.payment-method-card').forEach(card => {
+          const selected = card.getAttribute('onclick')?.includes(`'${selectedMethod}'`);
+          card.classList.toggle('selected', Boolean(selected));
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio) radio.checked = Boolean(selected);
+        });
+        document.getElementById('qrBox').style.display = selectedMethod === 'vietqr' ? 'block' : 'none';
+      }
+      updateSubmitLabel();
 
       const user = getCurrentCustomer();
       if (user) {
-        document.getElementById('custName').value = user.name || 'Lê Hoàng Long';
-        document.getElementById('custPhone').value = user.phone || '0988 776 655';
-        document.getElementById('custBalanceText').textContent = `Số dư khả dụng: ${formatVND(user.balance || 0)} (Trừ trực tiếp)`;
+        const account = await apiRequest('/api/auth/me');
+        if (account.success && account.user) {
+          const freshUser = { ...user, ...account.user };
+          setCurrentCustomer(freshUser);
+          document.getElementById('custName').value = freshUser.name || '';
+          document.getElementById('custPhone').value = freshUser.phone || '';
+          document.getElementById('custAddress').value = freshUser.address || document.getElementById('custAddress').value;
+          document.getElementById('custBalanceText').textContent = `Số dư khả dụng: ${formatVND(Number(freshUser.balance) || 0)} (Trừ trực tiếp)`;
+        } else {
+          document.getElementById('custBalanceText').textContent = 'Không tải được số dư';
+        }
       }
+      if (cartMode) {
+        document.getElementById('custPhone').value = draft.customerPhone || document.getElementById('custPhone').value;
+      }
+      if (draft.customerName) document.getElementById('custName').value = draft.customerName;
+      if (draft.customerPhone) document.getElementById('custPhone').value = draft.customerPhone;
+      if (draft.customerAddress) document.getElementById('custAddress').value = draft.customerAddress;
+      saveCheckoutDraft();
     });
+
+    // Ví số dư: ký quỹ ngay. Các phương thức còn lại: chuyển sang cổng VNPay để thanh toán.
+    function updateSubmitLabel() {
+      const btn = document.getElementById('btnSubmitEscrow');
+      if (!btn) return;
+      btn.disabled = false;
+      btn.innerHTML = selectedMethod === 'balance'
+        ? `<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow`
+        : `<i class="fa-solid fa-credit-card"></i> Thanh Toán Qua VNPay`;
+    }
 
     function selectPaymentMethod(method, el) {
       if (!requireCustomerLogin()) return;
       selectedMethod = method;
+      saveCheckoutDraft();
+      updateSubmitLabel();
       document.querySelectorAll('.payment-method-card').forEach(c => {
         c.classList.remove('selected');
         c.querySelector('input[type="radio"]').checked = false;
@@ -371,15 +421,60 @@
 
     async function submitEscrowOrder() {
       if (!requireCustomerLogin()) return;
+      saveCheckoutDraft();
       const btn = document.getElementById('btnSubmitEscrow');
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Ký Quỹ Escrow...`;
 
       const user = getCurrentCustomer();
+      if (draft.kind === 'cart') {
+        const paymentMethods = {
+          vietqr: 'Chuyển khoản VietQR (Escrow)',
+          vnpay: 'Ví VNPay / MoMo (Escrow)',
+          balance: 'Số dư tài khoản (Escrow)',
+          card: 'Thẻ Tín Dụng Quốc Tế (Escrow)'
+        };
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang chuyển tới thanh toán...`;
+        const result = await apiRequest('/api/booking-list/checkout', {
+          method: 'POST',
+          body: JSON.stringify({
+            customerPhone: document.getElementById('custPhone').value.trim(),
+            customerAddress: document.getElementById('custAddress').value.trim(),
+            notes: draft.notes || '',
+            paymentMethod: paymentMethods[selectedMethod],
+            schedulesByProvider: draft.schedulesByProvider
+          })
+        });
+        if (result.success && result.paymentUrl) {
+          // Thanh toán qua cổng VNPay: đơn đã được tạo ở trạng thái chờ thanh toán
+          localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
+          showToast('Đang chuyển tới VNPay', result.message || 'Vui lòng hoàn tất thanh toán trên cổng VNPay.', 'success');
+          window.location.href = result.paymentUrl;
+          return;
+        }
+        if (result.success) {
+          localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
+          sessionStorage.setItem('SKILLRENTAL_CART_CHECKOUT_RESULT', JSON.stringify({orders:result.orders||[],message:result.message}));
+          location.href = 'customer_orders.html?cartCheckout=success';
+          return;
+        }
+        showToast('Chưa thể thanh toán', result.message || 'Vui lòng thử lại.', 'error');
+        btn.disabled = false;
+        updateSubmitLabel();
+        return;
+      }
+
+      const paymentMethods = {
+        vietqr: 'Chuyển khoản VietQR',
+        vnpay: 'Ví VNPay / MoMo',
+        balance: 'Số dư tài khoản',
+        card: 'Thẻ Tín Dụng Quốc Tế'
+      };
       const payload = {
         customerId: user.id,
         customerName: document.getElementById('custName').value,
         customerPhone: document.getElementById('custPhone').value,
+        customerAddress: document.getElementById('custAddress').value.trim(),
         providerId: draft.providerId,
         providerName: draft.providerName,
         serviceTitle: draft.serviceTitle,
@@ -388,13 +483,21 @@
         scheduledDate: draft.scheduledDate,
         scheduledTime: draft.time,
         notes: draft.notes,
-        paymentMethod: selectedMethod === 'vietqr' ? 'Chuyển khoản VietQR' : (selectedMethod === 'vnpay' ? 'Ví VNPay / MoMo' : 'Số dư tài khoản')
+        paymentMethod: paymentMethods[selectedMethod]
       };
 
       const res = await apiRequest('/api/orders', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
+
+      if (res.success && res.paymentUrl) {
+        // Thanh toán qua cổng VNPay: đơn đã được tạo ở trạng thái chờ thanh toán
+        localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
+        showToast('Đang chuyển tới VNPay', res.message || 'Vui lòng hoàn tất thanh toán trên cổng VNPay.', 'success');
+        window.location.href = res.paymentUrl;
+        return;
+      }
 
       if (res.success && res.order) {
         // Clear draft
@@ -404,9 +507,94 @@
       } else {
         showToast('Lỗi Ký Quỹ', res.message || 'Không thể tạo đơn ký quỹ. Vui lòng thử lại!', 'error');
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow`;
+        updateSubmitLabel();
       }
     }
   </script>
 </body>
 </html>
+@@ -179,7 +179,7 @@
+               Mã VietQR Ký Quỹ Escrow Tự Động
+             </div>
+             <div style="font-size:12px;color:#64748B;margin:12px auto;max-width:300px;">
+-              Mã QR sẽ được cung cấp khi cổng thanh toán được kết nối. Hiện tại đơn hàng được ký quỹ từ số dư SkillRental.
++              Bạn sẽ được chuyển sang cổng VNPay để quét mã VietQR bằng ứng dụng ngân hàng. Đơn chỉ được ký quỹ khi VNPay xác nhận thanh toán thành công; nếu không thanh toán, đơn sẽ tự hủy sau 30 phút.
+             </div>
+           </div>
+ 
+@@ -349,6 +349,7 @@
+         });
+         document.getElementById('qrBox').style.display = selectedMethod === 'vietqr' ? 'block' : 'none';
+       }
++      updateSubmitLabel();
+ 
+       const user = getCurrentCustomer();
+       if (user) {
+@@ -368,9 +369,20 @@
+       }
+     });
+ 
++    // Ví số dư: ký quỹ ngay. Các phương thức còn lại: chuyển sang cổng VNPay để thanh toán.
++    function updateSubmitLabel() {
++      const btn = document.getElementById('btnSubmitEscrow');
++      if (!btn) return;
++      btn.disabled = false;
++      btn.innerHTML = selectedMethod === 'balance'
++        ? `<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow`
++        : `<i class="fa-solid fa-credit-card"></i> Thanh Toán Qua VNPay`;
++    }
++
+     function selectPaymentMethod(method, el) {
+       if (!requireCustomerLogin()) return;
+       selectedMethod = method;
++      updateSubmitLabel();
+       document.querySelectorAll('.payment-method-card').forEach(c => {
+         c.classList.remove('selected');
+         c.querySelector('input[type="radio"]').checked = false;
+@@ -407,6 +419,13 @@
+             schedulesByProvider: draft.schedulesByProvider
+           })
+         });
++        if (result.success && result.paymentUrl) {
++          // Thanh toán qua cổng VNPay: đơn đã được tạo ở trạng thái chờ thanh toán
++          localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
++          showToast('Đang chuyển tới VNPay', result.message || 'Vui lòng hoàn tất thanh toán trên cổng VNPay.', 'success');
++          window.location.href = result.paymentUrl;
++          return;
++        }
+         if (result.success) {
+           localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
+           sessionStorage.setItem('SKILLRENTAL_CART_CHECKOUT_RESULT', JSON.stringify({orders:result.orders||[],message:result.message}));
+@@ -415,7 +434,7 @@
+         }
+         showToast('Chưa thể thanh toán', result.message || 'Vui lòng thử lại.', 'error');
+         btn.disabled = false;
+-        btn.innerHTML = `<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow`;
++        updateSubmitLabel();
+         return;
+       }
+ 
+@@ -445,6 +464,14 @@
+         body: JSON.stringify(payload)
+       });
+ 
++      if (res.success && res.paymentUrl) {
++        // Thanh toán qua cổng VNPay: đơn đã được tạo ở trạng thái chờ thanh toán
++        localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
++        showToast('Đang chuyển tới VNPay', res.message || 'Vui lòng hoàn tất thanh toán trên cổng VNPay.', 'success');
++        window.location.href = res.paymentUrl;
++        return;
++      }
++
+       if (res.success && res.order) {
+         // Clear draft
+         localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
+@@ -453,7 +480,7 @@
+       } else {
+         showToast('Lỗi Ký Quỹ', res.message || 'Không thể tạo đơn ký quỹ. Vui lòng thử lại!', 'error');
+         btn.disabled = false;
+-        btn.innerHTML = `<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow`;
++        updateSubmitLabel();
+       }
+     }
+   </script>

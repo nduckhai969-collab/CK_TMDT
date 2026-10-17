@@ -1,10 +1,4 @@
 {
-  "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "dotenv": "^16.4.5",
-    "firebase-admin": "^12.6.0"
-  },
   "name": "tmdt_ck",
   "version": "1.0.0",
   "description": "",
@@ -12,11 +6,19 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "seed": "node scripts/seedFirebase.js"
+    "seed": "node scripts/seedFirebase.js",
+    "seed:cart-demo": "node scripts/seedCartDemo.js",
+    "test:payment": "node scripts/testPayment.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nduckhai969-collab/CK_TMDT.git"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "firebase-admin": "^12.6.0"
   },
   "keywords": [],
   "author": "",

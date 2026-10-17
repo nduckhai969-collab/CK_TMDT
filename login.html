@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập — SkillRental Platform</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Identity Services (GIS) SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body {
+      background-color: var(--bg-page);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .auth-header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--text-heading);
+    }
+    .auth-logo i {
+      color: var(--primary);
+    }
+    .auth-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .auth-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      width: 100%;
+      max-width: 440px;
+      padding: 36px 32px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+    }
+    .auth-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-heading);
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .auth-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-heading);
+      margin-bottom: 6px;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+    .form-control {
+      width: 100%;
+      height: 44px;
+      padding: 10px 14px 10px 40px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-input);
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      background: #FFFFFF;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+    }
+    .password-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .form-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .btn-auth-submit {
+      width: 100%;
+      height: 46px;
+      background: var(--primary);
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-btn);
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-auth-submit:hover {
+      background: var(--primary-dark);
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 24px 0;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .divider span {
+      padding: 0 12px;
+    }
+    .google-btn-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .btn-google-fallback {
+      width: 100%;
+      height: 44px;
+      background: #FFFFFF;
+      color: var(--text-heading);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-btn);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+    .btn-google-fallback:hover {
+      background: #F8FAFC;
+      border-color: #CBD5E1;
+    }
+    .auth-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .auth-footer a {
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .alert-banner {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .alert-error {
+      background: #FEE2E2;
+      color: #DC2626;
+      border: 1px solid #FCA5A5;
+    }
+    .alert-success {
+      background: #DCFCE7;
+      color: #15803D;
+      border: 1px solid #86EFAC;
+    }
+    .alert-info {
+      background: #DBEAFE;
+      color: #1D4ED8;
+      border: 1px solid #93C5FD;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="auth-header">
+    <a href="index.html" class="auth-logo">
+      <i class="fa-solid fa-briefcase"></i> SkillRental
+    </a>
+    <a href="index.html" style="color: var(--text-secondary); font-weight: 500; font-size: 14px;">
+      <i class="fa-solid fa-house"></i> Trang chủ
+    </a>
+  </header>
+
+  <main class="auth-container">
+    <div class="auth-card">
+      <h1 class="auth-title">Đăng Nhập</h1>
+      <p class="auth-subtitle">Chào mừng bạn quay trở lại với SkillRental</p>
+
+      <div id="alert-box" class="alert-banner"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-email">Địa chỉ Email</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-envelope"></i>
+            <input type="email" id="login-email" class="form-control" placeholder="name@example.com" required autocomplete="email">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password">Mật khẩu</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+            <i class="fa-solid fa-eye password-toggle" id="toggle-pwd" onclick="togglePasswordVisibility()"></i>
+          </div>
+        </div>
+
+        <div class="form-flex">
+          <label class="checkbox-label">
+            <input type="checkbox" id="remember-me"> Ghi nhớ đăng nhập
+          </label>
+          <a href="forgot-password.html" style="color: var(--primary); font-weight: 600;">Quên mật khẩu?</a>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn-auth-submit">
+          <span>Đăng Nhập</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+
+      <div class="divider">
+        <span>HOẶC ĐĂNG NHẬP BẰNG</span>
+      </div>
+
+      <!-- Google GIS Button Container (+2đ Bonus) -->
+      <div class="google-btn-container">
+        <!-- Official GIS Render Container -->
+        <div id="g_id_onload"
+             data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleGoogleLoginResponse"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left"
+             data-width="376">
+        </div>
+
+        <!-- Fallback Custom Button for local dev testing -->
+        <button type="button" class="btn-google-fallback" onclick="triggerGoogleTestAuth()">
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.617z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          <span>Đăng nhập nhanh với Google (Dev Mode)</span>
+        </button>
+      </div>
+
+      <div class="auth-footer">
+        Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const alertBox = document.getElementById('alert-box');
+
+    if (urlParams.get('logout') === '1') {
+      showAlert('Bạn đã đăng xuất thành công khỏi hệ thống.', 'success');
+    } else if (urlParams.get('expired') === '1') {
+      showAlert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'error');
+    } else if (urlParams.get('verified') === '1') {
+      showAlert('Email của bạn đã được xác minh thành công! Vui lòng đăng nhập.', 'success');
+    }
+
+    function showAlert(msg, type = 'error') {
+      alertBox.textContent = msg;
+      alertBox.className = `alert-banner alert-${type}`;
+      alertBox.style.display = 'block';
+    }
+
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById('login-password');
+      const icon = document.getElementById('toggle-pwd');
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash password-toggle';
+      } else {
+        pwdInput.type = 'password';
+        icon.className = 'fa-solid fa-eye password-toggle';
+      }
+    }
+
+    // Standard Login
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const submitBtn = document.getElementById('submit-btn');
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đăng nhập...';
+      alertBox.style.display = 'none';
+
+      try {
+        const res = await loginUser(email, password);
+        if (res.success) {
+          showToast('Thành công', 'Đăng nhập thành công! Đang chuyển hướng...', 'success');
+          setTimeout(() => {
+            if (res.user.role === 'ADMIN') {
+              window.location.href = 'admin.html';
+            } else if (res.user.role === 'PROVIDER') {
+              window.location.href = 'dashboard.html';
+            } else {
+              window.location.href = 'index.html';
+            }
+          }, 1000);
+        }
+      } catch (err) {
+        showAlert(err.message, 'error');
+        showToast('Lỗi Đăng nhập', err.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Đăng Nhập</span> <i class="fa-solid fa-arrow-right"></i>';
+      }
+    });
+
+    // Handle Official Google Login GIS Callback (+2đ Bonus)
+    async function handleGoogleLoginResponse(response) {
+      if (!response || !response.credential) return;
+
+      try {
+        const res = await googleLoginUser(response.credential);
+        if (res.success) {
+          showToast('Google Auth', 'Đăng nhập Google thành công!', 'success');
+          setTimeout(() => {
+            if (res.user.role === 'ADMIN') {
+              window.location.href = 'admin.html';
+            } else if (res.user.role === 'PROVIDER') {
+              window.location.href = 'dashboard.html';
+            } else {
+              window.location.href = 'index.html';
+            }
+          }, 1000);
+        }
+      } catch (err) {
+        showAlert(`Lỗi Google Sign-In: ${err.message}`, 'error');
+      }
+    }
+
+    // Fallback Google Test Auth for Local Development when Client ID or Origin is not registered in Google Cloud Console
+    async function triggerGoogleTestAuth() {
+      try {
+        showAlert('Đang xử lý đăng nhập thử nghiệm Google...', 'info');
+        
+        // Mock Google JWT Payload for Local Dev / Demo
+        const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+        const payload = btoa(JSON.stringify({
+          sub: "google_user_1092837465",
+          email: "google.demo@skillrental.com",
+          name: "Nguyễn Văn Google Demo",
+          picture: "https://lh3.googleusercontent.com/a/ACg8ocI-example=s96-c",
+          iat: Math.floor(Date.now() / 1000)
+        }));
+        const mockCredential = `${header}.${payload}.mock_signature`;
+
+        const res = await googleLoginUser(mockCredential);
+        if (res.success) {
+          showToast('Google Auth Demo', 'Đăng nhập Google (Dev Mode) thành công!', 'success');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 1000);
+        }
+      } catch (err) {
+        showAlert(`Lỗi Google Auth Demo: ${err.message}`, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

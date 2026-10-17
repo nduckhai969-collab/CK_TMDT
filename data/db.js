@@ -675,6 +675,7 @@ class Database {
     this.cache = {};
     this.snapshot = {};
     this.queue = Promise.resolve();
+    this.writeErrors = 0;
     this.ready = false;
   }
 
@@ -728,6 +729,18 @@ class Database {
     return true;
   }
 
+  async saveCollectionAndWait(name, items) {
+    const errorsBefore = this.writeErrors;
+    if (!this.saveCollection(name, items)) return false;
+    await this.flush();
+    if (this.writeErrors > errorsBefore) {
+      // Allow a later save to retry all documents after a failed batch.
+      this.snapshot[name] = new Map();
+      throw new Error(`Firestore write failed for collection "${name}".`);
+    }
+    return true;
+  }
+
   _enqueue(name, upserts, deletes) {
     const ops = [
       ...upserts.map(u => ({ type: 'set', key: u.key, doc: u.doc })),
@@ -743,7 +756,10 @@ class Database {
         });
         await batch.commit();
       }
-    }).catch(err => console.error(`[db] Lỗi ghi Firestore (${name}):`, err.message));
+    }).catch(err => {
+      this.writeErrors++;
+      console.error(`[db] Lỗi ghi Firestore (${name}):`, err.message);
+    });
   }
 
   // Chờ ghi xong (dùng khi tắt server hoặc trong script seed)

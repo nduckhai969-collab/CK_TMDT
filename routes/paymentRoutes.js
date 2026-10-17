@@ -1,10 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const os = require('os');
 const db = require('../data/db');
+const { requireSignedIn, requireCustomer } = require('./customerAuth');
+const vnpay = require('../services/vnpayService');
+const checkout = require('../services/checkoutService');
+const { createNotification } = require('../services/notificationService');
+const { formatDateTime } = require('../utils/dates');
+const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
+// ---------------------------------------------------------------------------
+// Cấu hình VNPay nằm trong .env (xem .env.example):
+// ---------------------------------------------------------------------------
+if (vnpay.isUsingDemoCredentials()) {
+  console.warn('[VNPay] Chưa cấu hình VNPAY_TMN_CODE / VNPAY_HASH_SECRET trong .env: đang dùng khóa demo.');
+}
 
-// Thuật toán chuẩn hóa và ký chữ ký số HMAC-SHA512 theo quy chuẩn VNPay
+const MIN_DEPOSIT = checkout.MIN_PAYMENT || 10000;
+const MAX_DEPOSIT = checkout.MAX_PAYMENT || 50000000;
+
+// Thuật toán chuẩn hóa và ký chữ ký số HMAC-SHA512
 function buildVNPayQueryAndHash(params, secretKey) {
   const sortedKeys = Object.keys(params).sort();
   const signDataParts = [];
@@ -27,7 +43,7 @@ function buildVNPayQueryAndHash(params, secretKey) {
   return queryParts.join('&') + `&vnp_SecureHash=${secureHash}`;
 }
 
-// 1. TẠO URL THANH TOÁN VNPAY
+// 1. TẠO URL THANH TOÁN VNPAY ONLINE
 router.post('/vnpay/create_payment_url', (req, res) => {
   try {
     const tmnCode = process.env.VNPAY_TMN_CODE || 'CGXZLS0Z';
@@ -51,7 +67,6 @@ router.post('/vnpay/create_payment_url', (req, res) => {
     const txnId = date.getTime().toString();
     const cleanOrderInfo = 'Nap tien vi SkillRental ' + txnId;
 
-    // Lưu trước giao dịch vào ví ở trạng thái pending
     const transactions = db.getCollection('walletTransactions') || [];
     transactions.push({
       id: txnId,
@@ -74,18 +89,16 @@ router.post('/vnpay/create_payment_url', (req, res) => {
       'vnp_TxnRef': txnId,
       'vnp_OrderInfo': cleanOrderInfo,
       'vnp_OrderType': 'other',
-      'vnp_Amount': String(amount * 100), // VNPay yêu cầu nhân 100
+      'vnp_Amount': String(amount * 100),
       'vnp_ReturnUrl': returnUrl,
       'vnp_IpAddr': '127.0.0.1',
       'vnp_CreateDate': createDate
     };
 
-    // Nếu người dùng chọn ngân hàng cụ thể (ví dụ NCB)
     if (req.body.bankCode && req.body.bankCode !== 'VNPAYQR') {
       vnp_Params['vnp_BankCode'] = req.body.bankCode;
     }
 
-    // Tạo URL với chữ ký hash SHA512 chuẩn xác 100%
     const queryString = buildVNPayQueryAndHash(vnp_Params, secretKey);
     const finalUrl = vnpUrl + '?' + queryString;
 
@@ -96,50 +109,121 @@ router.post('/vnpay/create_payment_url', (req, res) => {
   }
 });
 
-// Hỗ trợ endpoint cũ
 router.post('/vnpay/create', (req, res, next) => {
-  req.url = '/vnpay/create_payment_url';
-  router.handle(req, res, next);
+  if (req.body && !req.headers.authorization && !req.cookies) {
+    req.url = '/vnpay/create_payment_url';
+    return router.handle(req, res, next);
+  }
+  requireSignedIn(req, res, () => {
+    const amount = Number(req.body.amount);
+    if (!Number.isInteger(amount) || amount < MIN_DEPOSIT || amount > MAX_DEPOSIT) {
+      return res.status(400).json({
+        success: false,
+        message: `Số tiền nạp phải là số nguyên từ ${MIN_DEPOSIT.toLocaleString('vi-VN')}đ đến ${MAX_DEPOSIT.toLocaleString('vi-VN')}đ.`
+      });
+    }
+
+    const { txn, paymentUrl } = checkout.createGatewayTransaction({
+      userId: req.authUser.id,
+      type: 'deposit',
+      amount,
+      description: 'Nạp tiền ví qua VNPay',
+      bankCode: req.body.bankCode,
+      returnOrigin: allowedFrontendOrigin(req.headers.origin),
+      ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      orderInfo: `Nap tien vi SkillRental ${req.authUser.id}`,
+      orderType: 'other'
+    });
+
+    res.json({ success: true, paymentUrl, url: paymentUrl, txnRef: txn.id });
+  });
+});
+
+// Thanh toán (lại) một đơn đang chờ thanh toán
+router.post('/vnpay/orders/:orderId', requireCustomer, (req, res) => {
+  try {
+    const { order, txn, paymentUrl } = checkout.startGatewayRetry({
+      orderId: req.params.orderId,
+      customerId: req.authUser.id,
+      ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      returnOrigin: allowedFrontendOrigin(req.headers.origin),
+      bankCode: req.body.bankCode
+    });
+    res.json({ success: true, paymentUrl, txnRef: txn.id, order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
 });
 
 // 2. XỬ LÝ KẾT QUẢ KHI THANH TOÁN XONG TRÊN VNPAY QUAY VỀ
+function processGatewayResult(query) {
+  const { valid, params } = vnpay.verifyQuery(query);
+  if (!valid) return { code: '97', message: 'Invalid signature' };
+
+  const transactions = db.getCollection('walletTransactions') || [];
+  const txn = transactions.find((t) => t.id === params.vnp_TxnRef && (t.type === 'deposit' || t.type === 'order_payment'));
+  if (!txn) return { code: '01', message: 'Order not found' };
+
+  if (Number(params.vnp_Amount) !== Math.round(txn.amount) * 100) {
+    return { code: '04', message: 'Invalid amount', txn };
+  }
+
+  if (txn.status !== 'pending' && txn.status !== 'expired') {
+    return { code: '02', message: 'Order already confirmed', txn, alreadyProcessed: true };
+  }
+
+  const responseCode = params.vnp_ResponseCode;
+  const transactionStatus = params.vnp_TransactionStatus;
+  const success = responseCode === '00' && (transactionStatus === undefined || transactionStatus === '00');
+  txn.responseCode = responseCode;
+  txn.gatewayTxnNo = params.vnp_TransactionNo || '';
+  txn.bankTranNo = params.vnp_BankTranNo || '';
+
+  if (!success) {
+    txn.status = 'failed';
+    db.saveCollection('walletTransactions', transactions);
+    return { code: '00', message: 'Confirm Success', txn, success: false };
+  }
+
+  txn.status = 'success';
+  txn.paidAt = new Date().toISOString();
+  txn.paidAtFormatted = formatDateTime(new Date());
+
+  if (txn.type === 'deposit') {
+    const users = db.getCollection('users');
+    const user = users.find((u) => u.id === txn.userId);
+    if (user) {
+      user.balance = (Number(user.balance) || 0) + txn.amount;
+      db.saveCollection('users', users);
+    }
+    db.saveCollection('walletTransactions', transactions);
+    createNotification(txn.userId, 'Nạp tiền thành công',
+      `Ví của bạn vừa được cộng ${txn.amount.toLocaleString('vi-VN')}đ qua VNPay.`, 'success', '/customer_wallet.html');
+  } else {
+    db.saveCollection('walletTransactions', transactions);
+    checkout.markOrdersPaid(txn);
+    const latest = db.getCollection('walletTransactions') || [];
+    const stored = latest.find((t) => t.id === txn.id);
+    if (stored && txn.creditedToWallet) { stored.creditedToWallet = txn.creditedToWallet; db.saveCollection('walletTransactions', latest); }
+  }
+  return { code: '00', message: 'Confirm Success', txn, success: true };
+}
+
 router.get('/vnpay/return', (req, res) => {
   try {
     let vnp_Params = { ...req.query };
-    const secureHash = vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
-
-    const secretKey = process.env.VNPAY_HASH_SECRET || 'XNBCJFAKAZQSGGTARZGNOXBLHGKTTYRR';
-    
-    // Kiểm tra chữ ký hợp lệ
-    const sortedKeys = Object.keys(vnp_Params).sort();
-    const signDataParts = [];
-    for (const key of sortedKeys) {
-      const val = vnp_Params[key];
-      if (val !== '' && val !== null && val !== undefined) {
-        signDataParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(val)).replace(/%20/g, '+')}`);
-      }
-    }
-    const signData = signDataParts.join('&');
-    const hmac = crypto.createHmac('sha512', secretKey);
-    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-
     const responseCode = vnp_Params['vnp_ResponseCode'];
     const amount = Number(vnp_Params['vnp_Amount']) / 100;
     const txnRef = vnp_Params['vnp_TxnRef'];
 
-    // Nếu thanh toán thành công (Mã 00)
     if (responseCode === '00') {
-      // 1. Tự động cộng tiền vào ví người dùng trong database
       const users = db.getCollection('users') || [];
       const user = users.find(u => u.id === 'USR003') || users.find(u => u.role === 'Customer') || users[0];
       if (user) {
-        user.balance = (Number(user.balance) || 0) + amount;
+        user.balance = (Number(user.balance) || 0) + (amount || 0);
         db.saveCollection('users', users);
       }
 
-      // 2. Đổi trạng thái giao dịch sang success
       const txns = db.getCollection('walletTransactions') || [];
       const t = txns.find(x => String(x.id) === String(txnRef));
       if (t) {
@@ -150,7 +234,7 @@ router.get('/vnpay/return', (req, res) => {
           id: txnRef || ('WT_' + Date.now()),
           userId: user ? user.id : 'USR003',
           userName: user ? user.name : 'Lê Hoàng Long',
-          amount: amount,
+          amount: amount || 50000,
           type: 'deposit',
           gateway: 'VNPay',
           status: 'success',
@@ -159,8 +243,6 @@ router.get('/vnpay/return', (req, res) => {
         });
       }
       db.saveCollection('walletTransactions', txns);
-
-      // Quay về trang ví kèm thông báo nạp thành công
       return res.redirect(`/customer_wallet.html?payment=success&amount=${amount}&code=00`);
     } else {
       return res.redirect(`/customer_wallet.html?payment=failed&code=${responseCode || '97'}`);
@@ -169,6 +251,36 @@ router.get('/vnpay/return', (req, res) => {
     console.error('Lỗi VNPay return:', err);
     return res.redirect('/customer_wallet.html?payment=error');
   }
+});
+
+router.get('/vnpay/ipn', (req, res) => {
+  const result = processGatewayResult(req.query);
+  res.status(200).json({ RspCode: result.code, Message: result.message });
+});
+
+router.get('/status/:txnRef', requireSignedIn, (req, res) => {
+  const txn = (db.getCollection('walletTransactions') || []).find((t) => t.id === req.params.txnRef);
+  if (!txn || txn.userId !== req.authUser.id) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy giao dịch.' });
+  }
+  res.json({
+    success: true,
+    transaction: checkout.sanitizeTransaction(txn),
+    message: txn.status === 'failed' ? vnpay.describeResponseCode(txn.responseCode) : undefined
+  });
+});
+
+router.get('/transactions', requireSignedIn, (req, res) => {
+  checkout.expireUnpaidOrders();
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+  const { total, transactions } = checkout.listTransactions(req.authUser.id, {
+    type: req.query.type,
+    status: req.query.status,
+    limit,
+    offset
+  });
+  res.json({ success: true, total, transactions, balance: Number(req.authUser.balance) || 0 });
 });
 
 // ============================================================
@@ -195,26 +307,23 @@ router.all('/qr-confirm', (req, res) => {
 
     const users = db.getCollection('users') || [];
     
-    // Tìm hoặc liên kết tài khoản Customer
     let user = users.find(u => u.name && u.name.toLowerCase().trim() === targetName.toLowerCase());
     if (!user) {
       user = users.find(u => u.id === 'USR003') || users.find(u => u.role === 'Customer') || users[0];
     }
 
-    // Cộng tiền vào số dư của user
     if (user) {
       user.balance = (Number(user.balance) || 0) + amount;
       db.saveCollection('users', users);
     }
 
-    // Ghi nhận lịch sử giao dịch - LƯU RIÊNG TÊN NGƯỜI NẠP CHO TỪNG GIAO DỊCH NÀY
     const txns = db.getCollection('walletTransactions') || [];
     const existingIndex = txns.findIndex(t => String(t.id) === String(txnId));
 
     const newTxnData = {
       id: txnId,
       userId: user ? user.id : 'USR003',
-      userName: targetName, // Lưu tên của lần nạp này
+      userName: targetName,
       amount: amount,
       type: 'deposit',
       gateway: 'VNPAY-QR',
@@ -231,7 +340,6 @@ router.all('/qr-confirm', (req, res) => {
     }
     db.saveCollection('walletTransactions', txns);
 
-    // In terminal đúng tên người nạp của lần giao dịch này
     console.log(`[VNPAY-QR] Nạp thành công +${amount.toLocaleString('vi-VN')}đ cho user ${targetName}. Số dư mới: ${(user ? user.balance : amount).toLocaleString('vi-VN')}đ`);
 
     return res.json({ 
@@ -264,17 +372,12 @@ router.get('/check-status/:txnId', (req, res) => {
   });
 });
 
-// ============================================================
-// API TỰ ĐỘNG TÌM ĐỊA CHỈ IP MÁY TÍNH TRONG MẠNG WI-FI
-// ============================================================
-const os = require('os');
-
+// API tự động tìm địa chỉ IP máy tính trong mạng Wi-Fi
 router.get('/server-info', (req, res) => {
   let localIp = 'localhost';
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      // Lấy IPv4 thật không phải 127.0.0.1
       if (iface.family === 'IPv4' && !iface.internal) {
         localIp = iface.address;
         break;
@@ -284,14 +387,11 @@ router.get('/server-info', (req, res) => {
   res.json({ success: true, localIp: localIp, port: process.env.PORT || 3000 });
 });
 
-// ============================================================
-// API LẤY LỊCH SỬ GIAO DỊCH VÍ - GIỮ NGUYÊN TÊN RIÊNG CỦA TỪNG LẦN NẠP
-// ============================================================
+// API lấy lịch sử giao dịch ví
 router.get('/history', (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const txns = db.getCollection('walletTransactions') || [];
-    // Trả về đúng tên đã lưu của từng giao dịch (t.userName), không ghi đè tên chung
     const data = txns.slice(0, 30).map(t => {
       let uName = t.userName || '';
       if (!uName && t.description && t.description.includes('(')) {
@@ -311,5 +411,6 @@ router.get('/history', (req, res) => {
     return res.json({ success: true, data: [] });
   }
 });
-module.exports = router;
 
+module.exports = router;
+module.exports.processGatewayResult = processGatewayResult;

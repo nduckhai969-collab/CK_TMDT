@@ -2,12 +2,16 @@ const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
 const { requireCustomer } = require('./customerAuth');
+const { generateId } = require('../utils/id');
 
 // List job requests
-router.get('/', (req, res, next) => req.query.customerId ? requireCustomer(req, res, next) : next(), (req, res) => {
+router.get('/', (req, res, next) => (req.query.customerId || req.query.mine === '1') ? requireCustomer(req, res, next) : next(), (req, res) => {
   const { customerId, category, status, search, limit } = req.query;
   let jobs = db.getCollection('jobRequests') || [];
 
+  if (req.query.mine === '1') {
+    jobs = jobs.filter(j => j.customerId === req.authUser.id);
+  }
   if (customerId) {
     if (customerId !== req.authUser.id) {
       return res.status(403).json({ success: false, message: 'Bạn không có quyền xem yêu cầu của tài khoản khác.' });
@@ -57,7 +61,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Customer creates new job request
-router.post('/', requireCustomer, (req, res) => {
+router.post('/', requireCustomer, async (req, res) => {
   const { title, category, budget, budgetNum, deadline, location, desc } = req.body;
 
   if (!title || !category || (!budget && !budgetNum)) {
@@ -67,7 +71,10 @@ router.post('/', requireCustomer, (req, res) => {
   const jobs = db.getCollection('jobRequests');
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const newId = `JOB-${now.getFullYear()}-${String(jobs.length + 1).padStart(2, '0')}`;
+  let newId;
+  do {
+    newId = generateId('JOB');
+  } while (jobs.some(job => job.id === newId));
 
   const num = Number(budgetNum || String(budget).replace(/[^0-9]/g, '')) || 0;
   const formattedBudget = num.toLocaleString('vi-VN') + 'đ';
@@ -89,7 +96,12 @@ router.post('/', requireCustomer, (req, res) => {
   };
 
   jobs.unshift(newJob);
-  db.saveCollection('jobRequests', jobs);
+  try {
+    await db.saveCollectionAndWait('jobRequests', jobs);
+  } catch (err) {
+    console.error('[jobs] Không lưu được yêu cầu mới:', err.message);
+    return res.status(503).json({ success: false, message: 'Chưa lưu được yêu cầu lên hệ thống. Vui lòng thử lại.' });
+  }
 
   res.status(201).json({
     success: true,

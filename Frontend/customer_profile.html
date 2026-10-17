@@ -184,6 +184,14 @@
             object-fit: cover;
         }
 
+        .avatar-change-button {
+            position:absolute;right:-7px;top:-7px;width:30px;height:30px;border:2px solid #fff;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;background:#16A34A;color:#fff;cursor:pointer;
+            box-shadow:0 2px 8px rgba(15,23,42,.2);font-size:12px;
+        }
+        .avatar-change-button:disabled { opacity:.65;cursor:wait; }
+        .avatar-change-button:hover:not(:disabled) { background:#15803D; }
+
         .verified-icon {
             position: absolute;
 
@@ -1356,6 +1364,11 @@
                         KH
                     </div>
 
+                    <input type="file" id="avatarFileInput" accept="image/png,image/jpeg,image/webp" hidden>
+                    <button type="button" id="changeAvatarButton" class="avatar-change-button" title="Đổi ảnh đại diện" aria-label="Đổi ảnh đại diện">
+                        <i class="fa-solid fa-camera"></i>
+                    </button>
+
                     <div
                             class="verified-icon"
                             title="Tài khoản đang hoạt động"
@@ -1391,6 +1404,8 @@
                     </span>
 
                     </div>
+
+                    <p id="profileBioSummary" style="max-width:620px;margin:10px 0;color:rgba(255,255,255,.9);font-size:13px;line-height:1.55;white-space:pre-line;"></p>
 
                     <div class="profile-balance">
 
@@ -1670,6 +1685,12 @@
                                         placeholder="Nhập địa chỉ của bạn"
                                 >
 
+                            </div>
+
+                            <div class="form-group full">
+                                <label class="form-label" for="inputBio">Giới thiệu bản thân</label>
+                                <textarea id="inputBio" class="form-input" rows="4" maxlength="1000" placeholder="Chia sẻ đôi điều về bạn, sở thích hoặc cách bạn muốn được hỗ trợ..." style="min-height:110px;resize:vertical;"></textarea>
+                                <div class="form-note">Tối đa 1000 ký tự. Nội dung này hiển thị trên hồ sơ của bạn.</div>
                             </div>
 
                         </div>
@@ -2289,6 +2310,11 @@
                 .innerHTML =
                 renderCustomerNavbar('profile');
 
+            document.getElementById('changeAvatarButton').addEventListener('click', () => {
+                document.getElementById('avatarFileInput').click();
+            });
+            document.getElementById('avatarFileInput').addEventListener('change', changeCustomerAvatar);
+
             // Footer
 
             document
@@ -2351,6 +2377,63 @@
 
     }
 
+    async function changeCustomerAvatar(event) {
+        const input = event.currentTarget;
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            showToast('Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.', true);
+            input.value = '';
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Ảnh đại diện phải có dung lượng tối đa 5 MB.', true);
+            input.value = '';
+            return;
+        }
+
+        const button = document.getElementById('changeAvatarButton');
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const response = await apiRequest('/api/auth/profile', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: currentUser.name || '',
+                    phone: currentUser.phone || '',
+                    address: currentUser.address || '',
+                })
+            });
+            if (!response || !response.success) {
+                showToast(response?.message || 'Không thể lưu ảnh đại diện.', true);
+                return;
+            }
+
+            const uploadResponse = await apiRequest('/api/auth/profile/avatar', {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file
+            });
+            if (!uploadResponse || !uploadResponse.success) {
+                showToast(uploadResponse?.message || 'Không thể tải ảnh lên máy chủ.', true);
+                return;
+            }
+            currentUser = { ...currentUser, ...uploadResponse.user };
+            setCurrentCustomer(currentUser);
+            renderProfile();
+            const navbar = document.getElementById('navbar-placeholder');
+            if (navbar) navbar.innerHTML = renderCustomerNavbar('profile');
+            showToast('Đã cập nhật ảnh đại diện.');
+        } catch (error) {
+            console.error('Không thể tải ảnh đại diện lên máy chủ:', error);
+            showToast('Không thể tải ảnh lên. Vui lòng kiểm tra kết nối rồi thử lại.', true);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="fa-solid fa-camera"></i>';
+            input.value = '';
+        }
+    }
+
     /* =========================================
        RENDER PROFILE
     ========================================= */
@@ -2376,6 +2459,7 @@
         const address =
             currentUser.address ||
             '';
+        const bio = currentUser.bio || '';
 
         /* =========================
            HEADER
@@ -2390,6 +2474,8 @@
             .getElementById('profileEmail')
             .textContent =
             email;
+
+        document.getElementById('profileBioSummary').textContent = bio || 'Chưa có phần giới thiệu. Hãy thêm vài dòng về bạn trong mục Thông Tin Cá Nhân.';
 
         /* =========================
            AVATAR
@@ -2446,6 +2532,8 @@
             .getElementById('inputAddress')
             .value =
             address;
+
+        document.getElementById('inputBio').value = bio;
 
         /* =========================
            ACCOUNT
@@ -2684,6 +2772,15 @@
                         .getElementById('inputAddress')
                         .value
                         .trim();
+                const bio = document
+                    .getElementById('inputBio')
+                    .value
+                    .trim();
+
+                if (bio.length > 1000) {
+                    showToast('Phần giới thiệu không được vượt quá 1000 ký tự.', true);
+                    return;
+                }
 
                 if (!name) {
 
@@ -2706,7 +2803,8 @@
                                 body: JSON.stringify({
                                     name,
                                     phone,
-                                    address
+                                    address,
+                                    bio
                                 })
                             }
                         );

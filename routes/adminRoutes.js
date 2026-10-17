@@ -811,7 +811,9 @@ router.get('/statistics', (req, res) => {
   };
 
   const { startDate, endDate } = req.query;
-  let filteredOrders = orders;
+  // Đơn đang chờ thanh toán (hoặc đã tự hủy vì không thanh toán) chưa phải đơn hàng thật nên không đưa vào thống kê
+  const countedOrders = orders.filter(o => o.paymentStatus !== 'pending' && o.paymentStatus !== 'cancelled');
+  let filteredOrders = countedOrders;
   if (startDate && endDate) {
     // 'YYYY-MM-DD' phải đọc theo giờ địa phương: new Date('2025-04-20') là 00:00 UTC (= 07:00 ở VN)
     // nên đơn lúc 00:00 giờ VN của ngày đầu sẽ bị loại nhầm.
@@ -822,7 +824,7 @@ router.get('/statistics', (req, res) => {
     const start = toLocalDate(startDate);
     const end = toLocalDate(endDate);
     end.setHours(23, 59, 59, 999);
-    filteredOrders = orders.filter(o => {
+    filteredOrders = countedOrders.filter(o => {
       // Parse order date (DD/MM/YYYY HH:mm or ISO)
       let dStr = o.date || o.createdAt;
       let d;

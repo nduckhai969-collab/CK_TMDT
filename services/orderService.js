@@ -1,6 +1,9 @@
 const db = require('../data/db');
 const { createNotification, notifyProvider } = require('./notificationService');
 const { formatDateTime } = require('../utils/dates');
+const { slotsForDate } = require('../routes/providerAvailability');
+
+const CANCELLATION_UNDO_WINDOW_MS = 5 * 60 * 1000;
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -36,10 +39,15 @@ function assertProviderOwnsOrder(order, userId) {
   }
 }
 
+function assertOrderPaid(order) {
+  if (order.paymentStatus === 'pending') throw httpError(409, 'Đơn hàng chưa được khách thanh toán.');
+}
+
 function processAcceptOrder(orderId, userId) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
+  assertOrderPaid(order);
   if (order.orderStatus !== 'pending') throw httpError(409, 'Đơn hàng không ở trạng thái chờ tiếp nhận');
 
   order.orderStatus = 'processing';
@@ -55,6 +63,7 @@ function processDeliverOrder(orderId, userId) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
+  assertOrderPaid(order);
   if (order.orderStatus !== 'processing') throw httpError(409, 'Đơn hàng chưa được xử lý hoặc đã giao');
 
   order.orderStatus = 'delivered';
@@ -70,6 +79,7 @@ function processProgressOrder(orderId, userId, note) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
+  assertOrderPaid(order);
   if (order.orderStatus !== 'processing') throw httpError(409, 'Chỉ có thể cập nhật tiến độ khi đơn đang xử lý');
 
   updateOrderMilestone(order, `Cập nhật tiến độ: ${note}`);
@@ -84,8 +94,8 @@ function refundCustomer(order) {
   const users = db.getCollection('users');
   const customer = users.find(u => u.id === order.customerId);
   const amount = Number(order.escrowDeposit) || Number(order.price) || 0;
-  if (customer && amount > 0) {
-    customer.balance = (customer.balance || 0) + amount;
+  if (customer && Number.isFinite(amount) && amount > 0) {
+    customer.balance = (Number(customer.balance) || 0) + amount;
     db.saveCollection('users', users);
 
     const transactions = db.getCollection('walletTransactions') || [];
@@ -99,7 +109,9 @@ function refundCustomer(order) {
       description: `Hoàn tiền ký quỹ từ đơn hàng ${order.id}`
     });
     db.saveCollection('walletTransactions', transactions);
+    return amount;
   }
+  return 0;
 }
 
 function processCancelOrder(orderId, userId, userRole, reason) {
@@ -126,29 +138,113 @@ function processCancelOrder(orderId, userId, userRole, reason) {
     db.saveCollection('orders', orders);
 
     notifyProvider(order.providerId, 'Đơn hàng bị khiếu nại',
-      `Đơn hàng ${order.id} bị khiếu nại bởi khách hàng.`, 'warning');
+      `Đơn hàng ${order.id} bị khiếu nại bởi khách hàng.`, 'warning', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
+    createNotification(order.customerId, 'Đang xử lý tranh chấp', `Đơn ${order.id} đã chuyển sang tranh chấp. Khoản ký quỹ được giữ nguyên trong khi Admin xem xét.`, 'warning', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
     return order;
   }
 
-  // Hủy bình thường (pending/processing) -> hoàn toàn bộ tiền ký quỹ cho khách
+  // Đơn chưa được thanh toán không có tiền ký quỹ để hoàn lại.
+  const previousOrderStatus = order.orderStatus;
+  const previousPaymentStatus = order.paymentStatus || 'paid';
+  const paymentPending = order.paymentStatus === 'pending';
+  const previousEscrowStatus = order.escrowStatus || (paymentPending ? 'payment_pending' : 'escrow_held');
   order.orderStatus = 'cancelled';
-  order.escrowStatus = 'refunded';
+  if (paymentPending) order.paymentStatus = 'cancelled';
+  order.escrowStatus = paymentPending ? 'payment_cancelled' : 'refunded';
   order.cancelReason = reason || 'Hủy đơn hàng';
   order.cancelledBy = userRole;
+  order.cancelledAt = new Date().toISOString();
+  order.cancellationUndoUntil = new Date(Date.now() + CANCELLATION_UNDO_WINDOW_MS).toISOString();
+  order.previousOrderStatus = previousOrderStatus;
+  order.previousPaymentStatus = previousPaymentStatus;
+  order.previousEscrowStatus = previousEscrowStatus;
   updateOrderMilestone(order, `Đơn hàng bị hủy: ${order.cancelReason}`);
 
-  refundCustomer(order);
+  const refundedAmount = paymentPending ? 0 : refundCustomer(order);
+  order.refundAmount = refundedAmount;
+  order.refundedAt = refundedAmount > 0 ? formatDateTime(new Date()) : null;
   db.saveCollection('orders', orders);
 
   const cancellerName = userRole === 'Customer' ? 'Khách hàng' : (userRole === 'Admin' ? 'Quản trị viên' : 'Chuyên gia');
-  if (userRole !== 'Customer') {
+  if (paymentPending) {
+    createNotification(order.customerId, 'Đơn chờ thanh toán đã hủy', `Đơn hàng ${order.id} đã được hủy. Không có khoản tiền nào bị trừ.`, 'info', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+  } else if (userRole !== 'Customer') {
     createNotification(order.customerId, 'Đơn hàng bị hủy',
-      `${cancellerName} đã hủy đơn hàng ${order.id}. Số tiền đã được hoàn vào ví của bạn.`, 'error');
+      `${cancellerName} đã hủy đơn hàng ${order.id}. Số tiền đã được hoàn vào ví của bạn.`, 'error', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   } else {
-    notifyProvider(order.providerId, 'Đơn hàng bị hủy', `${cancellerName} đã hủy đơn hàng ${order.id}.`, 'error');
+    notifyProvider(order.providerId, 'Đơn hàng bị hủy', `${cancellerName} đã hủy đơn hàng ${order.id}.`, 'error', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
     createNotification(order.customerId, 'Đã hoàn tiền',
-      `Đơn hàng ${order.id} đã hủy, tiền ký quỹ đã được hoàn vào ví của bạn.`, 'success');
+      `Đơn hàng ${order.id} đã hủy, tiền ký quỹ đã được hoàn vào ví của bạn.`, 'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   }
+  return order;
+}
+
+function processUndoCancelOrder(orderId, customerId) {
+  const orders = db.getCollection('orders') || [];
+  const order = loadOrder(orders, orderId);
+  if (order.customerId !== customerId) throw httpError(403, 'Bạn không có quyền hoàn tác đơn hàng này.');
+  if (order.orderStatus !== 'cancelled' || order.cancelledBy !== 'Customer') {
+    throw httpError(409, 'Chỉ có thể hoàn tác đơn do chính bạn hủy.');
+  }
+  const undoUntil = Date.parse(order.cancellationUndoUntil || '');
+  if (!Number.isFinite(undoUntil) || Date.now() > undoUntil) {
+    throw httpError(409, 'Đã hết thời gian 5 phút để hoàn tác hủy đơn.');
+  }
+
+  if (order.scheduledDate && order.scheduledTime) {
+    const [year, month, day] = String(order.scheduledDate).split('-').map(Number);
+    const appointmentDate = new Date(year, month - 1, day, 12);
+    const provider = (db.getCollection('providers') || []).find(item => item.id === order.providerId);
+    if (!provider || appointmentDate.getFullYear() !== year || appointmentDate.getMonth() !== month - 1 || appointmentDate.getDate() !== day ||
+        !slotsForDate(provider, appointmentDate, orders).includes(order.scheduledTime)) {
+      throw httpError(409, 'Khung giờ đã được người khác đặt hoặc không còn khả dụng; không thể khôi phục đơn.');
+    }
+  }
+
+  const users = db.getCollection('users') || [];
+  const customer = users.find(user => user.id === customerId);
+  if (!customer) throw httpError(404, 'Không tìm thấy tài khoản khách hàng.');
+  const refundAmount = Number(order.refundAmount) || 0;
+  if (refundAmount > 0) {
+    const balance = Number(customer.balance) || 0;
+    if (balance < refundAmount) throw httpError(400, 'Số dư ví hiện không đủ để hoàn tác khoản tiền đã được hoàn trước đó.');
+    customer.balance = balance - refundAmount;
+    const transactions = db.getCollection('walletTransactions') || [];
+    transactions.unshift({
+      id: `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      userId: customerId,
+      type: 'refund_reversal',
+      amount: -refundAmount,
+      status: 'completed',
+      createdAt: formatDateTime(new Date()),
+      description: `Thu hồi khoản hoàn tiền khi khôi phục đơn ${order.id}`
+    });
+    db.saveCollection('walletTransactions', transactions);
+    db.saveCollection('users', users);
+  }
+
+  order.orderStatus = order.previousOrderStatus || 'pending';
+  order.paymentStatus = order.previousPaymentStatus || 'paid';
+  order.escrowStatus = order.previousEscrowStatus || 'escrow_held';
+  if (order.paymentStatus === 'pending') {
+    // Đơn chờ thanh toán được khôi phục: cho thêm thời gian để thanh toán (nếu không sẽ bị tự hủy lại ngay)
+    order.paymentExpiresAt = new Date(Date.now() + (Number(process.env.ORDER_PAYMENT_WINDOW_MINUTES) || 30) * 60 * 1000).toISOString();
+  }
+  order.lastCancellationUndoneAt = new Date().toISOString();
+  order.refundAmount = 0;
+  order.refundedAt = null;
+  delete order.cancelReason;
+  delete order.cancelledBy;
+  delete order.cancelledAt;
+  delete order.cancellationUndoUntil;
+  delete order.previousOrderStatus;
+  delete order.previousPaymentStatus;
+  delete order.previousEscrowStatus;
+  updateOrderMilestone(order, 'Khách hàng đã hoàn tác việc hủy đơn.');
+  db.saveCollection('orders', orders);
+
+  createNotification(customerId, 'Đã khôi phục đơn hàng', `Đơn ${order.id} đã được khôi phục${refundAmount ? ` và ${refundAmount.toLocaleString('vi-VN')}đ được thu lại từ ví` : ''}.`, 'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+  notifyProvider(order.providerId, 'Đơn hàng được khôi phục', `Khách hàng đã hoàn tác việc hủy đơn ${order.id}.`, 'info', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
   return order;
 }
 
@@ -226,6 +322,10 @@ function processForceRefund(orderId) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
 
+  if (order.paymentStatus === 'pending') {
+    throw httpError(409, 'Đơn chưa được thanh toán nên không có tiền ký quỹ để hoàn lại.');
+  }
+
   if (['completed', 'cancelled'].includes(order.orderStatus) || order.escrowStatus === 'refunded' || order.escrowStatus === 'completed') {
     throw httpError(409, 'Đơn hàng đã kết thúc hoặc đã hoàn tiền, không thể hoàn tiền thêm.');
   }
@@ -250,6 +350,7 @@ module.exports = {
   processDeliverOrder,
   processProgressOrder,
   processCancelOrder,
+  processUndoCancelOrder,
   processReleaseEscrow,
   processForceRefund
 };

@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hồ Sơ & Dịch Vụ - SkillRental Partner Dashboard</title>
+  <!-- Google Fonts Inter -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="brand-icon">S</div>
+        <span>SkillRental</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Tổng quan</div>
+        <a href="dashboard.html" class="nav-link">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="nav-section-title">Hồ sơ & Dịch vụ</div>
+        <a href="profile.html" class="nav-link active">
+          <i class="fa-solid fa-id-card-clip"></i>
+          <span>Hồ Sơ & Dịch Vụ</span>
+        </a>
+
+        <div class="nav-section-title">Công việc & Đơn hàng</div>
+        <a href="jobs.html" class="nav-link">
+          <i class="fa-solid fa-briefcase"></i>
+          <span>Đề xuất & Ứng tuyển</span>
+          <span class="badge-count" style="background-color: var(--primary);">6</span>
+        </a>
+        <a href="bookings.html" class="nav-link">
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>Đặt lịch & Tiến độ</span>
+        </a>
+
+        <div class="nav-section-title">Kinh doanh & Khách hàng</div>
+        <a href="chat.html" class="nav-link">
+          <i class="fa-solid fa-comments"></i>
+          <span>Tin nhắn Khách hàng</span>
+          <span class="badge-count">3</span>
+        </a>
+        
+        <a href="payment.html" class="nav-link">
+          <i class="fa-solid fa-credit-card"></i>
+          <span>Thanh toán & Phí sàn</span>
+        </a>
+        
+        <a href="income.html" class="nav-link">
+          <i class="fa-solid fa-wallet"></i>
+          <span>Ví & Thu nhập</span>
+        </a>
+        
+        <a href="review.html" class="nav-link">
+          <i class="fa-solid fa-star"></i>
+          <span>Đánh giá & Uy tín</span>
+        </a>
+        
+        <a href="complaint.html" class="nav-link">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Khiếu nại & Tranh chấp</span>
+          <span class="badge-count" style="background-color: var(--warning);">1</span>
+        </a>
+
+        <div class="nav-section-title">Dịch vụ hệ thống</div>
+        <a href="package.html" class="nav-link">
+          <i class="fa-solid fa-box-archive"></i>
+          <span>Mua dịch vụ</span>
+        </a>
+        
+        <a href="post.html" class="nav-link">
+          <i class="fa-solid fa-newspaper"></i>
+          <span>Bài viết & Portfolio</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-profile">
+        <div class="avatar">NV</div>
+        <div class="profile-info">
+          <div class="profile-name">Nguyễn Văn Pro</div>
+          <div class="profile-role">Senior UI/UX & Web Dev</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-wrapper">
+      
+      <!-- Top Sticky Header -->
+      <header class="top-header">
+        <div class="header-title">Quản Lý Hồ Sơ & Dịch Vụ Provider</div>
+        <div class="header-actions">
+          <span class="badge badge-success" id="headerStatusBadge">
+            <span class="badge-dot"></span> Đang Sẵn Sàng Nhận Việc
+          </span>
+          <!-- Switcher to Admin Portal -->
+          <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
+            <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
+          </a>
+          <button class="btn btn-outline btn-sm" onclick="showToast('Đang mở trang xem trước hồ sơ công khai!')">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Xem Trước Hồ Sơ
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="showToast('Đã lưu tất cả thay đổi cấu hình thành công!')">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu Thay Đổi
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Body Content -->
+      <div class="content-body">
+
+        <!-- Navigation Tabs -->
+        <div class="tab-list">
+          <div class="tab-item active" onclick="switchSection('uc29-profile', this)">
+            <i class="fa-solid fa-user-check"></i> Hồ Sơ Provider 
+          </div>
+          <div class="tab-item" onclick="switchSection('uc30-skills', this)">
+            <i class="fa-solid fa-bolt"></i> Kỹ Năng & Chứng Chỉ 
+          </div>
+          <div class="tab-item" onclick="switchSection('uc31-services', this)">
+            <i class="fa-solid fa-briefcase"></i> Dịch Vụ & Bảng Giá 
+          </div>
+          <div class="tab-item" onclick="switchSection('uc32-availability', this)">
+            <i class="fa-solid fa-calendar-check"></i> Lịch Rảnh & Tình Trạng 
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             1. HỒ SƠ PROVIDER (PROVIDER PROFILE)
+             =================================================================== -->
+        <div id="uc29-profile" class="profile-sub-view" style="display: block;">
+          
+          <!-- Header Profile Card -->
+          <div class="profile-header-card">
+            <div class="profile-cover">
+              <div class="profile-cover-action">
+                <button class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.9);" onclick="showToast('Đã mở công cụ tải lên ảnh bìa mới!')">
+                  <i class="fa-solid fa-camera"></i> Đổi ảnh bìa
+                </button>
+              </div>
+            </div>
+
+            <div class="profile-header-content">
+              <div class="profile-avatar-row">
+                <div class="profile-avatar-container">
+                  <div class="profile-avatar-lg">NV</div>
+                  <span class="profile-online-dot" title="Đang online"></span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button class="btn btn-outline btn-sm" onclick="openModal('editProfileModal')">
+                    <i class="fa-solid fa-pen-to-square"></i> Chỉnh Sửa Thông Tin
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div class="profile-title-row">
+                  <span class="profile-name-lg" id="viewName">Nguyễn Văn Pro</span>
+                  <span class="badge badge-success">
+                    <i class="fa-solid fa-shield-halved"></i> Đã Xác Thực Danh Tính
+                  </span>
+                  <span class="badge badge-warning">
+                    <i class="fa-solid fa-crown"></i> VIP Partner 5⭐
+                  </span>
+                </div>
+
+                <div class="profile-headline" id="viewHeadline">
+                  Senior UI/UX Designer & Fullstack Web Developer • 6+ Năm Kinh Nghiệm
+                </div>
+
+                <div class="profile-meta-tags">
+                  <span><i class="fa-solid fa-location-dot"></i> <span id="viewLocation">Cầu Giấy, Hà Nội</span></span>
+                  <span><i class="fa-solid fa-language"></i> Tiếng Việt (Bản ngữ), Tiếng Anh (IELTS 7.0)</span>
+                  <span><i class="fa-solid fa-envelope"></i> pro.nguyen@skillrental.vn</span>
+                  <span><i class="fa-solid fa-phone"></i> 0987.654.321</span>
+                  <span><i class="fa-solid fa-clock"></i> Tham gia: Tháng 03/2024</span>
+                </div>
+
+                <!-- Completeness Progress -->
+                <div class="profile-completeness-card">
+                  <div style="display:flex; align-items:center; gap: 12px; flex:1;">
+                    <div style="font-weight: 700; font-size: 13px; color: var(--secondary);">Mức độ hoàn thiện hồ sơ:</div>
+                    <div class="progress-bar">
+                      <div class="progress-bar-fill" style="width: 95%;"></div>
+                    </div>
+                    <span style="font-weight: 800; color: var(--primary); font-size: 14px;">95%</span>
+                  </div>
+                  <span style="font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-circle-check" style="color: var(--primary);"></i> Đủ điều kiện nhận huy hiệu Top Provider</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Key Metrics Grid -->
+          <div class="grid-4" style="margin-bottom: 24px;">
+            <div class="stat-card">
+              <div>
+                <div class="stat-label">Đánh Giá Uy Tín</div>
+                <div class="stat-value">4.9 ⭐ <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">(128)</span></div>
+              </div>
+              <div class="stat-icon" style="background-color: var(--warning-light); color: #B45309;">
+                <i class="fa-solid fa-star"></i>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div>
+                <div class="stat-label">Tỷ Lệ Phản Hồi</div>
+                <div class="stat-value">99% <span style="font-size: 12px; font-weight: 500; color: var(--primary);">&lt; 15 phút</span></div>
+              </div>
+              <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);">
+                <i class="fa-solid fa-reply-all"></i>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div>
+                <div class="stat-label">Đơn Hàng Hoàn Tất</div>
+                <div class="stat-value">142 <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">dự án</span></div>
+              </div>
+              <div class="stat-icon" style="background-color: var(--info-light); color: var(--info);">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div>
+                <div class="stat-label">Đúng Hạn Cam Kết</div>
+                <div class="stat-value">98.6%</div>
+              </div>
+              <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);">
+                <i class="fa-solid fa-calendar-check"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bio & Background Details -->
+          <div class="grid-3">
+            <!-- Left Bio (2 cols) -->
+            <div class="card" style="grid-column: span 2;">
+              <div class="card-header">
+                <div class="card-title"><i class="fa-solid fa-user" style="color: var(--primary);"></i> Giới Thiệu Bản Thân & Năng Lực Cốt Lõi</div>
+                <button class="btn btn-outline btn-sm" onclick="openModal('editProfileModal')"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>
+              </div>
+              
+              <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);" id="viewBio">
+                <p style="margin-bottom: 12px;">
+                  Xin chào! Tôi là <strong>Nguyễn Văn Pro</strong>, một Chuyên gia Thiết kế UI/UX và Lập trình viên Frontend với hơn 6 năm kinh nghiệm thực chiến trong việc xây dựng các ứng dụng web và mobile chất lượng cao.
+                </p>
+                <p style="margin-bottom: 12px;">
+                  Thế mạnh lớn nhất của tôi là khả năng chuyển hóa ý tưởng kinh doanh thành các giao diện số trực quan, chuẩn UX người dùng và triển khai mã nguồn sạch (Clean Code), tối ưu hiệu năng và chuẩn SEO trên các nền tảng React, Next.js và Tailwind CSS.
+                </p>
+                <p>
+                  Tôi luôn cam kết đúng tiến độ 100%, đồng hành hỗ trợ kỹ thuật tận tâm và mang lại giá trị cao nhất cho khách hàng của mình trên nền tảng SkillRental.
+                </p>
+              </div>
+
+              <!-- Education & Experience -->
+              <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                <div style="font-weight: 700; font-size: 15px; margin-bottom: 14px; color: var(--secondary);">
+                  <i class="fa-solid fa-briefcase" style="color: var(--primary);"></i> Kinh Nghiệm Làm Việc & Học Vấn
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 14px;">
+                  <div style="display:flex; gap: 12px;">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px;"></div>
+                    <div>
+                      <div style="font-weight: 600; font-size: 14px;">Lead Product Designer & Frontend Architect • Freelance / Agency</div>
+                      <div style="font-size: 12px; color: var(--text-muted);">2021 - Hiện tại (3+ năm)</div>
+                      <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Chủ trì thiết kế và triển khai hơn 40 dự án SaaS, sàn thương mại điện tử và cổng thông tin doanh nghiệp.</div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; gap: 12px;">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px;"></div>
+                    <div>
+                      <div style="font-weight: 600; font-size: 14px;">Kỹ sư Công Nghệ Thông Tin • Đại học Bách Khoa Hà Nội</div>
+                      <div style="font-size: 12px; color: var(--text-muted);">2015 - 2020 • Tốt nghiệp loại Giỏi</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Identity & Social Links (1 col) -->
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title"><i class="fa-solid fa-id-card" style="color: var(--primary);"></i> Xác Thực Danh Tính</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size: 13px;"><i class="fa-solid fa-id-badge" style="color: var(--primary); margin-right: 8px;"></i> CCCD / Hộ chiếu:</span>
+                    <span class="badge badge-success"><span class="badge-dot"></span> Đã xác thực</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size: 13px;"><i class="fa-solid fa-phone" style="color: var(--primary); margin-right: 8px;"></i> Số điện thoại:</span>
+                    <span class="badge badge-success"><span class="badge-dot"></span> 0987***321</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size: 13px;"><i class="fa-solid fa-envelope" style="color: var(--primary); margin-right: 8px;"></i> Email chính chủ:</span>
+                    <span class="badge badge-success"><span class="badge-dot"></span> Đã xác thực</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size: 13px;"><i class="fa-solid fa-building-columns" style="color: var(--primary); margin-right: 8px;"></i> Tài khoản ngân hàng:</span>
+                    <span class="badge badge-success"><span class="badge-dot"></span> MB Bank</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title"><i class="fa-solid fa-share-nodes" style="color: var(--primary);"></i> Liên Kết Portfolio</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <a href="https://github.com" target="_blank" class="btn btn-outline btn-sm" style="justify-content: flex-start; gap: 10px;">
+                    <i class="fa-brands fa-github" style="font-size: 16px; width: 18px;"></i> github.com/nguyenvanpro
+                  </a>
+                  <a href="https://behance.net" target="_blank" class="btn btn-outline btn-sm" style="justify-content: flex-start; gap: 10px;">
+                    <i class="fa-brands fa-behance" style="font-size: 16px; width: 18px; color: #0057ff;"></i> behance.net/prodesigner
+                  </a>
+                  <a href="https://linkedin.com" target="_blank" class="btn btn-outline btn-sm" style="justify-content: flex-start; gap: 10px;">
+                    <i class="fa-brands fa-linkedin" style="font-size: 16px; width: 18px; color: #0a66c2;"></i> linkedin.com/in/pro-nguyen
+                  </a>
+                  <a href="https://myportfolio.vn" target="_blank" class="btn btn-outline btn-sm" style="justify-content: flex-start; gap: 10px;">
+                    <i class="fa-solid fa-globe" style="font-size: 16px; width: 18px; color: var(--primary);"></i> https://nguyenvanpro.dev
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- ===================================================================
+             2. QUẢN LÝ KỸ NĂNG & CHỨNG CHỈ (SKILLS & CERTIFICATIONS)
+             =================================================================== -->
+        <div id="uc30-skills" class="profile-sub-view" style="display: none;">
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <div>
+              <h2 style="font-weight:700; font-size: 18px; color: var(--secondary);">Danh Mục Kỹ Năng & Chứng Chỉ Nghề Nghiệp</h2>
+              <div style="color: var(--text-muted); font-size: 13px;">Thiết lập kỹ năng chuyên môn và chứng thực qua bài kiểm tra năng lực sàn</div>
+            </div>
+            <div style="display:flex; gap: 10px;">
+              <button class="btn btn-outline btn-sm" onclick="showToast('Đang mở danh sách bài kiểm tra năng lực kỹ năng!')">
+                <i class="fa-solid fa-graduation-cap"></i> Làm Bài Test Kỹ Năng
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="openModal('addSkillModal')">
+                <i class="fa-solid fa-plus"></i> Thêm Kỹ Năng Mới
+              </button>
+            </div>
+          </div>
+
+          <!-- Primary Skills Section -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-star" style="color: var(--primary);"></i> Kỹ Năng Chuyên Môn Cốt Lõi (Primary Skills)
+              </div>
+              <span class="badge badge-success">4 Kỹ năng đã xác thực</span>
+            </div>
+
+            <div class="grid-2" id="primarySkillsList">
+              
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name">
+                    <i class="fa-brands fa-figma" style="color: #F24E1E; font-size: 18px;"></i>
+                    UI/UX Design & Prototyping (Figma)
+                  </div>
+                  <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
+                    <span class="skill-badge-level level-expert">Chuyên gia (Expert)</span>
+                    <span class="skill-test-score"><i class="fa-solid fa-circle-check"></i> Sàn xác thực 96/100</span>
+                  </div>
+                </div>
+                <div style="display:flex; gap: 6px;">
+                  <button class="btn btn-outline btn-sm" style="padding: 0 10px;" onclick="showToast('Đã mở chỉnh sửa kỹ năng Figma!')"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn btn-outline btn-sm" style="padding: 0 10px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name">
+                    <i class="fa-brands fa-react" style="color: #61DAFB; font-size: 18px;"></i>
+                    ReactJS & Next.js Framework
+                  </div>
+                  <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
+                    <span class="skill-badge-level level-expert">Chuyên gia (Expert)</span>
+                    <span class="skill-test-score"><i class="fa-solid fa-circle-check"></i> Sàn xác thực 92/100</span>
+                  </div>
+                </div>
+                <div style="display:flex; gap: 6px;">
+                  <button class="btn btn-outline btn-sm" style="padding: 0 10px;" onclick="showToast('Đang cập nhật kỹ năng!')"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn btn-outline btn-sm" style="padding: 0 10px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name">
+                    <i class="fa-brands fa-html5" style="color: #E34F26; font-size: 18px;"></i>
+                    HTML5, CSS3, Tailwind CSS & SCSS
+                  </div>
+                  <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
+                    <span class="skill-badge-level level-expert">Chuyên gia (Expert)</span>
+                    <span class="skill-test-score"><i class="fa-solid fa-circle-check"></i> Sàn xác thực 98/100</span>
+                  </div>
+                </div>
+                <div style="display:flex; gap: 6px;">
+                  <button class="btn btn-outline btn-sm" style="padding: 0 10px;"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn btn-outline btn-sm" style="padding: 0 10px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name">
+                    <i class="fa-brands fa-js" style="color: #F7DF1E; font-size: 18px;"></i>
+                    TypeScript & Modern JavaScript (ES6+)
+                  </div>
+                  <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
+                    <span class="skill-badge-level level-intermediate">Thành thạo (Intermediate)</span>
+                    <span class="skill-test-score"><i class="fa-solid fa-circle-check"></i> Sàn xác thực 88/100</span>
+                  </div>
+                </div>
+                <div style="display:flex; gap: 6px;">
+                  <button class="btn btn-outline btn-sm" style="padding: 0 10px;"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn btn-outline btn-sm" style="padding: 0 10px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Secondary & Complementary Skills -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-layer-group" style="color: var(--primary);"></i> Kỹ Năng Bổ Trợ (Secondary Skills)
+              </div>
+            </div>
+
+            <div class="grid-3" id="secondarySkillsList">
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name"><i class="fa-solid fa-mobile-screen"></i> Responsive Mobile App</div>
+                  <span class="skill-badge-level level-expert" style="margin-top: 4px; width: fit-content;">Chuyên gia</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+              </div>
+
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name"><i class="fa-solid fa-users-viewfinder"></i> User Research & Usability</div>
+                  <span class="skill-badge-level level-intermediate" style="margin-top: 4px; width: fit-content;">Thành thạo</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+              </div>
+
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name"><i class="fa-solid fa-gauge-high"></i> SEO & Web Performance</div>
+                  <span class="skill-badge-level level-intermediate" style="margin-top: 4px; width: fit-content;">Thành thạo</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+              </div>
+
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name"><i class="fa-brands fa-git-alt"></i> Git, GitHub & CI/CD</div>
+                  <span class="skill-badge-level level-expert" style="margin-top: 4px; width: fit-content;">Chuyên gia</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+              </div>
+
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name"><i class="fa-solid fa-network-wired"></i> RESTful API & GraphQL</div>
+                  <span class="skill-badge-level level-intermediate" style="margin-top: 4px; width: fit-content;">Thành thạo</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+              </div>
+
+              <div class="skill-card-item">
+                <div class="skill-info">
+                  <div class="skill-name"><i class="fa-solid fa-palette"></i> Design System Architecture</div>
+                  <span class="skill-badge-level level-expert" style="margin-top: 4px; width: fit-content;">Chuyên gia</span>
+                </div>
+                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Professional Certifications -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-certificate" style="color: var(--primary);"></i> Chứng Chỉ Nghề Nghiệp Quốc Tế (Certifications)
+              </div>
+              <button class="btn btn-outline btn-sm" onclick="showToast('Đang mở form tải lên chứng chỉ mới!')">
+                <i class="fa-solid fa-file-arrow-up"></i> Tải Lên Chứng Chỉ Mới
+              </button>
+            </div>
+
+            <div class="grid-2">
+              <div class="cert-item-card">
+                <div class="cert-icon-box"><i class="fa-brands fa-google"></i></div>
+                <div class="cert-content">
+                  <div class="cert-name">Google UX Design Professional Certificate</div>
+                  <div class="cert-org">Cấp bởi Coursera & Google Career Certificates</div>
+                  <div class="cert-meta">
+                    <span><i class="fa-regular fa-calendar"></i> Cấp: 10/2023</span>
+                    <span><i class="fa-solid fa-hashtag"></i> ID: GOOG-UX-88421</span>
+                  </div>
+                </div>
+                <span class="badge badge-success"><span class="badge-dot"></span> Đã xác thực</span>
+              </div>
+
+              <div class="cert-item-card">
+                <div class="cert-icon-box"><i class="fa-brands fa-meta"></i></div>
+                <div class="cert-content">
+                  <div class="cert-name">Meta Front-End Developer Professional Certificate</div>
+                  <div class="cert-org">Cấp bởi Meta & Coursera Authorized</div>
+                  <div class="cert-meta">
+                    <span><i class="fa-regular fa-calendar"></i> Cấp: 04/2024</span>
+                    <span><i class="fa-solid fa-hashtag"></i> ID: META-FE-99302</span>
+                  </div>
+                </div>
+                <span class="badge badge-success"><span class="badge-dot"></span> Đã xác thực</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- ===================================================================
+             3. DỊCH VỤ & BẢNG GIÁ (SERVICE & PRICE)
+             =================================================================== -->
+        <div id="uc31-services" class="profile-sub-view" style="display: none;">
+          
+          <!-- Hourly Rate Box -->
+          <div class="hourly-rate-card">
+            <div>
+              <div style="display:flex; align-items:center; gap: 10px; margin-bottom: 6px;">
+                <span class="badge badge-neutral">HÌNH THỨC THUÊ THEO GIỜ</span>
+                <span class="badge badge-success"><span class="badge-dot"></span> Đang bật nhận việc theo giờ</span>
+              </div>
+              <div class="hourly-rate-val" id="displayHourlyRate">350.000đ <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;">/ giờ làm việc</span></div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                Cam kết tối thiểu 5 giờ/tuần • Tính công qua công cụ Timer & Báo cáo kết quả sàn SkillRental
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 20px;">
+              <div style="text-align: right;">
+                <div style="font-weight: 600; font-size: 13px;">Trạng thái nhận việc giờ</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Bật để hiển thị giá theo giờ</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="showToast('Đã cập nhật trạng thái nhận việc theo giờ!')">
+                <span class="slider"></span>
+              </label>
+              <button class="btn btn-outline btn-sm" onclick="openModal('editHourlyModal')">
+                <i class="fa-solid fa-pen"></i> Chỉnh Sửa Đơn Giá
+              </button>
+            </div>
+          </div>
+
+          <!-- Tiered Packages Header -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <div>
+              <h2 style="font-weight:700; font-size: 18px; color: var(--secondary);">Gói Dịch Vụ Niêm Yết Cố Định (Fixed Price Packages)</h2>
+              <div style="color: var(--text-muted); font-size: 13px;">Gói định giá chuẩn hóa giúp khách hàng dễ dàng lựa chọn và đặt hàng ngay lập tức</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('editPackageModal')">
+              <i class="fa-solid fa-plus"></i> Tạo Gói Dịch Vụ Mới
+            </button>
+          </div>
+
+          <!-- 3 Package Cards -->
+          <div class="grid-3" style="margin-bottom: 24px;">
+            
+            <!-- Basic Package -->
+            <div class="package-card">
+              <span class="badge badge-neutral" style="width: fit-content;">TIẾT KIỆM - CƠ BẢN</span>
+              <div style="font-weight: 700; font-size: 18px; margin-top: 10px; color: var(--secondary);">Landing Page Giới Thiệu</div>
+              <div class="package-price" style="color: var(--secondary);">1.500.000đ</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Phù hợp cho cá nhân kinh doanh, dịch vụ đơn lẻ hoặc sự kiện</div>
+
+              <ul class="package-feature-list">
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thiết kế 1 Trang Landing Page UI/UX</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Tối ưu hiển thị Responsive chuẩn Mobile</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thời gian bàn giao: <strong>3 Ngày</strong></li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> 2 Lần chỉnh sửa miễn phí theo ý khách</li>
+                <li style="color: #94A3B8;"><i class="fa-solid fa-xmark" style="color: #CBD5E1;"></i> Không bao gồm Lập trình Backend API</li>
+              </ul>
+
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openModal('editPackageModal')"><i class="fa-solid fa-pen"></i> Chỉnh Sửa</button>
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Đã tạm ẩn gói Cơ bản khỏi danh sách!')"><i class="fa-solid fa-eye-slash"></i> Ẩn</button>
+              </div>
+            </div>
+
+            <!-- Standard Package (Best Seller) -->
+            <div class="package-card highlight">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="badge badge-success">NỔI BẬT - BÁN CHẠY NHẤT</span>
+                <span style="font-size: 11px; font-weight:700; color: var(--primary);">★ KHUYÊN DÙNG</span>
+              </div>
+              <div style="font-weight: 700; font-size: 18px; margin-top: 10px; color: var(--secondary);">Website Doanh Nghiệp Chuẩn SEO</div>
+              <div class="package-price" style="color: var(--primary);">3.500.000đ</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Giải pháp toàn diện cho doanh nghiệp nhỏ & startup xây dựng thương hiệu</div>
+
+              <ul class="package-feature-list">
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thiết kế 5 - 7 Trang giao diện hoàn chỉnh</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Tích hợp Khung Chat, Form Báo Giá & Bản đồ</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Chuẩn SEO On-page & Tốc độ tải trang &lt; 2s</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Bàn giao toàn bộ File gốc Figma bản quyền</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thời gian bàn giao: <strong>5 Ngày</strong></li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> 5 Lần chỉnh sửa miễn phí</li>
+              </ul>
+
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary btn-sm" style="flex:1;" onclick="openModal('editPackageModal')"><i class="fa-solid fa-pen"></i> Chỉnh Sửa Gói</button>
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Đã sao chép liên kết gói tiêu chuẩn!')"><i class="fa-solid fa-link"></i></button>
+              </div>
+            </div>
+
+            <!-- Premium Package -->
+            <div class="package-card">
+              <span class="badge badge-info" style="width: fit-content;">CAO CẤP - FULLSTACK</span>
+              <div style="font-weight: 700; font-size: 18px; margin-top: 10px; color: var(--secondary);">Web/App Nâng Cao & Backend</div>
+              <div class="package-price" style="color: var(--secondary);">7.500.000đ+</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Dành cho dự án có quy trình Backend tùy chỉnh, Quản trị Admin & Thanh toán</div>
+
+              <ul class="package-feature-list">
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Fullstack Frontend ReactJS + NodeJS/Python Backend</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Tích hợp Cổng thanh toán (VNPay / MoMo)</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Trang Quản trị Admin phân quyền người dùng</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thời gian bàn giao: <strong>12 - 14 Ngày</strong></li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Hỗ trợ kỹ thuật & Bảo hành <strong>3 Tháng</strong></li>
+              </ul>
+
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openModal('editPackageModal')"><i class="fa-solid fa-pen"></i> Chỉnh Sửa</button>
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Đã tạm ẩn gói Nâng cao!')"><i class="fa-solid fa-eye-slash"></i> Ẩn</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Add-ons Services Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <i class="fa-solid fa-puzzle-piece" style="color: var(--primary);"></i> Dịch Vụ Gia Tăng Bổ Trợ (Add-ons & Extras)
+              </div>
+              <button class="btn btn-outline btn-sm" onclick="showToast('Đang mở form thêm dịch vụ cộng thêm!')">
+                <i class="fa-solid fa-plus"></i> Thêm Dịch Vụ Phụ
+              </button>
+            </div>
+
+            <div>
+              <div class="addon-row">
+                <div style="display:flex; align-items:center; gap: 14px;">
+                  <i class="fa-solid fa-bolt" style="color: var(--warning); font-size: 20px;"></i>
+                  <div>
+                    <div style="font-weight: 600; font-size: 14px;">Giao Hàng Hỏa Tốc Trong 24 Giờ</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Ưu tiên xử lý đơn hàng gấp và bàn giao nguyên bản trong vòng 24h</div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap: 16px;">
+                  <span style="font-weight: 700; font-size: 15px; color: var(--primary);">+500.000đ</span>
+                  <button class="btn btn-outline btn-sm" onclick="showToast('Đã cập nhật dịch vụ cộng thêm!')"><i class="fa-solid fa-pen"></i></button>
+                </div>
+              </div>
+
+              <div class="addon-row">
+                <div style="display:flex; align-items:center; gap: 14px;">
+                  <i class="fa-solid fa-file-circle-plus" style="color: var(--info); font-size: 20px;"></i>
+                  <div>
+                    <div style="font-weight: 600; font-size: 14px;">Thêm 1 Trang Giao Diện Tùy Biến</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Thiết kế thêm trang phụ, landing page con hoặc form khảo sát</div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap: 16px;">
+                  <span style="font-weight: 700; font-size: 15px; color: var(--primary);">+300.000đ / trang</span>
+                  <button class="btn btn-outline btn-sm" onclick="showToast('Đã cập nhật dịch vụ cộng thêm!')"><i class="fa-solid fa-pen"></i></button>
+                </div>
+              </div>
+
+              <div class="addon-row">
+                <div style="display:flex; align-items:center; gap: 14px;">
+                  <i class="fa-solid fa-server" style="color: var(--primary); font-size: 20px;"></i>
+                  <div>
+                    <div style="font-weight: 600; font-size: 14px;">Triển Khai Lên Server & Cấu Hình Tên Miền (DNS/SSL)</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Cài đặt hosting, VPS, trỏ domain, cài chứng chỉ bảo mật HTTPS SSL miễn phí trọn đời</div>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap: 16px;">
+                  <span style="font-weight: 700; font-size: 15px; color: var(--primary);">+400.000đ</span>
+                  <button class="btn btn-outline btn-sm" onclick="showToast('Đã cập nhật dịch vụ cộng thêm!')"><i class="fa-solid fa-pen"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- ===================================================================
+             4. LỊCH RẢNH & TÌNH TRẠNG NHẬN VIỆC (AVAILABILITY)
+             =================================================================== -->
+        <div id="uc32-availability" class="profile-sub-view" style="display: none;">
+          
+          <!-- 3 States Selector -->
+          <div style="margin-bottom: 20px;">
+            <h2 style="font-weight:700; font-size: 18px; color: var(--secondary);">Trạng Thái Hoạt Động & Nhận Đơn Tức Thời</h2>
+            <div style="color: var(--text-muted); font-size: 13px;">Thiết lập tình trạng nhận dự án mới giúp hệ thống gợi ý bạn trong kết quả tìm kiếm</div>
+          </div>
+
+          <div class="status-pill-group">
+            <div class="status-pill-option active" id="statusReady" onclick="setStatusMode('ready')">
+              <i class="fa-solid fa-circle-check" style="font-size: 26px; color: var(--primary);"></i>
+              <div>
+                <div style="font-weight: 700; font-size: 14px; color: var(--secondary);">Đang Sẵn Sàng Nhận Việc</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Nhận tất cả yêu cầu tư vấn và đơn hàng mới bình thường</div>
+              </div>
+            </div>
+
+            <div class="status-pill-option" id="statusLimited" onclick="setStatusMode('limited')">
+              <i class="fa-solid fa-clock" style="font-size: 26px; color: var(--warning);"></i>
+              <div>
+                <div style="font-weight: 700; font-size: 14px; color: var(--secondary);">Nhận Việc Có Giới Hạn</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Đang bận dự án lớn, chỉ nhận đơn gấp hoặc thỏa thuận riêng</div>
+              </div>
+            </div>
+
+            <div class="status-pill-option" id="statusPaused" onclick="setStatusMode('paused')">
+              <i class="fa-solid fa-ban" style="font-size: 26px; color: var(--danger);"></i>
+              <div>
+                <div style="font-weight: 700; font-size: 14px; color: var(--secondary);">Tạm Dừng / Nghỉ Phép</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Ẩn hồ sơ khỏi tìm kiếm khẩn, bật tin nhắn tự động vắng mặt</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vacation Mode Warning Banner (if toggled) -->
+          <div class="vacation-banner" id="vacationBanner" style="display: none;">
+            <i class="fa-solid fa-umbrella-beach" style="font-size: 24px; color: #D97706;"></i>
+            <div style="flex:1;">
+              <div style="font-weight: 700; color: #92400E; font-size: 14px;">Chế độ nghỉ phép (Vacation Mode) đang được kích hoạt</div>
+              <div style="font-size: 13px; color: #B45309; margin-top: 2px;">
+                Hệ thống sẽ tạm thời không nhận đơn hàng mới từ khách hàng cho đến hết ngày bạn chỉ định.
+              </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="setStatusMode('ready')">Tắt Chế Độ Nghỉ Phép</button>
+          </div>
+
+          <!-- Weekly Schedule Matrix -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <i class="fa-solid fa-calendar-days" style="color: var(--primary);"></i> Ma Trận Lịch Làm Việc Hàng Tuần (Weekly Schedule Matrix)
+                </div>
+                <div class="card-subtitle">Nhấp vào từng ô để chuyển đổi giữa trạng thái <strong>Rảnh (Xanh lá)</strong> và <strong>Bận (Xám)</strong></div>
+              </div>
+              
+              <div style="display:flex; gap: 8px;">
+                <button class="btn btn-outline btn-sm" onclick="setAllSlots(true)">
+                  <i class="fa-solid fa-check-double"></i> Chọn Cả Tuần
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="setBusinessHoursOnly()">
+                  <i class="fa-solid fa-briefcase"></i> Chỉ Giờ Hành Chính (T2-T6)
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="setAllSlots(false)">
+                  <i class="fa-solid fa-rotate-left"></i> Đặt Lại
+                </button>
+              </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="schedule-matrix-table">
+                <thead>
+                  <tr>
+                    <th class="schedule-time-col">Khung Giờ</th>
+                    <th>Thứ Hai</th>
+                    <th>Thứ Ba</th>
+                    <th>Thứ Tư</th>
+                    <th>Thứ Năm</th>
+                    <th>Thứ Sáu</th>
+                    <th>Thứ Bảy</th>
+                    <th>Chủ Nhật</th>
+                  </tr>
+                </thead>
+                <tbody id="scheduleTableBody">
+                  <!-- Row 1: Sáng -->
+                  <tr>
+                    <td class="schedule-time-col">
+                      <div style="font-weight: 700; color: var(--secondary);"><i class="fa-solid fa-sun" style="color: #F59E0B; margin-right: 4px;"></i> Ca Sáng</div>
+                      <div style="font-size: 11px; color: var(--text-muted);">08:00 - 12:00</div>
+                    </td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                  </tr>
+
+                  <!-- Row 2: Chiều -->
+                  <tr>
+                    <td class="schedule-time-col">
+                      <div style="font-weight: 700; color: var(--secondary);"><i class="fa-solid fa-cloud-sun" style="color: #3B82F6; margin-right: 4px;"></i> Ca Chiều</div>
+                      <div style="font-size: 11px; color: var(--text-muted);">13:30 - 17:30</div>
+                    </td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                  </tr>
+
+                  <!-- Row 3: Tối -->
+                  <tr>
+                    <td class="schedule-time-col">
+                      <div style="font-weight: 700; color: var(--secondary);"><i class="fa-solid fa-moon" style="color: #6366F1; margin-right: 4px;"></i> Ca Tối</div>
+                      <div style="font-size: 11px; color: var(--text-muted);">19:00 - 22:00</div>
+                    </td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary);">
+              <div style="display:flex; gap: 20px; align-items:center;">
+                <span style="display:flex; align-items:center; gap: 6px;">
+                  <span style="width: 14px; height: 14px; background: var(--primary-light); border: 1px solid var(--primary); border-radius: 3px;"></span> Slot rảnh nhận việc
+                </span>
+                <span style="display:flex; align-items:center; gap: 6px;">
+                  <span style="width: 14px; height: 14px; background: #F1F5F9; border: 1px solid var(--border-color); border-radius: 3px;"></span> Slot bận / Nghỉ ngơi
+                </span>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="showToast('Đã lưu ma trận lịch rảnh tuần thành công!')">
+                <i class="fa-solid fa-check"></i> Lưu Lịch Rảnh Tuần
+              </button>
+            </div>
+          </div>
+
+          <!-- Booking Rules & Vacation Config -->
+          <div class="grid-2">
+            
+            <!-- Booking Rules -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fa-solid fa-sliders" style="color: var(--primary);"></i> Quy Tắc Tiếp Nhận Đơn Hàng (Booking Rules)
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Thời gian báo trước tối thiểu (Minimum Lead Time)</label>
+                <select class="form-control" onchange="showToast('Đã cập nhật thời gian báo trước!')">
+                  <option value="12">12 Giờ (Chỉ áp dụng với đơn khẩn cấp)</option>
+                  <option value="24" selected>24 Giờ (Khuyên dùng để chuẩn bị trao đổi)</option>
+                  <option value="48">48 Giờ (2 Ngày làm việc)</option>
+                  <option value="72">3 Ngày làm việc</option>
+                </select>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                  Khách hàng không thể đặt lịch hẹn hoặc yêu cầu bàn giao trước khoảng thời gian này.
+                </div>
+              </div>
+
+              <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                  <label class="form-label" style="margin-bottom:0;">Số lượng dự án nhận đồng thời tối đa</label>
+                  <span id="maxProjectValue" style="font-weight: 800; color: var(--primary); font-size: 16px;">3 Dự án</span>
+                </div>
+                <input type="range" min="1" max="10" value="3" class="form-control" style="padding: 0; cursor: pointer;" oninput="document.getElementById('maxProjectValue').innerText = this.value + ' Dự án';">
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                  Khi đạt ngưỡng 3 dự án đang thực hiện, hệ thống tự động chuyển trạng thái sang "Nhận việc có giới hạn".
+                </div>
+              </div>
+            </div>
+
+            <!-- Vacation Mode Settings -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <i class="fa-solid fa-plane-departure" style="color: var(--primary);"></i> Thiết Lập Nghỉ Phép (Vacation & Out-of-Office)
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label">Nghỉ từ ngày</label>
+                  <input type="date" class="form-control" value="2026-09-25">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Đến hết ngày</label>
+                  <input type="date" class="form-control" value="2026-09-28">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Lời nhắn tự động gửi khách hàng khi nhắn tin</label>
+                <textarea class="form-control" style="min-height: 80px;">Chào bạn! Hiện tại tôi đang trong kỳ nghỉ phép ngắn từ 25/09 đến 28/09/2026. Tôi sẽ phản hồi tin nhắn của bạn ngay khi quay lại làm việc. Cảm ơn bạn!</textarea>
+              </div>
+
+              <button class="btn btn-outline" style="width:100%;" onclick="showToast('Đã lên lịch nghỉ phép thành công!')">
+                <i class="fa-solid fa-calendar-check"></i> Lưu Lịch Nghỉ Phép
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+
+  <!-- ===================================================================
+       MODALS: EDIT PROFILE, ADD SKILL, EDIT PACKAGE, EDIT HOURLY
+       =================================================================== -->
+
+  <!-- Modal 1: Edit Profile -->
+  <div class="modal-overlay" id="editProfileModal">
+    <div class="modal-content-card">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 16px; color: var(--secondary);">
+          <i class="fa-solid fa-user-pen" style="color: var(--primary);"></i> Chỉnh Sửa Hồ Sơ Provider
+        </div>
+        <button class="btn btn-outline btn-sm" style="width:32px; height:32px; padding:0;" onclick="closeModal('editProfileModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Họ và tên hiển thị</label>
+          <input type="text" class="form-control" id="inputName" value="Nguyễn Văn Pro">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Chức danh chuyên môn (Headline)</label>
+          <input type="text" class="form-control" id="inputHeadline" value="Senior UI/UX Designer & Fullstack Web Developer • 6+ Năm Kinh Nghiệm">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Địa điểm làm việc</label>
+          <input type="text" class="form-control" id="inputLocation" value="Cầu Giấy, Hà Nội, Việt Nam">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mô tả bản thân & Kinh nghiệm (Bio)</label>
+          <textarea class="form-control" id="inputBio" style="min-height: 120px;">Tôi là Nguyễn Văn Pro, chuyên gia Thiết kế UI/UX và Lập trình viên Frontend với hơn 6 năm kinh nghiệm thực chiến. Thế mạnh lớn nhất của tôi là chuyển hóa ý tưởng thành giao diện trực quan và triển khai Clean Code chuẩn SEO.</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editProfileModal')">Hủy Bỏ</button>
+        <button class="btn btn-primary" onclick="saveProfileChanges()"><i class="fa-solid fa-check"></i> Lưu Cập Nhật</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Add Skill -->
+  <div class="modal-overlay" id="addSkillModal">
+    <div class="modal-content-card">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 16px; color: var(--secondary);">
+          <i class="fa-solid fa-plus-circle" style="color: var(--primary);"></i> Thêm Kỹ Năng Chuyên Môn Mới
+        </div>
+        <button class="btn btn-outline btn-sm" style="width:32px; height:32px; padding:0;" onclick="closeModal('addSkillModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Tên kỹ năng</label>
+          <input type="text" class="form-control" id="inputSkillName" placeholder="Ví dụ: Flutter Mobile App, VueJS, Docker...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phân nhóm kỹ năng</label>
+          <select class="form-control" id="inputSkillGroup">
+            <option value="primary">Kỹ năng cốt lõi (Primary Skill)</option>
+            <option value="secondary">Kỹ năng bổ trợ (Secondary Skill)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mức độ thành thạo</label>
+          <select class="form-control" id="inputSkillLevel">
+            <option value="expert">Chuyên gia (Expert - 4+ năm)</option>
+            <option value="intermediate" selected>Thành thạo (Intermediate - 2-4 năm)</option>
+            <option value="beginner">Cơ bản (Beginner - &lt; 2 năm)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số năm kinh nghiệm với kỹ năng này</label>
+          <input type="number" class="form-control" value="3" min="1" max="20">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('addSkillModal')">Hủy</button>
+        <button class="btn btn-primary" onclick="addNewSkill()"><i class="fa-solid fa-plus"></i> Thêm Kỹ Năng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Edit Package -->
+  <div class="modal-overlay" id="editPackageModal">
+    <div class="modal-content-card">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 16px; color: var(--secondary);">
+          <i class="fa-solid fa-box-archive" style="color: var(--primary);"></i> Cấu Hình Gói Dịch Vụ & Đơn Giá
+        </div>
+        <button class="btn btn-outline btn-sm" style="width:32px; height:32px; padding:0;" onclick="closeModal('editPackageModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Tên gói dịch vụ</label>
+          <input type="text" class="form-control" value="Website Doanh Nghiệp Chuẩn SEO">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Giá niêm yết (VNĐ)</label>
+            <input type="text" class="form-control" value="3.500.000đ">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Thời gian bàn giao (Ngày)</label>
+            <input type="number" class="form-control" value="5">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số lần chỉnh sửa miễn phí</label>
+          <input type="number" class="form-control" value="5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Danh sách quyền lợi / Deliverables (Mỗi dòng 1 ý)</label>
+          <textarea class="form-control" style="min-height: 100px;">Thiết kế 5 - 7 Trang giao diện hoàn chỉnh
+Tích hợp Khung Chat, Form Báo Giá & Bản đồ
+Chuẩn SEO On-page & Tốc độ tải trang &lt; 2s
+Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editPackageModal')">Đóng</button>
+        <button class="btn btn-primary" onclick="closeModal('editPackageModal'); showToast('Đã lưu cập nhật gói dịch vụ thành công!');">
+          <i class="fa-solid fa-check"></i> Lưu Gói Dịch Vụ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Edit Hourly Rate -->
+  <div class="modal-overlay" id="editHourlyModal">
+    <div class="modal-content-card" style="max-width: 460px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 16px; color: var(--secondary);">
+          <i class="fa-solid fa-clock" style="color: var(--primary);"></i> Chỉnh Sửa Đơn Giá Theo Giờ
+        </div>
+        <button class="btn btn-outline btn-sm" style="width:32px; height:32px; padding:0;" onclick="closeModal('editHourlyModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Đơn giá làm việc mỗi giờ (VNĐ)</label>
+          <input type="number" class="form-control" id="inputHourlyRateVal" value="350000" step="50000">
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Mức giá đề xuất sàn SkillRental: 250.000đ - 500.000đ/giờ</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số giờ cam kết tối thiểu mỗi tuần</label>
+          <input type="number" class="form-control" value="5" min="1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('editHourlyModal')">Hủy</button>
+        <button class="btn btn-primary" onclick="saveHourlyRate()"><i class="fa-solid fa-check"></i> Cập Nhật</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Popup -->
+  <div class="toast-box" id="toastBox">
+    <i class="fa-solid fa-circle-check" style="color: var(--success); font-size: 18px;"></i>
+    <span id="toastMsg">Thao tác thành công!</span>
+  </div>
+
+  <!-- Interactive JavaScript Logic -->
+  <script>
+    // Tab switching between profile sub-views
+    function switchSection(targetId, tabEl) {
+      document.querySelectorAll('.profile-sub-view').forEach(view => {
+        view.style.display = 'none';
+      });
+      const activeView = document.getElementById(targetId);
+      if (activeView) {
+        activeView.style.display = 'block';
+      }
+
+      document.querySelectorAll('.tab-item').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      if (tabEl) {
+        tabEl.classList.add('active');
+      }
+    }
+
+    // Modal helpers
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.add('active');
+    }
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('active');
+    }
+
+    // Toast alert
+    function showToast(msg) {
+      const toast = document.getElementById('toastBox');
+      const toastMsg = document.getElementById('toastMsg');
+      if (toast && toastMsg) {
+        toastMsg.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 3000);
+      }
+    }
+
+    // Save profile changes
+    function saveProfileChanges() {
+      const name = document.getElementById('inputName').value;
+      const headline = document.getElementById('inputHeadline').value;
+      const location = document.getElementById('inputLocation').value;
+      const bio = document.getElementById('inputBio').value;
+
+      if (name) document.getElementById('viewName').innerText = name;
+      if (headline) document.getElementById('viewHeadline').innerText = headline;
+      if (location) document.getElementById('viewLocation').innerText = location;
+      if (bio) document.getElementById('viewBio').innerHTML = '<p>' + bio.replace(/\n/g, '<br>') + '</p>';
+
+      closeModal('editProfileModal');
+      showToast('Đã lưu thông tin hồ sơ Provider thành công!');
+    }
+
+    // Add new skill
+    function addNewSkill() {
+      const name = document.getElementById('inputSkillName').value.trim();
+      const group = document.getElementById('inputSkillGroup').value;
+      const level = document.getElementById('inputSkillLevel').value;
+
+      if (!name) {
+        alert('Vui lòng nhập tên kỹ năng!');
+        return;
+      }
+
+      const levelMap = {
+        'expert': { label: 'Chuyên gia (Expert)', cls: 'level-expert' },
+        'intermediate': { label: 'Thành thạo (Intermediate)', cls: 'level-intermediate' },
+        'beginner': { label: 'Cơ bản (Beginner)', cls: 'level-beginner' }
+      };
+
+      const targetList = group === 'primary' 
+        ? document.getElementById('primarySkillsList') 
+        : document.getElementById('secondarySkillsList');
+
+      const item = document.createElement('div');
+      item.className = 'skill-card-item';
+      item.innerHTML = `
+        <div class="skill-info">
+          <div class="skill-name"><i class="fa-solid fa-code" style="color: var(--primary);"></i> ${name}</div>
+          <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
+            <span class="skill-badge-level ${levelMap[level].cls}">${levelMap[level].label}</span>
+            <span class="badge badge-neutral" style="font-size: 10px;">Vừa thêm</span>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      `;
+
+      targetList.prepend(item);
+      document.getElementById('inputSkillName').value = '';
+      closeModal('addSkillModal');
+      showToast(`Đã thêm thành công kỹ năng "${name}"!`);
+    }
+
+    function deleteSkill(btn) {
+      if (confirm('Bạn có chắc chắn muốn xóa kỹ năng này khỏi hồ sơ?')) {
+        const card = btn.closest('.skill-card-item');
+        if (card) card.remove();
+        showToast('Đã gỡ bỏ kỹ năng thành công!');
+      }
+    }
+
+    // Save hourly rate
+    function saveHourlyRate() {
+      const val = document.getElementById('inputHourlyRateVal').value;
+      if (val) {
+        const formatted = Number(val).toLocaleString('vi-VN') + 'đ';
+        document.getElementById('displayHourlyRate').innerHTML = `${formatted} <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;">/ giờ làm việc</span>`;
+      }
+      closeModal('editHourlyModal');
+      showToast('Đã cập nhật đơn giá theo giờ mới!');
+    }
+
+    // Availability status switcher
+    function setStatusMode(mode) {
+      const btnReady = document.getElementById('statusReady');
+      const btnLimited = document.getElementById('statusLimited');
+      const btnPaused = document.getElementById('statusPaused');
+      const banner = document.getElementById('vacationBanner');
+      const headerBadge = document.getElementById('headerStatusBadge');
+
+      btnReady.className = 'status-pill-option';
+      btnLimited.className = 'status-pill-option';
+      btnPaused.className = 'status-pill-option';
+
+      if (mode === 'ready') {
+        btnReady.classList.add('active');
+        banner.style.display = 'none';
+        headerBadge.className = 'badge badge-success';
+        headerBadge.innerHTML = '<span class="badge-dot"></span> Đang Sẵn Sàng Nhận Việc';
+        showToast('Trạng thái: Đang sẵn sàng nhận việc!');
+      } else if (mode === 'limited') {
+        btnLimited.classList.add('active-limited');
+        banner.style.display = 'none';
+        headerBadge.className = 'badge badge-warning';
+        headerBadge.innerHTML = '<span class="badge-dot"></span> Nhận Việc Có Giới Hạn';
+        showToast('Trạng thái: Nhận việc có giới hạn!');
+      } else if (mode === 'paused') {
+        btnPaused.classList.add('active-paused');
+        banner.style.display = 'flex';
+        headerBadge.className = 'badge badge-danger';
+        headerBadge.innerHTML = '<span class="badge-dot"></span> Đang Tạm Dừng / Nghỉ Phép';
+        showToast('Trạng thái: Tạm dừng nhận đơn!');
+      }
+    }
+
+    // Toggle single slot in schedule matrix
+    function toggleSlot(cell) {
+      if (cell.classList.contains('available')) {
+        cell.classList.remove('available');
+        cell.classList.add('busy');
+        cell.textContent = 'Bận';
+      } else {
+        cell.classList.remove('busy');
+        cell.classList.add('available');
+        cell.textContent = 'Rảnh (Sẵn sàng)';
+      }
+    }
+
+    // Bulk schedule actions
+    function setAllSlots(isAvailable) {
+      document.querySelectorAll('.slot-cell').forEach(cell => {
+        if (isAvailable) {
+          cell.className = 'slot-cell available';
+          cell.textContent = 'Rảnh (Sẵn sàng)';
+        } else {
+          cell.className = 'slot-cell busy';
+          cell.textContent = 'Bận';
+        }
+      });
+      showToast(isAvailable ? 'Đã bật rảnh tất cả các khung giờ!' : 'Đã đặt lại toàn bộ lịch làm việc!');
+    }
+
+    function setBusinessHoursOnly() {
+      const rows = document.querySelectorAll('#scheduleTableBody tr');
+      rows.forEach((row, rIdx) => {
+        const cells = row.querySelectorAll('.slot-cell');
+        cells.forEach((cell, cIdx) => {
+          if (cIdx < 5 && (rIdx === 0 || rIdx === 1)) {
+            cell.className = 'slot-cell available';
+            cell.textContent = 'Rảnh (Sẵn sàng)';
+          } else {
+            cell.className = 'slot-cell busy';
+            cell.textContent = 'Bận';
+          }
+        });
+      });
+      showToast('Đã áp dụng lịch làm việc Giờ Hành Chính (T2 - T6)!');
+    }
+
+    // Auto-activate tab from URL hash if present
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && document.getElementById(hash)) {
+        const tabEl = document.querySelector(`.tab-item[onclick*="${hash}"]`);
+        switchSection(hash, tabEl);
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && document.getElementById(hash)) {
+        const tabEl = document.querySelector(`.tab-item[onclick*="${hash}"]`);
+        switchSection(hash, tabEl);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -11,6 +11,39 @@ const { authenticate, requireSignedIn, requireAdmin } = require('./customerAuth'
 // do Firebase Authentication (frontend) xử lý. Server chỉ quản lý HỒ SƠ người dùng.
 
 function publicUser(user) {
+  let bal = user.balance;
+  if (user && user.role === 'Customer') {
+    const txns = db.getCollection('walletTransactions') || [];
+    const userTxns = txns.filter(t => 
+      (t.userId === user.id || (user.uid && t.userId === user.uid)) &&
+      (t.status === 'success' || t.status === 'completed')
+    );
+    const hasDeposit = userTxns.some(t => t.type === 'deposit');
+    if (!hasDeposit) {
+      bal = 0;
+      if (Number(user.balance) !== 0) {
+        user.balance = 0;
+        const users = db.getCollection('users');
+        const found = users.find(u => u.id === user.id);
+        if (found) { found.balance = 0; db.saveCollection('users', users); }
+      }
+    } else {
+      const totalDeposits = userTxns
+        .filter(t => t.type === 'deposit' || t.type === 'refund')
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const totalDeductions = userTxns
+        .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+      bal = Math.max(0, totalDeposits - totalDeductions);
+      if (user.balance !== bal) {
+        user.balance = bal;
+        const users = db.getCollection('users');
+        const found = users.find(u => u.id === user.id);
+        if (found) { found.balance = bal; db.saveCollection('users', users); }
+      }
+    }
+  }
+
   return {
     id: user.id,
     name: user.name,
@@ -19,7 +52,7 @@ function publicUser(user) {
     address: user.address || '',
     bio: user.bio || '',
     role: user.role,
-    balance: user.balance,
+    balance: typeof bal === 'number' ? bal : (Number(user.balance) || 0),
     avatar: user.avatar,
     joinDate: user.joinDate
   };

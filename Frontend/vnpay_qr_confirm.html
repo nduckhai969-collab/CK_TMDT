@@ -118,6 +118,8 @@
     const params = new URLSearchParams(window.location.search);
     const amount = Number(params.get('amount') || 50000);
     const txn = params.get('txn') || ('WT_' + Date.now());
+    const userId = params.get('userId') || '';
+    const initialName = params.get('userName') || '';
 
     // Thời gian thực lúc quét mã
     const now = new Date();
@@ -128,6 +130,10 @@
     document.getElementById('displayAmount').textContent = amount.toLocaleString('vi-VN') + 'đ';
     document.getElementById('displayTxn').textContent = txn;
     document.getElementById('displayTime').textContent = fullTimeStr;
+
+    if (initialName) {
+      document.getElementById('txtSenderName').value = initialName;
+    }
 
     // Cập nhật tên theo thời gian thực khi gõ
     function onNameChange() {
@@ -144,6 +150,10 @@
       }
     }
 
+    if (initialName) {
+      onNameChange();
+    }
+
     async function confirmPayment() {
       const name = document.getElementById('txtSenderName').value.trim();
       if (!name) {
@@ -157,13 +167,14 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý nạp tiền...';
 
       try {
-        const confirmUrl = `/api/payments/qr-confirm?txn=${encodeURIComponent(txn)}&amount=${amount}&userName=${encodeURIComponent(name)}`;
+        const confirmUrl = `/api/payments/qr-confirm?txn=${encodeURIComponent(txn)}&amount=${amount}&userId=${encodeURIComponent(userId)}&userName=${encodeURIComponent(name)}`;
         const res = await fetch(confirmUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             amount: amount, 
             txn: txn, 
+            userId: userId,
             userName: name,
             name: name
           })

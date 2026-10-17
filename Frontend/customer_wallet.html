@@ -37,13 +37,21 @@
     /* Lịch sử giao dịch item */
     .history-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
     .history-left { display: flex; align-items: center; gap: 12px; }
-    .history-icon { width: 42px; height: 42px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .history-icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .history-icon.deposit { background: #dcfce7; color: #16a34a; }
+    .history-icon.escrow { background: #fee2e2; color: #dc2626; }
+    .history-icon.refund { background: #eff6ff; color: #2563eb; }
     .history-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
     .history-user { font-size: 12.5px; color: #005baa; margin-bottom: 2px; }
     .history-time { font-size: 11.5px; color: #64748b; }
     .history-right { text-align: right; }
-    .history-amount { font-size: 16px; font-weight: 800; color: #16a34a; margin-bottom: 4px; }
-    .badge-success-pill { background: #dcfce7; color: #15803d; font-size: 11px; padding: 3px 8px; border-radius: 9999px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+    .history-amount { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+    .history-amount.positive { color: #16a34a; }
+    .history-amount.negative { color: #dc2626; }
+    .badge-success-pill { font-size: 11px; padding: 3px 8px; border-radius: 9999px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #15803d; }
+    .history-filters { display: flex; gap: 8px; margin-bottom: 14px; }
+    .filter-chip { padding: 6px 12px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; color: #475569; }
+    .filter-chip.active { background: #16a34a; color: #fff; border-color: #16a34a; }
 
     /* Modal QR */
     .qr-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; }
@@ -61,7 +69,7 @@
     <div>
       <div class="balance-banner">
         <div class="balance-label"><i class="fa-solid fa-wallet"></i> Số dư ví khả dụng:</div>
-        <div class="balance-value" id="balanceDisplay">15.000.000đ</div>
+        <div class="balance-value" id="balanceDisplay">0đ</div>
         <div style="font-size:12px; opacity:.85;"><i class="fa-solid fa-shield-halved"></i> Tiền nạp được bảo chứng an toàn qua Escrow</div>
       </div>
 
@@ -91,11 +99,18 @@
 
     <!-- CỘT LỊCH SỬ GIAO DỊCH -->
     <div class="box-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <h3 style="margin:0; font-size:18px;"><i class="fa-solid fa-clock-rotate-left" style="color:#16a34a;"></i> Lịch sử giao dịch</h3>
         <button onclick="loadHistory()" style="background:none; border:none; color:#16a34a; font-size:13px; font-weight:600; cursor:pointer;">
           <i class="fa-solid fa-rotate"></i> Làm mới
         </button>
+      </div>
+
+      <!-- Bộ lọc giao dịch -->
+      <div class="history-filters">
+        <button type="button" class="filter-chip active" onclick="applyHistoryFilter('all', this)">Tất cả</button>
+        <button type="button" class="filter-chip" onclick="applyHistoryFilter('deposit', this)">Nạp tiền (+)</button>
+        <button type="button" class="filter-chip" onclick="applyHistoryFilter('escrow', this)">Ký quỹ Escrow (-)</button>
       </div>
 
       <div id="historyList"></div>
@@ -135,14 +150,17 @@
     let currentTxnId = '';
     let pollInterval = null;
     let localIpAddress = 'localhost';
+    let rawTransactions = [];
+    let currentFilter = 'all';
 
     document.addEventListener('DOMContentLoaded', async () => {
       if (typeof renderCustomerNavbar === 'function') {
-        document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('wallet');
+        const navEl = document.getElementById('navbar-placeholder');
+        if (navEl) navEl.innerHTML = renderCustomerNavbar('wallet');
       }
 
-      loadBalance();
-      loadHistory();
+      await loadBalance();
+      await loadHistory();
 
       try {
         const res = await fetch('/api/payments/server-info');
@@ -157,70 +175,180 @@
       document.getElementById('txtAmount').value = val;
     }
 
+    // TẢI SỐ DƯ TỨC THÌ (CHO ĐÚNG TÀI KHOẢN ĐANG ĐĂNG NHẬP)
     async function loadBalance() {
       try {
-        const res = await fetch('/api/payments/balance');
-        const json = await res.json();
-        if (json && json.balance) {
-          document.getElementById('balanceDisplay').textContent = json.balance.toLocaleString('vi-VN') + 'đ';
+        const user = (typeof getCurrentCustomer === 'function') ? getCurrentCustomer() : null;
+        const userId = user ? user.id : '';
+        if (!userId) {
+          const el = document.getElementById('balanceDisplay');
+          if (el) el.textContent = '0đ';
+          return;
         }
-      } catch (e) {}
+
+        const url = `/api/payments/balance?userId=${encodeURIComponent(userId)}&_t=${Date.now()}`;
+        const headers = { 'x-user-id': userId };
+
+        const res = await fetch(url, { headers });
+        const json = await res.json();
+        if (json && json.balance !== undefined) {
+          const formatted = Number(json.balance).toLocaleString('vi-VN') + 'đ';
+          const el = document.getElementById('balanceDisplay');
+          if (el) el.textContent = formatted;
+
+          if (user && user.balance !== json.balance) {
+            user.balance = json.balance;
+            if (typeof setCurrentCustomer === 'function') setCurrentCustomer(user);
+          }
+        }
+      } catch (e) {
+        console.warn('Không tải được số dư qua /api/payments/balance:', e);
+      }
     }
 
-    // TẢI VÀ RENDER DANH SÁCH LỊCH SỬ GIAO DỊCH - MỖI GIAO DỊCH GIỮ ĐÚNG TÊN NGƯỜI NẠP RIÊNG
+    // TẢI VÀ RENDER DANH SÁCH LỊCH SỬ GIAO DỊCH RIÊNG CỦA TỪNG KHÁCH
     async function loadHistory() {
       try {
-        const res = await fetch(`/api/payments/history?_t=${Date.now()}`);
-        const json = await res.json();
-        const listContainer = document.getElementById('historyList');
-
-        if (json && json.data && json.data.length > 0) {
-          listContainer.innerHTML = json.data.map(item => {
-            const dateObj = new Date(item.paidAt || item.createdAt || Date.now());
-            const timeStr = dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const dateStr = dateObj.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const timeFull = isNaN(dateObj.getTime()) ? '13:46:45 - 17/10/2026' : `${timeStr} - ${dateStr}`;
-
-            let displayName = item.userName;
-            if ((!displayName || displayName === 'Lê Hoàng Long') && sessionStorage.getItem('qr_user_' + item.id)) {
-              displayName = sessionStorage.getItem('qr_user_' + item.id);
-            }
-            if ((!displayName || displayName === 'Lê Hoàng Long') && item.description && item.description.includes('(')) {
-              const m = item.description.match(/\((.*?)\)/);
-              if (m && m[1] && isNaN(Number(m[1].replace(/[\.đ]/g, '')))) {
-                displayName = m[1].trim();
-              }
-            }
-            if (!displayName) displayName = 'Lê Hoàng Long';
-
-            return `
-              <div class="history-item">
-                <div class="history-left">
-                  <div class="history-icon"><i class="fa-solid fa-qrcode"></i></div>
-                  <div>
-                    <div class="history-title">Nạp tiền VNPAY-QR</div>
-                    <div class="history-user"><i class="fa-solid fa-user"></i> Người nạp: <strong>${displayName}</strong></div>
-                    <div class="history-time"><i class="fa-regular fa-clock"></i> ${timeFull}</div>
-                  </div>
-                </div>
-                <div class="history-right">
-                  <div class="history-amount">+${Math.abs(Number(item.amount) || 50000).toLocaleString('vi-VN')}đ</div>
-                  <span class="badge-success-pill"><i class="fa-solid fa-check"></i> Thành công</span>
-                </div>
-              </div>`;
-          }).join('');
+        const user = (typeof getCurrentCustomer === 'function') ? getCurrentCustomer() : null;
+        const userId = user ? user.id : '';
+        if (!userId) {
+          rawTransactions = [];
+          renderHistoryList();
+          return;
         }
-      } catch (e) {}
+
+        const url = `/api/payments/history?userId=${encodeURIComponent(userId)}&_t=${Date.now()}`;
+        const headers = { 'x-user-id': userId };
+
+        const res = await fetch(url, { headers });
+        const json = await res.json();
+        rawTransactions = (json && json.data) ? json.data : [];
+        renderHistoryList();
+      } catch (e) {
+        console.error('Lỗi khi tải lịch sử:', e);
+        const listContainer = document.getElementById('historyList');
+        if (listContainer) {
+          listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#dc2626;">Không thể tải lịch sử giao dịch.</div>';
+        }
+      }
+    }
+
+    function applyHistoryFilter(filterType, btnEl) {
+      currentFilter = filterType;
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      renderHistoryList();
+    }
+
+    function renderHistoryList() {
+      const listContainer = document.getElementById('historyList');
+      if (!listContainer) return;
+
+      let items = rawTransactions || [];
+      if (currentFilter === 'deposit') {
+        items = items.filter(t => t.type === 'deposit' || t.gateway === 'VNPAY-QR' || Number(t.amount) > 0);
+      } else if (currentFilter === 'escrow') {
+        items = items.filter(t => t.type === 'escrow' || t.type === 'order_payment' || Number(t.amount) < 0);
+      }
+
+      if (!items || items.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; padding:25px; color:#94a3b8; font-size:13px;">Chưa có giao dịch nào phù hợp.</div>';
+        return;
+      }
+
+      listContainer.innerHTML = items.map(item => {
+        const dateObj = new Date(item.paidAt || item.createdAt || Date.now());
+        const timeStr = dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const dateStr = dateObj.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeFull = isNaN(dateObj.getTime()) ? (item.createdAt || 'Vừa xong') : `${timeStr} - ${dateStr}`;
+
+        const isEscrow = item.type === 'escrow' || item.type === 'order_payment' || item.type === 'withdraw' || Number(item.amount) < 0;
+        const isRefund = item.type === 'refund';
+        const isQrDeposit = item.gateway === 'VNPAY-QR';
+
+        let iconHtml = '<i class="fa-solid fa-qrcode"></i>';
+        let iconClass = 'deposit';
+        let title = 'Nạp tiền VNPAY-QR';
+        let subText = '';
+        let sign = '+';
+        let amountClass = 'positive';
+
+        if (isEscrow) {
+          iconHtml = '<i class="fa-solid fa-shield-halved"></i>';
+          iconClass = 'escrow';
+          title = item.description || 'Ký quỹ đơn hàng (Escrow)';
+          subText = `<div class="history-time"><i class="fa-solid fa-receipt"></i> Mã GD: <strong>${item.id}</strong></div>`;
+          sign = '-';
+          amountClass = 'negative';
+        } else if (isRefund) {
+          iconHtml = '<i class="fa-solid fa-arrow-rotate-left"></i>';
+          iconClass = 'refund';
+          title = item.description || 'Hoàn tiền vào ví (Escrow)';
+          subText = `<div class="history-time"><i class="fa-solid fa-receipt"></i> Mã GD: <strong>${item.id}</strong></div>`;
+          sign = '+';
+          amountClass = 'positive';
+        } else {
+          iconHtml = isQrDeposit ? '<i class="fa-solid fa-qrcode"></i>' : '<i class="fa-solid fa-credit-card"></i>';
+          iconClass = 'deposit';
+          title = isQrDeposit ? 'Nạp tiền VNPAY-QR' : (item.description || 'Nạp ví qua VNPay');
+          const displayName = item.userName || 'Khách hàng';
+          subText = `<div class="history-user"><i class="fa-solid fa-user"></i> Người nạp: <strong>${displayName}</strong></div>`;
+          sign = '+';
+          amountClass = 'positive';
+        }
+
+        const absAmount = Math.abs(Number(item.amount) || 0).toLocaleString('vi-VN');
+        const isSuccess = item.status === 'success' || item.status === 'completed';
+        const isPending = item.status === 'pending';
+
+        let badgeHtml = '<span class="badge-success-pill"><i class="fa-solid fa-check"></i> Thành công</span>';
+        if (isPending) {
+          badgeHtml = '<span class="badge-success-pill" style="background:#fef3c7; color:#b45309;"><i class="fa-solid fa-clock"></i> Chờ xử lý</span>';
+        } else if (item.status === 'failed') {
+          badgeHtml = '<span class="badge-success-pill" style="background:#fee2e2; color:#b91c1c;"><i class="fa-solid fa-xmark"></i> Thất bại</span>';
+        }
+
+        let balanceAfterHtml = '';
+        if (item.balanceAfter !== undefined && item.balanceAfter !== null) {
+          balanceAfterHtml = `<div style="font-size:11.5px; color:#64748b; margin-top:3px;">Số dư sau GD: <strong>${Number(item.balanceAfter).toLocaleString('vi-VN')}đ</strong></div>`;
+        }
+
+        return `
+          <div class="history-item">
+            <div class="history-left">
+              <div class="history-icon ${iconClass}">${iconHtml}</div>
+              <div>
+                <div class="history-title">${title}</div>
+                ${subText}
+                <div class="history-time"><i class="fa-regular fa-clock"></i> ${timeFull}</div>
+              </div>
+            </div>
+            <div class="history-right">
+              <div class="history-amount ${amountClass}">${sign}${absAmount}đ</div>
+              ${badgeHtml}
+              ${balanceAfterHtml}
+            </div>
+          </div>`;
+      }).join('');
     }
 
     function openQRCodeModal() {
+      const user = (typeof getCurrentCustomer === 'function') ? getCurrentCustomer() : null;
+      if (!user || !user.id) {
+        alert('⚠️ Vui lòng đăng nhập để nạp tiền vào ví của bạn.');
+        window.location.href = 'index.html?auth=login';
+        return;
+      }
+
       const amount = Number(document.getElementById('txtAmount').value);
       if (!amount || amount < 10000) return alert('Số tiền tối thiểu là 10.000đ');
 
       currentTxnId = 'WT_' + Date.now();
       
       const hostIp = (localIpAddress && localIpAddress !== 'localhost') ? `${localIpAddress}:3000` : window.location.host;
-      const confirmUrl = `http://${hostIp}/vnpay_qr_confirm.html?txn=${currentTxnId}&amount=${amount}`;
+      const uId = user.id;
+      const uName = user.name || '';
+      const confirmUrl = `http://${hostIp}/vnpay_qr_confirm.html?txn=${currentTxnId}&amount=${amount}&userId=${encodeURIComponent(uId)}&userName=${encodeURIComponent(uName)}`;
 
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(confirmUrl)}`;
 
@@ -238,13 +366,9 @@
             clearInterval(pollInterval);
             closeQRModal();
 
-            if (data.userName) {
-              sessionStorage.setItem('qr_user_' + currentTxnId, data.userName);
-            }
-
             await loadBalance();
             await loadHistory();
-            const confirmedUser = data.userName || sessionStorage.getItem('qr_user_' + currentTxnId) || 'Khách hàng';
+            const confirmedUser = data.userName || user.name || 'Khách hàng';
             alert(`🎉 NẠP TIỀN THÀNH CÔNG!\n- Người nạp: ${confirmedUser}\n- Số tiền: +${amount.toLocaleString('vi-VN')}đ`);
           }
         } catch (e) {}

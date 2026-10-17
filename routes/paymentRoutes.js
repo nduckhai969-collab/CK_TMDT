@@ -67,10 +67,18 @@ router.post('/vnpay/create_payment_url', (req, res) => {
     const txnId = date.getTime().toString();
     const cleanOrderInfo = 'Nap tien vi SkillRental ' + txnId;
 
+    const targetUserId = req.body.userId || req.headers['x-user-id'] || (req.authUser ? req.authUser.id : null);
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, message: 'Vui lòng đăng nhập hoặc cung cấp userId để nạp tiền.' });
+    }
+    const users = db.getCollection('users') || [];
+    const targetUser = users.find(u => u.id === targetUserId || u.uid === targetUserId);
+
     const transactions = db.getCollection('walletTransactions') || [];
     transactions.push({
       id: txnId,
-      userId: req.body.userId || 'USR003',
+      userId: targetUserId,
+      userName: targetUser ? targetUser.name : 'Khách hàng',
       amount: amount,
       type: 'deposit',
       gateway: 'VNPay',
@@ -217,32 +225,63 @@ router.get('/vnpay/return', (req, res) => {
     const txnRef = vnp_Params['vnp_TxnRef'];
 
     if (responseCode === '00') {
-      const users = db.getCollection('users') || [];
-      const user = users.find(u => u.id === 'USR003') || users.find(u => u.role === 'Customer') || users[0];
-      if (user) {
-        user.balance = (Number(user.balance) || 0) + (amount || 0);
-        db.saveCollection('users', users);
-      }
-
       const txns = db.getCollection('walletTransactions') || [];
       const t = txns.find(x => String(x.id) === String(txnRef));
+
+      const users = db.getCollection('users') || [];
+      const targetUserId = (t && t.userId) ? t.userId : (req.query.userId || req.headers['x-user-id']);
+      let user = null;
+      if (targetUserId) {
+        user = users.find(u => u.id === targetUserId || u.uid === targetUserId);
+      }
+      if (!user && !targetUserId) {
+        return res.redirect('/customer_wallet.html?payment=error&message=' + encodeURIComponent('Không xác định được tài khoản người nhận tiền.'));
+      }
+      const assignedUserId = user ? user.id : targetUserId;
+
       if (t) {
         t.status = 'success';
         t.paidAt = new Date().toISOString();
+        if (user && !t.userName) t.userName = user.name;
       } else {
         txns.unshift({
           id: txnRef || ('WT_' + Date.now()),
-          userId: user ? user.id : 'USR003',
-          userName: user ? user.name : 'Lê Hoàng Long',
+          userId: assignedUserId,
+          userName: user ? user.name : 'Khách hàng',
           amount: amount || 50000,
           type: 'deposit',
           gateway: 'VNPay',
           status: 'success',
           description: 'Nạp tiền qua VNPay thành công',
+          paidAt: new Date().toISOString(),
           createdAt: new Date().toISOString()
         });
       }
+
+      // Tính toán số dư chuẩn từ lịch sử giao dịch thực tế của user
+      const userTxns = txns.filter(x => 
+        (x.userId === assignedUserId) &&
+        (x.status === 'success' || x.status === 'completed')
+      );
+      const totalDeposits = userTxns
+        .filter(x => x.type === 'deposit' || x.type === 'refund')
+        .reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
+      const totalDeductions = userTxns
+        .filter(x => x.type === 'escrow' || x.type === 'order_payment' || x.type === 'withdraw')
+        .reduce((sum, x) => sum + Math.abs(Number(x.amount) || 0), 0);
+      const calculatedBalance = Math.max(0, totalDeposits - totalDeductions);
+
+      if (user) {
+        user.balance = calculatedBalance;
+        db.saveCollection('users', users);
+      }
+
+      const activeTxn = t || txns[0];
+      if (activeTxn) {
+        activeTxn.balanceAfter = calculatedBalance;
+      }
       db.saveCollection('walletTransactions', txns);
+
       return res.redirect(`/customer_wallet.html?payment=success&amount=${amount}&code=00`);
     } else {
       return res.redirect(`/customer_wallet.html?payment=failed&code=${responseCode || '97'}`);
@@ -284,51 +323,114 @@ router.get('/transactions', requireSignedIn, (req, res) => {
 });
 
 // ============================================================
-// 3. API LẤY SỐ DƯ TỨC THÌ
+// 3. API LẤY SỐ DƯ TỨC THÌ (CHO TỪNG TÀI KHOẢN RIÊNG)
 // ============================================================
 router.get('/balance', (req, res) => {
   const users = db.getCollection('users') || [];
-  const customer = users.find(u => u.id === 'USR003') || users.find(u => u.role === 'Customer') || users[0];
+  const targetUserId = req.headers['x-user-id'] || req.query.userId;
+  let customer = null;
+  if (targetUserId) {
+    customer = users.find(u => u.id === targetUserId || u.uid === targetUserId);
+    if (!customer) {
+      return res.json({ 
+        success: true, 
+        userId: targetUserId,
+        balance: 0,
+        userName: 'Khách hàng'
+      });
+    }
+  } else if (req.authUser) {
+    customer = users.find(u => u.id === req.authUser.id || u.uid === req.authUser.uid);
+  }
+
+  // Nếu không xác định được tài khoản -> trả về số dư 0đ
+  if (!customer) {
+    return res.json({ 
+      success: true, 
+      userId: null,
+      balance: 0,
+      userName: 'Khách hàng'
+    });
+  }
+
+  // Kiểm tra lịch sử giao dịch của tài khoản
+  const txns = db.getCollection('walletTransactions') || [];
+  const userTxns = txns.filter(t => 
+    (t.userId === customer.id || (customer.uid && t.userId === customer.uid)) &&
+    (t.status === 'success' || t.status === 'completed')
+  );
+
+  const hasDeposit = userTxns.some(t => t.type === 'deposit');
+
+  let realBalance = 0;
+  if (hasDeposit) {
+    const totalDeposits = userTxns
+      .filter(t => t.type === 'deposit' || t.type === 'refund')
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const totalDeductions = userTxns
+      .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+      .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+    realBalance = Math.max(0, totalDeposits - totalDeductions);
+  } else {
+    // Tài khoản chưa có bất kỳ giao dịch nạp nào thành công -> về 0đ
+    realBalance = 0;
+  }
+
+  if (customer.balance !== realBalance) {
+    customer.balance = realBalance;
+    db.saveCollection('users', users);
+  }
+
   res.json({ 
     success: true, 
-    balance: customer ? Number(customer.balance) : 15000000,
-    userName: customer ? customer.name : 'Lê Hoàng Long'
+    userId: customer.id,
+    balance: realBalance,
+    userName: customer.name || 'Khách hàng'
   });
 });
 
 // ============================================================
-// API XÁC NHẬN THANH TOÁN QR VÀ TỰ ĐỘNG CỘNG TIỀN VÍ
+// API XÁC NHẬN THANH TOÁN QR VÀ TỰ ĐỘNG CỘNG TIỀN VÍ CHO ĐÚNG USER
 // ============================================================
 router.all('/qr-confirm', (req, res) => {
   try {
     const amount = Number(req.body.amount || req.query.amount) || 0;
-    const targetName = (req.body.userName || req.body.name || req.body.senderName || req.query.userName || req.query.name || '').trim() || 'Lê Hoàng Long';
+    const targetName = (req.body.userName || req.body.name || req.body.senderName || req.query.userName || req.query.name || '').trim() || 'Khách hàng';
     const txnId = req.body.txn || req.query.txn || ('WT_' + Date.now());
+    const targetUserId = req.body.userId || req.query.userId || req.headers['x-user-id'];
 
     const users = db.getCollection('users') || [];
     
-    let user = users.find(u => u.name && u.name.toLowerCase().trim() === targetName.toLowerCase());
-    if (!user) {
-      user = users.find(u => u.id === 'USR003') || users.find(u => u.role === 'Customer') || users[0];
+    let user = null;
+    if (targetUserId) {
+      user = users.find(u => u.id === targetUserId || u.uid === targetUserId);
+    }
+    if (!user && targetName && targetName !== 'Khách hàng') {
+      user = users.find(u => u.name && u.name.toLowerCase().trim() === targetName.toLowerCase());
     }
 
-    if (user) {
-      user.balance = (Number(user.balance) || 0) + amount;
-      db.saveCollection('users', users);
+    if (!user && !targetUserId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Không tìm thấy thông tin tài khoản cần nạp tiền. Vui lòng đăng nhập trước khi quét mã.'
+      });
     }
+
+    const assignedUserId = user ? user.id : targetUserId;
+    const finalName = targetName && targetName !== 'Khách hàng' ? targetName : (user ? user.name : 'Khách hàng');
 
     const txns = db.getCollection('walletTransactions') || [];
     const existingIndex = txns.findIndex(t => String(t.id) === String(txnId));
 
     const newTxnData = {
       id: txnId,
-      userId: user ? user.id : 'USR003',
-      userName: targetName,
+      userId: assignedUserId,
+      userName: finalName,
       amount: amount,
       type: 'deposit',
       gateway: 'VNPAY-QR',
       status: 'success',
-      description: `Nạp tiền qua VNPAY-QR (${targetName})`,
+      description: `Nạp tiền qua VNPAY-QR (${finalName})`,
       paidAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
@@ -338,14 +440,38 @@ router.all('/qr-confirm', (req, res) => {
     } else {
       txns.unshift(newTxnData);
     }
+
+    // Tính lại balance chính xác từ toàn bộ giao dịch của riêng user này
+    const userTxns = txns.filter(t => 
+      (t.userId === assignedUserId) &&
+      (t.status === 'success' || t.status === 'completed')
+    );
+    const totalDeposits = userTxns
+      .filter(t => t.type === 'deposit' || t.type === 'refund')
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const totalDeductions = userTxns
+      .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+      .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+    const calculatedBalance = Math.max(0, totalDeposits - totalDeductions);
+
+    if (user) {
+      user.balance = calculatedBalance;
+      db.saveCollection('users', users);
+    }
+
+    const updatedTxn = txns.find(t => String(t.id) === String(txnId));
+    if (updatedTxn) {
+      updatedTxn.balanceAfter = calculatedBalance;
+    }
     db.saveCollection('walletTransactions', txns);
 
-    console.log(`[VNPAY-QR] Nạp thành công +${amount.toLocaleString('vi-VN')}đ cho user ${targetName}. Số dư mới: ${(user ? user.balance : amount).toLocaleString('vi-VN')}đ`);
+    console.log(`[VNPAY-QR] Nạp thành công +${amount.toLocaleString('vi-VN')}đ cho user ${finalName} (${assignedUserId}). Số dư mới: ${calculatedBalance.toLocaleString('vi-VN')}đ`);
 
     return res.json({ 
       success: true, 
-      userName: targetName, 
-      newBalance: user ? user.balance : amount 
+      userId: assignedUserId,
+      userName: finalName, 
+      newBalance: calculatedBalance 
     });
   } catch (err) {
     console.error('Lỗi QR confirm:', err);
@@ -368,7 +494,10 @@ router.get('/check-status/:txnId', (req, res) => {
   res.json({ 
     success: true, 
     isPaid: Boolean(txn && txn.status === 'success'),
-    userName: uName
+    userName: uName,
+    userId: txn ? txn.userId : null,
+    amount: txn ? txn.amount : null,
+    balanceAfter: txn ? txn.balanceAfter : null
   });
 });
 
@@ -387,12 +516,19 @@ router.get('/server-info', (req, res) => {
   res.json({ success: true, localIp: localIp, port: process.env.PORT || 3000 });
 });
 
-// API lấy lịch sử giao dịch ví
+// API lấy lịch sử giao dịch ví (phân tách theo từng user)
 router.get('/history', (req, res) => {
   try {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    const targetUserId = req.headers['x-user-id'] || req.query.userId || (req.authUser ? req.authUser.id : null);
     const txns = db.getCollection('walletTransactions') || [];
-    const data = txns.slice(0, 30).map(t => {
+
+    let filtered = [];
+    if (targetUserId) {
+      filtered = txns.filter(t => t.userId === targetUserId || t.customerId === targetUserId);
+    }
+
+    const data = filtered.slice(0, 50).map(t => {
       let uName = t.userName || '';
       if (!uName && t.description && t.description.includes('(')) {
         const m = t.description.match(/\((.*?)\)/);
@@ -402,7 +538,7 @@ router.get('/history', (req, res) => {
       }
       return {
         ...t,
-        userName: uName || 'Lê Hoàng Long'
+        userName: uName || 'Khách hàng'
       };
     });
 

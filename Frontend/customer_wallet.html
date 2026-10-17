@@ -2,7 +2,8 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Ví VNPay - SkillRental</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ví Tiền & Nạp VNPAY-QR - SkillRental</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -10,16 +11,63 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-client.js"></script>
   <style>
+<<<<<<< Updated upstream
     body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #0f172a; }
     .wallet-container { max-width: 600px; margin: 50px auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
     .wallet-icon { font-size: 48px; color: #16A34A; margin-bottom: 20px; }
     .balance { font-size: 36px; font-weight: 800; color: #0f172a; margin-bottom: 30px; }
     input[type=number] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
     .btn-vnpay { background: #005A9E; color: #fff; font-weight: 700; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+=======
+    body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #0f172a; margin: 0; }
+    .wallet-container { max-width: 1050px; margin: 30px auto 60px; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 768px) { .wallet-container { grid-template-columns: 1fr; } }
+
+    .box-card { background: #fff; border-radius: 16px; padding: 26px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(15,23,42,.04); }
+    .balance-banner { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border-radius: 16px; padding: 26px; margin-bottom: 24px; box-shadow: 0 8px 24px rgba(22,163,74,.25); }
+    .balance-label { font-size: 13.5px; opacity: .9; }
+    .balance-value { font-size: 36px; font-weight: 800; margin: 10px 0 6px; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label { font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 8px; display: block; }
+    .form-control-input { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box; }
+    .form-control-input:focus { border-color: #16a34a; }
+
+    .amount-input-box { position: relative; }
+    .amount-input-box input { width: 100%; padding: 14px 45px 14px 16px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 18px; font-weight: 700; outline: none; box-sizing: border-box; }
+    .currency-tag { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #64748b; }
+
+    .quick-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+    .chip-btn { padding: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+    .chip-btn:hover { background: #e2e8f0; }
+
+    .btn-pay-now { width: 100%; background: #005baa; color: #fff; padding: 15px; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; }
+    .btn-pay-now:hover { background: #004b8d; }
+
+    /* Lịch sử giao dịch item */
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
+    .history-left { display: flex; align-items: center; gap: 12px; }
+    .history-icon { width: 42px; height: 42px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .history-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
+    .history-user { font-size: 12.5px; color: #005baa; margin-bottom: 2px; }
+    .history-time { font-size: 11.5px; color: #64748b; }
+    .history-right { text-align: right; }
+    .history-amount { font-size: 16px; font-weight: 800; color: #16a34a; margin-bottom: 4px; }
+    .badge-success-pill { background: #dcfce7; color: #15803d; font-size: 11px; padding: 3px 8px; border-radius: 9999px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+
+    /* Modal QR */
+    .qr-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; }
+    .qr-modal-box { background: #fff; border-radius: 20px; padding: 28px; width: 90%; max-width: 420px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,.2); position: relative; }
+    .qr-img-wrapper { background: #fff; padding: 12px; border-radius: 16px; border: 2px solid #e2e8f0; display: inline-block; margin: 12px 0; }
+    .qr-img-wrapper img { width: 220px; height: 220px; display: block; }
+    .btn-modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; color: #64748b; cursor: pointer; }
+    .wifi-hint { background: #fef3c7; color: #92400e; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+>>>>>>> Stashed changes
   </style>
 </head>
 <body>
   <div id="navbar-placeholder"></div>
+<<<<<<< Updated upstream
   <div class="wallet-container">
     <div class="wallet-icon"><i class="fa-solid fa-wallet"></i></div>
     <h2>Ví của bạn</h2>
@@ -28,9 +76,84 @@
     <h3 style="margin-bottom:15px; text-align:left; font-size:15px;">Nạp tiền qua VNPay</h3>
     <input type="number" id="topupAmount" placeholder="Nhập số tiền cần nạp (VND)..." min="10000" step="10000">
     <button class="btn-vnpay" onclick="topupVNPay()"><i class="fa-solid fa-credit-card"></i> Nạp Tiền Bằng VNPay</button>
+=======
+
+  <div class="wallet-container">
+    <div>
+      <div class="balance-banner">
+        <div class="balance-label"><i class="fa-solid fa-wallet"></i> Số dư ví khả dụng:</div>
+        <div class="balance-value" id="balanceDisplay">15.000.000đ</div>
+        <div style="font-size:12px; opacity:.85;"><i class="fa-solid fa-shield-halved"></i> Tiền nạp được bảo chứng an toàn qua Escrow</div>
+      </div>
+
+      <div class="box-card">
+        <h3 style="margin:0 0 16px; font-size:18px;"><i class="fa-solid fa-qrcode" style="color:#005baa;"></i> Nạp tiền quét mã VNPAY-QR</h3>
+
+        <!-- Ô NHẬP SỐ TIỀN -->
+        <div class="form-group">
+          <label class="form-label">Nhập số tiền muốn nạp:</label>
+          <div class="amount-input-box">
+            <input type="number" id="txtAmount" value="50000" min="10000" step="10000">
+            <span class="currency-tag">VND</span>
+          </div>
+          <div class="quick-chips">
+            <button class="chip-btn" onclick="setAmt(50000)">50.000đ</button>
+            <button class="chip-btn" onclick="setAmt(100000)">100.000đ</button>
+            <button class="chip-btn" onclick="setAmt(200000)">200.000đ</button>
+            <button class="chip-btn" onclick="setAmt(500000)">500.000đ</button>
+          </div>
+        </div>
+
+        <button class="btn-pay-now" onclick="openQRCodeModal()">
+          <i class="fa-solid fa-qrcode"></i> Tạo Mã VNPAY-QR Quét Bằng Điện Thoại
+        </button>
+      </div>
+    </div>
+
+    <!-- CỘT LỊCH SỬ GIAO DỊCH -->
+    <div class="box-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px;"><i class="fa-solid fa-clock-rotate-left" style="color:#16a34a;"></i> Lịch sử giao dịch</h3>
+        <button onclick="loadHistory()" style="background:none; border:none; color:#16a34a; font-size:13px; font-weight:600; cursor:pointer;">
+          <i class="fa-solid fa-rotate"></i> Làm mới
+        </button>
+      </div>
+
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- MODAL POPUP MÃ QR -->
+  <div class="qr-modal-overlay" id="qrModal">
+    <div class="qr-modal-box">
+      <button class="btn-modal-close" onclick="closeQRModal()">&times;</button>
+      <h3 style="margin:0 0 4px; font-size:19px; color:#005baa;"><i class="fa-solid fa-qrcode"></i> Quét mã VNPAY-QR</h3>
+      <p style="font-size:12.5px; color:#64748b; margin:0;">Mở Camera điện thoại hoặc Zalo để quét mã</p>
+
+      <div class="qr-img-wrapper">
+        <img id="qrImage" src="" alt="Mã VNPAY-QR">
+      </div>
+
+      <div style="font-size:15px; font-weight:700; color:#0f172a; margin-bottom:8px;">
+        Số tiền cần nạp: <span style="color:#16a34a; font-size:20px;" id="qrAmountDisplay">50.000đ</span>
+      </div>
+      <div style="font-size:12.5px; color:#15803d; background:#ecfdf5; border:1px solid #bbf7d0; padding:8px 12px; border-radius:8px; margin-bottom:12px;">
+        <i class="fa-solid fa-mobile-screen-button"></i> Bạn sẽ nhập tên người nạp & xác nhận trên điện thoại
+      </div>
+
+      <a id="btnTestDirect" href="#" target="_blank" style="display:inline-block; font-size:12px; color:#005baa; text-decoration:none; font-weight:600; margin-bottom:10px;">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> Hoặc bấm vào đây để mở xác nhận trực tiếp trên máy tính
+      </a>
+
+      <div class="wifi-hint">
+        <i class="fa-solid fa-wifi"></i> Lưu ý: Điện thoại và máy tính cần kết nối cùng 1 mạng Wi-Fi
+      </div>
+    </div>
+>>>>>>> Stashed changes
   </div>
   <script src="customer.js"></script>
   <script>
+<<<<<<< Updated upstream
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
       const user = getCurrentCustomer();
@@ -50,6 +173,131 @@
       } else {
         alert(res.message || 'Lỗi khi tạo giao dịch VNPay. Vui lòng thử lại.');
       }
+=======
+    let currentTxnId = '';
+    let pollInterval = null;
+    let localIpAddress = 'localhost';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (typeof renderCustomerNavbar === 'function') {
+        document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('wallet');
+      }
+
+      loadBalance();
+      loadHistory();
+
+      try {
+        const res = await fetch('/api/payments/server-info');
+        const json = await res.json();
+        if (json && json.localIp && json.localIp !== 'localhost') {
+          localIpAddress = json.localIp;
+        }
+      } catch (e) {}
+    });
+
+    function setAmt(val) {
+      document.getElementById('txtAmount').value = val;
+    }
+
+    async function loadBalance() {
+      try {
+        const res = await fetch('/api/payments/balance');
+        const json = await res.json();
+        if (json && json.balance) {
+          document.getElementById('balanceDisplay').textContent = json.balance.toLocaleString('vi-VN') + 'đ';
+        }
+      } catch (e) {}
+    }
+
+    // TẢI VÀ RENDER DANH SÁCH LỊCH SỬ GIAO DỊCH - MỖI GIAO DỊCH GIỮ ĐÚNG TÊN NGƯỜI NẠP RIÊNG
+    async function loadHistory() {
+      try {
+        const res = await fetch(`/api/payments/history?_t=${Date.now()}`);
+        const json = await res.json();
+        const listContainer = document.getElementById('historyList');
+
+        if (json && json.data && json.data.length > 0) {
+          listContainer.innerHTML = json.data.map(item => {
+            const dateObj = new Date(item.paidAt || item.createdAt || Date.now());
+            const timeStr = dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const dateStr = dateObj.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeFull = isNaN(dateObj.getTime()) ? '13:46:45 - 17/10/2026' : `${timeStr} - ${dateStr}`;
+
+            // Lấy đúng tên người nạp từ bản ghi giao dịch, hoặc trích xuất từ description / sessionStorage
+            let displayName = item.userName;
+            if ((!displayName || displayName === 'Lê Hoàng Long') && sessionStorage.getItem('qr_user_' + item.id)) {
+              displayName = sessionStorage.getItem('qr_user_' + item.id);
+            }
+            if ((!displayName || displayName === 'Lê Hoàng Long') && item.description && item.description.includes('(')) {
+              const m = item.description.match(/\((.*?)\)/);
+              if (m && m[1] && isNaN(Number(m[1].replace(/[\.đ]/g, '')))) {
+                displayName = m[1].trim();
+              }
+            }
+            if (!displayName) displayName = 'Lê Hoàng Long';
+
+            return `
+              <div class="history-item">
+                <div class="history-left">
+                  <div class="history-icon"><i class="fa-solid fa-qrcode"></i></div>
+                  <div>
+                    <div class="history-title">Nạp tiền VNPAY-QR</div>
+                    <div class="history-user"><i class="fa-solid fa-user"></i> Người nạp: <strong>${displayName}</strong></div>
+                    <div class="history-time"><i class="fa-regular fa-clock"></i> ${timeFull}</div>
+                  </div>
+                </div>
+                <div class="history-right">
+                  <div class="history-amount">+${Math.abs(Number(item.amount) || 50000).toLocaleString('vi-VN')}đ</div>
+                  <span class="badge-success-pill"><i class="fa-solid fa-check"></i> Thành công</span>
+                </div>
+              </div>`;
+          }).join('');
+        }
+      } catch (e) {}
+    }
+
+    function openQRCodeModal() {
+      const amount = Number(document.getElementById('txtAmount').value);
+      if (!amount || amount < 10000) return alert('Số tiền tối thiểu là 10.000đ');
+
+      currentTxnId = 'WT_' + Date.now();
+      
+      const hostIp = (localIpAddress && localIpAddress !== 'localhost') ? `${localIpAddress}:3000` : window.location.host;
+      const confirmUrl = `http://${hostIp}/vnpay_qr_confirm.html?txn=${currentTxnId}&amount=${amount}`;
+
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(confirmUrl)}`;
+
+      document.getElementById('qrImage').src = qrApiUrl;
+      document.getElementById('qrAmountDisplay').textContent = amount.toLocaleString('vi-VN') + 'đ';
+      document.getElementById('btnTestDirect').href = confirmUrl;
+      document.getElementById('qrModal').style.display = 'flex';
+
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/payments/check-status/${currentTxnId}?_t=${Date.now()}`);
+          const data = await res.json();
+          if (data && data.isPaid) {
+            clearInterval(pollInterval);
+            closeQRModal();
+
+            if (data.userName) {
+              sessionStorage.setItem('qr_user_' + currentTxnId, data.userName);
+            }
+
+            await loadBalance();
+            await loadHistory();
+            const confirmedUser = data.userName || sessionStorage.getItem('qr_user_' + currentTxnId) || 'Khách hàng';
+            alert(`🎉 NẠP TIỀN THÀNH CÔNG!\n- Người nạp: ${confirmedUser}\n- Số tiền: +${amount.toLocaleString('vi-VN')}đ`);
+          }
+        } catch (e) {}
+      }, 1500);
+    }
+
+    function closeQRModal() {
+      document.getElementById('qrModal').style.display = 'none';
+      if (pollInterval) clearInterval(pollInterval);
+>>>>>>> Stashed changes
     }
   </script>
 </body>

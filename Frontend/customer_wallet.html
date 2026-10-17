@@ -11,14 +11,6 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-client.js"></script>
   <style>
-<<<<<<< Updated upstream
-    body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #0f172a; }
-    .wallet-container { max-width: 600px; margin: 50px auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
-    .wallet-icon { font-size: 48px; color: #16A34A; margin-bottom: 20px; }
-    .balance { font-size: 36px; font-weight: 800; color: #0f172a; margin-bottom: 30px; }
-    input[type=number] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
-    .btn-vnpay { background: #005A9E; color: #fff; font-weight: 700; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
-=======
     body { background: #f8fafc; font-family: 'Inter', sans-serif; color: #0f172a; margin: 0; }
     .wallet-container { max-width: 1050px; margin: 30px auto 60px; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     @media (max-width: 768px) { .wallet-container { grid-template-columns: 1fr; } }
@@ -30,8 +22,6 @@
 
     .form-group { margin-bottom: 18px; }
     .form-label { font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 8px; display: block; }
-    .form-control-input { width: 100%; padding: 12px 16px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 15px; font-weight: 600; outline: none; box-sizing: border-box; }
-    .form-control-input:focus { border-color: #16a34a; }
 
     .amount-input-box { position: relative; }
     .amount-input-box input { width: 100%; padding: 14px 45px 14px 16px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 18px; font-weight: 700; outline: none; box-sizing: border-box; }
@@ -62,21 +52,10 @@
     .qr-img-wrapper img { width: 220px; height: 220px; display: block; }
     .btn-modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; color: #64748b; cursor: pointer; }
     .wifi-hint { background: #fef3c7; color: #92400e; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; }
->>>>>>> Stashed changes
   </style>
 </head>
 <body>
   <div id="navbar-placeholder"></div>
-<<<<<<< Updated upstream
-  <div class="wallet-container">
-    <div class="wallet-icon"><i class="fa-solid fa-wallet"></i></div>
-    <h2>Ví của bạn</h2>
-    <div class="balance" id="currentBalance">0đ</div>
-    
-    <h3 style="margin-bottom:15px; text-align:left; font-size:15px;">Nạp tiền qua VNPay</h3>
-    <input type="number" id="topupAmount" placeholder="Nhập số tiền cần nạp (VND)..." min="10000" step="10000">
-    <button class="btn-vnpay" onclick="topupVNPay()"><i class="fa-solid fa-credit-card"></i> Nạp Tiền Bằng VNPay</button>
-=======
 
   <div class="wallet-container">
     <div>
@@ -149,31 +128,10 @@
         <i class="fa-solid fa-wifi"></i> Lưu ý: Điện thoại và máy tính cần kết nối cùng 1 mạng Wi-Fi
       </div>
     </div>
->>>>>>> Stashed changes
   </div>
+
   <script src="customer.js"></script>
   <script>
-<<<<<<< Updated upstream
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
-      const user = getCurrentCustomer();
-      if (user) document.getElementById('currentBalance').textContent = formatVND(user.balance || 0);
-    });
-
-    async function topupVNPay() {
-      const amount = document.getElementById('topupAmount').value;
-      if (!amount || amount < 10000) return alert('Vui lòng nhập số tiền hợp lệ (tối thiểu 10.000đ)');
-      
-      const res = await apiRequest('/api/payments/vnpay/create', {
-        method: 'POST',
-        body: { amount: parseInt(amount), orderDescription: 'Nạp tiền vào ví SkillRental', orderType: 'topup', language: 'vn', bankCode: '' }
-      });
-      if (res.success && (res.paymentUrl || res.url)) {
-        window.location.href = res.paymentUrl || res.url;
-      } else {
-        alert(res.message || 'Lỗi khi tạo giao dịch VNPay. Vui lòng thử lại.');
-      }
-=======
     let currentTxnId = '';
     let pollInterval = null;
     let localIpAddress = 'localhost';
@@ -297,7 +255,6 @@
     function closeQRModal() {
       document.getElementById('qrModal').style.display = 'none';
       if (pollInterval) clearInterval(pollInterval);
->>>>>>> Stashed changes
     }
   </script>
 </body>

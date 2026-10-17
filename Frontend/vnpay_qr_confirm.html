@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xác nhận thanh toán VNPAY-QR</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #f1f5f9; padding: 16px; color: #0f172a; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .mobile-card { background: #fff; width: 100%; max-width: 420px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
+    .header-bar { background: linear-gradient(135deg, #005baa, #003e75); color: #fff; padding: 22px 20px; text-align: center; }
+    .logo-badge { width: 48px; height: 48px; background: #fff; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; color: #005baa; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .header-bar h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.3px; }
+    .header-bar p { margin: 3px 0 0; font-size: 12px; opacity: .85; }
+
+    .content-body { padding: 20px; }
+
+    /* Ô NHẬP TÊN NGƯỜI NẠP */
+    .input-box { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; transition: border-color 0.2s; }
+    .input-box:focus-within { border-color: #005baa; background: #fff; box-shadow: 0 0 0 3px rgba(0,91,170,0.12); }
+    .input-label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .input-field { width: 100%; border: none; outline: none; background: transparent; font-size: 15px; font-weight: 600; color: #0f172a; }
+    .input-field::placeholder { color: #94a3b8; font-weight: 400; }
+
+    /* BẢNG CHI TIẾT GIAO DỊCH */
+    .detail-card { background: #f8fafc; border-radius: 14px; border: 1px solid #e2e8f0; padding: 16px; margin-bottom: 20px; }
+    .amount-box { text-align: center; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1.5px dashed #cbd5e1; }
+    .amount-label { font-size: 11.5px; color: #64748b; text-transform: uppercase; font-weight: 700; }
+    .amount-num { font-size: 30px; font-weight: 800; color: #16a34a; margin-top: 2px; }
+
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+    .info-row:last-child { border-bottom: none; }
+    .info-row span { color: #64748b; display: flex; align-items: center; gap: 6px; }
+    .info-row strong { color: #0f172a; text-align: right; max-width: 60%; word-break: break-word; }
+
+    .btn-confirm { width: 100%; background: #16a34a; color: #fff; border: none; padding: 15px; border-radius: 12px; font-size: 15.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(22,163,74,.35); transition: background 0.15s, transform 0.1s; }
+    .btn-confirm:active { transform: scale(0.98); background: #15803d; }
+
+    .success-screen { display: none; text-align: center; padding: 36px 20px; }
+    .success-icon { width: 70px; height: 70px; background: #dcfce7; color: #16a34a; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 34px; margin-bottom: 16px; }
+    .success-summary { background: #f8fafc; border-radius: 12px; padding: 14px; margin: 16px 0; text-align: left; font-size: 13px; border: 1px solid #e2e8f0; }
+    .success-summary div { display: flex; justify-content: space-between; padding: 6px 0; }
+  </style>
+</head>
+<body>
+  <div class="mobile-card">
+    <div class="header-bar">
+      <div class="logo-badge"><i class="fa-solid fa-qrcode"></i></div>
+      <h2>VNPAY-QR THANH TOÁN</h2>
+      <p>Cổng thanh toán điện tử SkillRental</p>
+    </div>
+
+    <!-- MÀN HÌNH NHẬP TÊN & XÁC NHẬN THÔNG TIN -->
+    <div class="content-body" id="confirmSection">
+      <!-- 1. Ô NHẬP TÊN NGƯỜI NẠP -->
+      <div class="input-box">
+        <label class="input-label"><i class="fa-solid fa-user-pen"></i> Nhập họ và tên người nạp:</label>
+        <input type="text" id="txtSenderName" class="input-field" placeholder="Ví dụ: Nguyễn Văn A" oninput="onNameChange()" autofocus>
+      </div>
+
+      <!-- 2. HIỆN THÔNG TIN XÁC NHẬN GIAO DỊCH -->
+      <div class="detail-card">
+        <div class="amount-box">
+          <div class="amount-label">Số tiền nạp đã chọn</div>
+          <div class="amount-num" id="displayAmount">50.000đ</div>
+        </div>
+
+        <div class="info-row">
+          <span><i class="fa-solid fa-user-check" style="color:#005baa;"></i> Tên người nạp:</span>
+          <strong id="displayUser" style="color:#005baa;">Chưa nhập tên</strong>
+        </div>
+        <div class="info-row">
+          <span><i class="fa-regular fa-clock" style="color:#16a34a;"></i> Thời gian:</span>
+          <strong id="displayTime">--:-- - --/--/----</strong>
+        </div>
+        <div class="info-row">
+          <span><i class="fa-solid fa-building-columns"></i> Đơn vị nhận:</span>
+          <strong>Sàn SkillRental</strong>
+        </div>
+        <div class="info-row">
+          <span><i class="fa-solid fa-barcode"></i> Mã giao dịch:</span>
+          <strong id="displayTxn" style="font-family: monospace;">WT_171000</strong>
+        </div>
+        <div class="info-row">
+          <span><i class="fa-solid fa-shield-halved" style="color:#16a34a;"></i> Bảo chứng:</span>
+          <strong style="color:#16a34a;">Ví Escrow SkillRental</strong>
+        </div>
+      </div>
+
+      <!-- 3. NÚT XÁC NHẬN -->
+      <button class="btn-confirm" id="btnSubmit" onclick="confirmPayment()">
+        <i class="fa-solid fa-circle-check"></i> Xác Nhận Nạp Tiền
+      </button>
+    </div>
+
+    <!-- MÀN HÌNH BÁO THÀNH CÔNG -->
+    <div class="success-screen" id="successSection">
+      <div class="success-icon"><i class="fa-solid fa-check"></i></div>
+      <h3 style="margin:0 0 6px; font-size:20px; color:#15803d;">Nạp Tiền Thành Công!</h3>
+      <p style="color:#64748b; font-size:13px; margin:0 0 14px;">Giao dịch đã được ghi nhận vào hệ thống.</p>
+
+      <div class="success-summary">
+        <div><span style="color:#64748b;">Người nạp:</span> <strong id="successUser" style="color:#005baa;">--</strong></div>
+        <div><span style="color:#64748b;">Số tiền nạp:</span> <strong id="successAmount" style="color:#16a34a; font-size:15px;">--</strong></div>
+        <div><span style="color:#64748b;">Thời gian:</span> <strong id="successTime">--</strong></div>
+        <div><span style="color:#64748b;">Mã GD:</span> <strong id="successTxn" style="font-family:monospace;">--</strong></div>
+      </div>
+
+      <p style="color:#15803d; font-size:12.5px; font-weight:600; margin-bottom:14px;">
+        <i class="fa-solid fa-circle-check"></i> Số dư ví trên máy tính đã được cộng và lịch sử đã được cập nhật!
+      </p>
+      <div style="font-size:11.5px; color:#94a3b8;">Bạn có thể đóng trang này lại.</div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const amount = Number(params.get('amount') || 50000);
+    const txn = params.get('txn') || ('WT_' + Date.now());
+
+    // Thời gian thực lúc quét mã
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const fullTimeStr = `${timeStr} - ${dateStr}`;
+
+    document.getElementById('displayAmount').textContent = amount.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('displayTxn').textContent = txn;
+    document.getElementById('displayTime').textContent = fullTimeStr;
+
+    // Cập nhật tên theo thời gian thực khi gõ
+    function onNameChange() {
+      const name = document.getElementById('txtSenderName').value.trim();
+      const userDisplay = document.getElementById('displayUser');
+      if (name) {
+        userDisplay.textContent = name;
+        userDisplay.style.color = '#005baa';
+        userDisplay.style.fontStyle = 'normal';
+      } else {
+        userDisplay.textContent = 'Chưa nhập tên';
+        userDisplay.style.color = '#94a3b8';
+        userDisplay.style.fontStyle = 'italic';
+      }
+    }
+
+    async function confirmPayment() {
+      const name = document.getElementById('txtSenderName').value.trim();
+      if (!name) {
+        alert('⚠️ Vui lòng nhập họ và tên người nạp tiền!');
+        document.getElementById('txtSenderName').focus();
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý nạp tiền...';
+
+      try {
+        const confirmUrl = `/api/payments/qr-confirm?txn=${encodeURIComponent(txn)}&amount=${amount}&userName=${encodeURIComponent(name)}`;
+        const res = await fetch(confirmUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            amount: amount, 
+            txn: txn, 
+            userName: name,
+            name: name
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('confirmSection').style.display = 'none';
+          document.getElementById('successSection').style.display = 'block';
+
+          document.getElementById('successUser').textContent = name;
+          document.getElementById('successAmount').textContent = '+' + amount.toLocaleString('vi-VN') + 'đ';
+          document.getElementById('successTime').textContent = fullTimeStr;
+          document.getElementById('successTxn').textContent = txn;
+        } else {
+          alert('Lỗi nạp tiền: ' + (data.message || 'Không thành công'));
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Xác Nhận Nạp Tiền';
+        }
+      } catch (e) {
+        alert('Lỗi kết nối máy chủ: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Xác Nhận Nạp Tiền';
+      }
+    }
+  </script>
+</body>
+</html>

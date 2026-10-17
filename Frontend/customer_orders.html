@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Đơn hàng của tôi</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
+    .order-card {
+      background: #FFFFFF;
+      border: 1px solid #DDE7E2;
+      border-radius: 16px;
+      padding: 0;
+      margin-bottom: 18px;
+      overflow:hidden;
+      box-shadow: 0 3px 12px rgba(15,23,42,.035);
+      transition: box-shadow .2s ease, border-color .2s ease;
+    }
+    .order-card:hover {
+      border-color:#9bd3ae;
+      box-shadow: 0 10px 26px -6px rgba(15,23,42,0.1);
+    }
+    .order-card > summary { list-style:none; cursor:pointer; }
+    .order-card > summary::-webkit-details-marker { display:none; }
+    .order-compact { min-height:66px; display:flex; justify-content:space-between; align-items:center; gap:14px; padding:15px 19px; }
+    .order-compact-main { min-width:0; display:flex; flex-direction:column; gap:4px; }
+    .order-compact-title { overflow:hidden; color:#0f172a; font-size:14px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+    .order-compact-meta { color:#64748b; font-size:11px; }
+    .order-compact-side { display:flex; flex:0 0 auto; align-items:center; gap:12px; }
+    .order-expand-label { color:#15803d; font-size:12px; font-weight:700; white-space:nowrap; }
+    .order-collapse-label { display:none; }
+    .order-card[open] > summary { border-bottom:1px solid #e7eeea; }
+    .order-card[open] .order-expand-label { display:none; }
+    .order-card[open] .order-collapse-label { display:inline; }
+    .orders-hero { display:flex;justify-content:space-between;align-items:center;gap:22px;padding:26px 30px;margin-bottom:22px;border:1px solid #ccebd7;border-radius:18px;background:linear-gradient(115deg,#f0fdf4,#fff 68%); }
+    .order-head { display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:20px 22px;background:#fbfdfc;border-bottom:1px solid #e7eeea; }
+    .order-badges { display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px; }
+    .order-id { font-size:16px;font-weight:800;color:#0f172a; }
+    .order-meta { display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#64748b;font-size:11px; }
+    .order-meta span { display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid #e2e8f0;border-radius:8px;background:#fff; }
+    .order-total { flex:0 0 auto;min-width:170px;padding:11px 14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4; }
+    .order-body { display:grid;grid-template-columns:minmax(0,1.5fr) minmax(230px,.8fr);gap:14px;padding:18px 22px; }
+    .order-service-box,.escrow-info { padding:15px;border:1px solid #e5ece8;border-radius:12px;background:#fff; }
+    .order-service-title { margin:5px 0 12px;font-size:16px;line-height:1.45;font-weight:800;color:#172033; }
+    .provider-info { display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#475569; }
+    .provider-info strong { color:#0f172a; }
+    .order-notes { margin-top:12px;padding:10px 12px;border-left:3px solid #a7f3d0;background:#f8fafc;color:#64748b;border-radius:0 8px 8px 0;font-size:12px;line-height:1.5; }
+    .escrow-info { background:#f6fcf8;border-color:#d8eee0; }
+    .milestones-panel { margin:0 22px 18px;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc; }
+    .milestones-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px; }
+    .order-actions { display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 22px;border-top:1px solid #e7eeea;background:#fcfdfc; }
+    .order-action-group { display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap; }
+    .status-tab {
+      padding: 9px 13px;
+      border-radius: 9px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #64748B;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space:nowrap;
+      border:1px solid transparent;
+      background:transparent;
+    }
+    .status-tab.active {
+      background: #FFFFFF;
+      color: #16A34A;
+      border-color:#d6eade;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .status-tab span { display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 4px;margin-left:3px;border-radius:7px;background:#e2e8f0;color:#475569;font-size:10px;font-weight:800; }
+    .status-tab.active span { background:#dcfce7;color:#15803d; }
+    .milestone-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+    .milestone-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .milestone-dot.done {
+      background: #16A34A;
+      color: #FFF;
+    }
+    .milestone-dot.pending {
+      background: #E2E8F0;
+      color: #94A3B8;
+    }
+    @media(max-width:800px){.order-body{grid-template-columns:1fr}.milestones-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:600px){.orders-hero{padding:21px;align-items:flex-start;flex-direction:column}.order-head{padding:16px;flex-direction:column}.order-total{width:100%;box-sizing:border-box}.order-body{padding:14px 16px}.milestones-panel{margin:0 16px 14px;padding:13px}.order-actions{padding:13px 16px;align-items:flex-start;flex-direction:column}.order-action-group{width:100%;justify-content:flex-start}.order-action-group .btn{flex:1;justify-content:center}.status-tab{font-size:12px;padding:8px 10px}}
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <div id="navbar-placeholder"></div>
+
+  <main style="max-width: 1160px; margin: 28px auto 60px; padding: 0 24px;">
+
+    <section class="orders-hero">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:7px;padding:5px 10px;background:#dcfce7;color:#15803d;border-radius:999px;font-size:11px;font-weight:800;margin-bottom:9px"><i class="fa-solid fa-shield-halved"></i> KÝ QUỸ ĐƯỢC BẢO VỆ</div>
+        <h1 style="font-size:clamp(24px,4vw,32px);font-weight:800;color:#0f172a;margin:0">Đơn hàng của tôi</h1>
+        <p style="font-size:13px;color:#64748b;line-height:1.6;margin:7px 0 0">Theo dõi tiến độ, nghiệm thu và quản lý khoản ký quỹ của bạn.</p>
+      </div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <a href="customer_requests.html" class="btn btn-outline" style="font-weight:700"><i class="fa-solid fa-rectangle-list" style="color:#15803d"></i> Yêu cầu của tôi</a>
+        <a href="customer.html" class="btn btn-primary" style="font-weight:700"><i class="fa-solid fa-plus"></i> Đặt dịch vụ</a>
+      </div>
+    </section>
+
+    <!-- FILTER TABS -->
+    <div style="background:#eef2f5;padding:5px;border-radius:12px;display:flex;gap:4px;margin-bottom:20px;overflow-x:auto;width:max-content;max-width:100%;box-sizing:border-box">
+      <button type="button" class="status-tab active" onclick="filterOrders('all', this)">Tất cả <span id="countAll">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('processing', this)">Đang làm <span id="countProcessing">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('delivered', this)">Chờ nghiệm thu <span id="countDelivered">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('completed', this)">Hoàn tất <span id="countCompleted">0</span></button>
+      <button type="button" class="status-tab" onclick="filterOrders('disputed', this)">Tranh chấp <span id="countDisputed">0</span></button>
+    </div>
+
+    <section style="background:#fff;border:1px solid #dbeafe;border-left:4px solid #2563eb;border-radius:12px;padding:15px 18px;margin-bottom:18px;color:#334155;font-size:12.5px;line-height:1.65">
+      <strong style="display:block;color:#0f172a;font-size:13px;margin-bottom:5px"><i class="fa-solid fa-circle-info" style="color:#2563eb"></i> Quy định hủy đơn</strong>
+      <ul style="margin:0;padding-left:19px">
+        <li><strong>Đơn chưa thanh toán:</strong> bạn có thể hủy, không bị trừ tiền.</li>
+        <li><strong>Đơn đã thanh toán nhưng chưa bàn giao:</strong> bạn có thể hủy; tiền ký quỹ được hoàn vào ví SkillRental.</li>
+        <li><strong>Đơn đã bàn giao:</strong> chọn “Khiếu nại đơn”; đơn chuyển sang tranh chấp và tiền ký quỹ được giữ nguyên để Admin xem xét, chưa hoàn ngay.</li>
+        <li><strong>Hoàn tác:</strong> chỉ thực hiện được trong 5 phút sau khi bạn hủy. Nếu tiền đã hoàn vào ví, ví cần đủ số dư để thu hồi khoản hoàn; khung giờ dịch vụ cũng phải còn trống.</li>
+      </ul>
+    </section>
+
+    <!-- ORDERS LIST CONTAINER -->
+    <div id="ordersContainer">
+      <div style="text-align:center; padding:40px; color:#64748B;">
+        <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+        <div style="margin-top:10px;">Đang tải danh sách đơn hàng...</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- CONFIRM RELEASE ESCROW MODAL -->
+  <div id="releaseModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#FFFFFF; border-radius:16px; max-width:480px; width:90%; padding:32px; box-shadow:0 20px 35px -5px rgba(0,0,0,0.2); animation:modalIn 0.3s ease-out;">
+      <div style="width:60px; height:60px; border-radius:50%; background:#DCFCE7; color:#16A34A; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 16px;">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+      </div>
+      <h3 style="font-size:19px; font-weight:800; color:#0F172A; text-align:center; margin-bottom:8px;">Xác Nhận Nghiệm Thu & Giải Ngân</h3>
+      <p style="font-size:13.5px; color:#64748B; text-align:center; line-height:1.5; margin-bottom:20px;">
+        Bạn xác nhận chuyên gia đã hoàn thành đúng chất lượng cam kết? Sau khi bấm xác nhận, số tiền <strong id="modalReleaseAmount" style="color:#16A34A;">—</strong> đang ký quỹ sẽ được mở khóa và chuyển vào ví chuyên gia ngay lập tức.
+      </p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <button onclick="closeReleaseModal()" class="btn btn-outline" style="border-color:#CBD5E1; color:#0F172A; font-weight:600; padding:12px 0;">
+          Kiểm Tra Lại
+        </button>
+        <button id="btnConfirmRelease" onclick="confirmReleaseEscrow()" class="btn btn-primary" style="font-weight:700; padding:12px 0;">
+          <i class="fa-solid fa-check"></i> Xác Nhận Giải Ngân
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="retryPaymentModal" role="dialog" aria-modal="true" aria-labelledby="retryPaymentTitle" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:10000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
+    <div style="background:#fff;border-radius:16px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 35px -5px rgba(0,0,0,.2)">
+      <h3 id="retryPaymentTitle" style="margin:0 0 6px;color:#0f172a;font-size:18px">Chọn phương thức thanh toán</h3>
+      <p style="margin:0 0 16px;color:#64748b;font-size:13px">Chọn cách thanh toán cho đơn đang chờ. Bạn sẽ được chuyển sang VNPay để hoàn tất.</p>
+      <div style="display:grid;gap:9px">
+        <label style="display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #bbf7d0;border-radius:10px;cursor:pointer"><input type="radio" name="retryPaymentMethod" value="VNPAYQR" checked><span><strong>Quét mã VietQR</strong><br><small style="color:#64748b">Quét bằng ứng dụng ngân hàng</small></span></label>
+        <label style="display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer"><input type="radio" name="retryPaymentMethod" value=""><span><strong>Ví VNPay / MoMo</strong><br><small style="color:#64748b">Chọn ví trên cổng VNPay</small></span></label>
+        <label style="display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer"><input type="radio" name="retryPaymentMethod" value="VNBANK"><span><strong>Thẻ ATM / tài khoản ngân hàng</strong><br><small style="color:#64748b">Thanh toán qua ngân hàng nội địa</small></span></label>
+        <label style="display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer"><input type="radio" name="retryPaymentMethod" value="INTCARD"><span><strong>Thẻ quốc tế</strong><br><small style="color:#64748b">Visa, Mastercard hoặc JCB</small></span></label>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:20px">
+        <button type="button" onclick="closeRetryPaymentModal()" class="btn btn-outline">Để sau</button>
+        <button id="retryPaymentSubmit" type="button" onclick="retryOrderPayment()" class="btn btn-primary"><i class="fa-solid fa-credit-card"></i> Tiếp tục</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="customer.js"></script>
+  <script>
+    let myOrders = [];
+    let reviewedOrderIds = new Set();
+    let currentFilter = 'all';
+    let targetOrderId = null;
+    let retryPaymentOrderId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+      loadCustomerOrders();
+    });
+
+    async function loadCustomerOrders() {
+      const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        document.getElementById('ordersContainer').innerHTML = `
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:40px; text-align:center;">
+            <i class="fa-solid fa-lock" style="font-size:32px;color:#94A3B8"></i>
+            <h3 style="margin:12px 0 6px;color:#0F172A">Đăng nhập để xem đơn hàng</h3>
+            <p style="color:#64748B;margin-bottom:16px">Bạn có thể xem trang công khai, còn đơn hàng cá nhân cần tài khoản khách hàng.</p>
+            <button class="btn btn-primary" onclick="openAuthModal('login')">Đăng nhập</button>
+          </div>`;
+        return;
+      }
+      const profileRes = await apiRequest('/api/auth/me');
+      if (!profileRes.success || !profileRes.user || profileRes.user.role !== 'Customer') {
+        document.getElementById('ordersContainer').innerHTML = `
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:40px; text-align:center; color:#EF4444;">
+            <i class="fa-solid fa-triangle-exclamation fa-2x"></i>
+            <div style="margin-top:10px;">Không xác định được tài khoản khách hàng. Vui lòng đăng nhập lại.</div>
+          </div>`;
+        return;
+      }
+      const [res, reviewsRes] = await Promise.all([
+        apiRequest(`/api/orders?customerId=${encodeURIComponent(profileRes.user.id)}`),
+        apiRequest('/api/reviews')
+      ]);
+      if (res.success && res.orders) {
+        myOrders = res.orders;
+        reviewedOrderIds = new Set((reviewsRes.success ? reviewsRes.reviews : []).map(review => review.orderId));
+        updateCounts();
+        renderOrders();
+      } else {
+        document.getElementById('ordersContainer').innerHTML = `
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:40px; text-align:center; color:#EF4444;">
+            <i class="fa-solid fa-triangle-exclamation fa-2x"></i>
+            <div style="margin-top:10px;">Không thể tải danh sách đơn hàng.</div>
+          </div>
+        `;
+      }
+    }
+
+    function updateCounts() {
+      document.getElementById('countAll').textContent = myOrders.length;
+      document.getElementById('countProcessing').textContent = myOrders.filter(o => o.orderStatus === 'processing' || o.orderStatus === 'confirmed').length;
+      document.getElementById('countDelivered').textContent = myOrders.filter(o => o.orderStatus === 'delivered').length;
+      document.getElementById('countCompleted').textContent = myOrders.filter(o => o.orderStatus === 'completed').length;
+      document.getElementById('countDisputed').textContent = myOrders.filter(o => o.orderStatus === 'disputed').length;
+    }
+
+    function filterOrders(status, el) {
+      currentFilter = status;
+      document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+      if (el) el.classList.add('active');
+      renderOrders();
+    }
+
+    function renderOrders() {
+      const container = document.getElementById('ordersContainer');
+      let filtered = myOrders;
+
+      if (currentFilter === 'processing') {
+        filtered = myOrders.filter(o => o.orderStatus === 'processing' || o.orderStatus === 'confirmed');
+      } else if (currentFilter !== 'all') {
+        filtered = myOrders.filter(o => o.orderStatus === currentFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:48px; text-align:center;">
+            <i class="fa-solid fa-box-open" style="font-size:44px; color:#94A3B8; margin-bottom:14px;"></i>
+            <h3 style="font-size:17px; font-weight:700; color:#0F172A; margin-bottom:6px;">Không có đơn hàng nào trong mục này</h3>
+            <p style="font-size:13.5px; color:#64748B; margin-bottom:18px;">Bạn có thể khám phá danh sách chuyên gia hoặc đăng yêu cầu tuyển việc mới.</p>
+            <a href="customer.html" class="btn btn-primary" style="font-weight:600;"><i class="fa-solid fa-magnifying-glass"></i> Khám Phá Chuyên Gia</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(o => {
+        const isEscrowHeld = o.escrowStatus === 'escrow_held';
+        const isCompleted = o.orderStatus === 'completed';
+        const isDelivered = o.orderStatus === 'delivered';
+        const isDisputed = o.orderStatus === 'disputed';
+        const isCancelled = o.orderStatus === 'cancelled';
+        const canUndoCancellation = isCancelled && o.cancelledBy === 'Customer' && Number.isFinite(Date.parse(o.cancellationUndoUntil || '')) && Date.parse(o.cancellationUndoUntil) > Date.now();
+
+        let badgeStatus = '';
+        if (o.paymentStatus === 'pending') {
+          badgeStatus = `<span style="background:#FEF3C7; color:#B45309; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-clock"></i> Chờ thanh toán</span>`;
+        } else if (isCompleted) {
+          badgeStatus = `<span style="background:#DCFCE7; color:#15803D; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-circle-check"></i> Hoàn tất</span>`;
+        } else if (isDelivered) {
+          badgeStatus = `<span style="background:#FEF3C7; color:#B45309; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-bell"></i> Chờ nghiệm thu</span>`;
+        } else if (isDisputed) {
+          badgeStatus = `<span style="background:#FEE2E2; color:#B91C1C; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-scale-balanced"></i> Đang tranh chấp</span>`;
+        } else if (isCancelled) {
+          badgeStatus = `<span style="background:#F1F5F9; color:#475569; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-ban"></i> Đã hủy</span>`;
+        } else {
+          badgeStatus = `<span style="background:#EFF6FF; color:#1D4ED8; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-bars-progress"></i> Đang thực hiện</span>`;
+        }
+
+        return `
+          <details class="order-card" id="customer-order-${o.id}" data-order-id="${o.id}">
+            <summary class="order-compact">
+              <span class="order-compact-main"><span class="order-compact-title">${o.serviceTitle || 'Dịch vụ theo yêu cầu'}</span><span class="order-compact-meta">Đơn ${o.id} · ${o.providerName || 'Chưa cập nhật chuyên gia'}</span></span>
+              <span class="order-compact-side">${badgeStatus}<span class="order-expand-label">Xem chi tiết <i class="fa-solid fa-chevron-down"></i></span><span class="order-expand-label order-collapse-label">Thu gọn <i class="fa-solid fa-chevron-up"></i></span></span>
+            </summary>
+            <div class="order-expanded-content">
+            <div class="order-head">
+              <div style="min-width:0;flex:1">
+                <div class="order-badges"><span class="order-id">Đơn ${o.id}</span>${badgeStatus}<span class="badge-escrow"><i class="fa-solid fa-lock"></i> ${o.paymentStatus === 'pending' ? 'Chưa ký quỹ' : o.escrowStatus === 'payment_cancelled' ? 'Chưa thanh toán' : o.escrowStatus === 'completed' ? 'Đã giải ngân' : 'Đang ký quỹ'}</span></div>
+                <div class="order-meta"><span><i class="fa-regular fa-calendar"></i> Tạo ngày ${o.date || '—'}</span><span><i class="fa-regular fa-clock"></i> Hạn ${o.deadline || 'Thỏa thuận'}</span></div>
+              </div>
+              <div class="order-total"><div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Tiền ký quỹ</div><div style="font-size:20px;font-weight:800;color:#15803d;margin-top:4px">${formatVND(o.escrowDeposit || o.price)}</div></div>
+            </div>
+
+            <div class="order-body">
+              <div class="order-service-box">
+                <div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:.05em">Dịch vụ</div>
+                <h3 class="order-service-title">${o.serviceTitle || 'Dịch vụ theo yêu cầu'}</h3>
+                <div class="provider-info"><i class="fa-solid fa-user-tie" style="color:#16A34A"></i><span>Chuyên gia</span><strong>${o.providerName || 'Chưa cập nhật'}</strong>${o.providerPhone ? `<span style="color:#94a3b8">•</span><span><i class="fa-solid fa-phone" style="color:#94a3b8"></i> ${o.providerPhone}</span>` : ''}</div>
+                ${o.notes ? `<div class="order-notes"><strong>Ghi chú:</strong> ${o.notes}</div>` : ''}
+              </div>
+                <div class="escrow-info"><div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:.05em;margin-bottom:8px">Bảo vệ thanh toán</div><div style="display:flex;gap:10px;align-items:flex-start;color:${o.paymentStatus === 'pending' ? '#B45309' : '#15803d'};font-size:12px;font-weight:700;line-height:1.5"><i class="fa-solid ${o.paymentStatus === 'pending' ? 'fa-clock' : 'fa-shield-halved'}" style="font-size:17px;margin-top:1px"></i><span>${o.paymentStatus === 'pending' ? 'Chờ xác nhận thanh toán. Provider chưa nhận được yêu cầu.' : 'Tiền được giữ an toàn cho đến khi bạn nghiệm thu công việc.'}</span></div></div>
+            </div>
+
+            <div class="milestones-panel">
+              <div style="font-weight:800;font-size:12px;color:#0f172a;margin-bottom:13px;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-list-check" style="color:#16A34A"></i> Tiến độ công việc</div>
+              <div class="milestones-grid">
+                ${(o.milestones || []).length ? (o.milestones || []).map((m, idx) => `
+                  <div class="milestone-step">
+                    <div class="milestone-dot ${m.done ? 'done' : 'pending'}">
+                      ${m.done ? '<i class="fa-solid fa-check"></i>' : idx + 1}
+                    </div>
+                    <div>
+                      <div style="font-size:12.5px; font-weight:700; color:${m.done ? '#0F172A' : '#94A3B8'}; line-height:1.3;">
+                        ${m.title}
+                      </div>
+                      <div style="font-size:11px; color:#64748B; margin-top:2px;">
+                        ${m.time || ''}
+                      </div>
+                    </div>
+                  </div>
+                `).join('') : '<div style="font-size:12px;color:#64748b">Chưa có mốc tiến độ được cập nhật.</div>'}
+              </div>
+            </div>
+
+            <div class="order-actions">
+              <a href="customer_chat.html?with=${o.providerId || ''}" class="btn btn-outline btn-sm" style="font-weight:700"><i class="fa-solid fa-comments" style="color:#16A34A"></i> Nhắn chuyên gia</a>
+              <div class="order-action-group">
+                ${o.paymentStatus === 'pending' && (o.orderStatus === 'pending' || o.orderStatus === 'pending_payment') ? `
+                  <button type="button" onclick="openRetryPaymentModal('${o.id}')" class="btn btn-primary btn-sm" style="font-weight:700">
+                    <i class="fa-solid fa-rotate-right"></i> Thanh toán lại
+                  </button>
+                ` : ''}
+                ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') ? `
+                  <button onclick="cancelCustomerOrder('${o.id}', ${o.paymentStatus === 'pending'})" class="btn btn-outline btn-sm" style="border-color:#94a3b8;color:#475569;font-weight:700">
+                    <i class="fa-solid fa-xmark"></i> Hủy đơn
+                  </button>
+                ` : ''}
+                ${isDelivered ? `
+                  <button onclick="cancelCustomerOrder('${o.id}', false, true)" class="btn btn-outline btn-sm" style="border-color:#fca5a5;color:#b91c1c;font-weight:700">
+                    <i class="fa-solid fa-scale-balanced"></i> Khiếu nại đơn
+                  </button>
+                ` : ''}
+                ${!isCompleted && !isDisputed && !isCancelled && o.paymentStatus !== 'pending' ? `
+                  <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fecaca;color:#b91c1c;font-weight:700">
+                    <i class="fa-solid fa-shield-halved"></i> Khiếu nại
+                  </a>
+                ` : ''}
+
+                ${canUndoCancellation ? `
+                  <button onclick="undoCustomerOrderCancellation('${o.id}')" class="btn btn-outline btn-sm" style="border-color:#16a34a;color:#15803d;font-weight:700">
+                    <i class="fa-solid fa-rotate-left"></i> Hoàn tác hủy
+                  </button>
+                ` : ''}
+
+                ${isDelivered || (isEscrowHeld && !isCompleted && !isDisputed) ? `
+                  <button onclick="openReleaseModal('${o.id}', ${o.price})" class="btn btn-primary" style="font-weight:700">
+                    <i class="fa-solid fa-circle-check"></i> Nghiệm thu & giải ngân
+                  </button>
+                ` : ''}
+
+                ${isCompleted && !reviewedOrderIds.has(o.id) ? `
+                  <a href="customer_review.html?orderId=${o.id}" class="btn btn-primary" style="font-weight:700;background:#F59E0B;border-color:#F59E0B">
+                    <i class="fa-solid fa-star"></i> Đánh giá
+                  </a>
+                ` : isCompleted ? '<span class="btn btn-outline btn-sm" aria-label="Đã đánh giá"><i class="fa-solid fa-check" style="color:#16a34a"></i> Đã đánh giá</span>' : ''}
+              </div>
+            </div>
+
+            </div>
+          </details>
+        `;
+      }).join('');
+      const requestedOrderId = new URLSearchParams(window.location.search).get('orderId');
+      if (requestedOrderId) {
+        const target = Array.from(container.querySelectorAll('[data-order-id]')).find(card => card.dataset.orderId === requestedOrderId);
+        if (target) {
+          target.open = true;
+          setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+        }
+      }
+    }
+
+    function openReleaseModal(orderId, amount) {
+      targetOrderId = orderId;
+      document.getElementById('modalReleaseAmount').textContent = formatVND(amount);
+      document.getElementById('releaseModal').style.display = 'flex';
+    }
+
+    function closeReleaseModal() {
+      targetOrderId = null;
+      document.getElementById('releaseModal').style.display = 'none';
+    }
+
+    async function confirmReleaseEscrow() {
+      if (!targetOrderId) return;
+      const btn = document.getElementById('btnConfirmRelease');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Xử Lý...`;
+
+      const res = await apiRequest(`/api/orders/${targetOrderId}/release-escrow`, {
+        method: 'PUT'
+      });
+
+      if (res.success) {
+        showToast('Nghiệm Thu Thành Công', res.message, 'success');
+        closeReleaseModal();
+        setTimeout(() => {
+          window.location.href = `customer_review.html?orderId=${targetOrderId}`;
+        }, 1200);
+      } else {
+        showToast('Lỗi', res.message || 'Không thể giải ngân tiền ký quỹ', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> Xác Nhận Giải Ngân`;
+      }
+    }
+
+    function openRetryPaymentModal(orderId) {
+      retryPaymentOrderId = orderId;
+      document.querySelector('input[name="retryPaymentMethod"][value="VNPAYQR"]').checked = true;
+      document.getElementById('retryPaymentModal').style.display = 'flex';
+    }
+
+    function closeRetryPaymentModal() {
+      retryPaymentOrderId = null;
+      const button = document.getElementById('retryPaymentSubmit');
+      button.disabled = false;
+      button.innerHTML = '<i class="fa-solid fa-credit-card"></i> Tiếp tục';
+      document.getElementById('retryPaymentModal').style.display = 'none';
+    }
+
+    async function retryOrderPayment() {
+      if (!retryPaymentOrderId || !requireCustomerLogin()) return;
+      const orderId = retryPaymentOrderId;
+      const button = document.getElementById('retryPaymentSubmit');
+      const originalHtml = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo giao dịch...';
+      try {
+        const bankCode = document.querySelector('input[name="retryPaymentMethod"]:checked')?.value ?? 'VNPAYQR';
+        const result = await apiRequest(`/api/payments/vnpay/orders/${encodeURIComponent(orderId)}`, {
+          method: 'POST',
+          body: JSON.stringify({ bankCode })
+        });
+        if (!result.success || !result.paymentUrl) {
+          throw new Error(result.message || 'Không thể tạo lại giao dịch VNPay.');
+        }
+        window.location.href = result.paymentUrl;
+      } catch (error) {
+        showToast('Không thể thanh toán lại', error.message || 'Vui lòng thử lại sau.', 'error');
+        button.disabled = false;
+        button.innerHTML = originalHtml;
+      }
+    }
+
+    async function cancelCustomerOrder(orderId, paymentPending = false, isDelivered = false) {
+      const prompt = paymentPending
+        ? 'Hủy đơn đang chờ thanh toán? Đơn sẽ bị hủy và không có khoản tiền nào bị trừ.'
+        : isDelivered
+          ? 'Gửi khiếu nại cho đơn đã bàn giao? Đơn sẽ chuyển sang tranh chấp. Tiền ký quỹ vẫn bị giữ cho đến khi Admin xem xét, chưa được hoàn ngay.'
+          : 'Hủy đơn này? Tiền ký quỹ sẽ được hoàn vào ví SkillRental. Bạn có thể hoàn tác trong 5 phút; nếu hoàn tác, ví cần đủ số dư để thu hồi khoản hoàn và khung giờ phải còn trống.';
+      if (!confirm(prompt)) return;
+      const res = await apiRequest(`/api/orders/${orderId}/cancel`, {
+        method: 'PUT',
+        body: JSON.stringify({ reason: 'Khách hàng hủy đơn' })
+      });
+      if (res.success) {
+        showToast('Thành công', res.message || 'Đã cập nhật trạng thái đơn hàng.', 'success');
+        await loadCustomerOrders();
+      } else {
+        showToast('Lỗi', res.message || 'Không thể hủy đơn hàng', 'error');
+      }
+    }
+
+    async function undoCustomerOrderCancellation(orderId) {
+      if (!confirm('Bạn chỉ có thể hoàn tác trong 5 phút sau khi hủy. Nếu tiền đã được hoàn vào ví, ví cần đủ số dư để thu hồi khoản hoàn; khung giờ dịch vụ phải còn trống. Tiếp tục khôi phục đơn?')) return;
+      const result = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}/undo-cancel`, { method: 'PUT' });
+      if (result.success) {
+        showToast('Đã khôi phục đơn', result.message || 'Đơn hàng đã được khôi phục.', 'success');
+        await loadCustomerOrders();
+      } else {
+        showToast('Không thể hoàn tác', result.message || 'Vui lòng thử lại.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

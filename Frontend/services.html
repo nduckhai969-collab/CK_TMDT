@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Rental - Quản lý Dịch vụ &amp; Bài đăng</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">S</div>
+        <div class="brand-text">
+          <strong>SKILL RENTAL</strong>
+          <span>Admin Portal (B4)</span>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <div class="menu-label">TỔNG QUAN</div>
+        <a class="menu-item" href="admin.html">
+          <span class="menu-icon">⌂</span>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ NGƯỜI DÙNG</div>
+        <a class="menu-item" href="users.html">
+          <span class="menu-icon">♙</span>
+          <span>Người dùng</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=locked">
+          <span class="menu-icon">▣</span>
+          <span>Khóa tài khoản</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=unlock-requests">
+          <span class="menu-icon">🔓</span>
+          <span>Mở khóa tài khoản</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ PROVIDER</div>
+        <a class="menu-item" href="providers.html">
+          <span class="menu-icon">♙</span>
+          <span>Tất cả Provider</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt Provider &amp; Hồ sơ</span>
+          <span class="badge-count" id="badge-provider-pending">4</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=skills">
+          <span class="menu-icon">✦</span>
+          <span>Duyệt kỹ năng &amp; CC</span>
+          <span class="badge-count" id="badge-skill-pending">3</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ DỊCH VỤ</div>
+        <a class="menu-item active" href="services.html">
+          <span class="menu-icon">▤</span>
+          <span>Dịch vụ</span>
+        </a>
+        <a class="menu-item" href="services.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt dịch vụ &amp; giá</span>
+          <span class="badge-count" id="badge-service-pending">5</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ GIAO DỊCH &amp; ĐÁNH GIÁ</div>
+        <a class="menu-item" href="orders.html">
+          <span class="menu-icon">▤</span>
+          <span>Đơn hàng</span>
+        </a>
+        <a class="menu-item" href="reviews.html">
+          <span class="menu-icon">★</span>
+          <span>Đánh giá</span>
+        </a>
+        <a class="menu-item" href="complaints.html">
+          <span class="menu-icon">⚑</span>
+          <span>Khiếu nại</span>
+          <span class="badge-count" id="badge-complaint-count">2</span>
+        </a>
+
+        <div class="menu-label">THỐNG KÊ &amp; BÁO CÁO</div>
+        <a class="menu-item" href="reports.html">
+          <span class="menu-icon">▥</span>
+          <span>Báo cáo &amp; Xuất file</span>
+        </a>
+        <a class="menu-item" href="statistics.html">
+          <span class="menu-icon">◫</span>
+          <span>Thống kê hệ thống</span>
+        </a>
+        <a class="menu-item" href="cashflow.html">
+          <span class="menu-icon">◷</span>
+          <span>Thống kê dòng tiền</span>
+        </a>
+
+        <div class="menu-label">CẤU HÌNH &amp; GÓI</div>
+        <a class="menu-item" href="packages.html">
+          <span class="menu-icon">▢</span>
+          <span>Gói đăng tin</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="online-dot"></div>
+        <span>Hệ thống B4 đang hoạt động</span>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="breadcrumb-tag">QUẢN LÝ / DỊCH VỤ &amp; BÀI ĐĂNG</span>
+          <div class="top-search">
+            <span>⌕</span>
+            <input type="text" placeholder="Tìm kiếm dịch vụ, kỹ năng...">
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <a href="dashboard.html" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:12px;">
+            <span>💼</span>
+            <span>Cổng Provider ↗</span>
+          </a>
+          <button class="icon-badge-btn" onclick="showToast('Thông báo', 'Có bài đăng dịch vụ mới cần duyệt', 'info')">
+            <span>♢</span>
+            <span class="badge-dot">3</span>
+          </button>
+          <div class="admin-profile">
+            <div class="admin-avatar">A</div>
+            <div class="admin-info">
+              <strong>Nguyễn Văn Admin</strong>
+              <span>Quản trị viên hệ thống</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-header">
+          <div class="page-title-group">
+            <h1><span class="green-pill"></span> Quản lý Dịch vụ &amp; Bài đăng</h1>
+            <p>Phê duyệt bài đăng dịch vụ mới, kiểm duyệt cập nhật bảng giá và xử lý khóa dịch vụ vi phạm</p>
+          </div>
+        </div>
+
+        <!-- Subtabs -->
+        <div class="subtabs">
+          <button class="subtab-btn active" data-subtab="tab-all">
+            <span>Tất cả dịch vụ</span>
+          </button>
+          <button class="subtab-btn" data-subtab="tab-pending">
+            <span>Duyệt dịch vụ mới</span>
+            <span class="tab-badge" id="tab-badge-pending-svc">3</span>
+          </button>
+          <button class="subtab-btn" data-subtab="tab-prices">
+            <span>Duyệt điều chỉnh giá</span>
+            <span class="tab-badge" id="tab-badge-pending-prices">2</span>
+          </button>
+          <button class="subtab-btn" data-subtab="tab-locked">
+            <span>Dịch vụ bị khóa vi phạm</span>
+          </button>
+        </div>
+
+        <!-- Tab 1: All Services -->
+        <div class="subtab-content active" id="tab-all">
+          <div class="filter-toolbar">
+            <div class="filter-left">
+              <div class="search-input-wrap">
+                <span>⌕</span>
+                <input type="text" id="svc-search-input" placeholder="Tìm kiếm tên dịch vụ, Provider...">
+              </div>
+              <select class="filter-select" id="svc-cat-filter">
+                <option value="all">Tất cả danh mục</option>
+                <option value="IT">Lập trình & CNTT</option>
+                <option value="Design">Thiết kế & Đồ họa</option>
+                <option value="Tutor">Gia sư</option>
+                <option value="Home">Dọn dẹp & Gia đình</option>
+                <option value="Repair">Sửa chữa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tên dịch vụ</th>
+                    <th>Danh mục</th>
+                    <th>Provider sở hữu</th>
+                    <th>Đơn giá dịch vụ</th>
+                    <th>Đánh giá</th>
+                    <th>Trạng thái</th>
+                    <th style="text-align:right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="all-services-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Pending Services -->
+        <div class="subtab-content" id="tab-pending">
+          <div class="card">
+            <div class="panel-header">
+              <h2>Bài đăng dịch vụ mới chờ phê duyệt</h2>
+              <p>Kiểm tra nội dung mô tả, tính minh bạch của dịch vụ trước khi cho phép xuất hiện trên chợ</p>
+            </div>
+            <div class="table-wrap">
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tên dịch vụ mới</th>
+                      <th>Danh mục</th>
+                      <th>Provider</th>
+                      <th>Đơn giá đề xuất</th>
+                      <th>Ngày gửi duyệt</th>
+                      <th style="text-align:right">Xét duyệt</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pending-services-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Price Changes -->
+        <div class="subtab-content" id="tab-prices">
+          <div class="card">
+            <div class="panel-header">
+              <h2>Yêu cầu điều chỉnh bảng giá dịch vụ</h2>
+              <p>Provider xin thay đổi mức giá theo giờ / theo gói công việc</p>
+            </div>
+            <div class="table-wrap">
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Dịch vụ</th>
+                      <th>Provider</th>
+                      <th>Giá hiện tại</th>
+                      <th>Giá mới đề xuất</th>
+                      <th>Lý do điều chỉnh</th>
+                      <th style="text-align:right">Xử lý</th>
+                    </tr>
+                  </thead>
+                  <tbody id="price-changes-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Locked Services -->
+        <div class="subtab-content" id="tab-locked">
+          <div class="card">
+            <div class="panel-header">
+              <h2>Dịch vụ bị gỡ bỏ hoặc tạm khóa vi phạm</h2>
+              <p>Dịch vụ có nội dung phản cảm, lừa đảo hoặc vi phạm quy chế an ninh mạng</p>
+            </div>
+            <div class="table-wrap">
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Dịch vụ</th>
+                      <th>Provider</th>
+                      <th>Lý do khóa</th>
+                      <th>Người khóa</th>
+                      <th>Ngày khóa</th>
+                      <th style="text-align:right">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="locked-services-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderServicesPage();
+      setupServiceEvents();
+    });
+
+    function renderServicesPage() {
+      const state = getAppState();
+
+      // Tab 1: Active Services
+      const tbodyAll = document.getElementById('all-services-tbody');
+      const q = (document.getElementById('svc-search-input')?.value || '').toLowerCase().trim();
+      const cat = document.getElementById('svc-cat-filter')?.value || 'all';
+
+      const activeSvcs = state.services.filter(s => s.status === 'active').filter(s => {
+        const matchQ = s.title.toLowerCase().includes(q) || s.providerName.toLowerCase().includes(q);
+        const matchCat = (cat === 'all') || (s.category === cat);
+        return matchQ && matchCat;
+      });
+
+      if (tbodyAll) {
+        if (activeSvcs.length === 0) {
+          tbodyAll.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-secondary);">Không tìm thấy dịch vụ phù hợp.</td></tr>`;
+        } else {
+          tbodyAll.innerHTML = activeSvcs.map(s => `
+            <tr>
+              <td><strong>${s.title}</strong></td>
+              <td><span class="badge badge-neutral">${s.category}</span></td>
+              <td>${s.providerName}</td>
+              <td><strong style="color:var(--secondary)">${s.price.toLocaleString('vi-VN')}đ</strong></td>
+              <td>${s.rating}</td>
+              <td><span class="badge badge-success">Đang hiển thị</span></td>
+              <td style="text-align:right">
+                <button class="btn btn-danger-outline btn-xs" onclick="triggerLockService('${s.id}')">Khóa vi phạm</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // Tab 2: Pending Services
+      const pendingSvcs = state.services.filter(s => s.status === 'pending');
+      const badgePending = document.getElementById('tab-badge-pending-svc');
+      if (badgePending) badgePending.textContent = pendingSvcs.length;
+
+      const tbodyPending = document.getElementById('pending-services-tbody');
+      if (tbodyPending) {
+        if (pendingSvcs.length === 0) {
+          tbodyPending.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-secondary);">Không có bài đăng mới chờ duyệt.</td></tr>`;
+        } else {
+          tbodyPending.innerHTML = pendingSvcs.map(s => `
+            <tr>
+              <td><strong>${s.title}</strong></td>
+              <td><span class="badge badge-neutral">${s.category}</span></td>
+              <td>${s.providerName}</td>
+              <td><strong style="color:var(--primary)">${s.price.toLocaleString('vi-VN')}đ</strong></td>
+              <td>${s.dateSubmitted || 'Hôm nay'}</td>
+              <td style="text-align:right">
+                <button class="btn btn-primary btn-xs" onclick="approveService('${s.id}')">Duyệt bài đăng</button>
+                <button class="btn btn-danger-outline btn-xs" onclick="rejectService('${s.id}')">Từ chối</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // Tab 3: Price Changes
+      const priceSvcs = state.services.filter(s => s.status === 'price_pending');
+      const badgePrice = document.getElementById('tab-badge-pending-prices');
+      if (badgePrice) badgePrice.textContent = priceSvcs.length;
+
+      const tbodyPrices = document.getElementById('price-changes-tbody');
+      if (tbodyPrices) {
+        if (priceSvcs.length === 0) {
+          tbodyPrices.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-secondary);">Không có yêu cầu điều chỉnh giá nào.</td></tr>`;
+        } else {
+          tbodyPrices.innerHTML = priceSvcs.map(s => `
+            <tr>
+              <td><strong>${s.title}</strong></td>
+              <td>${s.providerName}</td>
+              <td><span style="text-decoration:line-through; color:var(--text-secondary);">${s.price.toLocaleString('vi-VN')}đ</span></td>
+              <td><strong style="color:var(--primary); font-size:14px;">${s.newPrice.toLocaleString('vi-VN')}đ</strong></td>
+              <td>${s.reason}</td>
+              <td style="text-align:right">
+                <button class="btn btn-primary btn-xs" onclick="approvePrice('${s.id}')">Duyệt giá mới</button>
+                <button class="btn btn-danger-outline btn-xs" onclick="rejectPrice('${s.id}')">Từ chối</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // Tab 4: Locked Services
+      const lockedSvcs = state.services.filter(s => s.status === 'locked');
+      const tbodyLocked = document.getElementById('locked-services-tbody');
+      if (tbodyLocked) {
+        if (lockedSvcs.length === 0) {
+          tbodyLocked.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-secondary);">Không có dịch vụ nào đang bị khóa.</td></tr>`;
+        } else {
+          tbodyLocked.innerHTML = lockedSvcs.map(s => `
+            <tr>
+              <td><strong>${s.title}</strong></td>
+              <td>${s.providerName}</td>
+              <td><span style="color:var(--error); font-weight:600;">${s.lockReason}</span></td>
+              <td>Admin Hệ Thống</td>
+              <td>25/04/2025</td>
+              <td style="text-align:right">
+                <button class="btn btn-secondary btn-xs" onclick="unlockService('${s.id}')">Mở khóa lại</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      }
+    }
+
+    function setupServiceEvents() {
+      const search = document.getElementById('svc-search-input');
+      const cat = document.getElementById('svc-cat-filter');
+      if (search) search.addEventListener('input', renderServicesPage);
+      if (cat) cat.addEventListener('change', renderServicesPage);
+    }
+
+    function approveService(id) {
+      const state = getAppState();
+      const svc = state.services.find(s => s.id === id);
+      if (svc) {
+        svc.status = 'active';
+        if (window.adminApi) {
+          window.adminApi.approveService(id).catch(console.warn);
+        }
+        saveAppState(state);
+        renderServicesPage();
+        updateSidebarBadges();
+        showToast('Duyệt bài đăng dịch vụ', `Dịch vụ "${svc.title}" đã được hiển thị trên sàn!`, 'success');
+      }
+    }
+
+    function rejectService(id) {
+      const state = getAppState();
+      const svc = state.services.find(s => s.id === id);
+      if (svc) {
+        svc.status = 'rejected';
+        saveAppState(state);
+        renderServicesPage();
+        updateSidebarBadges();
+        showToast('Từ chối dịch vụ', `Đã từ chối bài đăng "${svc.title}"`, 'warning');
+      }
+    }
+
+    function approvePrice(id) {
+      const state = getAppState();
+      const svc = state.services.find(s => s.id === id);
+      if (svc) {
+        svc.price = svc.newPrice;
+        svc.status = 'active';
+        if (window.adminApi) {
+          window.adminApi.approveServicePrice(id).catch(console.warn);
+        }
+        saveAppState(state);
+        renderServicesPage();
+        updateSidebarBadges();
+        showToast('Duyệt điều chỉnh giá', `Đã cập nhật mức giá mới cho dịch vụ "${svc.title}"!`, 'success');
+      }
+    }
+
+    function rejectPrice(id) {
+      const state = getAppState();
+      const svc = state.services.find(s => s.id === id);
+      if (svc) {
+        svc.status = 'active';
+        saveAppState(state);
+        renderServicesPage();
+        updateSidebarBadges();
+        showToast('Từ chối điều chỉnh giá', `Đã giữ nguyên bảng giá hiện tại`, 'info');
+      }
+    }
+
+    function triggerLockService(id) {
+      const state = getAppState();
+      const svc = state.services.find(s => s.id === id);
+      if (svc) {
+        const reason = prompt('Nhập lý do khóa dịch vụ vi phạm chính sách:', 'Nội dung vi phạm tiêu chuẩn cộng đồng');
+        if (reason) {
+          svc.status = 'locked';
+          svc.lockReason = reason;
+          if (window.adminApi) {
+            window.adminApi.lockService(id, reason).catch(console.warn);
+          }
+          saveAppState(state);
+          renderServicesPage();
+          showToast('Khóa dịch vụ vi phạm', `Đã gỡ dịch vụ "${svc.title}" khỏi sàn.`, 'warning');
+        }
+      }
+    }
+
+    function unlockService(id) {
+      const state = getAppState();
+      const svc = state.services.find(s => s.id === id);
+      if (svc) {
+        svc.status = 'active';
+        svc.lockReason = '';
+        if (window.adminApi) {
+          window.adminApi.unlockService(id).catch(console.warn);
+        }
+        saveAppState(state);
+        renderServicesPage();
+        showToast('Mở khóa dịch vụ', `Dịch vụ "${svc.title}" đã được kích hoạt lại.`, 'success');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Rental - Quản lý & Mở khóa Người dùng (UC-53b)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    /* Style bổ sung cho giao diện Thẩm tra khiếu nại UC-53b */
+    .appeal-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .appeal-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .appeal-user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .appeal-box {
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .appeal-box-lock {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      color: #9b2c2c;
+    }
+    .appeal-box-user {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+    }
+    .appeal-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px dotted #e2e8f0;
+    }
+    .appeal-actions {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">S</div>
+        <div class="brand-text">
+          <strong>SKILL RENTAL</strong>
+          <span>Admin Portal (B4)</span>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <div class="menu-label">TỔNG QUAN</div>
+        <a class="menu-item" href="admin.html">
+          <span class="menu-icon">⌂</span>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ NGƯỜI DÙNG</div>
+        <a class="menu-item" href="users.html" id="menu-all-users">
+          <span class="menu-icon">♙</span>
+          <span>Người dùng</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=locked" id="menu-locked-users">
+          <span class="menu-icon">▣</span>
+          <span>Khóa tài khoản</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=unlock-requests" id="menu-unlock-requests">
+          <span class="menu-icon">🔓</span>
+          <span>Mở khóa tài khoản</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ PROVIDER</div>
+        <a class="menu-item" href="providers.html">
+          <span class="menu-icon">♙</span>
+          <span>Tất cả Provider</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt Provider & Hồ sơ</span>
+          <span class="badge-count" id="badge-provider-pending">4</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=skills">
+          <span class="menu-icon">✦</span>
+          <span>Duyệt kỹ năng & CC</span>
+          <span class="badge-count" id="badge-skill-pending">3</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ DỊCH VỤ</div>
+        <a class="menu-item" href="services.html">
+          <span class="menu-icon">▤</span>
+          <span>Dịch vụ</span>
+        </a>
+        <a class="menu-item" href="services.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt dịch vụ & giá</span>
+          <span class="badge-count" id="badge-service-pending">5</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ GIAO DỊCH & ĐÁNH GIÁ</div>
+        <a class="menu-item" href="orders.html"><span class="menu-icon">▤</span><span>Đơn hàng</span></a>
+        <a class="menu-item" href="reviews.html"><span class="menu-icon">★</span><span>Đánh giá</span></a>
+        <a class="menu-item" href="complaints.html">
+          <span class="menu-icon">⚑</span><span>Khiếu nại</span>
+          <span class="badge-count">2</span>
+        </a>
+
+        <div class="menu-label">THỐNG KÊ & BÁO CÁO</div>
+        <a class="menu-item" href="reports.html"><span class="menu-icon">▥</span><span>Báo cáo & Xuất file</span></a>
+        <a class="menu-item" href="statistics.html"><span class="menu-icon">◫</span><span>Thống kê hệ thống</span></a>
+        <a class="menu-item" href="cashflow.html"><span class="menu-icon">◷</span><span>Thống kê dòng tiền</span></a>
+
+        <div class="menu-label">CẤU HÌNH & GÓI</div>
+        <a class="menu-item" href="packages.html"><span class="menu-icon">▢</span><span>Gói đăng tin</span></a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="online-dot"></div>
+        <span>Hệ thống B4 đang hoạt động</span>
+      </div>
+    </aside>
+
+    <!-- MAIN MAIN -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="breadcrumb-tag" id="breadcrumb-title">QUẢN LÝ / NGƯỜI DÙNG</span>
+          <div class="top-search">
+            <span>⌕</span>
+            <input type="text" id="top-search-input" placeholder="Tìm kiếm nhanh người dùng, email, SĐT...">
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <a href="dashboard.html" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; text-decoration:none; margin-right:12px;">
+            <span>💼</span><span>Cổng Provider ↗</span>
+          </a>
+          <button class="icon-badge-btn" onclick="showToast('Thông báo hệ thống', 'Bạn có các tác vụ người dùng cần kiểm tra', 'info')">
+            <span>♢</span><span class="badge-dot">3</span>
+          </button>
+          <div class="admin-profile">
+            <div class="admin-avatar">A</div>
+            <div class="admin-info">
+              <strong>Nguyễn Văn Admin</strong>
+              <span>Quản trị viên hệ thống</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="page-header">
+          <div class="page-title-group">
+            <h1 id="page-main-title"><span class="green-pill"></span> Quản lý Người dùng</h1>
+            <p id="page-sub-title">Tra cứu danh sách, xem chi tiết và thực hiện Khóa / Mở khóa tài khoản người dùng vi phạm</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary btn-sm" onclick="exportDataSimulation('Danh_Sach_Nguoi_Dung')">
+              <span>⤓</span> Xuất danh sách
+            </button>
+          </div>
+        </div>
+
+        <!-- VIEW 1: BẢNG DANH SÁCH TÀI KHOẢN -->
+        <div id="standard-users-view">
+          <div class="filter-toolbar">
+            <div class="filter-left">
+              <div class="search-input-wrap">
+                <span>⌕</span>
+                <input type="text" id="user-search-input" placeholder="Tìm theo ID, họ tên, email, SĐT...">
+              </div>
+
+              <select class="filter-select" id="user-role-filter">
+                <option value="all">Tất cả vai trò</option>
+                <option value="Customer">Khách hàng (Customer)</option>
+                <option value="Provider">Nhà cung cấp (Provider)</option>
+              </select>
+
+              <select class="filter-select" id="user-status-filter">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="active">Đang hoạt động</option>
+                <option value="locked">Đã bị khóa</option>
+              </select>
+            </div>
+
+            <div class="filter-right">
+              <button class="btn btn-secondary btn-sm" id="reset-filter-btn">Làm mới bộ lọc</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Người dùng / Email</th>
+                    <th>Vai trò</th>
+                    <th>Số điện thoại</th>
+                    <th>Ngày tham gia</th>
+                    <th>Tổng chi / Thu</th>
+                    <th>Trạng thái tài khoản</th>
+                    <th style="text-align:right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="users-table-tbody"></tbody>
+              </table>
+            </div>
+
+            <div class="table-footer">
+              <span class="table-info-text" id="users-count-info"></span>
+              <div class="pagination">
+                <button class="page-btn">‹</button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">›</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 2: KHỦNG THẨM TRA YÊU CẦU MỞ KHÓA & KHIẾU NẠI (UC-53b) -->
+        <div id="unlock-requests-view" style="display: none;">
+          <div id="appeal-cards-container">
+            <!-- Render động danh sách card giải trình từ JS -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Khóa tài khoản -->
+  <div class="modal-overlay" id="modal-lock-user">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Khóa tài khoản người dùng</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-lock-user')">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom:14px; color:var(--text-secondary);">
+          Bạn đang thực hiện khóa quyền truy cập của tài khoản <strong id="lock-target-name" style="color:var(--secondary)">...</strong>
+        </p>
+        <div class="form-group">
+          <label class="form-label">Thời hạn khóa tài khoản <span style="color:var(--danger)">*</span></label>
+          <select class="form-control" id="lock-duration-select">
+            <option value="7">7 ngày (Cảnh cáo tạm thời)</option>
+            <option value="30">30 ngày (Vi phạm nghiêm trọng)</option>
+            <option value="permanent">Vĩnh viễn (Khóa vĩnh viễn không thể mở)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Lý do khóa tài khoản vi phạm <span style="color:var(--danger)">*</span></label>
+          <textarea class="form-control" id="lock-reason-input" placeholder="Ví dụ: Gian lận đơn hàng, quấy rối khách hàng, vi phạm thanh toán..." rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-lock-user')">Hủy bỏ</button>
+        <button class="btn btn-danger btn-sm" id="confirm-lock-btn">Xác nhận khóa tài khoản</button>
+      </div>
+    </div>
+  <!-- Modal Xem Chi tiết Người dùng -->
+  <div class="modal-overlay" id="modal-user-detail">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Thông tin chi tiết người dùng</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-user-detail')">×</button>
+      </div>
+      <div class="modal-body" id="user-detail-body">
+        <!-- Render chi tiết động -->
+      </div>
+      <div class="modal-footer" id="user-detail-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-user-detail')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="common.js"></script>
+  <script>
+    let activeTargetUserId = null;
+
+    // Dữ liệu mẫu danh sách giải trình UC-53b
+    const initialUnlockRequests = [
+      {
+        id: 'USR004',
+        name: 'Hoàng Văn Nam',
+        email: 'nam.hoang@example.com',
+        phone: '0933 221 100',
+        role: 'Customer',
+        badgeTag: 'Chờ Admin xem xét',
+        badgeClass: 'badge-warning',
+        originalReason: 'Hủy đơn hàng liên tục 5 lần không lý do (Thời hạn khóa: 7 ngày).',
+        appealText: '"Tôi xin thành thật nhận lỗi vì thời gian qua gia đình có việc khẩn cấp nên không kịp trao đổi với thợ. Tôi cam kết tuân thủ 100% quy chế giao dịch và thanh toán cọc đầy đủ qua sàn."',
+        appealMeta: 'Thời gian gửi yêu cầu: 28/04/2025 08:30 (Lần khiếu nại thứ 1)',
+        type: 'standard'
+      },
+      {
+        id: 'USR007',
+        name: 'Đặng Quốc Huy',
+        email: 'huy.dang@example.com',
+        phone: '0911 334 455',
+        role: 'Provider',
+        badgeTag: 'Vi phạm nghiêm trọng',
+        badgeClass: 'badge-danger',
+        originalReason: 'Gian lận đánh giá và sử dụng tài khoản ảo để trục lợi sàn (Khóa Vĩnh viễn).',
+        appealText: '"Tôi xin cam đoan không tái phạm hành vi cài link phần mềm hay tạo nick ảo. Đề nghị ban quản trị cho tôi cơ hội tiếp tục làm việc."',
+        appealMeta: 'Thời gian gửi yêu cầu: 27/04/2025 15:45 • Báo cáo An ninh mạng liên quan',
+        type: 'severe'
+      }
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initPageRoute();
+    });
+
+    function initPageRoute() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const filterParam = urlParams.get('filter');
+
+      // Set Active Class Sidebar
+      document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+
+      if (filterParam === 'unlock-requests') {
+        document.getElementById('menu-unlock-requests')?.classList.add('active');
+        switchToUnlockRequestsView();
+      } else if (filterParam === 'locked') {
+        document.getElementById('menu-locked-users')?.classList.add('active');
+        switchToStandardUsersView('locked');
+      } else {
+        document.getElementById('menu-all-users')?.classList.add('active');
+        switchToStandardUsersView('all');
+      }
+
+      setupEvents();
+    }
+
+    // Chuyển sang giao diện Thẩm tra khiếu nại (UC-53b)
+    function switchToUnlockRequestsView() {
+      document.getElementById('breadcrumb-title').textContent = 'QUẢN LÝ / XỬ LÝ YÊU CẦU MỞ KHÓA (UC-53b)';
+      document.getElementById('page-main-title').innerHTML = '<span class="green-pill"></span> Xử lý Yêu cầu Mở khóa & Khiếu nại';
+      document.getElementById('page-sub-title').textContent = 'Thẩm tra đơn khiếu nại, cam kết tuân thủ quy chế sàn từ người dùng bị khóa và đưa ra quyết định phục hồi tài khoản';
+
+      document.getElementById('standard-users-view').style.display = 'none';
+      document.getElementById('unlock-requests-view').style.display = 'block';
+
+      renderAppealCards();
+    }
+
+    // Chuyển sang giao diện Danh sách bảng thông thường
+    function switchToStandardUsersView(statusFilter) {
+      document.getElementById('breadcrumb-title').textContent = 'QUẢN LÝ / NGƯỜI DÙNG';
+      document.getElementById('page-main-title').innerHTML = '<span class="green-pill"></span> Quản lý Người dùng';
+      document.getElementById('page-sub-title').textContent = 'Tra cứu danh sách, xem chi tiết và thực hiện Khóa / Mở khóa tài khoản người dùng vi phạm';
+
+      document.getElementById('standard-users-view').style.display = 'block';
+      document.getElementById('unlock-requests-view').style.display = 'none';
+
+      const statusSelect = document.getElementById('user-status-filter');
+      if (statusSelect && statusFilter !== 'all') {
+        statusSelect.value = statusFilter;
+      }
+      renderUsersTable();
+    }
+
+    // Render danh sách Card khiếu nại theo đúng thiết kế UI
+    function renderAppealCards() {
+      const container = document.getElementById('appeal-cards-container');
+      if (!container) return;
+
+      if (initialUnlockRequests.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:50px; background:#fff; border-radius:12px; border:1px solid #e2e8f0; color:var(--text-secondary);">
+            Hiện tại không có yêu cầu mở khóa hoặc khiếu nại nào cần xử lý.
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = initialUnlockRequests.map(req => `
+        <div class="appeal-card" id="appeal-card-${req.id}">
+          <div class="appeal-card-header">
+            <div class="appeal-user-info">
+              <div class="avatar-sm ${req.role === 'Provider' ? 'green' : 'blue'}">
+                ${req.name.split(' ').map(n=>n[0]).slice(-2).join('')}
+              </div>
+              <div>
+                <strong>${req.name} (${req.id})</strong>
+                <div style="font-size:12.5px; color:var(--text-secondary); margin-top:2px;">
+                  ${req.email} • ${req.phone} • Vai trò: <span class="badge ${req.role==='Provider'?'badge-success':'badge-info'}">${req.role}</span>
+                </div>
+              </div>
+            </div>
+            <span class="badge ${req.badgeClass}">${req.badgeTag}</span>
+          </div>
+
+          <div class="appeal-box appeal-box-lock">
+            <strong>Lý do bị khóa ban đầu:</strong> ${req.originalReason}
+          </div>
+
+          <div class="appeal-box appeal-box-user">
+            <strong>Nội dung giải trình & Cam kết từ người dùng:</strong><br>
+            <span style="font-style:italic;">${req.appealText}</span>
+          </div>
+
+          <div class="appeal-footer">
+            <span style="font-size:12.5px; color:var(--text-secondary);">${req.appealMeta}</span>
+            <div class="appeal-actions">
+              ${req.type === 'severe' ? `
+                <button class="btn btn-danger-outline btn-sm" onclick="handleDecision('${req.id}', 'reject_perm', '${req.name}')">Bác bỏ vĩnh viễn</button>
+                <button class="btn btn-primary btn-sm" onclick="handleDecision('${req.id}', 'probation', '${req.name}')">🔓 Mở khóa thử thách 30 ngày</button>
+              ` : `
+                <button class="btn btn-secondary btn-sm" onclick="handleDecision('${req.id}', 'reject', '${req.name}')">Từ chối</button>
+                <button class="btn btn-primary btn-sm" onclick="handleDecision('${req.id}', 'approve', '${req.name}')">🔓 Chấp thuận mở khóa tài khoản</button>
+              `}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Xử lý quyết định thẩm tra (Backend connected)
+    async function handleDecision(userId, actionType, userName) {
+      const index = initialUnlockRequests.findIndex(r => r.id === userId);
+      
+      if (actionType === 'approve') {
+        showToast('Đã chấp thuận', `Tài khoản ${userName} đã được phục hồi quyền truy cập thành công.`, 'success');
+      } else if (actionType === 'probation') {
+        showToast('Mở khóa thử thách', `Tài khoản ${userName} được chuyển sang chế độ theo dõi thử thách 30 ngày.`, 'warning');
+      } else if (actionType === 'reject_perm') {
+        showToast('Bác bỏ vĩnh viễn', `Đã giữ nguyên án khóa vĩnh viễn với tài khoản ${userName}.`, 'danger');
+      } else {
+        showToast('Từ chối khiếu nại', `Đã từ chối đơn mở khóa của ${userName}.`, 'info');
+      }
+
+      if (window.adminApi) {
+        try {
+          await window.adminApi.decideUnlock(userId, actionType);
+        } catch (e) {
+          console.warn('Backend decide unlock error:', e);
+        }
+      }
+
+      const state = getAppState();
+      const user = state.users.find(u => u.id === userId);
+      if (user && actionType === 'approve') {
+        user.status = 'active';
+        user.lockReason = '';
+        user.lockDuration = '';
+        saveAppState(state);
+      }
+
+      if (index !== -1) {
+        initialUnlockRequests.splice(index, 1);
+        renderAppealCards();
+      }
+    }
+
+    // Render danh sách người dùng chuẩn (Bảng)
+    function renderUsersTable() {
+      const state = getAppState();
+      const q = (document.getElementById('user-search-input')?.value || '').toLowerCase().trim();
+      const role = document.getElementById('user-role-filter')?.value || 'all';
+      const status = document.getElementById('user-status-filter')?.value || 'all';
+
+      const filtered = (state.users || []).filter(u => {
+        const uName = String(u.name || '').toLowerCase();
+        const uEmail = String(u.email || '').toLowerCase();
+        const uPhone = String(u.phone || '').toLowerCase();
+        const uId = String(u.id || '').toLowerCase();
+        const matchQ = !q || uName.includes(q) || uEmail.includes(q) || uPhone.includes(q) || uId.includes(q);
+        const matchR = (role === 'all') || (u.role === role);
+        const matchS = (status === 'all') || (u.status === status);
+        return matchQ && matchR && matchS;
+      });
+
+      const tbody = document.getElementById('users-table-tbody');
+      const countEl = document.getElementById('users-count-info');
+      if (countEl) countEl.textContent = `Hiển thị ${filtered.length} / ${(state.users || []).length} người dùng`;
+
+      if (!tbody) return;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-secondary);">Không tìm thấy người dùng phù hợp.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(u => {
+        const isAdmin = (window.adminUtils && window.adminUtils.isAdminAccount(u)) || u.role === 'Admin';
+        const initials = String(u.name || u.email || 'U').split(' ').filter(Boolean).map(n => n[0]).slice(-2).join('').toUpperCase() || 'U';
+        return `
+        <tr>
+          <td>
+            <div class="user-cell">
+              <div class="avatar-sm ${u.role === 'Provider' ? 'green' : 'blue'}">
+                ${initials}
+              </div>
+              <div class="user-cell-meta">
+                <strong>${u.name || 'Người dùng'}</strong>
+                <span>${u.email || ''}</span>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge ${u.role === 'Provider' ? 'badge-success' : 'badge-info'}">${u.role || 'Customer'}</span></td>
+          <td>${u.phone || 'Chưa cập nhật'}</td>
+          <td>${u.joinDate || 'N/A'}</td>
+          <td><strong>${u.spentOrEarned || '0đ'}</strong></td>
+          <td>
+            ${u.status === 'active' 
+              ? '<span class="badge badge-success"><span class="badge-dot-indicator"></span> Hoạt động</span>' 
+              : `<span class="badge badge-danger"><span class="badge-dot-indicator"></span> Đã khóa (${u.lockDuration || 'Vi phạm'})</span>`}
+          </td>
+          <td style="text-align:right">
+            <div class="table-actions" style="justify-content:flex-end; gap:6px;">
+              <button class="btn btn-secondary btn-xs" onclick="viewUserDetail('${u.id}')">Chi tiết</button>
+              ${isAdmin
+                ? '<span class="badge badge-neutral" style="font-size:11px;">Quản trị</span>'
+                : (u.status === 'active'
+                  ? `<button class="btn btn-danger-outline btn-xs" onclick="triggerLockUser('${u.id}')">Khóa</button>`
+                  : `<button class="btn btn-primary btn-xs" onclick="triggerUnlockUser('${u.id}')">Mở khóa</button>`
+                )}
+            </div>
+          </td>
+        </tr>
+      `;
+      }).join('');
+    }
+
+    // Xem chi tiết người dùng
+    function viewUserDetail(id) {
+      const state = getAppState();
+      const u = state.users.find(user => user.id === id);
+      if (!u) return;
+
+      const isAdmin = (window.adminUtils && window.adminUtils.isAdminAccount(u)) || u.role === 'Admin';
+      const body = document.getElementById('user-detail-body');
+      const footer = document.getElementById('user-detail-footer');
+
+      body.innerHTML = `
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+          <div class="avatar-sm ${u.role === 'Provider' ? 'green' : 'blue'}" style="width:48px; height:48px; font-size:16px; font-weight:700;">
+            ${u.name.split(' ').map(n=>n[0]).slice(-2).join('')}
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h4 style="margin:0; font-size:16px; color:var(--secondary);">${u.name}</h4>
+              <span style="font-size:12px; color:var(--text-secondary);">(${u.id})</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+              <span class="badge ${u.role === 'Provider' ? 'badge-success' : 'badge-info'}">${u.role}</span>
+              ${u.status === 'active'
+                ? '<span class="badge badge-success"><span class="badge-dot-indicator"></span> Đang hoạt động</span>'
+                : `<span class="badge badge-danger"><span class="badge-dot-indicator"></span> Đã khóa (${u.lockDuration || 'Vi phạm'})</span>`}
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:16px;">
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Email:</span>
+            <strong style="font-size:13px; color:var(--secondary);">${u.email}</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Số điện thoại:</span>
+            <strong style="font-size:13px; color:var(--secondary);">${u.phone || 'Chưa cập nhật'}</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Ngày tham gia:</span>
+            <strong style="font-size:13px; color:var(--secondary);">${u.joinDate || 'N/A'}</strong>
+          </div>
+          <div>
+            <span class="form-label" style="margin-bottom:2px;">Tổng chi / Thu nhập:</span>
+            <strong style="font-size:13px; color:var(--primary);">${u.spentOrEarned || '0đ'}</strong>
+          </div>
+        </div>
+
+        ${u.status === 'locked' ? `
+          <div class="appeal-box appeal-box-lock" style="margin-top:12px;">
+            <strong>Lý do khóa tài khoản:</strong> ${u.lockReason || 'Không có lý do cụ thể'}<br>
+            <strong>Thời hạn áp dụng:</strong> ${u.lockDuration || 'Chưa xác định'}
+          </div>
+        ` : ''}
+      `;
+
+      footer.innerHTML = `
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-user-detail')">Đóng</button>
+        ${isAdmin ? '' : (u.status === 'active'
+          ? `<button class="btn btn-danger btn-sm" onclick="closeModal('modal-user-detail'); triggerLockUser('${u.id}')">Khóa tài khoản</button>`
+          : `<button class="btn btn-primary btn-sm" onclick="closeModal('modal-user-detail'); triggerUnlockUser('${u.id}')">Mở khóa tài khoản</button>`
+        )}
+      `;
+
+      openModal('modal-user-detail');
+    }
+
+    // Mở khóa tài khoản
+    function triggerUnlockUser(id) {
+      const state = getAppState();
+      const user = state.users.find(u => u.id === id);
+      if (!user) return;
+
+      if (confirm(`Bạn có chắc chắn muốn mở khóa quyền truy cập cho tài khoản ${user.name} (${user.id}) không?`)) {
+        user.status = 'active';
+        user.lockReason = '';
+        user.lockDuration = '';
+
+        saveAppState(state);
+        renderUsersTable();
+        showToast('Mở khóa thành công', `Tài khoản ${user.name} đã được khôi phục quyền hoạt động.`, 'success');
+      }
+    }
+
+    function triggerLockUser(id) {
+      const state = getAppState();
+      const user = state.users.find(u => u.id === id);
+      if (!user) return;
+
+      // Không cho phép vô tình khóa tài khoản quản trị viên
+      if ((window.adminUtils && window.adminUtils.isAdminAccount(user)) || user.role === 'Admin') {
+        showToast('Không thể thao tác', 'Không thể khóa tài khoản Quản trị viên hệ thống!', 'error');
+        return;
+      }
+
+      activeTargetUserId = id;
+      document.getElementById('lock-target-name').textContent = `${user.name} (${user.role})`;
+      document.getElementById('lock-reason-input').value = '';
+      openModal('modal-lock-user');
+    }
+
+    function setupEvents() {
+      const search = document.getElementById('user-search-input');
+      const role = document.getElementById('user-role-filter');
+      const status = document.getElementById('user-status-filter');
+      const resetBtn = document.getElementById('reset-filter-btn');
+
+      if (search) search.addEventListener('input', renderUsersTable);
+      if (role) role.addEventListener('change', renderUsersTable);
+      if (status) status.addEventListener('change', renderUsersTable);
+      if (resetBtn) resetBtn.addEventListener('click', () => {
+        if (search) search.value = '';
+        if (role) role.value = 'all';
+        if (status) status.value = 'all';
+        renderUsersTable();
+      });
+
+      // Confirm lock
+      document.getElementById('confirm-lock-btn').addEventListener('click', () => {
+        if (!activeTargetUserId) return;
+        const reason = document.getElementById('lock-reason-input').value.trim();
+        if (!reason) {
+          alert('Vui lòng điền lý do khóa tài khoản!');
+          return;
+        }
+
+        const state = getAppState();
+        const user = state.users.find(u => u.id === activeTargetUserId);
+        const duration = document.getElementById('lock-duration-select').value;
+        const durationText = duration === 'permanent' ? 'Vĩnh viễn' : `${duration} ngày`;
+
+        if (user) {
+          user.status = 'locked';
+          user.lockReason = reason;
+          user.lockDuration = durationText;
+
+          saveAppState(state);
+          closeModal('modal-lock-user');
+          renderUsersTable();
+          showToast('Khóa tài khoản thành công', `Tài khoản ${user.name} đã bị khóa (${durationText}).`, 'warning');
+        }
+      });
+
+      // Lắng nghe cập nhật từ các trang khác
+      window.addEventListener('storage', (e) => {
+        if (!e.key || e.key === 'SKILL_RENTAL_ADMIN_STATE_V1') {
+          renderUsersTable();
+        }
+      });
+      window.addEventListener('appStateUpdated', renderUsersTable);
+      window.addEventListener('skillrental:users-synced', renderUsersTable);
+    }
+  </script>
+</body>
+</html>

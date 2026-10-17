@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRental - Đánh Giá & Chấm Điểm Chuyên Gia (Customer Review)</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
+    .star-rating {
+      display: inline-flex;
+      gap: 10px;
+      font-size: 36px;
+      color: #CBD5E1;
+      cursor: pointer;
+    }
+    .star-rating .star {
+      transition: color 0.15s ease, transform 0.15s ease;
+    }
+    .star-rating .star:hover,
+    .star-rating .star.hovered,
+    .star-rating .star.selected {
+      color: #F59E0B;
+      transform: scale(1.15);
+    }
+    .tag-choice {
+      padding: 8px 14px;
+      border: 1px solid #E2E8F0;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      background: #FFFFFF;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .tag-choice.selected {
+      border-color: #16A34A;
+      background: #DCFCE7;
+      color: #15803D;
+    }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-client.js"></script>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <div id="navbar-placeholder"></div>
+
+  <main style="max-width: 800px; margin: 40px auto 70px; padding: 0 24px;">
+
+    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:36px; box-shadow:0 4px 20px -2px rgba(15,23,42,0.06);">
+      
+      <!-- Header -->
+      <div style="text-align:center; margin-bottom:28px;">
+        <div style="width:58px; height:58px; border-radius:50%; background:#FEF3C7; color:#D97706; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 14px;">
+          <i class="fa-solid fa-star"></i>
+        </div>
+        <h1 style="font-size:22px; font-weight:800; color:#0F172A; margin-bottom:6px;">
+          Đánh Giá Dịch Vụ & Chuyên Gia
+        </h1>
+        <p style="font-size:14px; color:#64748B;">
+          Ý kiến đánh giá công tâm của bạn giúp duy trì cộng đồng chuyên gia uy tín và bảo vệ các khách hàng khác.
+        </p>
+      </div>
+
+      <!-- Target Order Card -->
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:18px 20px; margin-bottom:28px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <img id="orderProviderAvatar" src="" alt="Provider" style="display:none;width:48px;height:48px;border-radius:12px;object-fit:cover;border:2px solid #E2E8F0;">
+          <div>
+            <div style="font-weight:800; font-size:15px; color:#0F172A;" id="orderServiceTitle">—</div>
+            <div style="font-size:12.5px; color:#64748B; margin-top:2px;">
+              Chuyên gia: <strong id="orderProviderName" style="color:#0F172A;">—</strong> • Mã đơn: <strong id="orderIdText">—</strong>
+            </div>
+          </div>
+        </div>
+        <div>
+          <span style="background:#DCFCE7; color:#15803D; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:9999px;">
+            <i class="fa-solid fa-circle-check"></i> Đã Nghiệm Thu
+          </span>
+        </div>
+      </div>
+
+      <!-- Rating Section -->
+      <form id="reviewForm" onsubmit="submitReview(event)">
+        
+        <div style="text-align:center; margin-bottom:28px;">
+          <label style="display:block; font-size:14px; font-weight:700; color:#0F172A; margin-bottom:10px;">
+            Mức Độ Hài Lòng Chung Về Chất Lượng Dịch Vụ:
+          </label>
+          <div class="star-rating" id="starContainer">
+            <span class="star" data-value="1" onclick="setRating(1)">★</span>
+            <span class="star" data-value="2" onclick="setRating(2)">★</span>
+            <span class="star" data-value="3" onclick="setRating(3)">★</span>
+            <span class="star" data-value="4" onclick="setRating(4)">★</span>
+            <span class="star" data-value="5" onclick="setRating(5)">★</span>
+          </div>
+          <div id="ratingLabel" style="font-size:13.5px; font-weight:700; color:#F59E0B; margin-top:8px;">
+            Rất Tuyệt Vời (5/5 Sao)
+          </div>
+        </div>
+
+        <!-- Tags Criteria -->
+        <div style="margin-bottom:24px;">
+          <label style="display:block; font-size:13.5px; font-weight:700; color:#0F172A; margin-bottom:10px;">
+            Điểm Nổi Bật Của Chuyên Gia:
+          </label>
+          <div style="display:flex; flex-wrap:wrap; gap:10px;">
+            <span class="tag-choice selected" onclick="toggleTag(this)">Đúng hẹn & đúng cam kết</span>
+            <span class="tag-choice selected" onclick="toggleTag(this)">Chuyên môn cao, sản phẩm chất lượng</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Giao tiếp lịch thiệp, phản hồi nhanh</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Giá cả minh bạch, không phát sinh</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Sẵn sàng thuê lại lần sau</span>
+          </div>
+        </div>
+
+        <!-- Review Content -->
+        <div style="margin-bottom:28px;">
+          <label style="display:block; font-size:13.5px; font-weight:700; color:#0F172A; margin-bottom:8px;">
+            Nhận Xét Chi Tiết Của Bạn: <span style="color:#EF4444;">*</span>
+          </label>
+          <textarea id="reviewText" rows="4" required placeholder="Chia sẻ cảm nhận của bạn về tiến độ, chất lượng bàn giao hoặc thái độ làm việc của chuyên gia..." style="width:100%; padding:12px 14px; border:1px solid #CBD5E1; border-radius:10px; font-size:13.5px; font-family:inherit; outline:none; resize:vertical;"></textarea>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <a href="customer_orders.html" class="btn btn-outline" style="font-weight:600; padding:11px 20px;">
+            Để Sau
+          </a>
+          <button type="submit" id="btnSubmitReview" class="btn btn-primary btn-lg" style="font-weight:700; padding:12px 32px; box-shadow:0 4px 14px rgba(22,163,74,0.3);">
+            <i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+
+  </main>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="customer.js"></script>
+  <script>
+    let currentRating = 0;
+    let targetOrder = null;
+
+    const ratingTexts = {
+      1: 'Rất Không Hài Lòng (1/5 Sao)',
+      2: 'Chưa Hài Lòng (2/5 Sao)',
+      3: 'Tạm Ổn (3/5 Sao)',
+      4: 'Tốt & Hài Lòng (4/5 Sao)',
+      5: 'Rất Tuyệt Vời (5/5 Sao)'
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
+      document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('orderId');
+      if (!orderId) {
+        showToast('Thiếu đơn hàng', 'Chọn đơn hàng đã hoàn tất để gửi đánh giá.', 'error');
+        document.getElementById('btnSubmitReview').disabled = true;
+        return;
+      }
+      loadOrderInfo(orderId);
+    });
+
+    async function loadOrderInfo(orderId) {
+      const res = await apiRequest(`/api/orders/${orderId}`);
+      if (res.success && res.order) {
+        targetOrder = res.order;
+        document.getElementById('orderIdText').textContent = targetOrder.id;
+        document.getElementById('orderServiceTitle').textContent = targetOrder.serviceTitle;
+        document.getElementById('orderProviderName').textContent = targetOrder.providerName;
+        if (targetOrder.orderStatus !== 'completed') {
+          document.getElementById('reviewForm').hidden = true;
+          showToast('Chưa thể đánh giá', 'Chỉ có thể đánh giá đơn hàng đã hoàn tất.', 'error');
+        }
+        const providerResult = await apiRequest(`/api/providers/${encodeURIComponent(targetOrder.providerId)}`);
+        if (providerResult.success && providerResult.provider?.avatar) {
+          const avatar = document.getElementById('orderProviderAvatar');
+          avatar.src = providerResult.provider.avatar;
+          avatar.style.display = 'block';
+        }
+      } else {
+        document.getElementById('reviewForm').hidden = true;
+        showToast('Không tìm thấy đơn hàng', res.message || 'Kiểm tra lại mã đơn hàng.', 'error');
+      }
+    }
+
+    function setRating(val) {
+      currentRating = val;
+      const stars = document.querySelectorAll('.star-rating .star');
+      stars.forEach(s => {
+        const starVal = Number(s.dataset.value);
+        if (starVal <= val) {
+          s.classList.add('selected');
+        } else {
+          s.classList.remove('selected');
+        }
+      });
+      document.getElementById('ratingLabel').textContent = ratingTexts[val];
+    }
+
+    function toggleTag(el) {
+      el.classList.toggle('selected');
+    }
+
+    async function submitReview(e) {
+      e.preventDefault();
+      if (!requireCustomerLogin()) return;
+      if (!targetOrder || targetOrder.orderStatus !== 'completed' || !currentRating) {
+        showToast('Thiếu thông tin đánh giá', 'Chọn đơn hàng đã hoàn tất và mức đánh giá.', 'error');
+        return;
+      }
+      const btn = document.getElementById('btnSubmitReview');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi...`;
+
+      const user = getCurrentCustomer();
+      const selectedTags = Array.from(document.querySelectorAll('.tag-choice.selected')).map(t => t.textContent.trim());
+
+      const payload = {
+        orderId: targetOrder.id,
+        providerId: targetOrder.providerId,
+        providerName: targetOrder.providerName,
+        customerId: user.id,
+        customerName: user.name,
+        serviceTitle: targetOrder.serviceTitle,
+        rating: currentRating,
+        content: document.getElementById('reviewText').value,
+        criteria: selectedTags
+      };
+
+      const res = await apiRequest('/api/reviews', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.success) {
+        showToast('Cảm Ơn Đánh Giá!', 'Đánh giá của bạn đã được công khai trên hồ sơ chuyên gia.', 'success');
+        setTimeout(() => {
+          window.location.href = 'customer_reviews.html';
+        }, 1200);
+      } else {
+        showToast('Lỗi', res.message || 'Không thể gửi đánh giá', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay`;
+      }
+    }
+  </script>
+</body>
+</html>

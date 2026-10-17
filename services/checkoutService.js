@@ -126,6 +126,7 @@ function buildOrderDocument(spec, ctx) {
     ...(spec.providerPhone ? { providerPhone: spec.providerPhone } : {}),
     serviceId: spec.serviceId || null,
     serviceTitle: spec.serviceTitle,
+    ...(spec.jobId ? { jobId: spec.jobId } : {}),
     ...(spec.items && spec.items.length ? { items: spec.items } : {}),
     price: spec.price,
     priceFormatted: money(spec.price),
@@ -133,7 +134,7 @@ function buildOrderDocument(spec, ctx) {
     escrowDeposit: spec.escrowDeposit,
     escrowStatus: gateway ? 'payment_pending' : 'escrow_held',
     paymentStatus: gateway ? 'pending' : 'paid',
-    orderStatus: 'pending',
+    orderStatus: spec.jobId ? (gateway ? 'pending' : 'processing') : 'pending',
     paymentMethod: ctx.paymentMethod,
     date: dateStr,
     deadline: spec.deadline || '7 ngày sau đặt cọc',
@@ -144,7 +145,7 @@ function buildOrderDocument(spec, ctx) {
       gateway
         ? { title: 'Chờ khách thanh toán qua VNPay', done: false, time: 'Chờ thanh toán' }
         : { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: dateStr },
-      { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: false, time: 'Chờ tiếp nhận' },
+      { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: Boolean(spec.jobId && !gateway), time: spec.jobId && !gateway ? dateStr : 'Chờ tiếp nhận' },
       { title: 'Bàn giao sản phẩm / hoàn thành dịch vụ', done: false, time: 'Chờ bàn giao' },
       { title: 'Khách hàng nghiệm thu & Giải ngân Escrow', done: false, time: 'Chờ nghiệm thu' }
     ]
@@ -336,6 +337,12 @@ function markOrdersPaid(txn) {
     if (order && order.paymentStatus === 'pending' && order.orderStatus === 'pending') {
       order.paymentStatus = 'paid';
       order.escrowStatus = 'escrow_held';
+      if (order.jobId) {
+        order.orderStatus = 'processing';
+        if (order.milestones && order.milestones[1]) {
+          order.milestones[1] = { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: true, time: formatDateTime(now) };
+        }
+      }
       order.paidAt = now.toISOString();
       order.paymentRef = txn.id;
       delete order.paymentExpiresAt;
@@ -370,14 +377,35 @@ function markOrdersPaid(txn) {
   }
 
   paidOrders.forEach((order) => {
-    notifyProvider(order.providerId, 'Đơn đặt lịch mới',
-      `Bạn có lịch đặt mới từ ${order.customerName}. Tổng giá trị: ${money(order.price)}.`, 'info',
+    if (order.jobId) {
+      const jobs = db.getCollection('jobRequests') || [];
+      const job = jobs.find((item) => item.id === order.jobId && item.customerId === order.customerId && item.status === 'awaiting_payment');
+      if (job && job.selectedProviderId === order.providerId) {
+        (job.applicants || []).forEach((applicant) => {
+          if (applicant.providerId !== order.providerId && applicant.status === 'pending') applicant.status = 'rejected';
+        });
+        job.status = 'closed';
+        job.closeReason = 'provider_selected';
+        job.paymentOrderId = order.id;
+        job.statusUpdatedAt = now.toISOString();
+        db.saveCollection('jobRequests', jobs);
+      }
+    }
+    notifyProvider(order.providerId, order.jobId ? 'Ký quỹ hoàn tất - bắt đầu công việc' : 'Đơn đặt lịch mới',
+      order.jobId
+        ? `Khách hàng đã ký quỹ ${money(order.price)} cho yêu cầu “${order.serviceTitle}”. Bạn có thể bắt đầu thực hiện.`
+        : `Bạn có lịch đặt mới từ ${order.customerName}. Tổng giá trị: ${money(order.price)}.`, 'info',
       `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
+    if (order.jobId) {
+      createNotification(order.customerId, 'Đã ký quỹ, công việc bắt đầu',
+        `Đơn ${order.id} cho yêu cầu “${order.serviceTitle}” đã được ký quỹ an toàn. Provider có thể bắt đầu thực hiện.`,
+        'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+    }
   });
   if (paidOrders.length) {
     createNotification(txn.userId, 'Thanh toán thành công',
       `Đã nhận ${money(txn.amount)} qua VNPay. Đơn ${paidOrders.map((o) => o.id).join(', ')} đã được ký quỹ an toàn.`,
-      'success', '/customer_orders.html');
+      'success', `/customer_orders.html?orderId=${encodeURIComponent(paidOrders[0]?.id || '')}`);
   }
   if (credited > 0) {
     createNotification(txn.userId, 'Đã hoàn tiền vào ví',

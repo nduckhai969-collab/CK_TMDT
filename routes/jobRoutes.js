@@ -1,13 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
-const { requireCustomer } = require('./customerAuth');
+const { requireCustomer, requireProvider } = require('./customerAuth');
 const { generateId } = require('../utils/id');
+const { createNotification, notifyProvider } = require('../services/notificationService');
+
+function getProviderProfile(user) {
+  const providers = db.getCollection('providers') || [];
+  let provider = providers.find(p => p.userId === user.id);
+  if (!provider && process.env.NODE_ENV !== 'production') {
+    provider = {
+      id: generateId('PRV'),
+      userId: user.id,
+      name: user.name || user.email || 'Provider thử nghiệm',
+      specialty: 'Chuyên gia Freelancer',
+      category: 'Other',
+      rating: 0,
+      reviewCount: 0,
+      completedOrders: 0,
+      verified: false,
+      avatar: user.avatar || '',
+      availabilityStatus: 'ready'
+    };
+    providers.push(provider);
+    db.saveCollection('providers', providers);
+  }
+  return provider || null;
+}
 
 // List job requests
 router.get('/', (req, res, next) => (req.query.customerId || req.query.mine === '1') ? requireCustomer(req, res, next) : next(), (req, res) => {
   const { customerId, category, status, search, limit } = req.query;
   let jobs = db.getCollection('jobRequests') || [];
+
+  // Public marketplace only exposes requests that are still accepting proposals.
+  if (!req.query.mine && !customerId) jobs = jobs.filter(j => j.status === 'open');
 
   if (req.query.mine === '1') {
     jobs = jobs.filter(j => j.customerId === req.authUser.id);
@@ -43,6 +70,36 @@ router.get('/', (req, res, next) => (req.query.customerId || req.query.mine === 
     total,
     jobs
   });
+});
+
+// Provider xem các yêu cầu khách đã chọn mình và đang chờ xác nhận.
+router.get('/provider/selected', requireProvider, (req, res) => {
+  const provider = getProviderProfile(req.authUser);
+  if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+  const jobs = (db.getCollection('jobRequests') || []).filter(job =>
+    job.status === 'awaiting_provider' && (job.applicants || []).some(a => a.providerId === provider.id && a.status === 'selected')
+  );
+  res.json({ success: true, jobs });
+});
+
+// Provider xem các báo giá mình đã gửi, lấy trực tiếp từ yêu cầu trong database.
+router.get('/provider/applications', requireProvider, (req, res) => {
+  const provider = getProviderProfile(req.authUser);
+  if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+  const applications = (db.getCollection('jobRequests') || []).flatMap(job =>
+    (job.applicants || [])
+      .filter(applicant => applicant.providerId === provider.id)
+      .map(applicant => ({
+        jobId: job.id,
+        title: job.title,
+        customerName: job.customerName || 'Khách hàng',
+        budget: job.budget,
+        createdAt: applicant.appliedAt || applicant.createdAt || job.createdAt,
+        status: applicant.status || 'pending',
+        ...applicant
+      }))
+  );
+  res.json({ success: true, applications });
 });
 
 // Single job request detail
@@ -103,6 +160,10 @@ router.post('/', requireCustomer, async (req, res) => {
     return res.status(503).json({ success: false, message: 'Chưa lưu được yêu cầu lên hệ thống. Vui lòng thử lại.' });
   }
 
+  createNotification(req.authUser.id, 'Yêu cầu đã được đăng',
+    `Yêu cầu “${newJob.title}” đang mở để Provider gửi báo giá. Bạn sẽ nhận thông báo khi có người ứng tuyển.`,
+    'success', `/customer_requests.html?jobId=${encodeURIComponent(newJob.id)}`);
+
   res.status(201).json({
     success: true,
     message: 'Đăng yêu cầu tuyển dụng thành công!',
@@ -151,6 +212,10 @@ router.patch('/:id/status', requireCustomer, (req, res) => {
     return res.status(403).json({ success: false, message: 'Bạn không có quyền quản lý yêu cầu này.' });
   }
 
+  if (['awaiting_provider', 'awaiting_payment'].includes(job.status)) {
+    return res.status(409).json({ success: false, message: 'Đang chờ Provider xác nhận hoặc khách ký quỹ; chưa thể đóng/mở yêu cầu.' });
+  }
+
   const { status } = req.body;
   if (!['open', 'closed'].includes(status)) {
     return res.status(400).json({ success: false, message: 'Trạng thái yêu cầu không hợp lệ.' });
@@ -168,8 +233,14 @@ router.patch('/:id/status', requireCustomer, (req, res) => {
 });
 
 // Provider applies to job request
-router.post('/:id/apply', (req, res) => {
-  const { providerId, providerName, specialty, avatar, proposedPrice, proposalText } = req.body;
+router.post('/:id/apply', requireProvider, (req, res) => {
+  const { proposedPrice, proposalText, estimatedDays } = req.body;
+  const quote = Number(String(proposedPrice || '').replace(/[^0-9]/g, ''));
+  if (!Number.isFinite(quote) || quote <= 0) {
+    return res.status(400).json({ success: false, message: 'Vui lòng gửi báo giá hợp lệ.' });
+  }
+  const provider = getProviderProfile(req.authUser);
+  if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
   const jobs = db.getCollection('jobRequests');
   const job = jobs.find(j => j.id === req.params.id);
 
@@ -181,7 +252,7 @@ router.post('/:id/apply', (req, res) => {
     return res.status(400).json({ success: false, message: 'Yêu cầu này đã đóng, hiện không nhận thêm đề xuất.' });
   }
 
-  const existing = (job.applicants || []).find(a => a.providerId === providerId);
+  const existing = (job.applicants || []).find(a => a.providerId === provider.id);
   if (existing) {
     return res.status(400).json({ success: false, message: 'Bạn đã gửi đề xuất ứng tuyển cho yêu cầu này rồi!' });
   }
@@ -190,11 +261,13 @@ router.post('/:id/apply', (req, res) => {
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   const applicant = {
-    providerId: providerId || 'PRV001',
-    providerName: providerName || 'Nguyễn Văn An',
-    specialty: specialty || 'Chuyên gia Freelancer',
-    avatar: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-    proposedPrice: proposedPrice || job.budget,
+    providerId: provider.id,
+    providerName: provider.name || req.authUser.name,
+    specialty: provider.specialty || 'Chuyên gia Freelancer',
+    avatar: provider.avatar || req.authUser.avatar || '',
+    proposedPrice: quote.toLocaleString('vi-VN') + 'đ',
+    proposedPriceNum: quote,
+    estimatedDays: Number(estimatedDays) > 0 ? Number(estimatedDays) : null,
     appliedAt: dateStr,
     proposalText: proposalText || 'Chào bạn, tôi rất tự tin hoàn thành tốt dự án này đúng tiến độ.',
     status: 'pending'
@@ -203,6 +276,9 @@ router.post('/:id/apply', (req, res) => {
   job.applicants = job.applicants || [];
   job.applicants.push(applicant);
   db.saveCollection('jobRequests', jobs);
+  createNotification(job.customerId, 'Có Provider mới ứng tuyển',
+    `${applicant.providerName} đã gửi báo giá ${applicant.proposedPrice} cho yêu cầu “${job.title}”. Mở danh sách ứng viên để xem hồ sơ và lựa chọn.`,
+    'info', `/customer_requests.html?jobId=${encodeURIComponent(job.id)}`);
 
   res.status(201).json({
     success: true,
@@ -211,7 +287,7 @@ router.post('/:id/apply', (req, res) => {
   });
 });
 
-// Customer accepts an applicant -> creates order with escrow
+// Customer selects an applicant. No order or payment is created until Provider confirms.
 router.post('/:id/accept-applicant', requireCustomer, (req, res) => {
   const { providerId } = req.body;
   const jobs = db.getCollection('jobRequests');
@@ -229,23 +305,66 @@ router.post('/:id/accept-applicant', requireCustomer, (req, res) => {
     return res.status(400).json({ success: false, message: 'Yêu cầu này đã được đóng hoặc chốt chuyên gia.' });
   }
 
-  const applicant = (job.applicants || []).find(a => a.providerId === providerId);
+  const applicant = (job.applicants || []).find(a => a.providerId === providerId && a.status === 'pending');
   if (!applicant) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy ứng viên này!' });
   }
 
-  applicant.status = 'accepted';
-  job.status = 'closed';
-  job.closeReason = 'provider_selected';
+  applicant.status = 'selected';
+  job.status = 'awaiting_provider';
+  job.selectedProviderId = applicant.providerId;
   job.statusUpdatedAt = new Date().toISOString();
   db.saveCollection('jobRequests', jobs);
+  createNotification(job.customerId, 'Đang chờ Provider xác nhận',
+    `Bạn đã chọn ${applicant.providerName} cho yêu cầu “${job.title}”. Chưa có khoản tiền nào bị trừ; Provider cần xác nhận trước khi bạn ký quỹ.`,
+    'info', `/customer_requests.html?jobId=${encodeURIComponent(job.id)}`);
+  notifyProvider(applicant.providerId, 'Khách hàng chọn báo giá của bạn',
+    `Khách hàng đã chọn bạn cho yêu cầu “${job.title}”. Vui lòng xác nhận hoặc từ chối trước khi khách ký quỹ.`, 'info', '/jobs.html?tab=selected');
 
   res.json({
     success: true,
-    message: `Đã chọn ứng viên ${applicant.providerName}! Vui lòng tiến hành thanh toán ký quỹ Escrow.`,
+    message: `Đã gửi lời mời cho ${applicant.providerName}. Chờ Provider xác nhận; bạn chưa bị trừ tiền.`,
     applicant,
     job
   });
+});
+
+// Provider confirms or declines the customer's selection. Payment starts only after confirmation.
+router.post('/:id/provider-response', requireProvider, (req, res) => {
+  const { action } = req.body || {};
+  if (!['confirm', 'decline'].includes(action)) {
+    return res.status(400).json({ success: false, message: 'Phản hồi không hợp lệ.' });
+  }
+  const provider = getProviderProfile(req.authUser);
+  if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+  const jobs = db.getCollection('jobRequests') || [];
+  const job = jobs.find(item => item.id === req.params.id);
+  if (!job) return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu.' });
+  if (job.status !== 'awaiting_provider' || job.selectedProviderId !== provider.id) {
+    return res.status(409).json({ success: false, message: 'Yêu cầu này không còn chờ bạn xác nhận.' });
+  }
+  const applicant = (job.applicants || []).find(a => a.providerId === provider.id && a.status === 'selected');
+  if (!applicant) return res.status(404).json({ success: false, message: 'Không tìm thấy lời mời ứng tuyển.' });
+
+  if (action === 'confirm') {
+    applicant.status = 'accepted';
+    job.status = 'awaiting_payment';
+    job.statusUpdatedAt = new Date().toISOString();
+    createNotification(job.customerId, 'Provider đã xác nhận',
+      `${applicant.providerName} đã nhận yêu cầu “${job.title}”. Vui lòng thanh toán ký quỹ để bắt đầu.`,
+      'success', `/customer_requests.html?jobId=${encodeURIComponent(job.id)}&action=pay`);
+    db.saveCollection('jobRequests', jobs);
+    return res.json({ success: true, message: 'Đã xác nhận nhận việc. Khách hàng sẽ được mời ký quỹ.', job });
+  }
+
+  applicant.status = 'declined';
+  job.status = 'open';
+  delete job.selectedProviderId;
+  job.statusUpdatedAt = new Date().toISOString();
+  createNotification(job.customerId, 'Provider từ chối yêu cầu',
+    `${applicant.providerName} chưa thể nhận yêu cầu “${job.title}”. Bạn có thể chọn ứng viên khác.`, 'warning', '/customer_requests.html');
+  db.saveCollection('jobRequests', jobs);
+  return res.json({ success: true, message: 'Đã từ chối lời mời. Yêu cầu được mở lại để khách chọn Provider khác.', job });
 });
 
 module.exports = router;

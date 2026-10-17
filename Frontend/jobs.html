@@ -43,7 +43,7 @@
         <a href="jobs.html" class="nav-link active">
           <i class="fa-solid fa-briefcase"></i>
           <span>Đề xuất &amp; Ứng tuyển</span>
-          <span class="badge-count" style="background-color: var(--primary);">6</span>
+          <span class="badge-count" id="marketJobCount" style="background-color: var(--primary);">0</span>
         </a>
         <a href="bookings.html" class="nav-link">
           <i class="fa-solid fa-calendar-check"></i>
@@ -119,11 +119,17 @@
       <!-- Main Body Content -->
       <div class="content-body">
 
+        <section id="selectedJobInvitations" style="display:none;background:#fff;border:1px solid #bbf7d0;border-radius:12px;padding:18px;margin-bottom:20px;">
+          <h3 style="margin:0 0 8px;color:#166534;font-size:16px;"><i class="fa-solid fa-handshake"></i> Khách hàng đang chờ bạn xác nhận</h3>
+          <p style="margin:0 0 14px;color:#64748b;font-size:13px;">Bạn xác nhận nhận việc thì khách mới được thanh toán ký quỹ. Chưa có tiền nào bị thu ở bước này.</p>
+          <div id="selectedJobInvitationList" style="display:grid;gap:10px;"></div>
+        </section>
+
         <!-- Navigation Tabs -->
         <div class="tab-list">
           <div class="tab-item active" onclick="switchJobTab('tab-uc33', this)">
             <i class="fa-solid fa-wand-magic-sparkles"></i> Đề Xuất Cho Tôi
-            <span class="badge-count" style="background:var(--primary); margin-left:6px;">6</span>
+            <span class="badge-count" id="marketTabCount" style="background:var(--primary); margin-left:6px;">0</span>
           </div>
           <div class="tab-item" onclick="switchJobTab('tab-uc34', this)">
             <i class="fa-solid fa-file-lines"></i> Xem Chi Tiết Request
@@ -133,7 +139,7 @@
           </div>
           <div class="tab-item" onclick="switchJobTab('tab-uc36', this)">
             <i class="fa-solid fa-clock-rotate-left"></i> Theo Dõi Ứng Tuyển
-            <span class="badge-count" style="background:var(--warning); margin-left:6px;">3</span>
+            <span class="badge-count" id="applicationCount" style="background:var(--warning); margin-left:6px;">0</span>
           </div>
         </div>
 
@@ -147,166 +153,26 @@
             <div>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
                 <div>
-                  <h2 style="font-size:18px; font-weight:700; color:var(--secondary);">Đề Xuất Phù Hợp Với Kỹ Năng Của Bạn</h2>
-                  <div style="font-size:13px; color:var(--text-muted);">Hệ thống AI tự động gợi ý dựa trên hồ sơ đã xác thực và đánh giá uy tín</div>
+                  <h2 style="font-size:18px; font-weight:700; color:var(--secondary);">Yêu cầu đang mở</h2>
+                  <div style="font-size:13px; color:var(--text-muted);">Dữ liệu được tải trực tiếp từ hệ thống</div>
                 </div>
                 <div style="display:flex; gap:8px;">
-                  <span class="badge badge-success"><span class="badge-dot"></span> 6 Việc mới hôm nay</span>
+                  <button class="btn btn-outline btn-sm" type="button" onclick="loadMarketJobs()"><i class="fa-solid fa-arrows-rotate"></i> Làm mới</button>
                 </div>
               </div>
 
-              <!-- Job 1 -->
-              <div class="job-card">
-                <div style="display:flex; gap:16px;">
-                  <div class="match-ring" style="--pct:96"><span>96%</span></div>
-                  <div style="flex:1;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                      <div>
-                        <div style="font-weight:700; font-size:16px; color:var(--secondary);">Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay</div>
-                        <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
-                          Khách hàng: <strong>Nguyễn Thị Hoa</strong> (TP.HCM) • Đăng 2 giờ trước
-                        </div>
-                      </div>
-                      <span class="badge badge-success"><span class="badge-dot"></span>Phù hợp tuyệt đối</span>
-                    </div>
-
-                    <div style="display:flex; gap:8px; margin:12px 0; flex-wrap:wrap;">
-                      <span class="chip"><i class="fa-solid fa-code" style="color:var(--primary); margin-right:4px;"></i> React / Node.js</span>
-                      <span class="chip"><i class="fa-solid fa-credit-card" style="color:var(--info); margin-right:4px;"></i> Cổng VNPay</span>
-                      <span class="chip"><i class="fa-solid fa-coins" style="color:var(--warning); margin-right:4px;"></i> 8.000.000đ – 12.000.000đ</span>
-                      <span class="chip"><i class="fa-solid fa-calendar" style="margin-right:4px;"></i> 14 ngày bàn giao</span>
-                    </div>
-
-                    <p style="font-size:13px; color:var(--text-main); line-height:1.6; margin-bottom:12px;">
-                      Cần một lập trình viên kinh nghiệm phát triển trang web bán lẻ mỹ phẩm, chuẩn SEO, responsive di động và tích hợp cổng thanh toán VNPay, Momo. Đã có sẵn thiết kế Figma và API sơ bộ.
-                    </p>
-
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
-                      <div style="font-size:12px; color:var(--text-muted);">
-                        <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> Vì sao đề xuất: Trùng khớp 4/4 kỹ năng bạn đã được xác minh chứng chỉ
-                      </div>
-                      <div style="display:flex; gap:8px;">
-                        <button class="btn btn-outline btn-sm" onclick="showToast('Đã lưu công việc vào danh sách quan tâm!')">
-                          <i class="fa-regular fa-bookmark"></i> Lưu
-                        </button>
-                        <button class="btn btn-primary btn-sm" onclick="openJobDetail('REQ-10245', 'Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay', '8.000.000 – 12.000.000đ', 'Nguyễn Thị Hoa')">
-                          Xem chi tiết →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div id="marketJobsList" aria-live="polite" style="display:grid;gap:14px;">
+                <div class="card" style="text-align:center;color:var(--text-muted);">Đang tải yêu cầu từ hệ thống...</div>
               </div>
-
-              <!-- Job 2 -->
-              <div class="job-card">
-                <div style="display:flex; gap:16px;">
-                  <div class="match-ring" style="--pct:88"><span>88%</span></div>
-                  <div style="flex:1;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                      <div>
-                        <div style="font-weight:700; font-size:16px; color:var(--secondary);">Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành</div>
-                        <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
-                          Khách hàng: <strong>Công ty Cổ phần Vận tải Express</strong> • Đăng 4 giờ trước
-                        </div>
-                      </div>
-                      <span class="badge badge-info"><span class="badge-dot"></span>Phù hợp cao</span>
-                    </div>
-
-                    <div style="display:flex; gap:8px; margin:12px 0; flex-wrap:wrap;">
-                      <span class="chip"><i class="fa-solid fa-pen-nib" style="color:var(--primary); margin-right:4px;"></i> Figma Design System</span>
-                      <span class="chip"><i class="fa-solid fa-mobile-screen" style="margin-right:4px;"></i> iOS &amp; Android</span>
-                      <span class="chip"><i class="fa-solid fa-coins" style="color:var(--warning); margin-right:4px;"></i> 6.500.000đ</span>
-                      <span class="chip"><i class="fa-solid fa-calendar" style="margin-right:4px;"></i> 10 ngày</span>
-                    </div>
-
-                    <p style="font-size:13px; color:var(--text-main); line-height:1.6; margin-bottom:12px;">
-                      Yêu cầu thiết kế 20 màn hình mobile app, bao gồm luồng đặt đơn hàng, theo dõi tài xế trên bản đồ GPS thời gian thực và quản lý ví tài khoản.
-                    </p>
-
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
-                      <div style="font-size:12px; color:var(--text-muted);">
-                        <i class="fa-solid fa-circle-info" style="color:var(--primary);"></i> Vì sao đề xuất: Bạn có chứng chỉ Google UX Design đã xác thực
-                      </div>
-                      <div style="display:flex; gap:8px;">
-                        <button class="btn btn-outline btn-sm" onclick="showToast('Đã lưu công việc!')"><i class="fa-regular fa-bookmark"></i> Lưu</button>
-                        <button class="btn btn-primary btn-sm" onclick="openJobDetail('REQ-10246', 'Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành', '6.500.000đ', 'Cty Express')">Xem chi tiết →</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Job 3 -->
-              <div class="job-card">
-                <div style="display:flex; gap:16px;">
-                  <div class="match-ring" style="--pct:75"><span>75%</span></div>
-                  <div style="flex:1;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                      <div>
-                        <div style="font-weight:700; font-size:16px; color:var(--secondary);">Tối ưu tốc độ tải trang Core Web Vitals cho Website Tin tức</div>
-                        <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
-                          Khách hàng: <strong>Phạm Văn Đức</strong> • Đăng hôm qua
-                        </div>
-                      </div>
-                      <span class="badge badge-neutral">Cân nhắc</span>
-                    </div>
-
-                    <div style="display:flex; gap:8px; margin:12px 0; flex-wrap:wrap;">
-                      <span class="chip">Tối ưu LCP &amp; PageSpeed</span>
-                      <span class="chip">Next.js SSR</span>
-                      <span class="chip">3.000.000đ</span>
-                    </div>
-
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:12px;">
-                      <div style="font-size:12px; color:var(--text-muted);">Yêu cầu xử lý trong 3 ngày</div>
-                      <div style="display:flex; gap:8px;">
-                        <button class="btn btn-outline btn-sm" onclick="showToast('Đã bỏ qua đề xuất!')">Bỏ qua</button>
-                        <button class="btn btn-primary btn-sm" onclick="openJobDetail('REQ-10247', 'Tối ưu tốc độ tải trang Core Web Vitals', '3.000.000đ', 'Phạm Văn Đức')">Xem chi tiết →</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
             </div>
-
             <!-- Right: Filter & Recommendations Settings -->
             <div>
               <div class="card">
-                <div class="card-title" style="margin-bottom:14px;"><i class="fa-solid fa-filter" style="color:var(--primary);"></i> Bộ Lọc Đề Xuất Thông Minh</div>
-                
-                <div class="form-group">
-                  <label class="form-label">Kỹ năng phù hợp</label>
-                  <select class="form-control">
-                    <option>Tất cả kỹ năng đã xác thực (5 kỹ năng)</option>
-                    <option>React / Next.js</option>
-                    <option>Node.js / Express</option>
-                    <option>UI/UX Figma Design</option>
-                    <option>AWS Cloud Solutions</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Khu vực / Bán kính nhận việc</label>
-                  <select class="form-control">
-                    <option>Toàn quốc (Làm việc Remote từ xa)</option>
-                    <option>TP. Hồ Chí Minh (Offline / Gặp mặt)</option>
-                    <option>Trong bán kính 10km</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Mức ngân sách tối thiểu</label>
-                  <input type="text" class="form-control" value="3.000.000đ">
-                </div>
-
-                <button class="btn btn-primary btn-block" onclick="showToast('Đã áp dụng bộ lọc đề xuất mới!')">
-                  <i class="fa-solid fa-arrows-rotate"></i> Cập Nhật Danh Sách
-                </button>
-              </div>
-
-              <div class="card" style="background:var(--primary-light); border-color:#BBF7D0;">
+                <div class="card-title" style="margin-bottom:14px;"><i class="fa-solid fa-filter" style="color:var(--primary);"></i> Lọc yêu cầu</div>
+                <div class="form-group"><label class="form-label" for="marketSearch">Từ khóa</label><input id="marketSearch" class="form-control" placeholder="Tìm tiêu đề, mô tả..." oninput="filterMarketJobs()"></div>
+                <div class="form-group"><label class="form-label" for="marketCategory">Danh mục</label><select id="marketCategory" class="form-control" onchange="filterMarketJobs()"><option value="all">Tất cả danh mục</option></select></div>
+                <div class="form-group"><label class="form-label" for="marketMinBudget">Ngân sách tối thiểu</label><input id="marketMinBudget" type="text" data-thousands inputmode="numeric" class="form-control" placeholder="0" oninput="filterMarketJobs()"></div>
+              </div>              <div class="card" style="background:var(--primary-light); border-color:#BBF7D0;">
                 <div style="font-weight:700; color:var(--primary-dark); font-size:14px; margin-bottom:6px;">
                   <i class="fa-solid fa-lightbulb"></i> Mẹo Tăng Tỷ Lệ Nhận Đơn
                 </div>
@@ -336,69 +202,30 @@
               <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
                 <div>
                   <span class="badge badge-success" style="margin-bottom:8px;"><span class="badge-dot"></span> Đang Mở Nhận Báo Giá</span>
-                  <h1 style="font-size:20px; font-weight:800; color:var(--secondary);" id="reqDetailTitle">Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay</h1>
+                  <h1 style="font-size:20px; font-weight:800; color:var(--secondary);" id="reqDetailTitle">Chọn một yêu cầu từ danh sách</h1>
                   <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
-                    Mã yêu cầu: <strong id="reqDetailId">#REQ-10245</strong> • Đăng lúc: 28/04/2025 14:30 • 4 Provider đã nộp báo giá
+                    Mã yêu cầu: <strong id="reqDetailId">—</strong> • Đăng lúc: <span id="reqDetailCreatedAt">—</span> • <span id="reqDetailApplicants">0</span> báo giá
                   </div>
                 </div>
               </div>
 
               <div style="border-top:1px solid var(--border-color); padding:16px 0;">
                 <h3 style="font-size:15px; font-weight:700; color:var(--secondary); margin-bottom:8px;">Mô tả chi tiết công việc</h3>
-                <p style="font-size:13.5px; color:var(--text-main); line-height:1.7;">
-                  Doanh nghiệp chúng tôi cần tìm một lập trình viên Fullstack giàu kinh nghiệm để hoàn thiện dự án website bán hàng mỹ phẩm thiên nhiên.
-                  <br><br>
-                  <strong>Các hạng mục chính:</strong><br>
-                  1. Lập trình Frontend từ thiết kế Figma đã được ban giám đốc duyệt (chuẩn Responsive máy tính và điện thoại).<br>
-                  2. Xây dựng trang danh mục sản phẩm, bộ lọc giá, thương hiệu và đánh giá sao.<br>
-                  3. Tích hợp giỏ hàng và cổng thanh toán trực tuyến qua VNPay &amp; MoMo QR Code.<br>
-                  4. Tối ưu On-page SEO, schema markup sản phẩm và tốc độ tải trang đạt điểm Google Lighthouse &gt; 90.<br>
-                  5. Hướng dẫn nhân viên quản trị thêm/sửa sản phẩm qua trang admin backend.
-                </p>
+                <p id="reqDetailDescription" style="font-size:13.5px; color:var(--text-main); line-height:1.7; white-space:pre-wrap;"></p>
               </div>
 
-              <div style="border-top:1px solid var(--border-color); padding:16px 0;">
-                <h3 style="font-size:15px; font-weight:700; color:var(--secondary); margin-bottom:10px;">Kỹ năng yêu cầu bắt buộc</h3>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                  <span class="chip" style="background:#DCFCE7; color:#15803D;">✓ ReactJS / Next.js</span>
-                  <span class="chip" style="background:#DCFCE7; color:#15803D;">✓ NodeJS / RESTful API</span>
-                  <span class="chip" style="background:#DCFCE7; color:#15803D;">✓ Cổng VNPay</span>
-                  <span class="chip">Chuẩn SEO On-page</span>
-                  <span class="chip">Responsive Mobile First</span>
-                </div>
-              </div>
-
-              <div style="border-top:1px solid var(--border-color); padding:16px 0;">
-                <h3 style="font-size:15px; font-weight:700; color:var(--secondary); margin-bottom:10px;">Tài liệu &amp; Thiết kế đính kèm</h3>
-                <div class="grid-3" style="gap:12px;">
-                  <div style="border:1px solid var(--border-color); border-radius:8px; padding:12px; display:flex; align-items:center; gap:10px; background:#F8FAFC;">
-                    <i class="fa-brands fa-figma" style="font-size:24px; color:#A855F7;"></i>
-                    <div style="flex:1; overflow:hidden;">
-                      <div style="font-weight:600; font-size:13px; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">Figma_Cosmetics_v2.fig</div>
-                      <div style="font-size:11px; color:var(--text-muted);">14.2 MB • Thiết kế UI</div>
-                    </div>
-                  </div>
-                  <div style="border:1px solid var(--border-color); border-radius:8px; padding:12px; display:flex; align-items:center; gap:10px; background:#F8FAFC;">
-                    <i class="fa-solid fa-file-pdf" style="font-size:24px; color:#EF4444;"></i>
-                    <div style="flex:1; overflow:hidden;">
-                      <div style="font-weight:600; font-size:13px; text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">Yeu_Cau_Ky_Thuat_SRS.pdf</div>
-                      <div style="font-size:11px; color:var(--text-muted);">2.1 MB • Tài liệu mô tả</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <!-- Right: Client Summary & Apply Action -->
             <div>
               <div class="card">
                 <div class="card-title">Ngân Sách Dự Kiến</div>
-                <div style="font-size:24px; font-weight:800; color:var(--primary); margin:8px 0;" id="reqDetailBudget">8.000.000 – 12.000.000đ</div>
-                <div style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Khách thanh toán ký quỹ 100% qua ví Escrow sàn SkillRental</div>
+                <div style="font-size:24px; font-weight:800; color:var(--primary); margin:8px 0;" id="reqDetailBudget">—</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">Khách thanh toán ký quỹ sau khi Provider xác nhận nhận việc.</div>
 
-                <div class="kv-row"><span class="k">Thời gian mong muốn</span><span class="v">14 Ngày</span></div>
-                <div class="kv-row"><span class="k">Hình thức làm việc</span><span class="v">Trọn gói (Fixed Price)</span></div>
-                <div class="kv-row"><span class="k">Hạn chót nhận báo giá</span><span class="v" style="color:var(--error);">Còn 2 ngày</span></div>
+                <div class="kv-row"><span class="k">Thời gian mong muốn</span><span class="v" id="reqDetailDeadline">—</span></div>
+                <div class="kv-row"><span class="k">Khu vực</span><span class="v" id="reqDetailLocation">—</span></div>
+                <div class="kv-row"><span class="k">Danh mục</span><span class="v" id="reqDetailCategory">—</span></div>
 
                 <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="goToApplyTab()">
                   <i class="fa-solid fa-paper-plane"></i> Ứng Tuyển &amp; Báo Giá Ngay
@@ -411,9 +238,9 @@
                 <div style="display:flex; gap:12px; align-items:center;">
                   <div class="avatar" style="width:48px; height:48px; font-size:18px;">NH</div>
                   <div>
-                    <div style="font-weight:700; font-size:14px;" id="reqDetailClient">Nguyễn Thị Hoa</div>
+                    <div style="font-weight:700; font-size:14px;" id="reqDetailClient">—</div>
                     <div style="font-size:12px; color:var(--text-muted);">Khách hàng Doanh nghiệp</div>
-                    <div style="font-size:12px; color:var(--warning); margin-top:2px;">★★★★★ 4.9 (18 đánh giá)</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Thông tin hồ sơ khách hàng</div>
                   </div>
                 </div>
 
@@ -444,20 +271,20 @@
 
               <div class="form-group">
                 <label class="form-label">Công việc ứng tuyển</label>
-                <input type="text" class="form-control" id="applyJobTitle" value="Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay" readonly style="background:#F1F5F9; font-weight:600;">
+                <input type="text" class="form-control" id="applyJobTitle" value="" readonly style="background:#F1F5F9; font-weight:600;">
               </div>
 
               <div class="grid-2">
                 <div class="form-group">
                   <label class="form-label">Mức giá bạn đề xuất (VNĐ) <span style="color:var(--error);">*</span></label>
-                  <input type="number" class="form-control" id="proposalPrice" value="9500000" oninput="calculateEarning()">
-                  <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Ngân sách khách: 8.000.000đ – 12.000.000đ</div>
+                  <input type="text" class="form-control" id="proposalPrice" data-thousands inputmode="numeric" value="" oninput="calculateEarning()">
+                  <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Ngân sách yêu cầu: <span id="proposalBudgetHint">Chọn công việc trước</span></div>
                 </div>
 
                 <div class="form-group">
                   <label class="form-label">Thời gian hoàn thành ước tính <span style="color:var(--error);">*</span></label>
                   <div style="display:flex; gap:8px;">
-                    <input type="number" class="form-control" id="proposalDays" value="12">
+                    <input type="number" class="form-control" id="proposalDays" value="">
                     <span style="display:flex; align-items:center; font-size:13px; color:var(--text-secondary);">ngày</span>
                   </div>
                 </div>
@@ -465,14 +292,7 @@
 
               <div class="form-group">
                 <label class="form-label">Thư chào giá &amp; Lời nhắn gửi khách hàng <span style="color:var(--error);">*</span></label>
-                <textarea class="form-control" rows="6" id="proposalLetter" placeholder="Giới thiệu kinh nghiệm tương tự, quy trình thực hiện và cam kết chất lượng...">Chào chị Hoa, em là An - Fullstack Web Developer với hơn 5 năm kinh nghiệm chuyên xây dựng website TMĐT tối ưu chuẩn SEO và tích hợp cổng thanh toán VNPay/MoMo.
-
-Em đã từng triển khai 3 dự án bán lẻ mỹ phẩm có các tính năng tương tự:
-1. Thiết kế chuẩn Responsive Mobile First từ Figma sang Next.js.
-2. Tích hợp thanh toán bảo mật chuẩn Sandbox/Production của VNPay.
-3. Tối ưu điểm Google PageSpeed đạt 95+ điểm trên cả Mobile và Desktop.
-
-Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn quản trị và bảo hành kỹ thuật 3 tháng sau nghiệm thu.</textarea>
+                <textarea class="form-control" rows="6" id="proposalLetter" placeholder="Giới thiệu kinh nghiệm tương tự, quy trình thực hiện và cam kết chất lượng..."></textarea>
               </div>
 
               <div class="form-group">
@@ -541,10 +361,10 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
                 <div style="font-size:13px; color:var(--text-muted);">Trạng thái phản hồi từ khách hàng đối với các báo giá bạn đã gửi</div>
               </div>
               <div style="display:flex; gap:8px;">
-                <button class="btn btn-secondary btn-sm" onclick="filterProposals('all', this)">Tất cả (5)</button>
-                <button class="btn btn-primary btn-sm" onclick="filterProposals('pending', this)">Đang chờ (3)</button>
-                <button class="btn btn-secondary btn-sm" onclick="filterProposals('accepted', this)">Đã chấp nhận (1)</button>
-                <button class="btn btn-secondary btn-sm" onclick="filterProposals('rejected', this)">Từ chối (1)</button>
+                <button id="proposalFilterAll" class="btn btn-secondary btn-sm" onclick="filterProposals('all', this)">Tất cả (0)</button>
+                <button id="proposalFilterPending" class="btn btn-primary btn-sm" onclick="filterProposals('pending', this)">Đang chờ (0)</button>
+                <button id="proposalFilterAccepted" class="btn btn-secondary btn-sm" onclick="filterProposals('accepted', this)">Đã chọn (0)</button>
+                <button id="proposalFilterRejected" class="btn btn-secondary btn-sm" onclick="filterProposals('rejected', this)">Từ chối (0)</button>
               </div>
             </div>
 
@@ -560,84 +380,7 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
                     <th style="text-align:right;">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody id="proposalsTableBody">
-                  <!-- Row 1: Pending -->
-                  <tr data-status="pending">
-                    <td>
-                      <div style="font-weight:700; color:var(--secondary);">Xây dựng website bán mỹ phẩm chuẩn SEO tích hợp VNPay</div>
-                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Nguyễn Thị Hoa</strong> (TP.HCM)</div>
-                    </td>
-                    <td><strong>9.500.000đ</strong></td>
-                    <td>12 ngày</td>
-                    <td>28/04/2025</td>
-                    <td><span class="badge badge-warning"><span class="badge-dot"></span> Đang chờ khách xem</span></td>
-                    <td style="text-align:right;">
-                      <button class="btn btn-outline btn-sm" onclick="openModal('viewProposalModal')">Xem thư</button>
-                    </td>
-                  </tr>
-
-                  <!-- Row 2: Accepted (Direct link to Booking) -->
-                  <tr data-status="accepted" style="background:#F0FDF4;">
-                    <td>
-                      <div style="font-weight:700; color:var(--secondary);">Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành</div>
-                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Cty Cổ phần Vận tải Express</strong></div>
-                    </td>
-                    <td><strong style="color:var(--primary);">6.500.000đ</strong></td>
-                    <td>10 ngày</td>
-                    <td>26/04/2025</td>
-                    <td><span class="badge badge-success"><span class="badge-dot"></span> Khách đã chấp nhận</span></td>
-                    <td style="text-align:right;">
-                      <a href="bookings.html?tab=booking" class="btn btn-primary btn-sm">
-                        <i class="fa-solid fa-calendar-check"></i> Đến Booking &amp; Hợp Đồng →
-                      </a>
-                    </td>
-                  </tr>
-
-                  <!-- Row 3: Pending -->
-                  <tr data-status="pending">
-                    <td>
-                      <div style="font-weight:700; color:var(--secondary);">Tối ưu tốc độ tải trang Core Web Vitals cho Website Tin tức</div>
-                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Phạm Văn Đức</strong></div>
-                    </td>
-                    <td><strong>3.000.000đ</strong></td>
-                    <td>3 ngày</td>
-                    <td>25/04/2025</td>
-                    <td><span class="badge badge-info"><span class="badge-dot"></span> Khách đang cân nhắc</span></td>
-                    <td style="text-align:right;">
-                      <button class="btn btn-outline btn-sm" onclick="openModal('viewProposalModal')">Xem chi tiết</button>
-                    </td>
-                  </tr>
-
-                  <!-- Row 4: Pending -->
-                  <tr data-status="pending">
-                    <td>
-                      <div style="font-weight:700; color:var(--secondary);">Kiểm thử bảo mật Web API Penetration Testing</div>
-                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Cty TNHH Công Nghệ Kim Long</strong></div>
-                    </td>
-                    <td><strong>12.000.000đ</strong></td>
-                    <td>7 ngày</td>
-                    <td>24/04/2025</td>
-                    <td><span class="badge badge-warning"><span class="badge-dot"></span> Đang chờ duyệt</span></td>
-                    <td style="text-align:right;">
-                      <button class="btn btn-outline btn-sm" onclick="openModal('viewProposalModal')">Xem chi tiết</button>
-                    </td>
-                  </tr>
-
-                  <!-- Row 5: Rejected -->
-                  <tr data-status="rejected">
-                    <td>
-                      <div style="font-weight:700; color:var(--secondary);">Cài đặt và cấu hình cụm máy chủ Kubernetes CI/CD</div>
-                      <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>Lê Minh Khang</strong></div>
-                    </td>
-                    <td><strong>15.000.000đ</strong></td>
-                    <td>14 ngày</td>
-                    <td>20/04/2025</td>
-                    <td><span class="badge badge-error"><span class="badge-dot"></span> Đã chọn Provider khác</span></td>
-                    <td style="text-align:right;">
-                      <button class="btn btn-ghost btn-sm" onclick="showToast('Khách hàng chọn báo giá khác có thời gian triển khai sớm hơn.')">Xem lý do</button>
-                    </td>
-                  </tr>
-                </tbody>
+                <tbody id="proposalsTableBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Đang tải báo giá...</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -660,15 +403,14 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
         <h3 style="font-size:17px; font-weight:700;">Chi Tiết Thư Chào Giá Đã Gửi</h3>
         <button onclick="closeModal('viewProposalModal')" style="border:none; background:none; font-size:18px; cursor:pointer;">✕</button>
       </div>
-      <div style="font-size:13px; color:var(--text-main); line-height:1.6; background:#F8FAFC; padding:16px; border-radius:8px; border:1px solid var(--border-color);">
-        Chào chị Hoa, em là An - Fullstack Web Developer với hơn 5 năm kinh nghiệm chuyên xây dựng website TMĐT tối ưu chuẩn SEO và tích hợp cổng thanh toán VNPay/MoMo. Em cam kết hoàn thiện trong 12 ngày và bảo hành 3 tháng.
-      </div>
+      <div id="proposalModalText" style="font-size:13px; color:var(--text-main); line-height:1.6; white-space:pre-wrap; background:#F8FAFC; padding:16px; border-radius:8px; border:1px solid var(--border-color);"></div>
       <div style="margin-top:20px; text-align:right;">
         <button class="btn btn-secondary btn-sm" onclick="closeModal('viewProposalModal')">Đóng</button>
       </div>
     </div>
   </div>
 
+  <script src="js/number-format.js"></script>
   <script src="provider.js"></script>
   <script>
     function showToast(msg) {
@@ -678,6 +420,73 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
       setTimeout(() => toast.classList.remove('show'), 3500);
     }
 
+    async function loadSelectedJobInvitations() {
+      const section = document.getElementById('selectedJobInvitations');
+      const list = document.getElementById('selectedJobInvitationList');
+      if (!section || !list || !window.providerApi) return;
+      try {
+        const result = await window.providerApi.getSelectedJobInvitations();
+        if (!result.success || !Array.isArray(result.jobs) || !result.jobs.length) return;
+        section.style.display = 'block';
+        result.jobs.forEach(job => {
+          const applicant = (job.applicants || []).find(item => item.status === 'selected');
+          if (!applicant) return;
+          const card = document.createElement('div');
+          card.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px;border:1px solid #e2e8f0;border-radius:9px;';
+          const info = document.createElement('div');
+          const title = document.createElement('strong'); title.textContent = job.title || 'Yêu cầu tuyển dụng';
+          const detail = document.createElement('div'); detail.style.cssText = 'font-size:12px;color:#64748b;margin-top:4px;';
+          detail.textContent = `Báo giá của bạn: ${applicant.proposedPrice} · Hạn: ${job.deadline || 'Thỏa thuận'}`;
+          info.append(title, detail);
+          const actions = document.createElement('div'); actions.style.cssText = 'display:flex;gap:8px;flex-shrink:0;';
+          [['confirm','Xác nhận nhận việc','btn btn-primary btn-sm'],['decline','Từ chối','btn btn-outline btn-sm']].forEach(([action,label,className]) => {
+            const button = document.createElement('button'); button.type = 'button'; button.className = className; button.textContent = label;
+            button.addEventListener('click', async () => {
+              button.disabled = true;
+              try {
+                const response = await window.providerApi.respondToJobSelection(job.id, action);
+                if (!response.success) throw new Error(response.message || 'Không thể cập nhật phản hồi.');
+                card.remove();
+                if (!list.children.length) section.style.display = 'none';
+                showToast(response.message);
+              } catch (error) { showToast(error.message || 'Vui lòng thử lại.'); button.disabled = false; }
+            });
+            actions.appendChild(button);
+          });
+          card.append(info, actions);
+          list.appendChild(card);
+        });
+      } catch (error) { console.warn('Không tải được lời mời nhận việc:', error); }
+    }
+
+    async function loadMyApplications() {
+      const body=document.getElementById('proposalsTableBody');
+      if(!window.providerApi)return;
+      try {
+        const result=await window.providerApi.getMyJobApplications();
+        if(!result.success)throw new Error(result.message||'Không tải được báo giá.');
+        body.replaceChildren();
+        const applications=result.applications||[];document.getElementById('applicationCount').textContent=applications.length;
+        const acceptedCount=applications.filter(item=>['selected','accepted'].includes(item.status)).length;
+        const rejectedCount=applications.filter(item=>['rejected','declined'].includes(item.status)).length;
+        const pendingCount=applications.length-acceptedCount-rejectedCount;
+        document.getElementById('proposalFilterAll').textContent=`Tất cả (${applications.length})`;
+        document.getElementById('proposalFilterPending').textContent=`Đang chờ (${pendingCount})`;
+        document.getElementById('proposalFilterAccepted').textContent=`Đã chọn (${acceptedCount})`;
+        document.getElementById('proposalFilterRejected').textContent=`Từ chối (${rejectedCount})`;
+        if(!applications.length){const row=body.insertRow();const cell=row.insertCell();cell.colSpan=6;cell.style.textAlign='center';cell.style.color='var(--text-muted)';cell.textContent='Bạn chưa gửi báo giá nào.';return;}
+        applications.forEach(item=>{
+          const row=body.insertRow();
+          const status=['selected','accepted'].includes(item.status)?'accepted':(['rejected','declined'].includes(item.status)?'rejected':'pending');row.dataset.status=status;
+          const jobCell=row.insertCell();const title=document.createElement('div');title.style.cssText='font-weight:700;color:var(--secondary);';title.textContent=item.title||'Yêu cầu tuyển dụng';const client=document.createElement('div');client.style.cssText='font-size:12px;color:var(--text-muted);';client.textContent=`Khách hàng: ${item.customerName||'Khách hàng'}`;jobCell.append(title,client);
+          const price=row.insertCell();price.textContent=item.proposedPrice||'—';
+          const days=row.insertCell();days.textContent=item.estimatedDays?`${item.estimatedDays} ngày`:'—';
+          const date=row.insertCell();date.textContent=item.appliedAt||item.createdAt||'—';
+          const statusCell=row.insertCell();const badge=document.createElement('span');badge.className=`badge ${status==='accepted'?'badge-success':status==='rejected'?'badge-error':'badge-warning'}`;badge.textContent=status==='accepted'?'Được khách chọn':status==='rejected'?'Không được chọn':'Đang chờ khách xem';statusCell.appendChild(badge);
+          const action=row.insertCell();action.style.textAlign='right';const view=document.createElement('button');view.type='button';view.className='btn btn-outline btn-sm';view.textContent='Xem thư';view.addEventListener('click',()=>{document.getElementById('proposalModalText').textContent=item.proposalText||'Không có nội dung báo giá.';openModal('viewProposalModal');});action.appendChild(view);
+        });
+      } catch(error) { body.replaceChildren();const row=body.insertRow();const cell=row.insertCell();cell.colSpan=6;cell.textContent=error.message||'Không tải được báo giá.'; }
+    }
     function switchJobTab(tabId, el) {
       document.querySelectorAll('.screen-tab-content').forEach(c => c.classList.remove('active'));
       document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -687,24 +496,81 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
       window.scrollTo(0, 0);
     }
 
-    let currentJobId = 'JOB-2025-01';
+    let currentJobId = null;
+    let marketJobs = [];
+    document.addEventListener('DOMContentLoaded', () => { loadMarketJobs(); loadSelectedJobInvitations(); loadMyApplications(); });
 
-    function openJobDetail(id, title, budget, client) {
-      currentJobId = id || 'JOB-2025-01';
-      document.getElementById('reqDetailTitle').textContent = title;
-      document.getElementById('reqDetailId').textContent = '#' + id;
-      document.getElementById('reqDetailBudget').textContent = budget;
-      document.getElementById('reqDetailClient').textContent = client;
-      document.getElementById('applyJobTitle').value = title;
-      switchJobTab('tab-uc34', document.querySelectorAll('.tab-item')[1]);
+    function formatMoney(value) {
+      const amount=Number(value);
+      return Number.isFinite(amount) && amount>0 ? `${amount.toLocaleString('vi-VN')}đ` : (value || 'Thỏa thuận');
     }
-
+    function renderMarketJobs(jobs) {
+      const list=document.getElementById('marketJobsList'); list.replaceChildren();
+      if(!jobs.length){const empty=document.createElement('div');empty.className='card';empty.style.textAlign='center';empty.textContent='Chưa có yêu cầu nào đang mở.';list.appendChild(empty);return;}
+      jobs.forEach(job=>{
+        const card=document.createElement('article');card.className='job-card';
+        const title=document.createElement('div');title.style.cssText='font-weight:700;font-size:16px;color:var(--secondary);';title.textContent=job.title||'Yêu cầu tuyển dụng';
+        const meta=document.createElement('div');meta.style.cssText='font-size:12px;color:var(--text-muted);margin-top:5px;';meta.textContent=`Khách hàng: ${job.customerName||'Khách hàng'} · ${job.location||'Toàn quốc / Online'} · ${job.createdAt||''}`;
+        const chips=document.createElement('div');chips.style.cssText='display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;';
+        [job.category||'Chưa phân loại',formatMoney(job.budgetNum||job.budget),`Hạn: ${job.deadline||'Thỏa thuận'}`].forEach(label=>{const chip=document.createElement('span');chip.className='chip';chip.textContent=label;chips.appendChild(chip);});
+        const desc=document.createElement('p');desc.style.cssText='font-size:13px;color:var(--text-main);line-height:1.6;margin-bottom:12px;';desc.textContent=job.desc||'Khách hàng chưa thêm mô tả.';
+        const footer=document.createElement('div');footer.style.cssText='display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-color);padding-top:12px;gap:10px;';
+        const count=document.createElement('span');count.style.cssText='font-size:12px;color:var(--text-muted);';count.textContent=`${(job.applicants||[]).length} báo giá`;
+        const button=document.createElement('button');button.type='button';button.className='btn btn-primary btn-sm';button.textContent='Xem chi tiết →';button.addEventListener('click',()=>openJobDetail(job.id));
+        footer.append(count,button);card.append(title,meta,chips,desc,footer);list.appendChild(card);
+      });
+    }
+    async function loadMarketJobs() {
+      const list=document.getElementById('marketJobsList');
+      if(!window.providerApi){list.textContent='Không thể kết nối API.';return;}
+      list.innerHTML='<div class="card" style="text-align:center;color:var(--text-muted);">Đang tải yêu cầu từ hệ thống...</div>';
+      try{
+        const result=await window.providerApi.getMarketJobs();
+        if(!result.success)throw new Error(result.message||'Không tải được danh sách yêu cầu.');
+        marketJobs=Array.isArray(result.jobs)?result.jobs:[];
+        document.getElementById('marketJobCount').textContent=marketJobs.length;
+        document.getElementById('marketTabCount').textContent=marketJobs.length;
+        const categorySelect=document.getElementById('marketCategory');
+        const categories=[...new Set(marketJobs.map(job=>job.category).filter(Boolean))];
+        categorySelect.replaceChildren(new Option('Tất cả danh mục','all'),...categories.map(category=>new Option(category,category)));
+        filterMarketJobs();
+      }
+      catch(error){list.replaceChildren();const message=document.createElement('div');message.className='card';message.style.color='var(--error)';message.textContent=error.message||'Không tải được dữ liệu. Hãy thử làm mới.';list.appendChild(message);}
+    }
+    function filterMarketJobs() {
+      const query=(document.getElementById('marketSearch')?.value||'').trim().toLocaleLowerCase('vi');
+      const category=document.getElementById('marketCategory')?.value||'all';
+      const minBudget=readFormattedNumber(document.getElementById('marketMinBudget'));
+      renderMarketJobs(marketJobs.filter(job=>{
+        const text=`${job.title||''} ${job.desc||''} ${job.customerName||''}`.toLocaleLowerCase('vi');
+        return (!query||text.includes(query))&&(category==='all'||job.category===category)&&(Number(job.budgetNum)||0)>=minBudget;
+      }));
+    }
+    function openJobDetail(id) {
+      const job=marketJobs.find(item=>item.id===id);if(!job){showToast('Yêu cầu không còn trong danh sách. Hãy tải lại dữ liệu.');return;}
+      currentJobId=job.id;
+      document.getElementById('reqDetailTitle').textContent=job.title||'Yêu cầu tuyển dụng';
+      document.getElementById('reqDetailId').textContent='#'+job.id;
+      document.getElementById('reqDetailBudget').textContent=formatMoney(job.budgetNum||job.budget);
+      document.getElementById('reqDetailClient').textContent=job.customerName||'Khách hàng';
+      document.getElementById('reqDetailCreatedAt').textContent=job.createdAt||'—';
+      document.getElementById('reqDetailApplicants').textContent=(job.applicants||[]).length;
+      document.getElementById('reqDetailDescription').textContent=job.desc||'Khách hàng chưa thêm mô tả.';
+      document.getElementById('reqDetailDeadline').textContent=job.deadline||'Thỏa thuận';
+      document.getElementById('reqDetailLocation').textContent=job.location||'Toàn quốc / Online';
+      document.getElementById('reqDetailCategory').textContent=job.category||'—';
+      document.getElementById('applyJobTitle').value=job.title||'';
+      document.getElementById('proposalBudgetHint').textContent=formatMoney(job.budgetNum||job.budget);
+      setFormattedNumber('proposalPrice',job.budgetNum||'');
+      document.getElementById('proposalDays').value='';document.getElementById('proposalLetter').value='';calculateEarning();
+      switchJobTab('tab-uc34',document.querySelectorAll('.tab-item')[1]);
+    }
     function goToApplyTab() {
-      switchJobTab('tab-uc35', document.querySelectorAll('.tab-item')[2]);
+      if(!currentJobId){showToast('Vui lòng chọn một yêu cầu trước.');return;}
+      switchJobTab('tab-uc35',document.querySelectorAll('.tab-item')[2]);
     }
-
     function calculateEarning() {
-      const price = parseFloat(document.getElementById('proposalPrice').value) || 0;
+      const price = readFormattedNumber('proposalPrice');
       const fee = Math.round(price * 0.05);
       const net = price - fee;
       document.getElementById('calcPriceDisplay').textContent = price.toLocaleString('vi-VN') + 'đ';
@@ -713,11 +579,12 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
     }
 
     async function submitProposalAction() {
-      const price = document.getElementById('proposalPrice').value;
+      const price = readFormattedNumber('proposalPrice');
       const days = document.getElementById('proposalDays').value;
-      const coverLetter = document.getElementById('proposalCoverLetter') ? document.getElementById('proposalCoverLetter').value : '';
+      const coverLetter = document.getElementById('proposalLetter').value.trim();
 
-      if (!price || !days) {
+      if (!currentJobId) { showToast('Vui lòng chọn một yêu cầu trước.'); return; }
+      if (!price || !days || !coverLetter) {
         showToast('Vui lòng nhập đầy đủ báo giá và số ngày hoàn thành!');
         return;
       }
@@ -725,17 +592,24 @@ Em cam kết bàn giao mã nguồn sạch, có kèm tài liệu hướng dẫn q
       showToast('Đang gửi hồ sơ ứng tuyển...', 'info');
       try {
         if (window.providerApi) {
-          const num = Number(price);
-          await window.providerApi.applyToJob(currentJobId, {
+          const num = price;
+          const result = await window.providerApi.applyToJob(currentJobId, {
             proposedPrice: num.toLocaleString('vi-VN') + 'đ',
-            proposalText: coverLetter || `Tôi cam kết hoàn thành dự án trong ${days} ngày với đơn giá ${num.toLocaleString('vi-VN')}đ.`
+            proposalText: coverLetter, estimatedDays: Number(days)
           });
+          if (!result.success) throw new Error(result.message || 'Không gửi được hồ sơ ứng tuyển.');
+        } else {
+          throw new Error('Không thể kết nối hệ thống ứng tuyển.');
         }
       } catch (err) {
         console.warn('Apply job API error:', err);
+        showToast(err.message || 'Không gửi được hồ sơ ứng tuyển.');
+        return;
       }
 
       showToast('Đã gửi hồ sơ ứng tuyển và báo giá thành công!');
+      await loadMarketJobs();
+      await loadMyApplications();
       setTimeout(() => {
         switchJobTab('tab-uc36', document.querySelectorAll('.tab-item')[3]);
       }, 700);

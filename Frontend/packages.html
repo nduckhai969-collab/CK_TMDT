@@ -201,7 +201,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Mức giá niêm yết (VNĐ)</label>
-          <input type="number" class="form-control" id="pkg-price-input" placeholder="Ví dụ: 199000">
+          <input type="text" class="form-control" id="pkg-price-input" data-thousands inputmode="numeric" placeholder="Ví dụ: 199.000" autocomplete="off">
         </div>
         <div class="form-group">
           <label class="form-label">Thời hạn hiệu lực (Ngày)</label>
@@ -246,6 +246,7 @@
 
   <div class="toast-container" id="toast-container"></div>
 
+  <script src="js/number-format.js"></script>
   <script src="common.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -396,7 +397,7 @@
         if (pkg) {
           document.getElementById('modal-package-title').textContent = 'Chỉnh sửa Gói Đăng Tin (UC-70)';
           document.getElementById('pkg-name-input').value = pkg.name;
-          document.getElementById('pkg-price-input').value = pkg.price;
+          setFormattedNumber('pkg-price-input', pkg.price);
           document.getElementById('pkg-duration-input').value = pkg.duration;
           document.getElementById('pkg-posts-input').value = pkg.postsCount;
           document.getElementById('pkg-status-input').value = pkg.status || 'active';
@@ -405,7 +406,7 @@
       } else {
         document.getElementById('modal-package-title').textContent = 'Thêm Gói Đăng Tin Mới (UC-70)';
         document.getElementById('pkg-name-input').value = '';
-        document.getElementById('pkg-price-input').value = '199000';
+        setFormattedNumber('pkg-price-input', 199000);
         document.getElementById('pkg-duration-input').value = 30;
         document.getElementById('pkg-posts-input').value = 10;
         document.getElementById('pkg-status-input').value = 'active';
@@ -460,7 +461,7 @@
         }
 
         // 2. Kiểm tra bắt buộc & số hợp lệ: Mức giá niêm yết
-        const price = parseInt(priceVal, 10);
+        const price = readFormattedNumber(priceVal);
         if (priceVal === '' || isNaN(price) || price < 0) {
           alert('Mức giá niêm yết không hợp lệ! Vui lòng nhập số tiền từ 0 VNĐ trở lên.');
           document.getElementById('pkg-price-input').focus();

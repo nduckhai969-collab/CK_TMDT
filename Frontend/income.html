@@ -95,7 +95,7 @@
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label">Số tiền cần rút (VNĐ)</label>
-              <input type="number" class="form-control" id="withdrawAmount" placeholder="Ví dụ: 5000000" value="5000000">
+              <input type="text" class="form-control" id="withdrawAmount" data-thousands inputmode="numeric" placeholder="Ví dụ: 5.000.000" value="5.000.000" autocomplete="off">
               <div style="display:flex; gap:8px; margin-top: 8px;">
                 <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawVal(2000000)">2.000.000đ</button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawVal(5000000)">5.000.000đ</button>
@@ -152,16 +152,17 @@
     </main>
   </div>
 
+  <script src="js/number-format.js"></script>
   <script src="provider.js"></script>
   <script>
     let currentAvailableBalance = 25000000;
 
     function setWithdrawVal(val) {
-      document.getElementById('withdrawAmount').value = val;
+      setFormattedNumber('withdrawAmount', val);
     }
 
     function setWithdrawAll() {
-      document.getElementById('withdrawAmount').value = currentAvailableBalance;
+      setFormattedNumber('withdrawAmount', currentAvailableBalance);
     }
 
     async function loadWallet() {
@@ -203,14 +204,14 @@
     }
 
     async function handleWithdrawSubmit() {
-      const amount = document.getElementById('withdrawAmount').value;
+      const amount = readFormattedNumber('withdrawAmount');
       const pwd = document.getElementById('withdrawPassword').value;
 
-      if (!amount || Number(amount) <= 0) {
+      if (!amount || amount <= 0) {
         showToast('Vui lòng nhập số tiền cần rút hợp lệ!');
         return;
       }
-      if (Number(amount) > currentAvailableBalance) {
+      if (amount > currentAvailableBalance) {
         showToast('Số dư khả dụng không đủ!');
         return;
       }

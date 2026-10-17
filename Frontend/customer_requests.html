@@ -165,7 +165,7 @@
             </div>
             <div>
               <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Ngân Sách Dự Kiến (VNĐ) <span style="color:#EF4444;">*</span></label>
-              <input type="number" id="jobBudget" required placeholder="VD: 5000000" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+              <input type="text" id="jobBudget" data-thousands required inputmode="numeric" placeholder="VD: 5.000.000" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
             </div>
           </div>
 
@@ -194,7 +194,7 @@
           <div style="background:#DCFCE7; border:1px solid #86EFAC; border-radius:10px; padding:14px; margin-bottom:24px; display:flex; gap:12px; align-items:flex-start;">
             <i class="fa-solid fa-shield-halved" style="color:#15803D; font-size:20px; margin-top:2px;"></i>
             <div style="font-size:12.5px; color:#15803D; line-height:1.5;">
-              <strong>Bảo lãnh an toàn sàn:</strong> Khi bạn chọn được chuyên gia ưng ý từ danh sách ứng tuyển, bạn sẽ nạp ký quỹ Escrow. Tiền chỉ được sàn chuyển cho chuyên gia sau khi bạn nghiệm thu đạt chất lượng.
+              <strong>Bảo lãnh an toàn sàn:</strong> Đăng yêu cầu và chọn Provider chưa bị trừ tiền. Sau khi Provider xác nhận nhận việc, bạn mới thanh toán ký quỹ Escrow; tiền chỉ được chuyển cho Provider sau khi bạn nghiệm thu.
             </div>
           </div>
 
@@ -262,6 +262,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-client.js"></script>
+  <script src="js/number-format.js"></script>
   <script src="customer.js"></script>
   <script>
     let myJobs = [];
@@ -303,8 +304,11 @@
       if (!currentDetailJob) return;
       const job = currentDetailJob;
       document.getElementById('detailTitle').textContent = job.title;
-      const hasAcceptedProvider = (job.applicants || []).some(applicant => applicant.status === 'accepted') || job.closeReason === 'provider_selected';
-      document.getElementById('detailStatus').textContent = job.status === 'open' ? '● Đang nhận ứng tuyển' : (hasAcceptedProvider ? '● Đã chốt chuyên gia' : '● Đã đóng yêu cầu');
+      const hasAcceptedProvider = job.status === 'closed' && ((job.applicants || []).some(applicant => applicant.status === 'accepted') || job.closeReason === 'provider_selected');
+      document.getElementById('detailStatus').textContent = job.status === 'open' ? '● Đang nhận ứng tuyển'
+        : job.status === 'awaiting_provider' ? '● Chờ Provider xác nhận'
+          : job.status === 'awaiting_payment' ? '● Provider đã nhận, chờ ký quỹ'
+            : (hasAcceptedProvider ? '● Đã ký quỹ, đã chốt chuyên gia' : '● Đã đóng yêu cầu');
       document.getElementById('detailBudget').textContent = job.budget || formatVND(job.budgetNum || 0);
       document.getElementById('detailCategory').textContent = categoryName(job.category);
       document.getElementById('detailDeadline').textContent = job.deadline || 'Thỏa thuận';
@@ -313,11 +317,13 @@
       document.getElementById('detailMeta').textContent = `Mã ${job.id} · Đăng lúc ${job.createdAt || '—'} · ${(job.applicants || []).length} người ứng tuyển`;
       document.getElementById('detailEditBtn').style.display = job.status === 'open' ? '' : 'none';
       const statusAction = document.getElementById('detailStatusActionBtn');
-      statusAction.style.display = hasAcceptedProvider ? 'none' : '';
+      statusAction.style.display = hasAcceptedProvider || ['awaiting_provider', 'awaiting_payment'].includes(job.status) ? 'none' : '';
       statusAction.innerHTML = job.status === 'open' ? '<i class="fa-solid fa-circle-pause"></i> Đóng yêu cầu' : '<i class="fa-solid fa-circle-play"></i> Mở lại yêu cầu';
       document.getElementById('detailStatusNote').textContent = hasAcceptedProvider
-        ? 'Yêu cầu đã chốt chuyên gia nên hệ thống tự đóng và không nhận thêm hồ sơ ứng tuyển.'
-        : (job.status === 'open' ? 'Bạn có thể đóng tạm yêu cầu để ngừng nhận ứng viên, rồi mở lại bất cứ lúc nào.' : 'Yêu cầu đang tạm đóng. Mở lại để chuyên gia tiếp tục ứng tuyển.');
+        ? 'Yêu cầu đã được ký quỹ và chốt chuyên gia.'
+        : job.status === 'awaiting_provider' ? 'Bạn chưa bị trừ tiền. Provider cần xác nhận trước khi hệ thống mở bước ký quỹ.'
+          : job.status === 'awaiting_payment' ? 'Provider đã nhận việc. Hãy ký quỹ để bắt đầu; yêu cầu chỉ được chốt sau khi thanh toán thành công.'
+            : (job.status === 'open' ? 'Bạn có thể đóng tạm yêu cầu để ngừng nhận ứng viên, rồi mở lại bất cứ lúc nào.' : 'Yêu cầu đang tạm đóng. Mở lại để chuyên gia tiếp tục ứng tuyển.');
       document.getElementById('detailApplicantsBtn').innerHTML = `<i class="fa-solid fa-users"></i> Xem ${(job.applicants || []).length} ứng viên`;
       document.getElementById('requestDetailModal').style.display = 'flex';
     }
@@ -376,7 +382,7 @@
       editingJobId = job.id;
       document.getElementById('jobTitle').value = job.title || '';
       document.getElementById('jobCategory').value = job.category || 'IT';
-      document.getElementById('jobBudget').value = job.budgetNum || Number(String(job.budget || '').replace(/[^0-9]/g, '')) || '';
+      setFormattedNumber('jobBudget', job.budgetNum || Number(String(job.budget || '').replace(/[^0-9]/g, '')) || '');
       const deadline = String(job.deadline || '');
       const normalizedDeadline = /^\d{4}-\d{2}-\d{2}$/.test(deadline) ? deadline : (/^\d{2}\/\d{2}\/\d{4}$/.test(deadline) ? deadline.split('/').reverse().join('-') : '');
       document.getElementById('jobDeadline').value = normalizedDeadline;
@@ -407,7 +413,7 @@
       const payload = {
         title: document.getElementById('jobTitle').value,
         category: document.getElementById('jobCategory').value,
-        budgetNum: Number(document.getElementById('jobBudget').value),
+        budgetNum: readFormattedNumber('jobBudget'),
         deadline: document.getElementById('jobDeadline').value || 'Thỏa thuận',
         location: document.getElementById('jobLocation').value,
         desc: document.getElementById('jobDesc').value
@@ -462,6 +468,17 @@
         document.getElementById('statOpen').textContent = myJobs.filter(j => j.status === 'open').length;
         document.getElementById('statApplicants').textContent = myJobs.reduce((sum, j) => sum + (j.applicants || []).length, 0);
         renderJobsList();
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('action') === 'pay' && params.get('jobId')) {
+          const job = myJobs.find(item => String(item.id) === params.get('jobId'));
+          const applicant = (job?.applicants || []).find(item => item.providerId === job?.selectedProviderId && item.status === 'accepted');
+          if (job?.status === 'awaiting_payment' && applicant) {
+            beginJobEscrowCheckout(job, applicant);
+          } else {
+            showToast('Chưa thể ký quỹ', 'Yêu cầu không còn ở trạng thái chờ thanh toán hoặc Provider chưa xác nhận.', 'error');
+          }
+        }
       } catch (error) {
         console.error('Không tải được yêu cầu của tài khoản:', error);
         myJobs = [];
@@ -505,7 +522,7 @@
             <div class="request-compact-row">
               <h2 class="request-compact-title">${j.title}</h2>
               <div class="request-compact-meta">
-                <span class="request-status-pill" style="background:${isOpen ? '#dcfce7' : '#f1f5f9'};color:${isOpen ? '#15803d' : '#475569'}">${isOpen ? 'Đang nhận ứng tuyển' : ((j.applicants || []).some(a => a.status === 'accepted') ? 'Đã chốt chuyên gia' : 'Đã đóng')}</span>
+                <span class="request-status-pill" style="background:${isOpen ? '#dcfce7' : (j.status === 'awaiting_payment' ? '#fff7ed' : '#f1f5f9')};color:${isOpen ? '#15803d' : (j.status === 'awaiting_payment' ? '#c2410c' : '#475569')}">${isOpen ? 'Đang nhận ứng tuyển' : j.status === 'awaiting_provider' ? 'Chờ Provider xác nhận' : j.status === 'awaiting_payment' ? 'Chờ ký quỹ' : ((j.applicants || []).some(a => a.status === 'accepted') ? 'Đã chốt chuyên gia' : 'Đã đóng')}</span>
                 <span>${applicantCount} ứng viên</span>
                 <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
               </div>
@@ -528,7 +545,7 @@
         customerName: user.name,
         title: document.getElementById('jobTitle').value,
         category: document.getElementById('jobCategory').value,
-        budgetNum: Number(document.getElementById('jobBudget').value),
+        budgetNum: readFormattedNumber('jobBudget'),
         deadline: document.getElementById('jobDeadline').value,
         location: document.getElementById('jobLocation').value,
         desc: document.getElementById('jobDesc').value
@@ -588,8 +605,8 @@
               <div style="font-size:17px; font-weight:800; color:#16A34A; margin-bottom:8px;">${a.proposedPrice}</div>
               
               <div style="display:flex; flex-direction:column; gap:6px;">
-                <button onclick="acceptApplicant('${currentModalJob.id}', '${a.providerId}', '${a.providerName}', '${a.proposedPrice}')" class="btn btn-primary btn-sm" style="font-weight:700;">
-                  <i class="fa-solid fa-handshake"></i> Chọn & Ký Quỹ Escrow
+                <button onclick="handleApplicantAction('${currentModalJob.id}', '${a.providerId}')" class="btn btn-primary btn-sm" style="font-weight:700;" ${currentModalJob.status === 'open' && a.status === 'pending' || currentModalJob.status === 'awaiting_payment' && a.status === 'accepted' ? '' : 'disabled'}>
+                  <i class="fa-solid ${currentModalJob.status === 'awaiting_payment' ? 'fa-shield-halved' : 'fa-handshake'}"></i> ${currentModalJob.status === 'awaiting_payment' && a.status === 'accepted' ? 'Ký quỹ Escrow' : a.status === 'selected' ? 'Chờ Provider xác nhận' : a.status === 'accepted' ? 'Provider đã xác nhận' : a.status === 'declined' ? 'Provider đã từ chối' : 'Chọn Provider'}
                 </button>
                 <a href="customer_chat.html?with=${a.providerId}" class="btn btn-outline btn-sm" style="border-color:#CBD5E1; font-weight:600; text-align:center;">
                   <i class="fa-solid fa-comments"></i> Chat Báo Giá
@@ -608,9 +625,30 @@
       currentModalJob = null;
     }
 
-    async function acceptApplicant(jobId, providerId, providerName, priceFormatted) {
+    function beginJobEscrowCheckout(job, applicant) {
+      const priceNum = Number(String(applicant.proposedPriceNum || applicant.proposedPrice || '').replace(/[^0-9]/g, ''));
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        showToast('Lỗi báo giá', 'Không thể đọc báo giá của Provider.', 'error');
+        return;
+      }
+      localStorage.setItem('SKILLRENTAL_CHECKOUT_DRAFT', JSON.stringify({
+        jobId: job.id, providerId: applicant.providerId, providerName: applicant.providerName,
+        serviceTitle: job.title, price: priceNum, date: job.deadline || 'Thỏa thuận',
+        time: 'Theo thỏa thuận dự án', quantity: '1 Hợp đồng trọn gói',
+        notes: `Tuyển từ yêu cầu: ${job.id}`
+      }));
+      window.location.href = 'customer_checkout.html';
+    }
+
+    async function handleApplicantAction(jobId, providerId) {
       if (!requireCustomerLogin()) return;
-      const priceNum = Number(priceFormatted.replace(/[^0-9]/g, '')) || 5000000;
+      const job = myJobs.find(item => item.id === jobId);
+      const applicant = (job?.applicants || []).find(item => item.providerId === providerId);
+      if (job?.status === 'awaiting_payment' && applicant?.status === 'accepted') {
+        beginJobEscrowCheckout(job, applicant);
+        return;
+      }
+      if (job?.status !== 'open' || applicant?.status !== 'pending') return;
       
       const res = await apiRequest(`/api/jobs/${jobId}/accept-applicant`, {
         method: 'POST',
@@ -618,26 +656,12 @@
       });
 
       if (res.success) {
-        showToast('Đã Chọn Chuyên Gia!', res.message, 'success');
-        closeApplicantsModal();
-
-        // Save draft and redirect to checkout for escrow deposit
-        const draft = {
-          providerId,
-          providerName,
-          serviceTitle: currentModalJob ? currentModalJob.title : 'Hợp đồng theo yêu cầu',
-          price: priceNum,
-          date: currentModalJob ? currentModalJob.deadline : '7 ngày',
-          time: 'Theo thỏa thuận dự án',
-          quantity: '1 Hợp đồng trọn gói',
-          notes: `Tuyển từ yêu cầu: ${currentModalJob ? currentModalJob.id : ''}`
-        };
-        localStorage.setItem('SKILLRENTAL_CHECKOUT_DRAFT', JSON.stringify(draft));
-        setTimeout(() => {
-          window.location.href = 'customer_checkout.html';
-        }, 1000);
+        showToast('Đã gửi lời mời', res.message, 'success');
+        await loadJobs();
+        currentModalJob = myJobs.find(item => item.id === jobId) || null;
+        if (currentModalJob) openApplicantsModal(jobId); else closeApplicantsModal();
       } else {
-        showToast('Lỗi', res.message || 'Không thể chấp thuận ứng viên', 'error');
+        showToast('Lỗi', res.message || 'Không thể gửi lời mời cho Provider', 'error');
       }
     }
   </script>

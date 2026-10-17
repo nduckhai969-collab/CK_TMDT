@@ -55,7 +55,7 @@ function processAcceptOrder(orderId, userId) {
   db.saveCollection('orders', orders);
 
   createNotification(order.customerId, 'Đơn hàng được tiếp nhận',
-    `Chuyên gia đã tiếp nhận đơn hàng ${order.id} và bắt đầu thực hiện.`, 'info');
+    `Chuyên gia đã tiếp nhận đơn hàng ${order.id} và bắt đầu thực hiện.`, 'info', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   return order;
 }
 
@@ -71,7 +71,7 @@ function processDeliverOrder(orderId, userId) {
   db.saveCollection('orders', orders);
 
   createNotification(order.customerId, 'Đơn hàng đã bàn giao',
-    `Chuyên gia đã bàn giao đơn hàng ${order.id}. Vui lòng nghiệm thu.`, 'success');
+    `Chuyên gia đã bàn giao đơn hàng ${order.id}. Vui lòng kiểm tra và nghiệm thu.`, 'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   return order;
 }
 
@@ -86,7 +86,7 @@ function processProgressOrder(orderId, userId, note) {
   db.saveCollection('orders', orders);
 
   createNotification(order.customerId, 'Tiến độ đơn hàng',
-    `Đơn hàng ${order.id} được cập nhật tiến độ: ${note}`, 'info');
+    `Đơn hàng ${order.id} được cập nhật tiến độ: ${note}`, 'info', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   return order;
 }
 
@@ -314,6 +314,11 @@ function processReleaseEscrow(orderId, { customerId = null, force = false } = {}
 
   notifyProvider(order.providerId, 'Đơn hàng đã được nghiệm thu',
     `Đơn hàng ${order.id} đã hoàn tất. Số tiền ${order.priceFormatted || order.price} đã được cộng vào ví của bạn.`, 'success');
+  createNotification(order.customerId, force ? 'Đã phân xử đơn hàng' : 'Đơn hàng đã hoàn tất',
+    force
+      ? `Admin đã phân xử đơn ${order.id} và giải ngân khoản ký quỹ cho Provider. Đơn hàng đã kết thúc.`
+      : `Bạn đã nghiệm thu đơn ${order.id}. Ký quỹ đã được giải ngân cho Provider và đơn hàng đã hoàn tất.`,
+    'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   return order;
 }
 
@@ -338,7 +343,7 @@ function processForceRefund(orderId) {
   db.saveCollection('orders', orders);
 
   createNotification(order.customerId, 'Đã hoàn tiền',
-    `Admin đã hoàn 100% tiền ký quỹ của đơn hàng ${order.id} vào ví của bạn.`, 'success');
+    `Admin đã hoàn 100% tiền ký quỹ của đơn hàng ${order.id} vào ví của bạn.`, 'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   notifyProvider(order.providerId, 'Đơn hàng bị hoàn tiền', `Đơn hàng ${order.id} đã được Admin hoàn tiền cho khách hàng.`, 'warning');
   return order;
 }

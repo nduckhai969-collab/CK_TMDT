@@ -1,4 +1,4 @@
-// Khởi tạo Firebase Admin SDK (chỉ chạy ở server, KHÔNG đưa file này ra frontend)
+
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
@@ -16,7 +16,7 @@ function loadCredential() {
     }
     return admin.credential.cert(JSON.parse(fs.readFileSync(abs, 'utf8')));
   }
-  // Fallback: biến GOOGLE_APPLICATION_CREDENTIALS hoặc môi trường Google Cloud
+
   return admin.credential.applicationDefault();
 }
 

@@ -241,11 +241,27 @@
 
   window.syncUserToAdminState = syncUserToAdminState;
 
+  function getEmailActionCodeSettings() {
+    try {
+      const origin = window.location.origin;
+      const targetUrl = (origin && origin.startsWith('http'))
+        ? `${origin}/verify.html`
+        : 'https://skillrental-30a5e.firebaseapp.com/verify.html';
+      return {
+        url: targetUrl,
+        handleCodeInApp: false
+      };
+    } catch (_) {
+      return undefined;
+    }
+  }
+
   // ============================================================================
   // 5. SKILLAUTH CORE API
   // ============================================================================
   window.SkillAuth = {
     syncUserToAdminState,
+    getEmailActionCodeSettings,
 
     // A. ĐĂNG KÝ (Tạo Firebase Auth -> Tạo Profile Firestore -> Gửi Email Xác Nhận -> Đồng bộ Admin)
     async register({ name, email, phone, password, role }) {
@@ -306,7 +322,12 @@
       let sentVerification = false;
       if (fbUser) {
         try {
-          await fbUser.sendEmailVerification();
+          const actionSettings = getEmailActionCodeSettings();
+          try {
+            await fbUser.sendEmailVerification(actionSettings);
+          } catch (_) {
+            await fbUser.sendEmailVerification();
+          }
           sentVerification = true;
         } catch (e) {
           console.warn('[SkillAuth] Lỗi gửi email xác nhận:', e);
@@ -391,7 +412,12 @@
             await fbAuth.signOut();
             return { success: true, alreadyVerified: true, message: 'Email đã được xác nhận rồi! Bạn có thể đăng nhập ngay.' };
           }
-          await cred.user.sendEmailVerification();
+          const actionSettings = getEmailActionCodeSettings();
+          try {
+            await cred.user.sendEmailVerification(actionSettings);
+          } catch (_) {
+            await cred.user.sendEmailVerification();
+          }
           await fbAuth.signOut();
           return { success: true, message: `Đã gửi lại email xác nhận tới ${cleanEmail}. Vui lòng kiểm tra hộp thư!` };
         } catch (err) {
@@ -415,7 +441,12 @@
       let errorMsg = null;
 
       try {
-        await fbAuth.sendPasswordResetEmail(cleanEmail);
+        const actionSettings = getEmailActionCodeSettings();
+        try {
+          await fbAuth.sendPasswordResetEmail(cleanEmail, actionSettings);
+        } catch (_) {
+          await fbAuth.sendPasswordResetEmail(cleanEmail);
+        }
         clientSuccess = true;
       } catch (err) {
         if (err.code === 'auth/invalid-email') {
@@ -845,46 +876,314 @@
     border: 1px solid #BFDBFE;
     color: #1E40AF;
   }
-  .sr-quick-demo {
-    margin-top: 18px;
-    padding: 12px;
-    background: #F8FAFC;
-    border-radius: 10px;
-    border: 1px dashed #CBD5E1;
+  /* ============================================================
+   * EMAIL VERIFICATION UI (PREMIUM REDESIGN)
+   * ============================================================ */
+  .verify-notice-container {
+    padding: 6px 0 4px;
+    text-align: center;
+    animation: verifyFadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-  .sr-quick-demo-title {
+  @keyframes verifyFadeInUp {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .verify-hero-wrapper {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .verify-pulse-ring {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(22, 163, 74, 0.3) 0%, rgba(22, 163, 74, 0) 70%);
+    animation: verifyPulseRing 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+  }
+  @keyframes verifyPulseRing {
+    0% { transform: scale(0.85); opacity: 0.9; }
+    50% { transform: scale(1.2); opacity: 0.25; }
+    100% { transform: scale(0.85); opacity: 0.9; }
+  }
+  .verify-hero-icon {
+    position: relative;
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #22C55E 0%, #16A34A 50%, #15803D 100%);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 10px 25px -4px rgba(22, 163, 74, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+    animation: verifyFloat 3s ease-in-out infinite;
+  }
+  @keyframes verifyFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  .verify-badge-check {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    color: #16A34A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 900;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    border: 2px solid #FFFFFF;
+  }
+  .verify-heading {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0F172A;
+    letter-spacing: -0.4px;
+    margin: 0 0 6px;
+  }
+  .verify-lead {
+    font-size: 13px;
+    color: #64748B;
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+  .verify-email-card {
+    background: linear-gradient(180deg, #F0FDF4 0%, #DCFCE7 100%);
+    border: 1.5px solid #86EFAC;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.08);
+  }
+  .verify-email-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #FFFFFF;
+    color: #16A34A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.12);
+    flex-shrink: 0;
+  }
+  .verify-email-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .verify-email-tag {
+    display: block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    color: #15803D;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .verify-email-text {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0F172A;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .verify-copy-btn {
+    background: #FFFFFF;
+    border: 1px solid #BBF7D0;
+    color: #16A34A;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+  .verify-copy-btn:hover {
+    background: #16A34A;
+    color: #FFFFFF;
+    border-color: #16A34A;
+  }
+  .verify-mailbox-action {
+    margin-bottom: 12px;
+  }
+  .btn-open-inbox {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 40px;
+    background: #FFFFFF;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    color: #0F172A;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  .btn-open-inbox:hover {
+    border-color: #16A34A;
+    color: #16A34A;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+    transform: translateY(-1px);
+  }
+  .inbox-external-icon {
+    font-size: 11px;
+    opacity: 0.6;
+  }
+  .verify-guide-card {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    text-align: left;
+    margin-bottom: 12px;
+  }
+  .verify-guide-header {
     font-size: 12px;
     font-weight: 700;
-    color: #64748B;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
-  .sr-demo-btns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  .verify-steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .verify-step {
+    display: flex;
+    align-items: flex-start;
     gap: 8px;
+    font-size: 12.5px;
+    color: #475569;
+    line-height: 1.45;
   }
-  .sr-btn-demo {
-    padding: 7px 10px;
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 7px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #0F172A;
-    cursor: pointer;
+  .verify-step-number {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #DCFCE7;
+    color: #16A34A;
+    font-size: 11px;
+    font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 6px;
-    transition: all 0.15s;
-    text-align: left;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
   }
-  .sr-btn-demo:hover {
-    border-color: #16A34A;
-    background: #F0FDF4;
-    color: #166534;
+  .verify-tip-alert {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    color: #1E40AF;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-bottom: 14px;
+  }
+  .verify-tip-alert .tip-icon {
+    color: #3B82F6;
+    font-size: 14px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .verify-action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .verify-login-btn {
+    width: 100%;
+    height: 44px;
+    background: linear-gradient(135deg, #16A34A 0%, #15803D 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .verify-login-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(22, 163, 74, 0.45);
+  }
+  .verify-resend-btn {
+    width: 100%;
+    height: 40px;
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    border-radius: 10px !important;
+    color: #334155 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .verify-resend-btn:hover {
+    border-color: #16A34A !important;
+    color: #16A34A !important;
+    background: #F0FDF4 !important;
+  }
+  .verify-alt-nav {
+    font-size: 12.5px;
+    color: #64748B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .verify-alt-link {
+    color: #16A34A;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .verify-alt-link:hover {
+    text-decoration: underline;
   }
   .sr-toast-container {
     position: fixed;
@@ -1094,20 +1393,6 @@
           <button type="button" class="sr-btn-outline" onclick="handleGoogleLogin(event)" style="margin-bottom:12px;">
             <i class="fa-brands fa-google" style="color:#DB4437; font-size:16px;"></i> Đăng Nhập Bằng Google
           </button>
-
-          <div class="sr-quick-demo">
-            <div class="sr-quick-demo-title">
-              ⚡ Đăng Nhập Nhanh Mẫu (1-Click Demo)
-            </div>
-            <div class="sr-demo-btns">
-              <button type="button" class="sr-btn-demo" onclick="quickFillAndLogin('23130004@st.hcmuaf.edu.vn', 'SkillRental@123')">
-                <i class="fa-solid fa-user" style="color:#16A34A;"></i> Khách: 23130004
-              </button>
-              <button type="button" class="sr-btn-demo" onclick="quickFillAndLogin('minh.nguyen@example.com', 'SkillRental@123')">
-                <i class="fa-solid fa-briefcase" style="color:#0F172A;"></i> Provider: Minh
-              </button>
-            </div>
-          </div>
         </form>
 
         <!-- 2. FORM ĐĂNG KÝ -->
@@ -1194,30 +1479,96 @@
           </div>
         </form>
 
-        <!-- 4. THÔNG BÁO CHỜ XÁC NHẬN EMAIL -->
-        <div id="verifyNoticeBox" style="display:none; text-align:center; padding:10px 0;">
-          <div style="width:68px; height:68px; border-radius:50%; background:#DCFCE7; color:#16A34A; display:flex; align-items:center; justify-content:center; font-size:30px; margin:0 auto 16px;">
-            <i class="fa-solid fa-envelope-circle-check"></i>
+        <!-- 4. THÔNG BÁO CHỜ XÁC NHẬN EMAIL (MODERN REDESIGN) -->
+        <div id="verifyNoticeBox" class="verify-notice-container" style="display:none;">
+          <!-- Animated Hero Icon -->
+          <div class="verify-hero-wrapper">
+            <div class="verify-pulse-ring"></div>
+            <div class="verify-hero-icon">
+              <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <div class="verify-badge-check">
+              <i class="fa-solid fa-check"></i>
+            </div>
           </div>
 
-          <h4 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">Kích Hoạt Tài Khoản Qua Email</h4>
-          <p style="font-size:13px; color:#475569; line-height:1.5; margin:0 0 16px;">
-            Email dùng để xác minh tài khoản:
-            <br><strong id="verifyNoticeEmail" style="color:#16A34A; font-size:14px;">email@example.com</strong>
+          <h4 class="verify-heading">Kiểm Tra Hộp Thư Của Bạn</h4>
+          <p class="verify-lead">
+            Hệ thống đã gửi liên kết kích hoạt an toàn đến:
           </p>
 
-          <div class="sr-alert-box sr-alert-warning" style="text-align:left;">
-            <i class="fa-solid fa-circle-exclamation" style="font-size:16px; margin-top:2px;"></i>
-            <div id="verifyNoticeMessage">Mở email Firebase gửi tới địa chỉ trên và nhấn liên kết xác minh để kích hoạt tài khoản. Sau đó quay lại đây để đăng nhập. Nhớ kiểm tra cả mục Spam / Thư rác.</div>
+          <!-- Recipient Email Card with Copy Button -->
+          <div class="verify-email-card">
+            <div class="verify-email-avatar">
+              <i class="fa-solid fa-envelope"></i>
+            </div>
+            <div class="verify-email-info">
+              <span class="verify-email-tag">ĐỊA CHỈ NHẬN THƯ</span>
+              <span class="verify-email-text" id="verifyNoticeEmail">email@example.com</span>
+            </div>
+            <button type="button" class="verify-copy-btn" id="btnCopyVerifyEmail" onclick="copyVerifyEmail()" title="Sao chép email">
+              <i class="fa-regular fa-copy"></i>
+            </button>
           </div>
 
-          <button type="button" class="sr-btn-primary" onclick="switchAuthTab('login')" style="margin-bottom:10px;">
-            <i class="fa-solid fa-arrow-right-to-bracket"></i> Quay Lại Đăng Nhập
-          </button>
+          <!-- 1-Click Direct Webmail Shortcut -->
+          <div class="verify-mailbox-action" id="verifyMailboxAction">
+            <a href="https://mail.google.com" target="_blank" rel="noopener noreferrer" class="btn-open-inbox" id="btnOpenInbox">
+              <i class="fa-brands fa-google" id="inboxProviderIcon" style="color:#EA4335;"></i>
+              <span id="inboxProviderText">Mở Hộp Thư Gmail</span>
+              <i class="fa-solid fa-arrow-up-right-from-square inbox-external-icon"></i>
+            </a>
+          </div>
 
-          <button type="button" class="sr-btn-outline" id="btnResendVerification" onclick="triggerResendVerification()">
-            <i class="fa-solid fa-rotate-right"></i> Gửi Lại Email Xác Nhận
-          </button>
+          <!-- 3-Step Clear Action Guide -->
+          <div class="verify-guide-card">
+            <div class="verify-guide-header">
+              <i class="fa-solid fa-list-check"></i>
+              <span>3 bước kích hoạt tài khoản:</span>
+            </div>
+            <div class="verify-steps-list">
+              <div class="verify-step">
+                <div class="verify-step-number">1</div>
+                <div class="verify-step-desc">Mở hộp thư đến (Inbox) từ hệ thống SkillRental.</div>
+              </div>
+              <div class="verify-step">
+                <div class="verify-step-number">2</div>
+                <div class="verify-step-desc">Bấm nút <strong>Verify your email</strong> (hoặc nhấn link xác minh).</div>
+              </div>
+              <div class="verify-step">
+                <div class="verify-step-number">3</div>
+                <div class="verify-step-desc">Quay lại đây và nhấn <strong>Đăng nhập ngay</strong>.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tip Alert Box -->
+          <div class="verify-tip-alert" id="verifyNoticeMessage">
+            <i class="fa-solid fa-lightbulb tip-icon"></i>
+            <div>
+              <strong>Chưa thấy thư?</strong> Vui lòng kiểm tra thêm mục <b>Spam (Thư rác)</b> hoặc <b>Quảng cáo</b>. Nếu vẫn chưa nhận được, hãy dùng nút gửi lại bên dưới.
+            </div>
+          </div>
+
+          <!-- Primary & Secondary CTA Buttons -->
+          <div class="verify-action-group">
+            <button type="button" class="btn btn-primary btn-block verify-login-btn" onclick="switchAuthTab('login')">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i>
+              <span>Tôi Đã Xác Nhận, Đăng Nhập Ngay</span>
+            </button>
+
+            <button type="button" class="btn btn-outline btn-block verify-resend-btn" id="btnResendVerification" onclick="triggerResendVerification()">
+              <i class="fa-solid fa-rotate-right"></i>
+              <span>Gửi Lại Email Xác Nhận</span>
+            </button>
+          </div>
+
+          <div class="verify-alt-nav">
+            <span>Nhập sai email?</span>
+            <a href="javascript:void(0)" onclick="switchAuthTab('register')" class="verify-alt-link">
+              Đăng ký lại
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -1301,8 +1652,12 @@
     } else if (tab === 'verify') {
       if (verifyNotice) verifyNotice.style.display = 'block';
       if (tabsContainer) tabsContainer.style.display = 'none';
-      if (bannerTitle) bannerTitle.innerText = 'Xác Thực Tài Khoản';
-      if (bannerSubtitle) bannerSubtitle.innerText = 'Kích hoạt tài khoản để bắt đầu trải nghiệm dịch vụ';
+      if (bannerTitle) bannerTitle.innerText = 'Kích Hoạt Tài Khoản';
+      if (bannerSubtitle) bannerSubtitle.innerText = 'Xác thực email để bắt đầu sử dụng dịch vụ SkillRental';
+      const curEmail = document.getElementById('verifyNoticeEmail')?.innerText?.trim() || document.getElementById('loginEmail')?.value?.trim();
+      if (curEmail && curEmail !== 'email@example.com' && typeof window.updateVerifyEmailView === 'function') {
+        window.updateVerifyEmailView(curEmail);
+      }
     }
   };
 
@@ -1394,14 +1749,17 @@
       if (data.success && data.verifyEmail) {
         const verifyMessage = document.getElementById('verifyNoticeMessage');
         if (verifyMessage && !data.verificationSent) {
-          verifyMessage.textContent = 'Firebase chưa gửi được email kích hoạt. Bấm “Gửi Lại Email Xác Nhận” bên dưới; sau khi nhận thư, nhấn liên kết xác minh rồi quay lại đăng nhập.';
+          verifyMessage.innerHTML = '<i class="fa-solid fa-triangle-exclamation tip-icon" style="color:#F59E0B;"></i><div><strong>Chưa gửi được email tự động.</strong> Bấm “Gửi Lại Email Xác Nhận” bên dưới để nhận liên kết kích hoạt.</div>';
         }
-        showToastMsg(data.verificationSent ? 'Đã gửi email kích hoạt' : 'Chưa gửi được email kích hoạt', data.message, data.verificationSent ? 'success' : 'warning');
+        showToastMsg('🎉 Đăng Ký Thành Công!', 'Vui lòng kiểm tra hộp thư email để kích hoạt tài khoản của bạn.', 'success');
         const emailLabel = document.getElementById('verifyNoticeEmail');
         if (emailLabel) emailLabel.innerText = email;
         // Điền sẵn email vào form login
         const loginEmail = document.getElementById('loginEmail');
         if (loginEmail) loginEmail.value = email;
+        if (typeof window.updateVerifyEmailView === 'function') {
+          window.updateVerifyEmailView(email);
+        }
 
         switchAuthTab('verify');
         return;
@@ -1530,6 +1888,73 @@
     }
   };
 
+  // Cập nhật giao diện xác thực email (phát hiện hộp thư theo domain)
+  window.updateVerifyEmailView = function (email) {
+    if (!email) return;
+    const cleanEmail = String(email).trim();
+    const emailLabel = document.getElementById('verifyNoticeEmail');
+    if (emailLabel) emailLabel.innerText = cleanEmail;
+
+    const inboxBtn = document.getElementById('btnOpenInbox');
+    const inboxIcon = document.getElementById('inboxProviderIcon');
+    const inboxText = document.getElementById('inboxProviderText');
+
+    if (!inboxBtn || !inboxText) return;
+
+    const lower = cleanEmail.toLowerCase();
+    if (lower.includes('@gmail.com') || lower.includes('@st.hcmuaf.edu.vn') || lower.endsWith('.edu.vn')) {
+      inboxBtn.href = 'https://mail.google.com';
+      if (inboxIcon) {
+        inboxIcon.className = 'fa-brands fa-google';
+        inboxIcon.style.color = '#EA4335';
+      }
+      inboxText.innerText = 'Mở Hộp Thư Gmail';
+    } else if (lower.includes('@outlook.') || lower.includes('@hotmail.') || lower.includes('@live.') || lower.includes('@office365.')) {
+      inboxBtn.href = 'https://outlook.live.com';
+      if (inboxIcon) {
+        inboxIcon.className = 'fa-brands fa-microsoft';
+        inboxIcon.style.color = '#00A4EF';
+      }
+      inboxText.innerText = 'Mở Hộp Thư Outlook';
+    } else if (lower.includes('@yahoo.')) {
+      inboxBtn.href = 'https://mail.yahoo.com';
+      if (inboxIcon) {
+        inboxIcon.className = 'fa-brands fa-yahoo';
+        inboxIcon.style.color = '#6001D2';
+      }
+      inboxText.innerText = 'Mở Hộp Thư Yahoo';
+    } else {
+      inboxBtn.href = `mailto:${cleanEmail}`;
+      if (inboxIcon) {
+        inboxIcon.className = 'fa-solid fa-envelope-open';
+        inboxIcon.style.color = '#16A34A';
+      }
+      inboxText.innerText = 'Mở Ứng Dụng Hộp Thư';
+    }
+  };
+
+  // Sao chép email xác nhận vào clipboard
+  window.copyVerifyEmail = function () {
+    const email = document.getElementById('verifyNoticeEmail')?.innerText?.trim();
+    if (!email || email === 'email@example.com') return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(email).then(() => {
+        const btn = document.getElementById('btnCopyVerifyEmail');
+        if (btn) {
+          btn.innerHTML = '<i class="fa-solid fa-check" style="color:#16A34A;"></i>';
+          setTimeout(() => {
+            btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+          }, 2000);
+        }
+        showToastMsg('Đã Sao Chép', 'Đã sao chép địa chỉ email vào clipboard.', 'success');
+      }).catch(() => {
+        showToastMsg('Email Xác Nhận', email, 'info');
+      });
+    } else {
+      showToastMsg('Email Xác Nhận', email, 'info');
+    }
+  };
+
   // Đăng nhập / Đăng ký bằng Google
   window.handleGoogleLogin = async function (e, isRegister = false) {
     if (e) e.preventDefault();
@@ -1592,19 +2017,17 @@
     const params = new URLSearchParams(window.location.search);
     const authAction = params.get('auth');
     const mode = params.get('mode');
-    const oobCode = params.get('oobCode');
+    const verifiedParam = params.get('verified');
+    if (verifiedParam === '1') {
+      showToastMsg('Kích Hoạt Thành Công!', 'Tài khoản của bạn đã được xác nhận. Vui lòng đăng nhập.', 'success');
+    }
 
-    // Trường hợp 1: Nhấp link xác nhận email từ hộp thư
-    if (mode === 'verifyEmail' && oobCode) {
-      showToastMsg('Đang xác thực email...', 'Vui lòng đợi giây lát.', 'info');
-      const res = await SkillAuth.applyActionCode(oobCode);
-      if (res.success) {
-        showToastMsg('Kích Hoạt Thành Công!', 'Email của bạn đã được xác nhận. Vui lòng đăng nhập để bắt đầu.', 'success');
-        openAuthModal('login');
-      } else {
-        showToastMsg('Xác thực thất bại', res.message, 'error');
+    // Nếu nhận được link tác vụ từ email (verifyEmail, resetPassword, recoverEmail), tự động chuyển về trang verify.html chuyên biệt
+    if ((mode === 'verifyEmail' || mode === 'resetPassword' || mode === 'recoverEmail') && oobCode) {
+      if (!window.location.pathname.includes('verify.html')) {
+        window.location.href = `verify.html?${params.toString()}`;
+        return;
       }
-      return;
     }
 
     // Trường hợp 2: Nhấp link đặt lại mật khẩu từ hộp thư

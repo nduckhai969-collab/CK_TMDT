@@ -274,7 +274,17 @@ router.post('/resend-verification', async (req, res) => {
     if (userRecord.emailVerified) {
       return res.json({ success: true, alreadyVerified: true, message: 'Email này đã được xác nhận. Bạn có thể đăng nhập ngay!' });
     }
-    const verifyLink = await auth.generateEmailVerificationLink(cleanEmail);
+    let verifyLink;
+    try {
+      const appUrl = process.env.APP_URL || 'https://skillrental-30a5e.firebaseapp.com';
+      verifyLink = await auth.generateEmailVerificationLink(cleanEmail, {
+        url: `${appUrl}/verify.html`,
+        handleCodeInApp: false
+      });
+    } catch (_) {
+      verifyLink = await auth.generateEmailVerificationLink(cleanEmail);
+    }
+
     res.json({
       success: true,
       message: `Đã tạo liên kết xác nhận cho ${cleanEmail}. Vui lòng kiểm tra hộp thư của bạn.`,
@@ -297,7 +307,16 @@ router.post('/forgot-password', async (req, res) => {
   }
   const cleanEmail = String(email).trim().toLowerCase();
   try {
-    const resetLink = await auth.generatePasswordResetLink(cleanEmail);
+    let resetLink;
+    try {
+      const appUrl = process.env.APP_URL || 'https://skillrental-30a5e.firebaseapp.com';
+      resetLink = await auth.generatePasswordResetLink(cleanEmail, {
+        url: `${appUrl}/verify.html`,
+        handleCodeInApp: false
+      });
+    } catch (_) {
+      resetLink = await auth.generatePasswordResetLink(cleanEmail);
+    }
     res.json({
       success: true,
       message: `Nếu email ${cleanEmail} tồn tại trong hệ thống, liên kết khôi phục mật khẩu đã được tạo.`,

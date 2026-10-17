@@ -806,11 +806,15 @@ async function openCustomerNotification(notificationId) {
   const relatedLink = document.getElementById('customerNotificationRelatedLink');
   relatedLink.style.display = 'none';
   relatedLink.removeAttribute('href');
+  relatedLink.innerHTML = 'Đi tới trang liên quan <i class="fa-solid fa-arrow-up-right-from-square"></i>';
   if (notification.detailsUrl) {
     try {
       const target = new URL(notification.detailsUrl, window.location.origin);
       if (target.origin === window.location.origin) {
         relatedLink.href = target.href;
+        if (target.searchParams.get('action') === 'pay') {
+          relatedLink.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Thanh toán ký quỹ ngay';
+        }
         relatedLink.style.display = 'inline-flex';
       }
     } catch (_) {}

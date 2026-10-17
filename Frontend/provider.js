@@ -157,6 +157,11 @@ window.providerApi = {
     return res.json();
   },
 
+  getMyJobApplications: async () => {
+    const res = await fetch(`${API_BASE}/api/jobs/provider/applications`, { headers: getAuthHeader() });
+    return res.json();
+  },
+
   applyToJob: async (jobId, proposalData) => {
     const provider = getCurrentProvider();
     const res = await fetch(`${API_BASE}/api/jobs/${jobId}/apply`, {
@@ -168,6 +173,20 @@ window.providerApi = {
         avatar: provider.avatar,
         ...proposalData
       })
+    });
+    return res.json();
+  },
+
+  getSelectedJobInvitations: async () => {
+    const res = await fetch(`${API_BASE}/api/jobs/provider/selected`, { headers: getAuthHeader() });
+    return res.json();
+  },
+
+  respondToJobSelection: async (jobId, action) => {
+    const res = await fetch(`${API_BASE}/api/jobs/${encodeURIComponent(jobId)}/provider-response`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ action })
     });
     return res.json();
   },

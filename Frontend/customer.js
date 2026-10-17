@@ -1619,6 +1619,39 @@ function injectGlobalAuthModal() {
                     Đăng Nhập Ngay
                 </button>
 
+                <div style="text-align:center; margin:16px 0; font-size:12px; color:#94A3B8; position:relative;">
+                    <hr style="border:none; border-top:1px solid #E2E8F0; position:absolute; top:50%; width:100%; margin:0; z-index:1;">
+                    <span style="background:#FFF; padding:0 12px; position:relative; z-index:2;">HOẶC TIẾP TỤC VỚI</span>
+                </div>
+
+                <button
+                    type="button"
+                    id="loginGoogleBtn"
+                    onclick="handleGoogleLogin(event)"
+                    style="
+                        width:100%;
+                        height:44px;
+                        background:#FFFFFF;
+                        color:#334155;
+                        border:1px solid #CBD5E1;
+                        border-radius:8px;
+                        font-weight:600;
+                        font-size:14px;
+                        cursor:pointer;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        gap:10px;
+                        transition:all .2s ease;
+                        box-sizing:border-box;
+                    "
+                    onmouseover="this.style.background='#F8FAFC';this.style.borderColor='#94A3B8';"
+                    onmouseout="this.style.background='#FFFFFF';this.style.borderColor='#CBD5E1';"
+                >
+                    <i class="fa-brands fa-google" style="color:#DB4437; font-size:16px;"></i>
+                    Đăng Nhập Bằng Google
+                </button>
+
             </form>
 
 
@@ -1846,6 +1879,39 @@ function injectGlobalAuthModal() {
                     Hoàn Tất Đăng Ký
                 </button>
 
+                <div style="text-align:center; margin:16px 0; font-size:12px; color:#94A3B8; position:relative;">
+                    <hr style="border:none; border-top:1px solid #E2E8F0; position:absolute; top:50%; width:100%; margin:0; z-index:1;">
+                    <span style="background:#FFF; padding:0 12px; position:relative; z-index:2;">HOẶC ĐĂNG KÝ NHANH</span>
+                </div>
+
+                <button
+                    type="button"
+                    id="registerGoogleBtn"
+                    onclick="handleGoogleLogin(event, true)"
+                    style="
+                        width:100%;
+                        height:44px;
+                        background:#FFFFFF;
+                        color:#334155;
+                        border:1px solid #CBD5E1;
+                        border-radius:8px;
+                        font-weight:600;
+                        font-size:14px;
+                        cursor:pointer;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        gap:10px;
+                        transition:all .2s ease;
+                        box-sizing:border-box;
+                    "
+                    onmouseover="this.style.background='#F8FAFC';this.style.borderColor='#94A3B8';"
+                    onmouseout="this.style.background='#FFFFFF';this.style.borderColor='#CBD5E1';"
+                >
+                    <i class="fa-brands fa-google" style="color:#DB4437; font-size:16px;"></i>
+                    Đăng Ký Nhanh Bằng Google
+                </button>
+
             </form>
 
         </div>
@@ -1946,10 +2012,15 @@ function closeAuthModal() {
 
     overlay.style.display =
         'none';
-
-    document.body.style.overflow =
-        '';
   }
+
+  const fbModal = document.getElementById('authModal');
+  if (fbModal) {
+    fbModal.classList.remove('active');
+  }
+
+  document.body.style.overflow =
+      '';
 }
 
 
@@ -2315,6 +2386,99 @@ function handleGlobalRegister(e) {
 
 
 // ============================================================
+// GOOGLE SIGN-IN CHO CUSTOMER MODAL
+// ============================================================
+
+async function handleGoogleLogin(e, isRegister = false) {
+  if (e) e.preventDefault();
+
+  const googleBtn = isRegister
+      ? document.getElementById('registerGoogleBtn')
+      : document.getElementById('loginGoogleBtn');
+
+  const origContent = googleBtn ? googleBtn.innerHTML : '';
+  if (googleBtn) {
+    googleBtn.disabled = true;
+    googleBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kết nối Google...';
+  }
+
+  try {
+    if (!window.SkillAuth || typeof window.SkillAuth.loginWithGoogle !== 'function') {
+      throw new Error('Tính năng đăng nhập Google chưa được kích hoạt hoặc chưa tải xong. Vui lòng tải lại trang.');
+    }
+
+    const selectedRole = isRegister
+      ? (document.querySelector('input[name="regRole"]:checked')?.value || 'Customer')
+      : undefined;
+
+    const data = await window.SkillAuth.loginWithGoogle(selectedRole);
+
+    if (data.success && data.user) {
+      setCurrentCustomer(data.user);
+      showToast('Đăng Nhập Thành Công!', `Chào mừng ${data.user.name || 'bạn'}.`, 'success');
+      closeAuthModal();
+      setTimeout(() => {
+        redirectAfterLogin(data.user);
+      }, 300);
+      return;
+    }
+
+    if (data.code === 'NO_PROFILE' && data.googleUser) {
+      switchAuthTab('register');
+      const regName = document.getElementById('regName');
+      const regEmail = document.getElementById('regEmail');
+      const regPhone = document.getElementById('regPhone');
+      if (regName) regName.value = data.googleUser.name || '';
+      if (regEmail) { regEmail.value = data.googleUser.email || ''; regEmail.readOnly = true; }
+      if (regPhone) regPhone.value = data.googleUser.phone || '';
+
+      const pwdField = document.getElementById('regPassword');
+      if (pwdField) {
+        const pwdGroup = pwdField.closest('div');
+        if (pwdGroup) pwdGroup.style.display = 'none';
+        pwdField.removeAttribute('required');
+      }
+
+      const form = document.getElementById('registerForm');
+      if (form) {
+        form.onsubmit = async (evt) => {
+          evt.preventDefault();
+          const role = document.querySelector('input[name="regRole"]:checked')?.value || 'Customer';
+          data.googleUser.phone = document.getElementById('regPhone')?.value?.trim();
+          data.googleUser.name = document.getElementById('regName')?.value?.trim();
+          const res = await window.SkillAuth.registerGoogleProfile(role, data.googleUser);
+          if (res.success && res.user) {
+            setCurrentCustomer(res.user);
+            showToast('Tạo Tài Khoản Thành Công!', `Chào mừng bạn với vai trò ${role}.`, 'success');
+            closeAuthModal();
+            setTimeout(() => redirectAfterLogin(res.user), 300);
+          } else {
+            showToast('Đăng Ký Thất Bại', res.message || 'Không thể tạo tài khoản!', 'error');
+          }
+        };
+      }
+      showToast('Chọn vai trò', 'Vui lòng chọn vai trò để hoàn tất tài khoản Google.', 'info');
+      return;
+    }
+
+    showToast('Đăng Nhập Thất Bại', data.message || 'Lỗi xác thực Google.', 'error');
+  } catch (err) {
+    console.error('Google Sign-In Error:', err);
+    if (err.code === 'auth/popup-closed-by-user' || (err.message && err.message.includes('popup-closed'))) {
+      showToast('Đã hủy', 'Bạn đã đóng cửa sổ đăng nhập Google.', 'info');
+    } else {
+      showToast('Lỗi Đăng Nhập', err.message || 'Không thể đăng nhập bằng Google. Vui lòng thử lại.', 'error');
+    }
+  } finally {
+    if (googleBtn) {
+      googleBtn.disabled = false;
+      googleBtn.innerHTML = origContent;
+    }
+  }
+}
+
+
+// ============================================================
 // QUICK LOGIN - GIỐNG INDEX
 // ============================================================
 
@@ -2474,6 +2638,9 @@ window.handleModalRegister =
 
 window.handleGlobalRegister =
     handleGlobalRegister;
+
+window.handleGoogleLogin =
+    handleGoogleLogin;
 
 window.quickFillAndLogin =
     quickFillAndLogin;

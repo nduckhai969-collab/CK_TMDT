@@ -147,6 +147,11 @@ app.get(['/find-provider', '/find_provider', '/find_provider.html'], (req, res) 
   res.sendFile(path.join(__dirname, 'Frontend', 'find_provider.html'));
 });
 
+// Route xác thực tài khoản và Firebase email action handler
+app.get(['/verify', '/verify.html', '/__/auth/action'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Frontend', 'verify.html'));
+});
+
 // Route gốc vào trang chủ
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'Frontend', 'index.html'));

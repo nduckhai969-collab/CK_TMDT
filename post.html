@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bài viết & Portfolio - SkillRental Partner</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="brand-icon">S</div>
+        <span>SkillRental</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Tổng quan</div>
+        <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+
+        <div class="nav-section-title">Hồ sơ & Dịch vụ</div>
+        <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-card-clip"></i><span>Hồ Sơ & Dịch Vụ</span></a>
+
+        <div class="nav-section-title">Công việc & Đơn hàng</div>
+        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);">6</span></a>
+        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);">2</span></a>
+
+        <div class="nav-section-title">Kinh doanh & Khách hàng</div>
+        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count">3</span></a>
+        <a href="payment.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Thanh toán & Phí sàn</span></a>
+        <a href="income.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Ví & Thu nhập</span></a>
+        <a href="review.html" class="nav-link"><i class="fa-solid fa-star"></i><span>Đánh giá & Uy tín</span></a>
+        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);">1</span></a>
+
+        <div class="nav-section-title">Dịch vụ hệ thống</div>
+        <a href="package.html" class="nav-link"><i class="fa-solid fa-box-archive"></i><span>Mua dịch vụ</span></a>
+        <a href="post.html" class="nav-link active"><i class="fa-solid fa-newspaper"></i><span>Bài viết & Portfolio</span></a>
+      </nav>
+
+      <div class="sidebar-profile">
+        <div class="avatar">NV</div>
+        <div class="profile-info">
+          <div class="profile-name">Nguyễn Văn Pro</div>
+          <div class="profile-role">Senior UI/UX & Web Dev</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-wrapper">
+      <header class="top-header">
+        <div class="header-title">Quản Lý Bài Viết & Portfolio Showcase</div>
+        <div class="header-actions">
+          <!-- Switcher to Admin Portal -->
+          <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
+            <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
+          </a>
+          <button class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Đăng Bài Viết Mới</button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fa-solid fa-newspaper" style="color: var(--primary-accent);"></i> Danh Sách Bài Viết Đã Đăng</div>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Hình ảnh</th>
+                <th>Tiêu Đề Bài Viết</th>
+                <th>Chuyên Mục</th>
+                <th>Lượt Xem</th>
+                <th>Lượt Thích</th>
+                <th>Ngày Đăng</th>
+                <th>Trạng Thái</th>
+                <th>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="post-thumb" style="background:#E2E8F0; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text-muted);">UI/UX</div>
+                </td>
+                <td><strong>Quy trình thiết kế Landing Page giúp tối ưu chuyển đổi</strong></td>
+                <td>Thiết kế UI/UX</td>
+                <td>1.420</td>
+                <td>98</td>
+                <td>10/09/2026</td>
+                <td><span class="badge badge-success"><span class="badge-dot"></span> Đã xuất bản</span></td>
+                <td>
+                  <div style="display:flex; gap:6px;">
+                    <button class="btn btn-outline btn-sm" style="padding:0 10px;"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn btn-outline btn-sm" style="padding:0 10px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr>
+                <td>
+                  <div class="post-thumb" style="background:#DCFCE7; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--primary-accent);">React</div>
+                </td>
+                <td><strong>Top 10 giải pháp tối ưu hiệu năng ReactJS cho Web App lớn</strong></td>
+                <td>Lập Trình Web</td>
+                <td>850</td>
+                <td>45</td>
+                <td>02/09/2026</td>
+                <td><span class="badge badge-warning"><span class="badge-dot"></span> Bản nháp</span></td>
+                <td>
+                  <div style="display:flex; gap:6px;">
+                    <button class="btn btn-outline btn-sm" style="padding:0 10px;"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn btn-outline btn-sm" style="padding:0 10px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Soạn Bài Viết Quảng Bá Kỹ Năng</div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Tiêu đề bài viết</label>
+              <input type="text" class="form-control" placeholder="Nhập tiêu đề thu hút người đọc...">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Chuyên mục kỹ năng</label>
+              <select class="form-control">
+                <option>Thiết kế UI/UX & Graphics</option>
+                <option>Lập Trình Web & App</option>
+                <option>Digital Marketing & SEO</option>
+                <option>Biên Dịch & Content Writing</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nội dung bài viết</label>
+            <textarea class="form-control" style="min-height: 140px;" placeholder="Chia sẻ kinh nghiệm làm việc, dự án tiêu biểu..."></textarea>
+          </div>
+
+          <div style="display:flex; gap:12px;">
+            <button class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Xuất Bản Bài Viết</button>
+            <button class="btn btn-secondary"><i class="fa-solid fa-floppy-disk"></i> Lưu Bản Nháp</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>

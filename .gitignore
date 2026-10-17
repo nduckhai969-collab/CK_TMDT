@@ -3,3 +3,6 @@ node_modules/
 serviceAccountKey.json
 *-firebase-adminsdk-*.json
 uploads/
+.idea/
+.idea_backup/
+.idea_old/

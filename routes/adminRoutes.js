@@ -34,6 +34,13 @@ router.get('/dashboard', (req, res) => {
     }
   });
 
+  // Cộng doanh thu từ các gói dịch vụ bán cho Provider
+  const packagePurchases = db.getCollection('packagePurchases') || [];
+  packagePurchases.forEach(pkg => {
+    const amt = Number(pkg.amountNum || String(pkg.amount || '').replace(/[^0-9]/g, '')) || 0;
+    totalRevenue += amt;
+  });
+
   const pendingSvcCount = services.filter(s => s.status === 'pending' || s.status === 'price_pending').length;
   const pendingProvCount = pendingProviders.filter(p => p.status === 'pending').length;
   const pendingSkillCount = skillApprovals.filter(s => s.status === 'pending').length;

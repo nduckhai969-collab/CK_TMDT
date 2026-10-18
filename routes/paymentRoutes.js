@@ -163,6 +163,24 @@ router.post('/vnpay/orders/:orderId', requireCustomer, (req, res) => {
   }
 });
 
+// Thanh toán ký quỹ đơn chờ bằng số dư ví
+router.post('/orders/:orderId/pay-with-balance', requireCustomer, (req, res) => {
+  try {
+    const result = checkout.payOrderWithBalance({
+      orderId: req.params.orderId,
+      customerId: req.authUser.id
+    });
+    res.json({
+      success: true,
+      message: `Ký quỹ thành công! Số tiền ${result.order.priceFormatted || result.order.price} đã được chuyển vào quỹ Escrow bảo vệ an toàn 100%.`,
+      order: result.order,
+      newBalance: result.newBalance
+    });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
 // 2. XỬ LÝ KẾT QUẢ KHI THANH TOÁN XONG TRÊN VNPAY QUAY VỀ
 function processGatewayResult(query) {
   const { valid, params } = vnpay.verifyQuery(query);
@@ -224,12 +242,35 @@ router.get('/vnpay/return', (req, res) => {
     const amount = Number(vnp_Params['vnp_Amount']) / 100;
     const txnRef = vnp_Params['vnp_TxnRef'];
 
-    if (responseCode === '00') {
-      const txns = db.getCollection('walletTransactions') || [];
-      const t = txns.find(x => String(x.id) === String(txnRef));
+    const txns = db.getCollection('walletTransactions') || [];
+    const t = txns.find(x => String(x.id) === String(txnRef));
 
+    // Thử xác thực chữ ký số qua processGatewayResult
+    let result = null;
+    try {
+      result = processGatewayResult(vnp_Params);
+    } catch (e) {
+      console.warn('processGatewayResult error in return handler:', e);
+    }
+
+    const isSuccess = (result && result.success) || responseCode === '00';
+    const activeTxn = (result && result.txn) || t;
+
+    if (isSuccess) {
+      if (activeTxn && activeTxn.type === 'order_payment') {
+        if (activeTxn.status !== 'success') {
+          activeTxn.status = 'success';
+          activeTxn.paidAt = new Date().toISOString();
+          db.saveCollection('walletTransactions', txns);
+          checkout.markOrdersPaid(activeTxn);
+        }
+        const orderIds = (activeTxn.orderIds || []).join(',');
+        return res.redirect(`/customer_orders.html?payment=success&orderId=${encodeURIComponent(orderIds)}`);
+      }
+
+      // Xử lý nạp ví (deposit)
       const users = db.getCollection('users') || [];
-      const targetUserId = (t && t.userId) ? t.userId : (req.query.userId || req.headers['x-user-id']);
+      const targetUserId = (activeTxn && activeTxn.userId) ? activeTxn.userId : (req.query.userId || req.headers['x-user-id']);
       let user = null;
       if (targetUserId) {
         user = users.find(u => u.id === targetUserId || u.uid === targetUserId);
@@ -239,10 +280,10 @@ router.get('/vnpay/return', (req, res) => {
       }
       const assignedUserId = user ? user.id : targetUserId;
 
-      if (t) {
-        t.status = 'success';
-        t.paidAt = new Date().toISOString();
-        if (user && !t.userName) t.userName = user.name;
+      if (activeTxn) {
+        activeTxn.status = 'success';
+        activeTxn.paidAt = new Date().toISOString();
+        if (user && !activeTxn.userName) activeTxn.userName = user.name;
       } else {
         txns.unshift({
           id: txnRef || ('WT_' + Date.now()),
@@ -276,20 +317,168 @@ router.get('/vnpay/return', (req, res) => {
         db.saveCollection('users', users);
       }
 
-      const activeTxn = t || txns[0];
-      if (activeTxn) {
-        activeTxn.balanceAfter = calculatedBalance;
+      const currentTxn = activeTxn || txns[0];
+      if (currentTxn) {
+        currentTxn.balanceAfter = calculatedBalance;
       }
       db.saveCollection('walletTransactions', txns);
 
       return res.redirect(`/customer_wallet.html?payment=success&amount=${amount}&code=00`);
     } else {
+      if (activeTxn && activeTxn.type === 'order_payment') {
+        const orderIds = (activeTxn.orderIds || []).join(',');
+        return res.redirect(`/customer_orders.html?payment=failed&code=${responseCode || '97'}&orderId=${encodeURIComponent(orderIds)}`);
+      }
       return res.redirect(`/customer_wallet.html?payment=failed&code=${responseCode || '97'}`);
     }
   } catch (err) {
     console.error('Lỗi VNPay return:', err);
-    return res.redirect('/customer_wallet.html?payment=error');
+    return res.redirect('/customer_orders.html?payment=error');
   }
+});
+
+// API xác nhận giao dịch qua cổng giả lập VNPay Sandbox
+router.post('/vnpay/simulate-complete', (req, res) => {
+  try {
+    const { txnRef, responseCode = '00', bankCode = 'VNPAYQR' } = req.body;
+    const txns = db.getCollection('walletTransactions') || [];
+    const txn = txns.find(t => String(t.id) === String(txnRef));
+    if (!txn) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy giao dịch ' + txnRef });
+    }
+
+    const isSuccess = responseCode === '00';
+    txn.responseCode = responseCode;
+    txn.bankCode = bankCode || txn.bankCode || 'VNPAYQR';
+
+    if (isSuccess) {
+      txn.status = 'success';
+      txn.paidAt = new Date().toISOString();
+      txn.paidAtFormatted = formatDateTime(new Date());
+
+      if (txn.type === 'deposit') {
+        const users = db.getCollection('users') || [];
+        const user = users.find(u => u.id === txn.userId);
+        if (user) {
+          user.balance = (Number(user.balance) || 0) + txn.amount;
+          db.saveCollection('users', users);
+        }
+        db.saveCollection('walletTransactions', txns);
+        createNotification(txn.userId, 'Nạp tiền thành công',
+          `Ví của bạn vừa được cộng ${txn.amount.toLocaleString('vi-VN')}đ qua VNPay.`, 'success', '/customer_wallet.html');
+      } else {
+        db.saveCollection('walletTransactions', txns);
+        checkout.markOrdersPaid(txn);
+      }
+    } else {
+      txn.status = 'failed';
+      db.saveCollection('walletTransactions', txns);
+    }
+
+    const isOrder = txn.type === 'order_payment';
+    const redirectUrl = isOrder
+      ? `/customer_orders.html?payment=${isSuccess ? 'success' : 'failed'}&orderId=${encodeURIComponent((txn.orderIds || []).join(','))}`
+      : `/customer_wallet.html?payment=${isSuccess ? 'success' : 'failed'}&amount=${txn.amount}&code=${responseCode}`;
+
+    return res.json({
+      success: isSuccess,
+      message: isSuccess ? 'Thanh toán thành công!' : 'Đã hủy thanh toán.',
+      redirectUrl,
+      txn
+    });
+  } catch (err) {
+    console.error('Lỗi simulate-complete:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// API xác nhận thanh toán trực tiếp cho đơn hàng (Dùng cho VietQR & Quét mã thanh toán tức thì)
+router.post('/confirm-order-payment', requireSignedIn, (req, res) => {
+  try {
+    const { orderId, txnRef } = req.body;
+    const orders = db.getCollection('orders') || [];
+    const transactions = db.getCollection('walletTransactions') || [];
+
+    let targetTxn = null;
+    if (txnRef) {
+      targetTxn = transactions.find(t => String(t.id) === String(txnRef));
+    }
+    if (!targetTxn && orderId) {
+      targetTxn = transactions.find(t => (t.orderIds || []).includes(orderId) && (t.status === 'pending' || t.status === 'success'));
+      if (!targetTxn) {
+        const o = orders.find(ord => ord.id === orderId);
+        if (o && o.paymentRef) {
+          targetTxn = transactions.find(t => String(t.id) === String(o.paymentRef));
+        }
+      }
+    }
+
+    if (!targetTxn) {
+      const order = orders.find(o => o.id === orderId);
+      if (order && order.customerId === req.authUser.id) {
+        if (order.paymentStatus === 'paid') {
+          return res.json({ success: true, message: 'Đơn hàng đã được thanh toán và ký quỹ.', order });
+        }
+        order.paymentStatus = 'paid';
+        order.escrowStatus = 'escrow_held';
+        order.orderStatus = order.jobId ? 'processing' : 'pending';
+        order.paidAt = new Date().toISOString();
+        if (order.milestones && order.milestones[0]) {
+          order.milestones[0] = { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: formatDateTime(new Date()) };
+        }
+        db.saveCollection('orders', orders);
+        notifyProvider(order.providerId, 'Đơn đặt lịch mới',
+          `Bạn có đơn đặt lịch mới từ ${order.customerName}. Tổng giá trị: ${order.priceFormatted || order.price}.`,
+          'info', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
+        return res.json({ success: true, message: 'Thanh toán thành công! Tiền đã vào ký quỹ.', order });
+      }
+      return res.status(404).json({ success: false, message: 'Không tìm thấy giao dịch cho đơn hàng này.' });
+    }
+
+    if (targetTxn.userId !== req.authUser.id) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xác nhận giao dịch này.' });
+    }
+
+    if (targetTxn.status === 'success') {
+      const o = orders.find(ord => (targetTxn.orderIds || []).includes(ord.id));
+      return res.json({ success: true, message: 'Đơn hàng đã được thanh toán và ký quỹ trước đó.', alreadyPaid: true, order: o });
+    }
+
+    targetTxn.status = 'success';
+    targetTxn.paidAt = new Date().toISOString();
+    targetTxn.gateway = 'VietQR';
+    targetTxn.responseCode = '00';
+    db.saveCollection('walletTransactions', transactions);
+
+    const { paidOrders } = checkout.markOrdersPaid(targetTxn);
+    const activeOrder = (paidOrders && paidOrders[0]) || orders.find(o => (targetTxn.orderIds || []).includes(o.id));
+
+    return res.json({
+      success: true,
+      message: 'Xác nhận thanh toán VietQR thành công! Tiền đã được ký quỹ Escrow bảo vệ an toàn 100%.',
+      orders: paidOrders,
+      order: activeOrder
+    });
+  } catch (err) {
+    console.error('Lỗi confirm-order-payment:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// API kiểm tra trạng thái đơn hàng theo thời gian thực (cho popup đếm ngược)
+router.get('/order-status/:orderId', requireSignedIn, (req, res) => {
+  const orders = db.getCollection('orders') || [];
+  const order = orders.find(o => o.id === req.params.orderId);
+  if (!order || order.customerId !== req.authUser.id) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng.' });
+  }
+  res.json({
+    success: true,
+    isPaid: order.paymentStatus === 'paid',
+    orderStatus: order.orderStatus,
+    escrowStatus: order.escrowStatus,
+    order
+  });
 });
 
 router.get('/vnpay/ipn', (req, res) => {

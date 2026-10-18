@@ -469,6 +469,124 @@ function listTransactions(userId, { type, status, limit = 50, offset = 0 } = {})
   return { total, transactions: page };
 }
 
+// Thanh toán ký quỹ đơn hàng chờ bằng số dư ví SkillRental
+function payOrderWithBalance({ orderId, customerId }) {
+  expireUnpaidOrders();
+  const orders = db.getCollection('orders') || [];
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) throw httpError(404, 'Không tìm thấy đơn hàng.');
+  if (order.customerId !== customerId) throw httpError(403, 'Bạn không có quyền thanh toán đơn hàng này.');
+  if (order.paymentStatus !== 'pending' || (order.orderStatus !== 'pending' && order.orderStatus !== 'pending_payment')) {
+    throw httpError(409, 'Đơn hàng này không ở trạng thái chờ thanh toán.');
+  }
+
+  const depositAmt = Number(order.escrowDeposit || order.price || 0);
+  if (depositAmt <= 0) throw httpError(400, 'Số tiền ký quỹ không hợp lệ.');
+
+  const users = db.getCollection('users') || [];
+  const customer = users.find((u) => u.id === customerId);
+  if (!customer) throw httpError(404, 'Không tìm thấy tài khoản khách hàng.');
+
+  // Tính số dư khả dụng thực tế của khách hàng
+  const txns = db.getCollection('walletTransactions') || [];
+  const userTxns = txns.filter(t => 
+    (t.userId === customer.id || (customer.uid && t.userId === customer.uid)) &&
+    (t.status === 'success' || t.status === 'completed')
+  );
+  const hasDeposit = userTxns.some(t => t.type === 'deposit');
+  let realBalance = 0;
+  if (hasDeposit) {
+    const totalDeposits = userTxns
+      .filter(t => t.type === 'deposit' || t.type === 'refund')
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const totalDeductions = userTxns
+      .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+      .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+    realBalance = Math.max(0, totalDeposits - totalDeductions);
+  } else {
+    realBalance = 0;
+  }
+
+  if (realBalance < depositAmt) {
+    throw httpError(400, `Số dư ví không đủ để ký quỹ (Cần ${money(depositAmt)}, số dư khả dụng hiện có ${money(realBalance)}). Vui lòng nạp thêm tiền hoặc chọn thanh toán qua VietQR.`);
+  }
+
+  const now = new Date();
+  const newBalance = realBalance - depositAmt;
+  customer.balance = newBalance;
+  db.saveCollection('users', users);
+
+  // Huỷ các giao dịch gateway đang chờ của đơn này
+  txns.forEach((t) => {
+    if (t.type === 'order_payment' && t.status === 'pending' && (t.orderIds || []).includes(orderId)) {
+      t.status = 'cancelled';
+    }
+  });
+
+  // Ghi log giao dịch ký quỹ từ ví
+  const txnId = `TXN_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+  txns.unshift({
+    id: txnId,
+    userId: customer.id,
+    userName: customer.name || 'Khách hàng',
+    type: 'escrow',
+    amount: -depositAmt,
+    status: 'completed',
+    createdAt: formatDateTime(now),
+    createdAtISO: now.toISOString(),
+    description: `Ký quỹ Escrow cho đơn hàng ${order.id} (Trừ từ số dư ví)`,
+    orderIds: [order.id],
+    balanceAfter: newBalance
+  });
+  db.saveCollection('walletTransactions', txns);
+
+  // Cập nhật trạng thái đơn hàng sang paid & escrow_held
+  order.paymentStatus = 'paid';
+  order.escrowStatus = 'escrow_held';
+  order.paymentMethod = 'Số dư ví SkillRental (Escrow)';
+  order.paidAt = now.toISOString();
+  order.paymentRef = txnId;
+  delete order.paymentExpiresAt;
+
+  if (order.milestones && order.milestones[0]) {
+    order.milestones[0] = { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: formatDateTime(now) };
+  }
+
+  if (order.jobId) {
+    order.orderStatus = 'processing';
+    if (order.milestones && order.milestones[1]) {
+      order.milestones[1] = { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: true, time: formatDateTime(now) };
+    }
+    const jobs = db.getCollection('jobRequests') || [];
+    const job = jobs.find((item) => item.id === order.jobId && item.customerId === order.customerId && item.status === 'awaiting_payment');
+    if (job && job.selectedProviderId === order.providerId) {
+      (job.applicants || []).forEach((applicant) => {
+        if (applicant.providerId !== order.providerId && applicant.status === 'pending') applicant.status = 'rejected';
+      });
+      job.status = 'closed';
+      job.closeReason = 'provider_selected';
+      job.paymentOrderId = order.id;
+      job.statusUpdatedAt = now.toISOString();
+      db.saveCollection('jobRequests', jobs);
+    }
+  }
+
+  db.saveCollection('orders', orders);
+
+  // Thông báo tới Provider và Khách hàng
+  notifyProvider(order.providerId, order.jobId ? 'Ký quỹ hoàn tất - bắt đầu công việc' : 'Đơn đặt lịch mới',
+    order.jobId
+      ? `Khách hàng đã ký quỹ ${money(order.price)} từ ví cho yêu cầu “${order.serviceTitle}”. Bạn có thể bắt đầu thực hiện.`
+      : `Bạn có lịch đặt mới từ ${customer.name}. Đã ký quỹ: ${money(order.price)}.`, 'info',
+    `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
+
+  createNotification(customer.id, 'Ký quỹ thành công từ số dư ví',
+    `Đơn hàng ${order.id} đã được ký quỹ an toàn ${money(order.escrowDeposit)} từ số dư ví SkillRental.`,
+    'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+
+  return { order, newBalance };
+}
+
 module.exports = {
   PLATFORM_FEE_RATE,
   MIN_PAYMENT,
@@ -484,5 +602,6 @@ module.exports = {
   markOrdersPaid,
   expireUnpaidOrders,
   listTransactions,
-  sanitizeTransaction
+  sanitizeTransaction,
+  payOrderWithBalance
 };

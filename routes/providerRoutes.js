@@ -7,13 +7,20 @@ const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireProvider, requireSignedIn } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, checkAutoReleaseOrders } = require('../services/orderService');
 const { isVisibleToProvider } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 
 function getMyProvider(req) {
   const providers = db.getCollection('providers') || [];
-  let p = providers.find(p => p.userId === req.authUser.id);
+  let p = providers.find(p => p.userId === req.authUser.id || p.id === req.authUser.id);
+  if (!p && req.authUser.email) {
+    p = providers.find(p => p.email && p.email.toLowerCase() === req.authUser.email.toLowerCase());
+    if (p && !p.userId) {
+      p.userId = req.authUser.id;
+      db.saveCollection('providers', providers);
+    }
+  }
   if (!p) {
     p = {
       id: generateId('PRV'),
@@ -167,6 +174,7 @@ router.get('/me/services', requireProvider, (req, res) => {
 });
 
 router.get('/me/orders', requireProvider, (req, res) => {
+  checkAutoReleaseOrders();
   const provider = getMyProvider(req);
   const orders = (db.getCollection('orders') || []).filter(o => o.providerId === provider.id && isVisibleToProvider(o));
   res.json({ success: true, orders });
@@ -233,8 +241,10 @@ function orderAction(handler) {
   };
 }
 router.post('/orders/:id/accept', requireProvider, orderAction(req => processAcceptOrder(req.params.id, req.authUser.id)));
-router.post('/orders/:id/deliver', requireProvider, orderAction(req => processDeliverOrder(req.params.id, req.authUser.id)));
-router.post('/orders/:id/progress', requireProvider, orderAction(req => processProgressOrder(req.params.id, req.authUser.id, req.body.note || '')));
+router.post('/orders/:id/deliver', requireProvider, orderAction(req => processDeliverOrder(req.params.id, req.authUser.id, req.body)));
+router.post('/orders/:id/progress', requireProvider, orderAction(req => processProgressOrder(req.params.id, req.authUser.id, req.body)));
+router.post('/orders/:id/reject', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason || 'Provider từ chối nhận việc')));
+router.post('/orders/:id/cancel', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason || 'Provider hủy đơn hàng')));
 
 // ---- Đánh giá của tôi + trả lời đánh giá ----
 router.get('/me/reviews', requireProvider, (req, res) => {
@@ -455,48 +465,89 @@ router.post('/packages/purchase', requireProvider, (req, res) => {
   const { packageId } = req.body;
   const packages = db.getCollection('packages') || [];
   const pkg = packages.find(p => p.id === packageId);
-  if (!pkg) return res.status(404).json({ success: false, message: 'Gói không tồn tại' });
+  if (!pkg) return res.status(404).json({ success: false, message: 'Gói dịch vụ không tồn tại.' });
   
   const purchases = db.getCollection('packagePurchases') || [];
   const provider = getMyProvider(req);
+  const users = db.getCollection('users') || [];
+  const uidx = users.findIndex(u => u.id === req.authUser.id);
   
-  // Trừ tiền user
-  if (pkg.price > 0) {
-    const users = db.getCollection('users');
-    const uidx = users.findIndex(u => u.id === req.authUser.id);
-    if (uidx !== -1) {
-      if (users[uidx].balance < pkg.price) {
-        return res.status(400).json({ success: false, message: 'Số dư không đủ' });
-      }
-      users[uidx].balance -= pkg.price;
-      db.saveCollection('users', users);
-      
-      const transactions = db.getCollection('walletTransactions') || [];
-      transactions.unshift({
-        id: generateId('TXN'),
-        userId: req.authUser.id,
-        type: 'package_purchase',
-        amount: -pkg.price,
-        status: 'completed',
-        createdAt: formatDateTime(new Date()),
-        description: `Mua gói dịch vụ: ${pkg.name}`
-      });
-      db.saveCollection('walletTransactions', transactions);
-    }
+  if (uidx === -1) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng.' });
   }
 
+  const currentBal = Number(users[uidx].balance) || 0;
+
+  // Kiểm tra số dư ví nếu gói có phí
+  if (pkg.price > 0) {
+    if (currentBal < pkg.price) {
+      return res.status(400).json({
+        success: false,
+        message: `Số dư ví không đủ (Cần ${pkg.price.toLocaleString('vi-VN')}đ, hiện có ${currentBal.toLocaleString('vi-VN')}đ). Vui lòng nạp thêm tiền vào ví để kích hoạt gói.`
+      });
+    }
+
+    // Khấu trừ số dư ví chuyên gia
+    users[uidx].balance = currentBal - pkg.price;
+    db.saveCollection('users', users);
+    
+    // Ghi log giao dịch ví chuyên gia (tiền vào doanh thu sàn)
+    const transactions = db.getCollection('walletTransactions') || [];
+    transactions.unshift({
+      id: generateId('TXN'),
+      userId: req.authUser.id,
+      userName: provider.name || req.authUser.name || 'Chuyên gia',
+      type: 'package_purchase',
+      amount: -pkg.price,
+      balanceAfter: users[uidx].balance,
+      status: 'completed',
+      createdAt: formatDateTime(new Date()),
+      description: `Mua gói dịch vụ sàn: ${pkg.name}`
+    });
+    db.saveCollection('walletTransactions', transactions);
+  }
+
+  // Cập nhật huy hiệu và đặc quyền cho Provider
+  const providers = db.getCollection('providers') || [];
+  const provIdx = providers.findIndex(p => p.id === provider.id || p.userId === req.authUser.id);
+  if (provIdx !== -1) {
+    if (pkg.id === 'PKG_PRO') {
+      providers[provIdx].badge = 'PRO PROVIDER';
+      providers[provIdx].verified = true;
+      providers[provIdx].activePackage = 'PKG_PRO';
+    } else if (pkg.id === 'PKG_VIP') {
+      providers[provIdx].badge = 'VIP ELITE';
+      providers[provIdx].verified = true;
+      providers[provIdx].activePackage = 'PKG_VIP';
+    }
+    db.saveCollection('providers', providers);
+  }
+
+  // Lưu lịch sử đăng ký gói
   purchases.unshift({
     id: generateId('PKG-ORD'),
     providerId: provider.id,
     provider: provider.name,
     packageName: pkg.name,
-    amount: pkg.price + 'đ',
+    amount: (pkg.price || 0).toLocaleString('vi-VN') + 'đ',
+    amountNum: pkg.price || 0,
     activeDate: formatDateTime(new Date()).split(' ')[0],
-    expireDate: 'Tự động gia hạn',
+    expireDate: 'Tự động gia hạn 30 ngày',
     status: 'Đang hoạt động'
   });
   db.saveCollection('packagePurchases', purchases);
-  res.json({ success: true, message: 'Mua gói dịch vụ thành công' });
+
+  const { createNotification } = require('../services/notificationService');
+  createNotification(req.authUser.id, 'Kích hoạt gói dịch vụ thành công',
+    `Bạn đã kích hoạt thành công ${pkg.name}. Huy hiệu và đặc quyền ưu tiên của bạn đã hiển thị trên toàn sàn!`,
+    'success', '/package.html');
+
+  res.json({
+    success: true,
+    message: `Đã kích hoạt thành công ${pkg.name}!`,
+    newBalance: users[uidx].balance,
+    package: pkg
+  });
 });
 
 router.get('/me/posts', requireProvider, (req, res) => {

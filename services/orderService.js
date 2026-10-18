@@ -23,7 +23,7 @@ function updateOrderMilestone(order, title, timeStr = null) {
 // Đơn hàng lưu providerId (PRVxxx) còn người đăng nhập có id tài khoản (USRxxx):
 // phải đổi qua providers.userId rồi mới so sánh quyền sở hữu.
 function findProviderByUserId(userId) {
-  return (db.getCollection('providers') || []).find(p => p.userId === userId) || null;
+  return (db.getCollection('providers') || []).find(p => p.userId === userId || p.id === userId) || null;
 }
 
 function loadOrder(orders, orderId) {
@@ -59,7 +59,7 @@ function processAcceptOrder(orderId, userId) {
   return order;
 }
 
-function processDeliverOrder(orderId, userId) {
+function processDeliverOrder(orderId, userId, handoverData = {}) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
@@ -67,26 +67,50 @@ function processDeliverOrder(orderId, userId) {
   if (order.orderStatus !== 'processing') throw httpError(409, 'Đơn hàng chưa được xử lý hoặc đã giao');
 
   order.orderStatus = 'delivered';
+  order.deliveredAt = new Date().toISOString();
+  order.autoReleaseAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  if (typeof handoverData === 'string') {
+    order.handoverNotes = handoverData;
+  } else if (typeof handoverData === 'object' && handoverData !== null) {
+    if (handoverData.handoverNotes || handoverData.note) order.handoverNotes = handoverData.handoverNotes || handoverData.note;
+    if (handoverData.deliveryLink) order.deliveryLink = handoverData.deliveryLink;
+    if (handoverData.attachments) order.attachments = handoverData.attachments;
+  }
   updateOrderMilestone(order, 'Bàn giao sản phẩm / hoàn thành dịch vụ');
   db.saveCollection('orders', orders);
 
   createNotification(order.customerId, 'Đơn hàng đã bàn giao',
-    `Chuyên gia đã bàn giao đơn hàng ${order.id}. Vui lòng kiểm tra và nghiệm thu.`, 'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+    `Chuyên gia đã bàn giao đơn hàng ${order.id}. Vui lòng kiểm tra và nghiệm thu (Hệ thống sẽ tự động giải ngân sau 48h nếu không có khiếu nại).`, 'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   return order;
 }
 
-function processProgressOrder(orderId, userId, note) {
+function processProgressOrder(orderId, userId, payload) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
   assertOrderPaid(order);
   if (order.orderStatus !== 'processing') throw httpError(409, 'Chỉ có thể cập nhật tiến độ khi đơn đang xử lý');
 
-  updateOrderMilestone(order, `Cập nhật tiến độ: ${note}`);
+  let note = '';
+  if (typeof payload === 'string') {
+    note = payload;
+  } else if (typeof payload === 'object' && payload !== null) {
+    note = payload.notes || payload.note || '';
+    if (payload.progressPercent !== undefined) {
+      order.progressPercent = Number(payload.progressPercent);
+    }
+    if (Array.isArray(payload.completedTasks)) {
+      order.completedTasks = payload.completedTasks;
+    }
+  }
+
+  if (note) {
+    updateOrderMilestone(order, `Cập nhật tiến độ: ${note}`);
+  }
   db.saveCollection('orders', orders);
 
   createNotification(order.customerId, 'Tiến độ đơn hàng',
-    `Đơn hàng ${order.id} được cập nhật tiến độ: ${note}`, 'info', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+    `Đơn hàng ${order.id} được cập nhật tiến độ${note ? `: ${note}` : ''}.`, 'info', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   return order;
 }
 
@@ -348,6 +372,22 @@ function processForceRefund(orderId) {
   return order;
 }
 
+function checkAutoReleaseOrders() {
+  const orders = db.getCollection('orders') || [];
+  const now = Date.now();
+  for (const o of orders) {
+    if (o.orderStatus === 'delivered' && o.escrowStatus === 'escrow_held' && o.autoReleaseAt) {
+      if (now >= Date.parse(o.autoReleaseAt)) {
+        try {
+          processReleaseEscrow(o.id, { force: true });
+        } catch (e) {
+          console.warn('[Escrow] Auto release error for order', o.id, e.message);
+        }
+      }
+    }
+  }
+}
+
 module.exports = {
   httpError,
   findProviderByUserId,
@@ -357,5 +397,6 @@ module.exports = {
   processCancelOrder,
   processUndoCancelOrder,
   processReleaseEscrow,
-  processForceRefund
+  processForceRefund,
+  checkAutoReleaseOrders
 };

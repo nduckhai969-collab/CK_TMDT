@@ -106,8 +106,8 @@
       <header class="top-header">
         <div class="header-title">Quản Lý Đặt Lịch, Đơn Hàng &amp; Tiến Độ</div>
         <div class="header-actions">
-          <span class="badge badge-success">
-            <span class="badge-dot"></span> 2 Đơn hàng đang thực hiện
+          <span class="badge badge-success" id="headerActiveOrdersBadge">
+            <span class="badge-dot"></span> <span id="headerActiveOrdersCount">0</span> Đơn hàng đang thực hiện
           </span>
           <!-- Switcher to Admin Portal -->
           <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
@@ -122,32 +122,195 @@
         <!-- Navigation Tabs -->
         <div class="tab-list">
           <div class="tab-item active" onclick="switchOrderTab('tab-uc37', this)">
-            <i class="fa-solid fa-calendar-check"></i> Đặt Lịch (Booking)
+            <i class="fa-solid fa-calendar-check"></i> Đặt Lịch Mới <span class="badge-count" id="pendingTabCount" style="margin-left:6px; background-color: var(--warning); display:none;">0</span>
           </div>
           <div class="tab-item" onclick="switchOrderTab('tab-uc38', this)">
-            <i class="fa-solid fa-file-contract"></i> Đơn Hàng &amp; Ký Quỹ (Order)
+            <i class="fa-solid fa-file-contract"></i> Đang Thực Hiện <span class="badge-count" id="processingTabCount" style="margin-left:6px; background-color: var(--primary); display:none;">0</span>
           </div>
           <div class="tab-item" onclick="switchOrderTab('tab-uc39', this)">
             <i class="fa-solid fa-bars-progress"></i> Tiến Độ Công Việc
           </div>
           <div class="tab-item" onclick="switchOrderTab('tab-uc40', this)">
-            <i class="fa-solid fa-circle-check"></i> Hoàn Tất &amp; Nghiệm Thu
+            <i class="fa-solid fa-circle-check"></i> Hoàn Tất &amp; Nghiệm Thu <span class="badge-count" id="completeTabCount" style="margin-left:6px; background-color: var(--secondary); display:none;">0</span>
           </div>
         </div>
 
         <!-- ===================================================================
-             1. ĐẶT LỊCH (BOOKING)
+             1. ĐẶT LỊCH (BOOKING MỚI)
              =================================================================== -->
         <div id="tab-uc37" class="screen-tab-content active">
-          <div class="grid-3" style="grid-template-columns: 2fr 1fr;">
+          <div id="pendingOrdersContainer">
+            <div style="text-align:center; padding:48px 24px; color:var(--text-muted);">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px; color:var(--primary); margin-bottom:8px;"></i>
+              <div>Đang tải danh sách đặt lịch mới...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             2. ĐƠN HÀNG (ORDER & ESCROW PROTECTION)
+             =================================================================== -->
+        <div id="tab-uc38" class="screen-tab-content">
+          <div id="processingOrdersContainer">
+            <div style="text-align:center; padding:48px 24px; color:var(--text-muted);">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px; color:var(--primary); margin-bottom:8px;"></i>
+              <div>Đang tải đơn hàng đang thực hiện...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             3. TIẾN ĐỘ CÔNG VIỆC (JOB PROGRESS)
+             =================================================================== -->
+        <div id="tab-uc39" class="screen-tab-content">
+          <div id="progressViewContainer">
+            <!-- Dynamic progress view -->
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             4. HOÀN TẤT & NGHIỆM THU (COMPLETE JOB & ESCROW RELEASE)
+             =================================================================== -->
+        <div id="tab-uc40" class="screen-tab-content">
+          <div id="completeViewContainer">
+            <!-- Dynamic complete & delivery view -->
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Box -->
+  <div id="toastBox" class="toast-box">
+    <i class="fa-solid fa-circle-check" style="color: var(--primary);"></i>
+    <span id="toastMessage">Thông báo</span>
+  </div>
+
+  <script src="provider.js"></script>
+  <script>
+    let allOrders = [];
+    let currentProgressOrderId = null;
+    let currentDeliveryOrderId = null;
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatVND(amount) {
+      return Number(amount || 0).toLocaleString('vi-VN') + 'đ';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastBox');
+      if (!toast) return;
+      document.getElementById('toastMessage').textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    function switchOrderTab(tabId, el) {
+      document.querySelectorAll('.screen-tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      const target = document.getElementById(tabId);
+      if (target) target.classList.add('active');
+      if (el) el.classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    async function loadProviderOrders() {
+      try {
+        if (typeof updateProviderHeader === 'function') {
+          updateProviderHeader();
+        }
+        const res = await window.providerApi.getMyOrders();
+        if (!res || !res.success) {
+          console.warn('Failed to load orders:', res);
+          return;
+        }
+        allOrders = res.orders || [];
+
+        const pendingOrders = allOrders.filter(o => o.orderStatus === 'pending');
+        const processingOrders = allOrders.filter(o => o.orderStatus === 'processing');
+        const deliveredOrders = allOrders.filter(o => o.orderStatus === 'delivered');
+        const completedOrders = allOrders.filter(o => o.orderStatus === 'completed');
+
+        // Update Header & Tab counts
+        const headerCountEl = document.getElementById('headerActiveOrdersCount');
+        if (headerCountEl) headerCountEl.textContent = processingOrders.length;
+
+        const pCountEl = document.getElementById('pendingTabCount');
+        if (pCountEl) {
+          pCountEl.textContent = pendingOrders.length;
+          pCountEl.style.display = pendingOrders.length ? 'inline-block' : 'none';
+        }
+
+        const procCountEl = document.getElementById('processingTabCount');
+        if (procCountEl) {
+          procCountEl.textContent = processingOrders.length;
+          procCountEl.style.display = processingOrders.length ? 'inline-block' : 'none';
+        }
+
+        const compCountEl = document.getElementById('completeTabCount');
+        if (compCountEl) {
+          const count = deliveredOrders.length + completedOrders.length;
+          compCountEl.textContent = count;
+          compCountEl.style.display = count ? 'inline-block' : 'none';
+        }
+
+        // Render each tab
+        renderPendingTab(pendingOrders);
+        renderProcessingTab(processingOrders);
+        renderProgressTab(processingOrders);
+        renderCompleteTab(processingOrders, deliveredOrders, completedOrders);
+
+      } catch (err) {
+        console.error('Error loading provider orders:', err);
+      }
+    }
+
+    function renderPendingTab(orders) {
+      const container = document.getElementById('pendingOrdersContainer');
+      if (!container) return;
+
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:48px 24px;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#F1F5F9; color:#94A3B8; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:28px;">
+              <i class="fa-solid fa-calendar-xmark"></i>
+            </div>
+            <h3 style="font-size:16px; font-weight:700; color:var(--secondary); margin-bottom:6px;">Chưa có yêu cầu đặt lịch mới nào</h3>
+            <p style="font-size:13px; color:var(--text-muted); max-width:480px; margin:0 auto; line-height:1.6;">
+              Khi khách hàng chọn dịch vụ, đặt lịch và hoàn tất ký quỹ Escrow 100%, yêu cầu sẽ xuất hiện ngay tại đây để bạn tiếp nhận.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = orders.map(order => {
+        const price = Number(order.price) || 0;
+        const fee = order.platformFee || Math.round(price * 0.05);
+        const net = price - fee;
+        const escrow = order.escrowDeposit || price;
+        const customerInitials = (order.customerName || 'KH').trim().split(/\\s+/).slice(-2).map(p => p[0] || '').join('').toUpperCase();
+
+        return `
+          <div class="grid-3" style="grid-template-columns: 2fr 1fr; margin-bottom: 24px;">
             <div>
               <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
                   <div>
-                    <span class="badge badge-success" style="margin-bottom:8px;"><span class="badge-dot"></span> Khách Đã Đặt Lịch &amp; Giữ Cọc</span>
-                    <h2 style="font-size:18px; font-weight:700; color:var(--secondary);">Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành</h2>
+                    <span class="badge badge-success" style="margin-bottom:8px;"><span class="badge-dot"></span> Khách Đã Ký Quỹ Escrow (100%)</span>
+                    <h2 style="font-size:18px; font-weight:700; color:var(--secondary);">${escapeHtml(order.serviceTitle || 'Hợp đồng dịch vụ')}</h2>
                     <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
-                      Mã đặt lịch: <strong>#BK-8841</strong> • Tạo lúc: 27/04/2025 09:15
+                      Mã đặt lịch: <strong>#${order.id}</strong> • Tạo lúc: ${order.date || 'Gần đây'}
                     </div>
                   </div>
                   <span class="badge badge-neutral">Trực tuyến (Remote)</span>
@@ -155,96 +318,101 @@
 
                 <div style="border-top:1px solid var(--border-color); padding:16px 0;">
                   <h3 style="font-size:14.5px; font-weight:700; color:var(--secondary); margin-bottom:10px;">Thời gian &amp; Lộ trình thực hiện</h3>
-                  <div class="kv-row"><span class="k">Ngày bắt đầu dự án</span><span class="v">28/04/2025 (Hôm nay)</span></div>
-                  <div class="kv-row"><span class="k">Thời hạn bàn giao</span><span class="v">10/05/2025 (10 Ngày làm việc)</span></div>
-                  <div class="kv-row"><span class="k">Kênh trao đổi chính</span><span class="v">Khung Chat SkillRental &amp; Google Meet</span></div>
-                  <div class="kv-row"><span class="k">Hình thức thanh toán</span><span class="v">Đã giữ 100% trong ví ký quỹ Escrow sàn</span></div>
+                  <div class="kv-row"><span class="k">Ngày hẹn làm việc</span><span class="v">${order.scheduledDate ? `${order.scheduledDate} ${order.scheduledTime ? `(${order.scheduledTime})` : ''}` : (order.date || 'Theo thỏa thuận')}</span></div>
+                  <div class="kv-row"><span class="k">Thời hạn bàn giao</span><span class="v">${order.deadline || 'Theo tiến độ'}</span></div>
+                  <div class="kv-row"><span class="k">Phương thức thanh toán</span><span class="v">${escapeHtml(order.paymentMethod || 'Ví điện tử Escrow')}</span></div>
+                  <div class="kv-row"><span class="k">Tình trạng ký quỹ</span><span class="v" style="color:var(--primary); font-weight:700;"><i class="fa-solid fa-lock"></i> Đã giữ ${formatVND(escrow)} trong két sàn</span></div>
                 </div>
 
                 <div style="border-top:1px solid var(--border-color); padding:16px 0;">
                   <h3 style="font-size:14.5px; font-weight:700; color:var(--secondary); margin-bottom:6px;">Ghi chú đặc biệt từ khách hàng</h3>
                   <p style="font-size:13px; color:var(--text-main); background:#F8FAFC; padding:12px; border-radius:8px; border:1px solid var(--border-color); line-height:1.6;">
-                    "Chào bạn An, bên mình cần ưu tiên hoàn thành trước 3 luồng chính: Đặt đơn, Xem bản đồ tài xế và Trang ví trước ngày 04/05 để kịp thuyết trình với cổ đông. Cảm ơn bạn!"
+                    "${escapeHtml(order.notes || 'Khách hàng không để lại ghi chú thêm.')}"
                   </p>
                 </div>
-              </div>
 
-              <!-- Calendar Availability Check -->
-              <div class="card">
-                <div class="card-title" style="margin-bottom:12px;"><i class="fa-solid fa-calendar-days" style="color:var(--primary);"></i> Đối Soát Lịch Làm Việc Của Bạn</div>
-                <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Hệ thống tự động rà soát lịch để tránh trùng lặp khung giờ làm việc:</div>
-                
-                <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; text-align:center; font-size:12px;">
-                  <div style="font-weight:600; color:var(--text-muted);">T2</div>
-                  <div style="font-weight:600; color:var(--text-muted);">T3</div>
-                  <div style="font-weight:600; color:var(--text-muted);">T4</div>
-                  <div style="font-weight:600; color:var(--text-muted);">T5</div>
-                  <div style="font-weight:600; color:var(--text-muted);">T6</div>
-                  <div style="font-weight:600; color:var(--text-muted);">T7</div>
-                  <div style="font-weight:600; color:var(--text-muted);">CN</div>
-
-                  <div style="padding:10px 0; background:#DCFCE7; color:#15803D; border-radius:6px; font-weight:700;">28 ★</div>
-                  <div style="padding:10px 0; background:#DCFCE7; color:#15803D; border-radius:6px; font-weight:700;">29 ★</div>
-                  <div style="padding:10px 0; background:#DCFCE7; color:#15803D; border-radius:6px; font-weight:700;">30 ★</div>
-                  <div style="padding:10px 0; background:#DCFCE7; color:#15803D; border-radius:6px; font-weight:700;">01 ★</div>
-                  <div style="padding:10px 0; background:#DCFCE7; color:#15803D; border-radius:6px; font-weight:700;">02 ★</div>
-                  <div style="padding:10px 0; background:#F1F5F9; border-radius:6px;">03</div>
-                  <div style="padding:10px 0; background:#F1F5F9; border-radius:6px;">04</div>
-                </div>
-                <div style="font-size:12px; color:var(--success); margin-top:12px;">
-                  <i class="fa-solid fa-circle-check"></i> Không có lịch hẹn trùng lặp. Bạn hoàn toàn có thể tiếp nhận đơn hàng này!
+                <!-- Lịch rảnh đối soát -->
+                <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:12px; margin-top:8px;">
+                  <div style="font-size:12px; color:var(--success); font-weight:600;">
+                    <i class="fa-solid fa-circle-check"></i> Khung giờ làm việc đã được hệ thống đối soát hợp lệ, sẵn sàng để bạn tiếp nhận!
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Client & Confirm Booking -->
             <div>
               <div class="card">
                 <div class="card-title" style="margin-bottom:12px;">Khách Hàng Đặt Lịch</div>
                 <div style="display:flex; gap:12px; align-items:center;">
-                  <div class="avatar" style="width:48px; height:48px; font-size:18px;">EX</div>
+                  <div class="avatar" style="width:48px; height:48px; font-size:18px; background:var(--primary-light); color:var(--primary); font-weight:700; display:flex; align-items:center; justify-content:center;">
+                    ${customerInitials}
+                  </div>
                   <div>
-                    <div style="font-weight:700; font-size:14px;">Cty CP Vận Tải Express</div>
-                    <div style="font-size:12px; color:var(--text-muted);">Đại diện: Mr. Hoàng Nam</div>
-                    <div style="font-size:12px; color:var(--warning); margin-top:2px;">★★★★★ 5.0 (24 đơn)</div>
+                    <div style="font-weight:700; font-size:14px;">${escapeHtml(order.customerName || 'Khách hàng')}</div>
+                    <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(order.customerPhone || 'SĐT: Đã xác thực')}</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:2px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(order.customerAddress || 'Toàn quốc')}</div>
                   </div>
                 </div>
 
                 <div style="display:flex; gap:8px; margin-top:16px;">
                   <a href="chat.html" class="btn btn-outline btn-sm" style="flex:1;"><i class="fa-solid fa-comments"></i> Nhắn tin</a>
-                  <button class="btn btn-outline btn-sm" style="flex:1;" onclick="showToast('SĐT Khách hàng: 0988 776 655')"><i class="fa-solid fa-phone"></i> Gọi</button>
+                  <button class="btn btn-outline btn-sm" style="flex:1;" onclick="showToast('SĐT Khách: ${order.customerPhone || 'Chưa cập nhật'}')"><i class="fa-solid fa-phone"></i> Gọi</button>
                 </div>
               </div>
 
               <div class="card">
                 <div class="card-title">Giá Trị Hợp Đồng</div>
-                <div style="font-size:24px; font-weight:800; color:var(--primary); margin:6px 0;">6.500.000đ</div>
-                <div style="font-size:12px; color:var(--text-muted);">Đã bao gồm 5% phí nền tảng SkillRental</div>
+                <div style="font-size:24px; font-weight:800; color:var(--primary); margin:6px 0;">${formatVND(price)}</div>
+                <div class="kv-row" style="font-size:12px;"><span class="k">Phí nền tảng (5%)</span><span class="v" style="color:var(--error);">-${formatVND(fee)}</span></div>
+                <div class="kv-row" style="font-size:13px; font-weight:700; border-top:1px dashed var(--border-color); padding-top:8px; margin-top:8px;">
+                  <span class="k">Bạn thực nhận</span><span class="v" style="color:var(--primary); font-size:16px;">${formatVND(net)}</span>
+                </div>
 
-                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="confirmBookingToOrder()">
-                  <i class="fa-solid fa-check"></i> Xác Nhận &amp; Chuyển Sang Đơn Hàng
+                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="confirmAcceptOrder('${order.id}')">
+                  <i class="fa-solid fa-check"></i> Tiếp Nhận Đơn Hàng &amp; Bắt Đầu
                 </button>
-                <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="showToast('Đã gửi đề xuất điều chỉnh lịch hẹn đến khách hàng!')">
-                  <i class="fa-solid fa-clock-rotate-left"></i> Đề Xuất Đổi Lịch Hẹn
+                <button class="btn btn-outline btn-block" style="margin-top:8px; border-color:#FECDD3; color:#E11D48;" onclick="confirmRejectOrder('${order.id}')">
+                  <i class="fa-solid fa-ban"></i> Từ Chối Đơn (Hoàn Cọc Khách)
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        `;
+      }).join('');
+    }
 
+    function renderProcessingTab(orders) {
+      const container = document.getElementById('processingOrdersContainer');
+      if (!container) return;
 
-        <!-- ===================================================================
-             2. ĐƠN HÀNG (ORDER & ESCROW PROTECTION)
-             =================================================================== -->
-        <div id="tab-uc38" class="screen-tab-content">
-          <div class="grid-3" style="grid-template-columns: 2fr 1fr;">
-            <!-- Order Line Items -->
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:48px 24px;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#F1F5F9; color:#94A3B8; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:28px;">
+              <i class="fa-solid fa-briefcase"></i>
+            </div>
+            <h3 style="font-size:16px; font-weight:700; color:var(--secondary); margin-bottom:6px;">Hiện chưa có đơn hàng nào đang thực hiện</h3>
+            <p style="font-size:13px; color:var(--text-muted); max-width:480px; margin:0 auto; line-height:1.6;">
+              Khi bạn tiếp nhận đơn đặt lịch mới, đơn hàng sẽ chuyển sang trạng thái đang thực hiện tại đây.
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = orders.map(order => {
+        const price = Number(order.price) || 0;
+        const fee = order.platformFee || Math.round(price * 0.05);
+        const net = price - fee;
+
+        return `
+          <div class="grid-3" style="grid-template-columns: 2fr 1fr; margin-bottom: 24px;">
             <div class="card">
               <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
                 <div>
                   <div style="font-size:12px; color:var(--text-muted);">Mã đơn hàng chính thức</div>
-                  <h1 style="font-size:20px; font-weight:800; color:var(--secondary);">#ORD-8834: Thiết kế UI/UX App Mobile</h1>
-                  <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Khách hàng: Cty Cổ phần Vận tải Express • Tạo ngày 28/04/2025</div>
+                  <h1 style="font-size:19px; font-weight:800; color:var(--secondary);">#${order.id}: ${escapeHtml(order.serviceTitle || 'Dịch vụ hợp đồng')}</h1>
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Khách hàng: <strong>${escapeHtml(order.customerName || 'Khách hàng')}</strong> • Tạo ngày: ${order.date || 'Gần đây'}</div>
                 </div>
                 <span class="badge badge-info"><span class="badge-dot"></span> Đang Thực Hiện</span>
               </div>
@@ -264,30 +432,12 @@
                     <tbody>
                       <tr>
                         <td>
-                          <strong>Thiết kế Luồng Người dùng &amp; Wireframe</strong><br>
-                          <span style="font-size:11px; color:var(--text-muted);">20 màn hình sơ bộ trên Figma</span>
+                          <strong>${escapeHtml(order.serviceTitle || 'Hợp đồng dịch vụ')}</strong><br>
+                          <span style="font-size:11px; color:var(--text-muted);">${escapeHtml(order.notes || 'Triển khai theo yêu cầu và cam kết chất lượng của SkillRental')}</span>
                         </td>
                         <td>1 Gói</td>
-                        <td>2.000.000đ</td>
-                        <td style="text-align:right; font-weight:600;">2.000.000đ</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Thiết kế UI Chi tiết chuẩn Design System</strong><br>
-                          <span style="font-size:11px; color:var(--text-muted);">Bao gồm Dark/Light mode, Component, Color tokens</span>
-                        </td>
-                        <td>1 Gói</td>
-                        <td>3.500.000đ</td>
-                        <td style="text-align:right; font-weight:600;">3.500.000đ</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          <strong>Prototype Tương tác Clickable &amp; Bàn giao</strong><br>
-                          <span style="font-size:11px; color:var(--text-muted);">Video demo luồng đặt đơn và bàn giao source file</span>
-                        </td>
-                        <td>1 Gói</td>
-                        <td>1.000.000đ</td>
-                        <td style="text-align:right; font-weight:600;">1.000.000đ</td>
+                        <td>${formatVND(price)}</td>
+                        <td style="text-align:right; font-weight:600;">${formatVND(price)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -300,220 +450,238 @@
                   <i class="fa-solid fa-shield-halved" style="font-size:24px; color:var(--primary);"></i>
                   <div>
                     <div style="font-weight:700; color:#15803D; font-size:14px;">Khoản Thanh Toán Đã Được Bảo Vệ Bởi Ký Quỹ Escrow</div>
-                    <div style="font-size:12px; color:#166534; margin-top:2px;">
-                      Số tiền 6.500.000đ đang được giữ tại tài khoản trung gian của SkillRental. Tiền sẽ tự động giải ngân cho bạn ngay sau khi khách hàng xác nhận nghiệm thu hoặc sau 48h nếu khách không phản hồi.
+                    <div style="font-size:12px; color:#166534; margin-top:2px; line-height:1.5;">
+                      Số tiền ${formatVND(price)} đang được giữ an toàn tại tài khoản trung gian của SkillRental. Tiền sẽ tự động giải ngân cho bạn ngay sau khi khách hàng xác nhận nghiệm thu hoặc sau 48h nếu khách không phản hồi.
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Financial Summary & Progress Trigger -->
             <div>
               <div class="card">
                 <div class="card-title" style="margin-bottom:12px;">Thanh Toán Đơn Hàng</div>
-                <div class="kv-row"><span class="k">Tổng giá trị đơn</span><span class="v">6.500.000đ</span></div>
-                <div class="kv-row"><span class="k">Phí hoa hồng sàn (5%)</span><span class="v" style="color:var(--error);">-325.000đ</span></div>
+                <div class="kv-row"><span class="k">Tổng giá trị đơn</span><span class="v">${formatVND(price)}</span></div>
+                <div class="kv-row"><span class="k">Phí hoa hồng sàn (5%)</span><span class="v" style="color:var(--error);">-${formatVND(fee)}</span></div>
                 <div class="kv-row" style="padding:14px 0; border-top:2px solid var(--border-color);">
                   <span class="k" style="font-weight:700;">Bạn thực nhận</span>
-                  <span class="v" style="font-size:18px; font-weight:800; color:var(--primary);">6.175.000đ</span>
+                  <span class="v" style="font-size:18px; font-weight:800; color:var(--primary);">${formatVND(net)}</span>
                 </div>
 
                 <div class="timeline" style="margin-top:20px;">
                   <div class="tl-item done">
                     <div class="tl-title">Đơn hàng được khởi tạo</div>
-                    <div class="tl-meta">28/04/2025 • 09:15</div>
+                    <div class="tl-meta">${order.date || 'Khởi tạo'}</div>
                   </div>
                   <div class="tl-item done">
                     <div class="tl-title">Khách hàng đã ký quỹ Escrow</div>
-                    <div class="tl-meta">28/04/2025 • 09:20 (6.500.000đ)</div>
+                    <div class="tl-meta">${formatVND(order.escrowDeposit || price)} an toàn</div>
                   </div>
                   <div class="tl-item current">
                     <div class="tl-title">Provider đang thực hiện công việc</div>
-                    <div class="tl-meta">Dự kiến xong 10/05/2025</div>
+                    <div class="tl-meta">Hạn: ${order.deadline || 'Theo tiến độ'}</div>
                   </div>
                   <div class="tl-item">
                     <div class="tl-title">Nghiệm thu &amp; Giải ngân vào ví</div>
-                    <div class="tl-meta">Chờ hoàn tất</div>
+                    <div class="tl-meta">Chờ bàn giao</div>
                   </div>
                 </div>
 
-                <button class="btn btn-primary btn-block btn-lg" style="margin-top:24px;" onclick="goToProgressTab()">
+                <button class="btn btn-primary btn-block btn-lg" style="margin-top:24px;" onclick="goToProgressTabForOrder('${order.id}')">
                   <i class="fa-solid fa-bars-progress"></i> Cập Nhật Tiến Độ Thực Hiện →
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        <!-- ===================================================================
-             3. TIẾN ĐỘ CÔNG VIỆC (JOB PROGRESS)
-             =================================================================== -->
-        <div id="tab-uc39" class="screen-tab-content">
-          <div class="grid-3" style="grid-template-columns: 2fr 1fr;">
-            <!-- Progress Tracker -->
-            <div>
-              <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                  <div>
-                    <h2 style="font-size:18px; font-weight:700; color:var(--secondary);">Tiến Độ Đơn Hàng #ORD-8834</h2>
-                    <div style="font-size:12px; color:var(--text-muted);">Cập nhật từng đầu việc để khách hàng theo dõi trực tiếp theo thời gian thực</div>
-                  </div>
-                  <span class="badge badge-warning" id="statusBadgeProgress"><span class="badge-dot"></span> Đang Tiến Hành (65%)</span>
-                </div>
-
-                <!-- Progress Bar -->
-                <div style="margin-bottom:20px;">
-                  <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:6px;">
-                    <span>Tiến độ tổng thể</span>
-                    <span style="color:var(--primary);" id="progressPercentText">65% Hoàn thành</span>
-                  </div>
-                  <div class="progress-bar-job">
-                    <div id="progressFill" style="width:65%;"></div>
-                  </div>
-                </div>
-
-                <!-- Interactive Checklist -->
-                <h3 style="font-size:14.5px; font-weight:700; color:var(--secondary); margin-bottom:12px;">Checklist Các Hạng Mục Công Việc</h3>
-                
-                <div class="checklist-item">
-                  <div class="chk-box done" onclick="toggleTask(this, 20)">✓</div>
-                  <div style="flex:1;">
-                    <div style="font-weight:600; font-size:13.5px;">1. Họp Kickoff thống nhất yêu cầu &amp; Moodboard thiết kế</div>
-                    <div style="font-size:11px; color:var(--text-muted);">Đã hoàn thành lúc 09:30 • 28/04/2025</div>
-                  </div>
-                </div>
-
-                <div class="checklist-item">
-                  <div class="chk-box done" onclick="toggleTask(this, 20)">✓</div>
-                  <div style="flex:1;">
-                    <div style="font-weight:600; font-size:13.5px;">2. Xây dựng Wireframe 20 màn hình UX Flow</div>
-                    <div style="font-size:11px; color:var(--text-muted);">Đã hoàn thành lúc 16:45 • 29/04/2025</div>
-                  </div>
-                </div>
-
-                <div class="checklist-item">
-                  <div class="chk-box done" onclick="toggleTask(this, 25)">✓</div>
-                  <div style="flex:1;">
-                    <div style="font-weight:600; font-size:13.5px;">3. Thiết kế Visual UI chi tiết cho Luồng Đặt Đơn &amp; Theo dõi tài xế</div>
-                    <div style="font-size:11px; color:var(--text-muted);">Đã hoàn thành lúc 11:20 • 30/04/2025</div>
-                  </div>
-                </div>
-
-                <div class="checklist-item">
-                  <div class="chk-box" onclick="toggleTask(this, 20)"></div>
-                  <div style="flex:1;">
-                    <div style="font-weight:600; font-size:13.5px;">4. Hoàn thiện Design System &amp; Bộ Icon tùy chỉnh</div>
-                    <div style="font-size:11px; color:var(--warning);">Đang thực hiện (Dự kiến xong chiều nay)</div>
-                  </div>
-                </div>
-
-                <div class="checklist-item">
-                  <div class="chk-box" onclick="toggleTask(this, 15)"></div>
-                  <div style="flex:1;">
-                    <div style="font-weight:600; font-size:13.5px;">5. Tạo Prototype tương tác Clickable &amp; Kiểm thử lần cuối</div>
-                    <div style="font-size:11px; color:var(--text-muted);">Chưa bắt đầu</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Upload Evidence Photos -->
-              <div class="card">
-                <div class="card-title" style="margin-bottom:12px;"><i class="fa-solid fa-camera" style="color:var(--primary);"></i> Ảnh Chụp Minh Chứng Tiến Độ</div>
-                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;">
-                  <div style="aspect-ratio:1; background:#F1F5F9; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; color:var(--text-muted);">
-                    <i class="fa-solid fa-image" style="font-size:24px; color:#94A3B8; margin-bottom:4px;"></i>
-                    <span>Wireframe.png</span>
-                  </div>
-                  <div style="aspect-ratio:1; background:#F1F5F9; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; color:var(--text-muted);">
-                    <i class="fa-solid fa-image" style="font-size:24px; color:#94A3B8; margin-bottom:4px;"></i>
-                    <span>DesignSystem.png</span>
-                  </div>
-                  <div class="upload-box" style="aspect-ratio:1; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:center;" onclick="showToast('Đã tải ảnh chụp tiến độ mới!')">
-                    <i class="fa-solid fa-plus" style="font-size:20px; color:var(--primary);"></i>
-                    <span style="font-size:11px; margin-top:4px;">Thêm ảnh</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Notes to Client & Action -->
-            <div>
-              <div class="card">
-                <div class="card-title" style="margin-bottom:10px;">Gửi Tin Nhắn Cập Nhật Cho Khách</div>
-                <textarea class="form-control" rows="5" placeholder="Ghi chú tóm tắt nội dung vừa hoàn thành...">Em đã thiết kế xong 3 luồng quan trọng nhất (Đặt đơn, Bản đồ tài xế, Ví) và gửi link Figma qua khung Chat. Anh xem thử và góp ý giúp em nhé!</textarea>
-                <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="showToast('Đã gửi thông báo cập nhật tiến độ cho khách hàng!')">
-                  <i class="fa-solid fa-paper-plane"></i> Gửi Cập Nhật Cho Khách
-                </button>
-              </div>
-
-              <div class="card">
-                <div class="card-title">Thời Gian Làm Việc</div>
-                <div class="kv-row"><span class="k">Thời gian đã làm</span><span class="v">18 Giờ 45 Phút</span></div>
-                <div class="kv-row"><span class="k">Hạn chót bàn giao</span><span class="v">10/05/2025 (Còn 10 ngày)</span></div>
-
-                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="goToCompleteTab()">
-                  <i class="fa-solid fa-circle-check"></i> Chuyển Sang Nghiệm Thu →
+                <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="goToCompleteTabForOrder('${order.id}')">
+                  <i class="fa-solid fa-circle-check"></i> Chuyển Sang Bàn Giao →
                 </button>
               </div>
             </div>
           </div>
+        `;
+      }).join('');
+    }
+
+    function renderProgressTab(orders) {
+      const container = document.getElementById('progressViewContainer');
+      if (!container) return;
+
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:48px 24px;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#F1F5F9; color:#94A3B8; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:28px;">
+              <i class="fa-solid fa-bars-progress"></i>
+            </div>
+            <h3 style="font-size:16px; font-weight:700; color:var(--secondary); margin-bottom:6px;">Chưa có đơn hàng nào đang thực hiện</h3>
+            <p style="font-size:13px; color:var(--text-muted); max-width:480px; margin:0 auto;">Hãy tiếp nhận đơn đặt lịch mới để quản lý và theo dõi tiến độ công việc.</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (!currentProgressOrderId || !orders.some(o => o.id === currentProgressOrderId)) {
+        currentProgressOrderId = orders[0].id;
+      }
+
+      const curOrder = orders.find(o => o.id === currentProgressOrderId) || orders[0];
+      const percent = curOrder.progressPercent !== undefined ? curOrder.progressPercent : 50;
+
+      const defaultTasks = [
+        { text: '1. Khảo sát yêu cầu chi tiết & thống nhất phạm vi', weight: 25 },
+        { text: '2. Triển khai cấu trúc & các phân hệ chính theo kế hoạch', weight: 25 },
+        { text: '3. Hoàn thiện chi tiết sản phẩm / tính năng theo thỏa thuận', weight: 25 },
+        { text: '4. Kiểm thử chất lượng, tối ưu & chuẩn bị tài liệu hướng dẫn', weight: 25 }
+      ];
+
+      const completed = Array.isArray(curOrder.completedTasks) ? curOrder.completedTasks : [0, 1];
+
+      container.innerHTML = `
+        <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label style="font-weight:700; font-size:13px;">Chọn đơn hàng theo dõi:</label>
+            <select class="form-control" style="width:auto; padding:6px 12px; font-size:13px;" onchange="changeProgressOrder(this.value)">
+              ${orders.map(o => `<option value="${o.id}" ${o.id === curOrder.id ? 'selected' : ''}>#${o.id} - ${escapeHtml(o.serviceTitle)} (${escapeHtml(o.customerName)})</option>`).join('')}
+            </select>
+          </div>
         </div>
 
-
-        <!-- ===================================================================
-             4. HOÀN TẤT & NGHIỆM THU (COMPLETE JOB & ESCROW RELEASE)
-             =================================================================== -->
-        <div id="tab-uc40" class="screen-tab-content">
-          <div class="grid-3" style="grid-template-columns: 2fr 1fr;">
-            <!-- Delivery Submission Form -->
+        <div class="grid-3" style="grid-template-columns: 2fr 1fr;">
+          <div>
             <div class="card">
-              <div class="card-header">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div>
+                  <h2 style="font-size:18px; font-weight:700; color:var(--secondary);">Tiến Độ Đơn Hàng #${curOrder.id}</h2>
+                  <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(curOrder.serviceTitle)} • Khách hàng: <strong>${escapeHtml(curOrder.customerName)}</strong></div>
+                </div>
+                <span class="badge ${percent === 100 ? 'badge-success' : 'badge-warning'}" id="statusBadgeProgress">
+                  <span class="badge-dot"></span> ${percent === 100 ? 'Sẵn sàng bàn giao (100%)' : `Đang Tiến Hành (${percent}%)`}
+                </span>
+              </div>
+
+              <!-- Progress Bar -->
+              <div style="margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:6px;">
+                  <span>Tiến độ tổng thể</span>
+                  <span style="color:var(--primary);" id="progressPercentText">${percent}% Hoàn thành</span>
+                </div>
+                <div class="progress-bar-job">
+                  <div id="progressFill" style="width:${percent}%;"></div>
+                </div>
+              </div>
+
+              <!-- Interactive Checklist -->
+              <h3 style="font-size:14.5px; font-weight:700; color:var(--secondary); margin-bottom:12px;">Checklist Các Hạng Mục Công Việc</h3>
+              
+              ${defaultTasks.map((t, idx) => {
+                const isDone = completed.includes(idx);
+                return `
+                  <div class="checklist-item">
+                    <div class="chk-box ${isDone ? 'done' : ''}" onclick="toggleDynamicTask('${curOrder.id}', ${idx}, ${t.weight}, this)">${isDone ? '✓' : ''}</div>
+                    <div style="flex:1;">
+                      <div style="font-weight:600; font-size:13.5px;">${t.text}</div>
+                      <div style="font-size:11px; color:${isDone ? 'var(--text-muted)' : 'var(--warning)'};">${isDone ? 'Đã hoàn thành' : 'Đang thực hiện'}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- Upload Evidence Photos -->
+            <div class="card">
+              <div class="card-title" style="margin-bottom:12px;"><i class="fa-solid fa-camera" style="color:var(--primary);"></i> Ảnh &amp; Tài Liệu Minh Chứng Tiến Độ</div>
+              <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;">
+                <div style="aspect-ratio:1; background:#F1F5F9; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; color:var(--text-muted);">
+                  <i class="fa-solid fa-image" style="font-size:24px; color:#94A3B8; margin-bottom:4px;"></i>
+                  <span>TienDo_Draft.png</span>
+                </div>
+                <div style="aspect-ratio:1; background:#F1F5F9; border-radius:8px; border:1px solid var(--border-color); display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; color:var(--text-muted);">
+                  <i class="fa-solid fa-file-code" style="font-size:24px; color:#94A3B8; margin-bottom:4px;"></i>
+                  <span>TaiLieu_HuongDan.pdf</span>
+                </div>
+                <div class="upload-box" style="aspect-ratio:1; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer;" onclick="showToast('Đã tải ảnh chụp tiến độ mới!')">
+                  <i class="fa-solid fa-plus" style="font-size:20px; color:var(--primary);"></i>
+                  <span style="font-size:11px; margin-top:4px;">Thêm minh chứng</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="card-title" style="margin-bottom:10px;">Gửi Tin Nhắn Cập Nhật Cho Khách</div>
+              <textarea class="form-control" id="progressNoteInput" rows="5" placeholder="Ghi chú tóm tắt nội dung vừa hoàn thành...">Em đã triển khai xong các hạng mục chính của đơn #${curOrder.id}. Khách hàng có thể kiểm tra và trao đổi thêm qua khung Chat nhé!</textarea>
+              <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="sendProgressUpdateToClient('${curOrder.id}')">
+                <i class="fa-solid fa-paper-plane"></i> Gửi Cập Nhật Cho Khách
+              </button>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Thời Gian Làm Việc</div>
+              <div class="kv-row"><span class="k">Thời gian bắt đầu</span><span class="v">${curOrder.date || 'Gần đây'}</span></div>
+              <div class="kv-row"><span class="k">Hạn chót bàn giao</span><span class="v">${curOrder.deadline || 'Theo tiến độ'}</span></div>
+
+              <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="goToCompleteTabForOrder('${curOrder.id}')">
+                <i class="fa-solid fa-circle-check"></i> Chuyển Sang Bàn Giao &amp; Nghiệm Thu →
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCompleteTab(processingOrders, deliveredOrders, completedOrders) {
+      const container = document.getElementById('completeViewContainer');
+      if (!container) return;
+
+      if (!currentDeliveryOrderId || !processingOrders.some(o => o.id === currentDeliveryOrderId)) {
+        currentDeliveryOrderId = processingOrders.length ? processingOrders[0].id : null;
+      }
+      const curOrder = processingOrders.find(o => o.id === currentDeliveryOrderId) || (processingOrders.length ? processingOrders[0] : null);
+
+      let deliveryFormHtml = '';
+      if (curOrder) {
+        const price = Number(curOrder.price) || 0;
+        const fee = curOrder.platformFee || Math.round(price * 0.05);
+        const net = price - fee;
+
+        deliveryFormHtml = `
+          <div class="grid-3" style="grid-template-columns: 2fr 1fr; margin-bottom: 32px;">
+            <div class="card">
+              <div class="card-header" style="margin-bottom:16px;">
                 <div>
                   <h2 class="card-title">Bàn Giao Kết Quả &amp; Yêu Cầu Nghiệm Thu</h2>
-                  <div style="font-size:13px; color:var(--text-muted);">Gửi đầy đủ file bàn giao, tài liệu hướng dẫn và kích hoạt quy trình giải ngân tiền Escrow</div>
+                  <div style="font-size:13px; color:var(--text-muted);">Gửi đầy đủ link bàn giao, tài liệu hướng dẫn và kích hoạt quy trình giải ngân tiền Escrow</div>
                 </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Liên kết sản phẩm hoàn thiện (Figma / GitHub / Drive) <span style="color:var(--error);">*</span></label>
-                <input type="text" class="form-control" value="https://figma.com/@annguyen/express-delivery-app-final-v3">
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" style="font-weight:700; font-size:13px;">Chọn đơn hàng cần bàn giao <span style="color:var(--error);">*</span></label>
+                <select class="form-control" id="deliveryOrderSelect" onchange="changeDeliveryOrder(this.value)">
+                  ${processingOrders.map(o => `<option value="${o.id}" ${o.id === curOrder.id ? 'selected' : ''}>#${o.id} - ${escapeHtml(o.serviceTitle)} (${escapeHtml(o.customerName)})</option>`).join('')}
+                </select>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Tệp đính kèm bàn giao (Source code, Assets, Export PDF)</label>
-                <div class="upload-box" onclick="showToast('Đã tải lên tệp bàn giao hoàn tất!')">
-                  <i class="fa-solid fa-file-zipper" style="font-size:28px; color:var(--primary); margin-bottom:8px;"></i>
-                  <div>Kéo thả tệp nén bàn giao hoặc nhấp để tải lên</div>
-                  <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Tối đa 100MB (ZIP, RAR, 7Z, PDF)</div>
-                </div>
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" style="font-weight:700; font-size:13px;">Liên kết sản phẩm hoàn thiện (Figma / GitHub / Drive) <span style="color:var(--error);">*</span></label>
+                <input type="text" id="deliveryLinkInput" class="form-control" value="https://drive.google.com/drive/folders/skillrental-${curOrder.id}-final" placeholder="https://...">
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Ghi chú bàn giao và cam kết bảo hành <span style="color:var(--error);">*</span></label>
-                <textarea class="form-control" rows="6">Chào quý công ty, em đã hoàn tất 100% các hạng mục thiết kế UI/UX App Mobile theo đúng thỏa thuận ban đầu:
-1. Đầy đủ 20 màn hình giao diện chuẩn Figma Design System.
-2. Bản prototype tương tác hoàn chỉnh luồng đặt hàng và theo dõi tài xế.
-3. Toàn bộ icon vector SVG, font chữ bản quyền và hướng dẫn bàn giao cho đội ngũ lập trình viên Mobile.
-
-Em cam kết hỗ trợ giải đáp thắc mắc và chỉnh sửa nhỏ miễn phí trong 30 ngày tiếp theo.</textarea>
+              <div class="form-group" style="margin-bottom:14px;">
+                <label class="form-label" style="font-weight:700; font-size:13px;">Ghi chú bàn giao và cam kết bảo hành <span style="color:var(--error);">*</span></label>
+                <textarea id="deliveryNotesInput" class="form-control" rows="5" placeholder="Ghi chú chi tiết kết quả...">Chào anh/chị, em đã hoàn tất 100% các hạng mục của đơn hàng #${curOrder.id} theo đúng yêu cầu. Kính gửi quý khách nghiệm thu sản phẩm.</textarea>
               </div>
 
               <div style="display:flex; align-items:center; gap:10px; padding:12px; background:#F8FAFC; border-radius:8px;">
                 <input type="checkbox" id="completeConfirm" checked style="width:18px; height:18px; cursor:pointer;">
                 <label for="completeConfirm" style="font-size:13px; color:var(--text-main); cursor:pointer;">
-                  Tôi cam kết đã bàn giao đầy đủ sản phẩm đạt tiêu chuẩn và trung thực với các hạng mục của đơn hàng #ORD-8834.
+                  Tôi cam kết đã bàn giao đầy đủ sản phẩm đạt tiêu chuẩn và trung thực với các hạng mục của đơn hàng #${curOrder.id}.
                 </label>
               </div>
             </div>
 
-            <!-- Acceptance & Escrow Countdown -->
             <div>
               <div class="card">
                 <div class="card-title" style="margin-bottom:12px;">Giải Ngân Ký Quỹ Escrow</div>
-                <div class="kv-row"><span class="k">Mã đơn hàng</span><span class="v">#ORD-8834</span></div>
-                <div class="kv-row"><span class="k">Số tiền ký quỹ</span><span class="v" style="font-size:16px; font-weight:800; color:var(--primary);">6.175.000đ</span></div>
+                <div class="kv-row"><span class="k">Mã đơn hàng</span><span class="v">#${curOrder.id}</span></div>
+                <div class="kv-row"><span class="k">Số tiền ký quỹ</span><span class="v" style="font-size:16px; font-weight:800; color:var(--primary);">${formatVND(net)}</span></div>
 
                 <div style="background:var(--primary-light); border:1px solid #BBF7D0; border-radius:8px; padding:14px; margin:16px 0;">
                   <div style="font-weight:700; color:var(--primary-dark); font-size:13px;"><i class="fa-solid fa-clock"></i> Quy tắc giải ngân tự động 48 giờ</div>
@@ -522,118 +690,236 @@ Em cam kết hỗ trợ giải đáp thắc mắc và chỉnh sửa nhỏ miễn
                   </p>
                 </div>
 
-                <button class="btn btn-primary btn-block btn-lg" onclick="deliverCompleteJobAction()">
+                <button class="btn btn-primary btn-block btn-lg" onclick="deliverCompleteJobAction('${curOrder.id}')">
                   <i class="fa-solid fa-paper-plane"></i> Gửi Cho Khách Nghiệm Thu
                 </button>
-                <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="showToast('Đã lưu bản nháp bàn giao!')">
-                  <i class="fa-regular fa-floppy-disk"></i> Lưu Nháp
-                </button>
-
-                <!-- Success Banner (hidden initially) -->
-                <div id="completeSuccessBanner" style="display:none; margin-top:16px; background:#F0FDF4; border:1px solid #86EFAC; border-radius:8px; padding:16px; text-align:center;">
-                  <i class="fa-solid fa-circle-check" style="font-size:32px; color:var(--primary); margin-bottom:8px;"></i>
-                  <div style="font-weight:700; color:var(--secondary); font-size:14px;">Đã Gửi Yêu Cầu Nghiệm Thu!</div>
-                  <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Đồng hồ 48 giờ giải ngân Escrow đang được kích hoạt.</div>
-                </div>
               </div>
             </div>
           </div>
-        </div>
+        `;
+      }
 
-      </div>
-    </main>
-  </div>
+      // Delivered & Completed List
+      let deliveredSectionHtml = '';
+      const allFinished = [...deliveredOrders, ...completedOrders];
 
-  <!-- Toast Box -->
-  <div id="toastBox" class="toast-box">
-    <i class="fa-solid fa-circle-check" style="color: var(--primary);"></i>
-    <span id="toastMessage">Thông báo</span>
-  </div>
+      if (allFinished.length > 0) {
+        deliveredSectionHtml = `
+          <div class="card">
+            <div class="card-title" style="margin-bottom:16px;"><i class="fa-solid fa-clock-rotate-left" style="color:var(--primary);"></i> Lịch Sử Bàn Giao &amp; Giải Ngân Escrow</div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã đơn</th>
+                    <th>Dịch vụ &amp; Khách hàng</th>
+                    <th>Số tiền giải ngân</th>
+                    <th>Trạng thái Escrow</th>
+                    <th>Thời gian / Đếm ngược 48h</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${allFinished.map(o => {
+                    const isDelivered = o.orderStatus === 'delivered';
+                    const price = Number(o.price) || 0;
+                    const fee = o.platformFee || Math.round(price * 0.05);
+                    const net = price - fee;
+                    const autoReleaseText = o.autoReleaseAt ? new Date(o.autoReleaseAt).toLocaleString('vi-VN') : 'Trong vòng 48h';
 
-  <script src="provider.js"></script>
-  <script>
-    function showToast(msg) {
-      const toast = document.getElementById('toastBox');
-      document.getElementById('toastMessage').textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3500);
+                    return `
+                      <tr>
+                        <td><strong>#${o.id}</strong></td>
+                        <td>
+                          <strong>${escapeHtml(o.serviceTitle)}</strong><br>
+                          <span style="font-size:11px; color:var(--text-muted);">${escapeHtml(o.customerName)}</span>
+                        </td>
+                        <td style="font-weight:700; color:var(--primary);">${formatVND(net)}</td>
+                        <td>
+                          ${isDelivered 
+                            ? '<span class="badge badge-warning"><span class="badge-dot"></span> Chờ Khách Nghiệm Thu</span>' 
+                            : '<span class="badge badge-success"><span class="badge-dot"></span> Đã Nghiệm Thu &amp; Giải Ngân</span>'}
+                        </td>
+                        <td style="font-size:12px; color:var(--text-muted);">
+                          ${isDelivered ? `<i class="fa-solid fa-clock" style="color:var(--warning);"></i> Tự động giải ngân lúc: <strong>${autoReleaseText}</strong>` : `<i class="fa-solid fa-circle-check" style="color:var(--primary);"></i> Tiền đã cộng vào ví`}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      if (!deliveryFormHtml && !deliveredSectionHtml) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:48px 24px;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#F1F5F9; color:#94A3B8; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:28px;">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 style="font-size:16px; font-weight:700; color:var(--secondary); margin-bottom:6px;">Chưa có đơn hàng nào cần bàn giao hoặc đã hoàn tất</h3>
+            <p style="font-size:13px; color:var(--text-muted); max-width:480px; margin:0 auto;">Khi bạn thực hiện đơn hàng xong, hãy chuyển sang tab này để bàn giao và nhận tiền Escrow.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = deliveryFormHtml + deliveredSectionHtml;
     }
 
-    function switchOrderTab(tabId, el) {
-      document.querySelectorAll('.screen-tab-content').forEach(c => c.classList.remove('active'));
-      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-      const target = document.getElementById(tabId);
-      if (target) target.classList.add('active');
-      if (el) el.classList.add('active');
-      window.scrollTo(0, 0);
-    }
-
-    async function confirmBookingToOrder() {
-      showToast('Đang xác nhận lịch hẹn...');
+    async function confirmAcceptOrder(orderId) {
       try {
-        if (window.providerApi) {
-          await window.providerApi.acceptOrder('DH001234');
+        showToast('Đang tiếp nhận đơn hàng...');
+        const res = await window.providerApi.acceptOrder(orderId);
+        if (res && res.success) {
+          showToast('Đã tiếp nhận đơn hàng thành công! Đơn đã chuyển sang trạng thái Đang Thực Hiện.');
+          await loadProviderOrders();
+          switchOrderTab('tab-uc38', document.querySelectorAll('.tab-item')[1]);
+        } else {
+          showToast(res?.message || 'Không thể tiếp nhận đơn hàng.');
         }
       } catch (e) {
-        console.warn('Booking confirm error:', e);
+        console.error('Accept order error:', e);
+        showToast('Lỗi khi tiếp nhận đơn hàng.');
       }
-      showToast('Đã xác nhận lịch hẹn! Đơn hàng #ORD-8834 đang được bắt đầu.');
-      setTimeout(() => {
-        switchOrderTab('tab-uc38', document.querySelectorAll('.tab-item')[1]);
-      }, 700);
     }
 
-    function goToProgressTab() {
+    async function confirmRejectOrder(orderId) {
+      const reason = window.prompt('Nhập lý do từ chối đơn hàng (tiền ký quỹ sẽ được hoàn 100% về ví của khách):', 'Lịch trình bận, không thể sắp xếp công việc');
+      if (reason === null) return;
+      try {
+        showToast('Đang từ chối đơn hàng...');
+        const res = await window.providerApi.rejectOrder(orderId, reason || 'Provider từ chối nhận việc');
+        if (res && res.success) {
+          showToast('Đã từ chối đơn hàng. Tiền ký quỹ đã được hoàn 100% về ví khách!');
+          await loadProviderOrders();
+        } else {
+          showToast(res?.message || 'Không thể từ chối đơn hàng.');
+        }
+      } catch (e) {
+        console.error('Reject order error:', e);
+        showToast('Lỗi khi từ chối đơn hàng.');
+      }
+    }
+
+    function goToProgressTabForOrder(orderId) {
+      currentProgressOrderId = orderId;
+      const processingOrders = allOrders.filter(o => o.orderStatus === 'processing');
+      renderProgressTab(processingOrders);
       switchOrderTab('tab-uc39', document.querySelectorAll('.tab-item')[2]);
     }
 
-    function goToCompleteTab() {
+    function goToCompleteTabForOrder(orderId) {
+      currentDeliveryOrderId = orderId;
+      const processingOrders = allOrders.filter(o => o.orderStatus === 'processing');
+      const deliveredOrders = allOrders.filter(o => o.orderStatus === 'delivered');
+      const completedOrders = allOrders.filter(o => o.orderStatus === 'completed');
+      renderCompleteTab(processingOrders, deliveredOrders, completedOrders);
       switchOrderTab('tab-uc40', document.querySelectorAll('.tab-item')[3]);
     }
 
-    let currentPercent = 65;
-    async function toggleTask(box, weight) {
-      box.classList.toggle('done');
-      if (box.classList.contains('done')) {
-        box.textContent = '✓';
-        currentPercent = Math.min(100, currentPercent + weight);
-      } else {
-        box.textContent = '';
-        currentPercent = Math.max(0, currentPercent - weight);
+    function changeProgressOrder(orderId) {
+      currentProgressOrderId = orderId;
+      const processingOrders = allOrders.filter(o => o.orderStatus === 'processing');
+      renderProgressTab(processingOrders);
+    }
+
+    function changeDeliveryOrder(orderId) {
+      currentDeliveryOrderId = orderId;
+      const processingOrders = allOrders.filter(o => o.orderStatus === 'processing');
+      const deliveredOrders = allOrders.filter(o => o.orderStatus === 'delivered');
+      const completedOrders = allOrders.filter(o => o.orderStatus === 'completed');
+      renderCompleteTab(processingOrders, deliveredOrders, completedOrders);
+    }
+
+    async function toggleDynamicTask(orderId, taskIndex, weight, box) {
+      const curOrder = allOrders.find(o => o.id === orderId);
+      if (!curOrder) return;
+      if (!Array.isArray(curOrder.completedTasks)) {
+        curOrder.completedTasks = [0, 1];
       }
-      document.getElementById('progressFill').style.width = currentPercent + '%';
-      document.getElementById('progressPercentText').textContent = currentPercent + '% Hoàn thành';
-      if (currentPercent === 100) {
-        document.getElementById('statusBadgeProgress').className = 'badge badge-success';
-        document.getElementById('statusBadgeProgress').innerHTML = '<span class="badge-dot"></span> Sẵn sàng bàn giao (100%)';
-        showToast('Tuyệt vời! Tất cả các đầu việc đã hoàn tất 100%.');
+      const idx = curOrder.completedTasks.indexOf(taskIndex);
+      if (idx > -1) {
+        curOrder.completedTasks.splice(idx, 1);
+        box.classList.remove('done');
+        box.textContent = '';
+      } else {
+        curOrder.completedTasks.push(taskIndex);
+        box.classList.add('done');
+        box.textContent = '✓';
+      }
+
+      const newPercent = Math.min(100, Math.max(0, curOrder.completedTasks.length * 25));
+      curOrder.progressPercent = newPercent;
+
+      const fillEl = document.getElementById('progressFill');
+      if (fillEl) fillEl.style.width = newPercent + '%';
+      const textEl = document.getElementById('progressPercentText');
+      if (textEl) textEl.textContent = newPercent + '% Hoàn thành';
+      const badgeEl = document.getElementById('statusBadgeProgress');
+      if (badgeEl) {
+        badgeEl.className = 'badge ' + (newPercent === 100 ? 'badge-success' : 'badge-warning');
+        badgeEl.innerHTML = `<span class="badge-dot"></span> ` + (newPercent === 100 ? 'Sẵn sàng bàn giao (100%)' : `Đang Tiến Hành (${newPercent}%)`);
       }
 
       try {
-        if (window.providerApi) {
-          await window.providerApi.updateOrderProgress('DH001234', currentPercent);
-        }
+        await window.providerApi.updateOrderProgress(orderId, newPercent, curOrder.completedTasks, `Hoàn thành hạng mục tiến độ ${taskIndex + 1}`);
+        showToast(`Đã lưu tiến độ: ${newPercent}%`);
       } catch (e) {
         console.warn('Progress update error:', e);
       }
     }
 
-    async function deliverCompleteJobAction() {
+    async function sendProgressUpdateToClient(orderId) {
+      const note = document.getElementById('progressNoteInput')?.value || 'Cập nhật tiến độ';
+      const curOrder = allOrders.find(o => o.id === orderId);
+      const percent = curOrder?.progressPercent || 50;
+      const completed = curOrder?.completedTasks || [];
       try {
-        if (window.providerApi) {
-          await window.providerApi.deliverOrder('DH001234', 'Đã bàn giao toàn bộ sản phẩm hoàn thiện và tài liệu hướng dẫn.');
+        await window.providerApi.updateOrderProgress(orderId, percent, completed, note);
+        showToast('Đã gửi thông báo tiến độ cho khách hàng thành công!');
+      } catch (e) {
+        console.warn('Error sending note:', e);
+        showToast('Lỗi khi gửi thông báo tiến độ.');
+      }
+    }
+
+    async function deliverCompleteJobAction(orderId) {
+      const chk = document.getElementById('completeConfirm');
+      if (chk && !chk.checked) {
+        showToast('Vui lòng xác nhận cam kết bàn giao trước khi gửi.');
+        return;
+      }
+      const deliveryLink = document.getElementById('deliveryLinkInput')?.value || '';
+      const handoverNotes = document.getElementById('deliveryNotesInput')?.value || 'Bàn giao sản phẩm hoàn thiện';
+
+      try {
+        showToast('Đang gửi bàn giao cho khách nghiệm thu...');
+        const res = await window.providerApi.deliverOrder(orderId, handoverNotes, { deliveryLink });
+        if (res && res.success) {
+          showToast('Đã gửi yêu cầu nghiệm thu & kích hoạt đếm ngược 48h giải ngân Escrow!');
+          await loadProviderOrders();
+          switchOrderTab('tab-uc40', document.querySelectorAll('.tab-item')[3]);
+        } else {
+          showToast(res?.message || 'Không thể bàn giao đơn hàng.');
         }
       } catch (e) {
-        console.warn('Deliver order error:', e);
+        console.error('Deliver order error:', e);
+        showToast('Lỗi khi bàn giao đơn hàng.');
       }
-      showToast('Đã gửi tài liệu bàn giao và yêu cầu nghiệm thu thành công!');
-      document.getElementById('completeSuccessBanner').style.display = 'block';
     }
 
     // Auto switch based on URL query param if present
     document.addEventListener('DOMContentLoaded', () => {
+      loadProviderOrders();
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
+      const orderIdParam = urlParams.get('orderId');
+      if (orderIdParam) {
+        currentProgressOrderId = orderIdParam;
+        currentDeliveryOrderId = orderIdParam;
+      }
       if (tabParam === 'order') {
         switchOrderTab('tab-uc38', document.querySelectorAll('.tab-item')[1]);
       } else if (tabParam === 'progress') {

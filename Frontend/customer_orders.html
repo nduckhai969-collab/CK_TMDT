@@ -182,19 +182,144 @@
   </div>
 
   <div id="retryPaymentModal" role="dialog" aria-modal="true" aria-labelledby="retryPaymentTitle" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:10000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">
-    <div style="background:#fff;border-radius:16px;max-width:480px;width:100%;padding:24px;box-shadow:0 20px 35px -5px rgba(0,0,0,.2)">
-      <h3 id="retryPaymentTitle" style="margin:0 0 6px;color:#0f172a;font-size:18px">Chọn phương thức thanh toán</h3>
-      <p style="margin:0 0 16px;color:#64748b;font-size:13px">Chọn cách thanh toán cho đơn đang chờ. Bạn sẽ được chuyển sang VNPay để hoàn tất.</p>
-      <div style="display:grid;gap:9px">
-        <label style="display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #bbf7d0;border-radius:10px;cursor:pointer"><input type="radio" name="retryPaymentMethod" value="VNPAYQR" checked><span><strong>Quét mã VietQR</strong><br><small style="color:#64748b">Quét bằng ứng dụng ngân hàng</small></span></label>
-        <label style="display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer"><input type="radio" name="retryPaymentMethod" value=""><span><strong>Ví VNPay / MoMo</strong><br><small style="color:#64748b">Chọn ví trên cổng VNPay</small></span></label>
-        <label style="display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer"><input type="radio" name="retryPaymentMethod" value="VNBANK"><span><strong>Thẻ ATM / tài khoản ngân hàng</strong><br><small style="color:#64748b">Thanh toán qua ngân hàng nội địa</small></span></label>
-        <label style="display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer"><input type="radio" name="retryPaymentMethod" value="INTCARD"><span><strong>Thẻ quốc tế</strong><br><small style="color:#64748b">Visa, Mastercard hoặc JCB</small></span></label>
+    <div style="background:#fff;border-radius:18px;max-width:500px;width:100%;padding:24px;box-shadow:0 20px 35px -5px rgba(0,0,0,.2)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <h3 id="retryPaymentTitle" style="margin:0 0 4px;color:#0f172a;font-size:18px;font-weight:800">Chọn phương thức ký quỹ</h3>
+          <p style="margin:0;color:#64748b;font-size:13px">Ký quỹ Escrow bảo vệ an toàn 100% để chuyên gia tiếp nhận công việc.</p>
+        </div>
+        <button type="button" onclick="closeRetryPaymentModal()" style="background:none;border:none;font-size:18px;color:#94a3b8;cursor:pointer;padding:4px"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:20px">
-        <button type="button" onclick="closeRetryPaymentModal()" class="btn btn-outline">Để sau</button>
-        <button id="retryPaymentSubmit" type="button" onclick="retryOrderPayment()" class="btn btn-primary"><i class="fa-solid fa-credit-card"></i> Tiếp tục</button>
+
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <span style="font-size:12px;color:#64748B;display:block">Đơn hàng: <strong id="retryModalOrderId" style="color:#0F172A">—</strong></span>
+          <span style="font-size:12.5px;color:#475569">Tiền ký quỹ Escrow:</span>
+        </div>
+        <strong id="retryModalDepositAmount" style="font-size:18px;color:#16A34A;font-weight:800">—</strong>
       </div>
+
+      <div style="display:grid;gap:10px">
+        <!-- Phương thức 1: Số dư ví SkillRental -->
+        <label id="retryMethodBalanceLabel" style="display:flex;gap:12px;align-items:center;padding:12px 14px;border:2px solid #22c55e;background:#f0fdf4;border-radius:12px;cursor:pointer;transition:all 0.2s">
+          <input type="radio" name="retryPaymentMethod" value="balance" checked style="accent-color:#16a34a;transform:scale(1.2)">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px">
+              <strong style="color:#0f172a;font-size:13.5px"><i class="fa-solid fa-wallet" style="color:#16a34a"></i> Số dư ví SkillRental</strong>
+              <span style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:800;padding:2px 6px;border-radius:6px">Ký quỹ tức thì</span>
+            </div>
+            <div style="color:#475569;font-size:12px;margin-top:2px">
+              Số dư khả dụng: <strong id="retryWalletBalanceDisplay" style="color:#16a34a">Đang kiểm tra...</strong>
+            </div>
+            <div id="retryWalletBalanceNote" style="font-size:11.5px;color:#dc2626;margin-top:3px;display:none;font-weight:600"></div>
+          </div>
+        </label>
+
+        <!-- Phương thức 2: VietQR Chuyển khoản ngân hàng -->
+        <label id="retryMethodVietQrLabel" style="display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all 0.2s">
+          <input type="radio" name="retryPaymentMethod" value="VNPAYQR" style="accent-color:#16a34a;transform:scale(1.2)">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px">
+              <strong style="color:#0f172a;font-size:13.5px"><i class="fa-solid fa-qrcode" style="color:#2563eb"></i> Quét mã VietQR (Tự động 24/7)</strong>
+              <span style="background:#dbeafe;color:#1e40af;font-size:11px;font-weight:800;padding:2px 6px;border-radius:6px">Khuyên dùng</span>
+            </div>
+            <div style="color:#64748b;font-size:12px;margin-top:2px">Quét mã bằng MB, Vietcombank, Techcombank, Momo...</div>
+          </div>
+        </label>
+
+        <!-- Phương thức 3: Cổng VNPay / Ví MoMo -->
+        <label style="display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer">
+          <input type="radio" name="retryPaymentMethod" value="" style="accent-color:#16a34a;transform:scale(1.2)">
+          <div>
+            <strong style="color:#0f172a;font-size:13.5px"><i class="fa-solid fa-building-columns" style="color:#005baa"></i> Cổng thanh toán VNPay</strong>
+            <div style="color:#64748b;font-size:12px;margin-top:2px">Chuyển sang giao diện VNPay chọn ví điện tử hoặc cổng thanh toán</div>
+          </div>
+        </label>
+
+        <!-- Phương thức 4: Thẻ ATM nội địa -->
+        <label style="display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer">
+          <input type="radio" name="retryPaymentMethod" value="VNBANK" style="accent-color:#16a34a;transform:scale(1.2)">
+          <div>
+            <strong style="color:#0f172a;font-size:13.5px"><i class="fa-solid fa-credit-card" style="color:#059669"></i> Thẻ ATM / Tài khoản ngân hàng nội địa</strong>
+            <div style="color:#64748b;font-size:12px;margin-top:2px">Thanh toán qua thẻ ATM của hơn 40 ngân hàng Việt Nam</div>
+          </div>
+        </label>
+
+        <!-- Phương thức 5: Thẻ quốc tế -->
+        <label style="display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;cursor:pointer">
+          <input type="radio" name="retryPaymentMethod" value="INTCARD" style="accent-color:#16a34a;transform:scale(1.2)">
+          <div>
+            <strong style="color:#0f172a;font-size:13.5px"><i class="fa-brands fa-cc-visa" style="color:#ea580c"></i> Thẻ quốc tế (Visa / Mastercard / JCB)</strong>
+            <div style="color:#64748b;font-size:12px;margin-top:2px">Thanh toán an toàn qua cổng quốc tế</div>
+          </div>
+        </label>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:22px">
+        <button type="button" onclick="closeRetryPaymentModal()" class="btn btn-outline" style="font-weight:600">Để sau</button>
+        <button id="retryPaymentSubmit" type="button" onclick="retryOrderPayment()" class="btn btn-primary" style="font-weight:700;padding:10px 20px">
+          <i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIETQR ESCROW MODAL -->
+  <div id="vietqrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.65); z-index:10001; align-items:center; justify-content:center; backdrop-filter:blur(4px); padding:16px;">
+    <div style="background:#FFFFFF; border-radius:20px; max-width:440px; width:100%; padding:26px 22px; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); animation:modalIn 0.3s ease-out; position:relative;">
+      <button type="button" onclick="closeVietQrModal()" style="position:absolute; top:14px; right:14px; background:none; border:none; font-size:18px; color:#64748B; cursor:pointer; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div style="display:inline-flex; align-items:center; gap:6px; background:#EFF6FF; color:#1D4ED8; font-size:11.5px; font-weight:800; padding:4px 12px; border-radius:9999px; margin-bottom:10px;">
+        <i class="fa-solid fa-qrcode"></i> VietQR Chuyển Khoản Tức Thì 24/7
+      </div>
+      <h2 style="font-size:18px; font-weight:800; color:#0F172A; margin-bottom:4px;">Quét Mã Ký Quỹ Escrow</h2>
+      <p style="font-size:12.5px; color:#64748B; margin-bottom:14px;">Mở ứng dụng ngân hàng bất kỳ để quét mã và ký quỹ an toàn</p>
+
+      <!-- QR Frame -->
+      <div style="background:#FFFFFF; border:2px solid #E2E8F0; border-radius:14px; padding:10px; display:inline-block; margin-bottom:12px; box-shadow:0 4px 14px rgba(0,0,0,0.05);">
+        <img id="vietqrModalImg" src="" alt="Mã VietQR Ký Quỹ" style="width:210px; height:210px; display:block; border-radius:8px;">
+      </div>
+
+      <!-- Info Table -->
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; text-align:left; font-size:12.5px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Ngân hàng nhận:</span>
+          <strong style="color:#0F172A;">MB Bank (Quân Đội)</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Số tài khoản:</span>
+          <span style="color:#005BAA; font-weight:800; font-family:monospace; font-size:13.5px;">0988 776 655</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Chủ tài khoản:</span>
+          <strong style="color:#0F172A;">SAN GD SKILLRENTAL ESCROW</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Số tiền ký quỹ:</span>
+          <strong id="vietqrModalAmount" style="color:#16A34A; font-size:15px; font-weight:800;">—</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-top:1px dashed #CBD5E1; padding-top:6px;">
+          <span style="color:#64748B;">Nội dung CK:</span>
+          <strong id="vietqrModalContent" style="color:#DC2626; font-family:monospace; font-weight:800; font-size:13px;">—</strong>
+        </div>
+      </div>
+
+      <!-- Countdown -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#ECFDF5; border:1px solid #A7F3D0; border-radius:8px; padding:8px 12px; font-size:12px; color:#15803D; margin-bottom:14px;">
+        <span><i class="fa-regular fa-clock"></i> Thời gian chờ thanh toán:</span>
+        <strong id="vietqrCountdown" style="font-size:13.5px; font-weight:800;">14:59</strong>
+      </div>
+
+      <!-- Action Button -->
+      <button id="btnConfirmVietQrPaid" type="button" onclick="onCustomerConfirmVietQrPaid()" class="btn btn-primary btn-block" style="width:100%; padding:13px 0; font-weight:800; font-size:14.5px; box-shadow:0 4px 14px rgba(22,163,74,0.35); margin-bottom:8px;">
+        <i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công
+      </button>
+
+      <a id="linkOpenVnpayGateway" href="#" target="_blank" style="font-size:12px; color:#005BAA; font-weight:600; text-decoration:none; display:inline-block; margin-top:4px;">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> Hoặc mở giao diện Cổng VNPay giả lập
+      </a>
     </div>
   </div>
 
@@ -207,6 +332,11 @@
     let currentFilter = 'all';
     let targetOrderId = null;
     let retryPaymentOrderId = null;
+    let currentCustomerBalance = 0;
+    let activeRetryOrder = null;
+    let activeVietQrTxnRef = null;
+    let vietqrTimer = null;
+    let vietqrPollInterval = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
@@ -452,17 +582,63 @@
       }
     }
 
-    function openRetryPaymentModal(orderId) {
+    async function openRetryPaymentModal(orderId) {
       retryPaymentOrderId = orderId;
-      document.querySelector('input[name="retryPaymentMethod"][value="VNPAYQR"]').checked = true;
+      activeRetryOrder = myOrders.find(o => o.id === orderId) || { id: orderId, escrowDeposit: 0 };
+      
+      const orderIdEl = document.getElementById('retryModalOrderId');
+      if (orderIdEl) orderIdEl.textContent = activeRetryOrder.id;
+      const depositAmt = Number(activeRetryOrder.escrowDeposit || activeRetryOrder.price || 0);
+      const amountEl = document.getElementById('retryModalDepositAmount');
+      if (amountEl) amountEl.textContent = formatVND(depositAmt);
+
+      const balanceTextEl = document.getElementById('retryWalletBalanceDisplay');
+      const balanceNoteEl = document.getElementById('retryWalletBalanceNote');
+      const balanceRadio = document.querySelector('input[name="retryPaymentMethod"][value="balance"]');
+      const vietqrRadio = document.querySelector('input[name="retryPaymentMethod"][value="VNPAYQR"]');
+      
+      if (balanceTextEl) balanceTextEl.textContent = 'Đang kiểm tra...';
+      if (balanceNoteEl) balanceNoteEl.style.display = 'none';
       document.getElementById('retryPaymentModal').style.display = 'flex';
+
+      // Lấy số dư ví hiện tại của tài khoản
+      try {
+        const balRes = await apiRequest('/api/payments/balance');
+        if (balRes.success) {
+          currentCustomerBalance = Number(balRes.balance) || 0;
+        } else {
+          const meRes = await apiRequest('/api/auth/me');
+          currentCustomerBalance = Number(meRes.user?.balance) || 0;
+        }
+      } catch (e) {
+        currentCustomerBalance = 0;
+      }
+
+      if (balanceTextEl) balanceTextEl.textContent = formatVND(currentCustomerBalance);
+
+      if (currentCustomerBalance >= depositAmt && depositAmt > 0) {
+        if (balanceRadio) {
+          balanceRadio.disabled = false;
+          balanceRadio.checked = true;
+        }
+        if (balanceNoteEl) balanceNoteEl.style.display = 'none';
+      } else {
+        if (balanceNoteEl) {
+          balanceNoteEl.textContent = `(Số dư ví không đủ để ký quỹ ${formatVND(depositAmt)}, vui lòng chọn VietQR hoặc nạp thêm)`;
+          balanceNoteEl.style.display = 'block';
+        }
+        if (vietqrRadio) vietqrRadio.checked = true;
+      }
     }
 
     function closeRetryPaymentModal() {
       retryPaymentOrderId = null;
+      activeRetryOrder = null;
       const button = document.getElementById('retryPaymentSubmit');
-      button.disabled = false;
-      button.innerHTML = '<i class="fa-solid fa-credit-card"></i> Tiếp tục';
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ';
+      }
       document.getElementById('retryPaymentModal').style.display = 'none';
     }
 
@@ -471,22 +647,148 @@
       const orderId = retryPaymentOrderId;
       const button = document.getElementById('retryPaymentSubmit');
       const originalHtml = button.innerHTML;
+      const selectedMethod = document.querySelector('input[name="retryPaymentMethod"]:checked')?.value || 'balance';
+
+      // 1. Trường hợp ký quỹ bằng số dư ví SkillRental
+      if (selectedMethod === 'balance') {
+        const depositAmt = activeRetryOrder ? Number(activeRetryOrder.escrowDeposit || activeRetryOrder.price || 0) : 0;
+        if (currentCustomerBalance < depositAmt) {
+          showToast('Số dư ví không đủ', `Ví hiện có ${formatVND(currentCustomerBalance)}, cần ${formatVND(depositAmt)}. Vui lòng chọn VietQR hoặc nạp tiền ví.`, 'warning');
+          return;
+        }
+
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang trừ ví & ký quỹ...';
+        try {
+          const res = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}/pay-with-balance`, {
+            method: 'POST'
+          });
+          if (!res.success) {
+            throw new Error(res.message || 'Không thể thanh toán ký quỹ từ ví.');
+          }
+          closeRetryPaymentModal();
+          showToast('Ký Quỹ Thành Công', res.message || 'Tiền đã được đưa vào quỹ bảo vệ Escrow 100%.', 'success');
+          await loadCustomerOrders();
+        } catch (err) {
+          showToast('Lỗi ký quỹ', err.message || 'Vui lòng thử lại sau.', 'error');
+          button.disabled = false;
+          button.innerHTML = originalHtml;
+        }
+        return;
+      }
+
+      // 2. Trường hợp VietQR hoặc VNPay Gateway
       button.disabled = true;
       button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo giao dịch...';
       try {
-        const bankCode = document.querySelector('input[name="retryPaymentMethod"]:checked')?.value ?? 'VNPAYQR';
+        const bankCode = selectedMethod;
         const result = await apiRequest(`/api/payments/vnpay/orders/${encodeURIComponent(orderId)}`, {
           method: 'POST',
           body: JSON.stringify({ bankCode })
         });
         if (!result.success || !result.paymentUrl) {
-          throw new Error(result.message || 'Không thể tạo lại giao dịch VNPay.');
+          throw new Error(result.message || 'Không thể tạo lại giao dịch thanh toán.');
         }
+
+        if (selectedMethod === 'VNPAYQR') {
+          closeRetryPaymentModal();
+          const targetOrder = (activeRetryOrder && activeRetryOrder.id === orderId) ? activeRetryOrder : (result.order || { id: orderId });
+          openVietQrModal(targetOrder, result.txnRef, result.paymentUrl);
+          return;
+        }
+
         window.location.href = result.paymentUrl;
       } catch (error) {
         showToast('Không thể thanh toán lại', error.message || 'Vui lòng thử lại sau.', 'error');
         button.disabled = false;
         button.innerHTML = originalHtml;
+      }
+    }
+
+    function openVietQrModal(order, txnRef, paymentUrl) {
+      activeRetryOrder = order;
+      activeVietQrTxnRef = txnRef;
+      const depositAmt = Number(order.escrowDeposit || order.price || 0);
+      const orderId = order.id;
+
+      document.getElementById('vietqrModalAmount').textContent = formatVND(depositAmt);
+      document.getElementById('vietqrModalContent').textContent = 'KYQUY ' + orderId;
+
+      const qrApiUrl = 'https://img.vietqr.io/image/MB-0988776655-compact2.png?amount=' + depositAmt + '&addInfo=KYQUY%20' + encodeURIComponent(orderId) + '&accountName=SAN%20GD%20SKILLRENTAL%20ESCROW';
+      document.getElementById('vietqrModalImg').src = qrApiUrl;
+
+      const linkEl = document.getElementById('linkOpenVnpayGateway');
+      if (linkEl && paymentUrl) {
+        linkEl.href = paymentUrl;
+      }
+
+      document.getElementById('vietqrModal').style.display = 'flex';
+
+      let remaining = 15 * 60;
+      if (vietqrTimer) clearInterval(vietqrTimer);
+      vietqrTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(vietqrTimer);
+          closeVietQrModal();
+          showToast('Hết thời gian thanh toán', 'Vui lòng kiểm tra lại đơn hàng để thực hiện lại.', 'warning');
+          return;
+        }
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        const el = document.getElementById('vietqrCountdown');
+        if (el) el.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      }, 1000);
+
+      if (vietqrPollInterval) clearInterval(vietqrPollInterval);
+      vietqrPollInterval = setInterval(async () => {
+        try {
+          const st = await apiRequest('/api/payments/order-status/' + encodeURIComponent(orderId));
+          if (st.success && st.isPaid) {
+            clearInterval(vietqrPollInterval);
+            clearInterval(vietqrTimer);
+            closeVietQrModal();
+            showToast('Ký Quỹ Thành Công', `Đơn hàng ${orderId} đã được ký quỹ an toàn 100%!`, 'success');
+            await loadCustomerOrders();
+          }
+        } catch (e) {}
+      }, 2000);
+    }
+
+    function closeVietQrModal() {
+      document.getElementById('vietqrModal').style.display = 'none';
+      if (vietqrTimer) clearInterval(vietqrTimer);
+      if (vietqrPollInterval) clearInterval(vietqrPollInterval);
+    }
+
+    async function onCustomerConfirmVietQrPaid() {
+      if (!activeRetryOrder) return;
+      const btn = document.getElementById('btnConfirmVietQrPaid');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang xác nhận ký quỹ...';
+
+      try {
+        const res = await apiRequest('/api/payments/confirm-order-payment', {
+          method: 'POST',
+          body: JSON.stringify({
+            orderId: activeRetryOrder.id,
+            txnRef: activeVietQrTxnRef
+          })
+        });
+
+        if (res.success) {
+          closeVietQrModal();
+          showToast('Ký Quỹ Thành Công', res.message || 'Đơn hàng đã được đưa vào bảo vệ Escrow 100%!', 'success');
+          await loadCustomerOrders();
+        } else {
+          showToast('Chưa thể xác nhận', res.message || 'Không thể xác nhận thanh toán. Vui lòng thử lại.', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công';
+        }
+      } catch (err) {
+        showToast('Lỗi kết nối', err.message || 'Không kết nối được với máy chủ.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công';
       }
     }
 

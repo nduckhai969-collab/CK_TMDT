@@ -3,15 +3,16 @@ const router = express.Router();
 const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processUndoCancelOrder, processReleaseEscrow } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
 const { createNotification, notifyProvider } = require('../services/notificationService');
 const vnpay = require('../services/vnpayService');
-const { startGatewayCheckout, expireUnpaidOrders } = require('../services/checkoutService');
+const { startGatewayCheckout, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
 // List orders
 router.get('/', requireCustomer, (req, res) => {
   expireUnpaidOrders();
+  checkAutoReleaseOrders();
   const { customerId, providerId, status, escrowStatus } = req.query;
   let orders = db.getCollection('orders');
 
@@ -370,6 +371,24 @@ router.put('/:id/undo-cancel', requireCustomer, (req, res) => {
   try {
     const order = processUndoCancelOrder(req.params.id, req.authUser.id);
     res.json({ success: true, message: 'Đã hoàn tác hủy đơn và khôi phục đơn hàng.', order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+// Pay pending order using customer wallet balance
+router.post('/:id/pay-with-balance', requireCustomer, (req, res) => {
+  try {
+    const result = payOrderWithBalance({
+      orderId: req.params.id,
+      customerId: req.authUser.id
+    });
+    res.json({
+      success: true,
+      message: `Ký quỹ thành công! Số tiền ${result.order.priceFormatted || result.order.price} đã được chuyển vào quỹ Escrow bảo vệ an toàn 100%.`,
+      order: result.order,
+      newBalance: result.newBalance
+    });
   } catch (err) {
     res.status(err.status || 400).json({ success: false, message: err.message });
   }

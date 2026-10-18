@@ -177,10 +177,14 @@
           <!-- Dynamic QR Code Box for VietQR -->
           <div id="qrBox" style="background:#F8FAFC; border:1px dashed #CBD5E1; border-radius:12px; padding:20px; text-align:center; margin-top:16px;">
             <div style="font-weight:700; font-size:13.5px; color:#0F172A; margin-bottom:8px;">
-              Mã VietQR Ký Quỹ Escrow Tự Động
+              Mã VietQR Ký Quỹ Escrow Tự Động 24/7
             </div>
             <div style="font-size:12px;color:#64748B;margin:12px auto;max-width:300px;">
-              Bạn sẽ được chuyển sang cổng VNPay để quét mã VietQR bằng ứng dụng ngân hàng. Đơn chỉ được ký quỹ khi VNPay xác nhận thanh toán thành công; nếu không thanh toán, đơn sẽ tự hủy sau 30 phút.
+              Mã QR thanh toán tự động kèm số tiền và nội dung ký quỹ chính xác sẽ hiển thị ngay khi bạn bấm <strong>Thanh Toán & Ký Quỹ VietQR</strong>. Hỗ trợ quét bằng mọi app ngân hàng (MB, Vietcombank, Techcombank, BIDV...) và ví điện tử.
+            </div>
+            <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; padding:8px 12px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:#64748B;">Ngân hàng thụ hưởng:</span>
+              <strong style="color:#005BAA;">MB Bank · STK: 0988 776 655 · SAN GD SKILLRENTAL ESCROW</strong>
             </div>
           </div>
 
@@ -297,6 +301,65 @@
     </div>
   </div>
 
+  <!-- VIETQR ESCROW MODAL -->
+  <div id="vietqrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.65); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px); padding:16px;">
+    <div style="background:#FFFFFF; border-radius:20px; max-width:440px; width:100%; padding:26px 22px; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); animation:modalIn 0.3s ease-out; position:relative;">
+      <button type="button" onclick="closeVietQrModal()" style="position:absolute; top:14px; right:14px; background:none; border:none; font-size:18px; color:#64748B; cursor:pointer; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div style="display:inline-flex; align-items:center; gap:6px; background:#EFF6FF; color:#1D4ED8; font-size:11.5px; font-weight:800; padding:4px 12px; border-radius:9999px; margin-bottom:10px;">
+        <i class="fa-solid fa-qrcode"></i> VietQR Chuyển Khoản Tức Thì 24/7
+      </div>
+      <h2 style="font-size:18px; font-weight:800; color:#0F172A; margin-bottom:4px;">Quét Mã Ký Quỹ Escrow</h2>
+      <p style="font-size:12.5px; color:#64748B; margin-bottom:14px;">Mở ứng dụng ngân hàng bất kỳ để quét mã và ký quỹ an toàn</p>
+
+      <!-- QR Frame -->
+      <div style="background:#FFFFFF; border:2px solid #E2E8F0; border-radius:14px; padding:10px; display:inline-block; margin-bottom:12px; box-shadow:0 4px 14px rgba(0,0,0,0.05);">
+        <img id="vietqrModalImg" src="" alt="Mã VietQR Ký Quỹ" style="width:210px; height:210px; display:block; border-radius:8px;">
+      </div>
+
+      <!-- Info Table -->
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 14px; text-align:left; font-size:12.5px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Ngân hàng nhận:</span>
+          <strong style="color:#0F172A;">MB Bank (Quân Đội)</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Số tài khoản:</span>
+          <span style="color:#005BAA; font-weight:800; font-family:monospace; font-size:13.5px;">0988 776 655</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Chủ tài khoản:</span>
+          <strong style="color:#0F172A;">SAN GD SKILLRENTAL ESCROW</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:#64748B;">Số tiền ký quỹ:</span>
+          <strong id="vietqrModalAmount" style="color:#16A34A; font-size:15px; font-weight:800;">—</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; border-top:1px dashed #CBD5E1; padding-top:6px;">
+          <span style="color:#64748B;">Nội dung CK:</span>
+          <strong id="vietqrModalContent" style="color:#DC2626; font-family:monospace; font-weight:800; font-size:13px;">—</strong>
+        </div>
+      </div>
+
+      <!-- Countdown -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#ECFDF5; border:1px solid #A7F3D0; border-radius:8px; padding:8px 12px; font-size:12px; color:#15803D; margin-bottom:14px;">
+        <span><i class="fa-regular fa-clock"></i> Thời gian chờ thanh toán:</span>
+        <strong id="vietqrCountdown" style="font-size:13.5px; font-weight:800;">14:59</strong>
+      </div>
+
+      <!-- Action Button -->
+      <button id="btnConfirmVietQrPaid" type="button" onclick="onCustomerConfirmVietQrPaid()" class="btn btn-primary btn-block" style="width:100%; padding:13px 0; font-weight:800; font-size:14.5px; box-shadow:0 4px 14px rgba(22,163,74,0.35); margin-bottom:8px;">
+        <i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công
+      </button>
+
+      <a id="linkOpenVnpayGateway" href="#" target="_blank" style="font-size:12px; color:#005BAA; font-weight:600; text-decoration:none; display:inline-block; margin-top:4px;">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> Hoặc mở giao diện Cổng VNPay giả lập
+      </a>
+    </div>
+  </div>
+
   <div id="footer-placeholder"></div>
 
   <script src="customer.js"></script>
@@ -397,9 +460,12 @@
       const btn = document.getElementById('btnSubmitEscrow');
       if (!btn) return;
       btn.disabled = false;
-      btn.innerHTML = selectedMethod === 'balance'
-        ? `<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow`
-        : `<i class="fa-solid fa-credit-card"></i> Thanh Toán Qua VNPay`;
+      if (selectedMethod === 'balance') { btn.innerHTML = '<i class="fa-solid fa-shield-check"></i> Xác Nhận Ký Quỹ Escrow (Trừ Ví)'; return; }
+      if (selectedMethod === 'vietqr') { btn.innerHTML = '<i class="fa-solid fa-qrcode"></i> Thanh Toán & Ký Quỹ VietQR'; return; }
+      if (selectedMethod === 'vnpay') { btn.innerHTML = '<i class="fa-solid fa-wallet"></i> Thanh Toán Qua Cổng VNPay'; return; }
+      btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Thanh Toán Thẻ Quốc Tế'; return;
+
+
     }
 
     function selectPaymentMethod(method, el) {
@@ -417,6 +483,104 @@
       // Toggle VietQR box
       const qrBox = document.getElementById('qrBox');
       qrBox.style.display = method === 'vietqr' ? 'block' : 'none';
+    }
+
+    let activeEscrowOrder = null;
+    let activeEscrowTxnRef = null;
+    let activeEscrowPaymentUrl = null;
+    let vietqrTimer = null;
+    let vietqrPollInterval = null;
+
+    function openVietQrModal(order, txnRef, paymentUrl) {
+      activeEscrowOrder = order;
+      activeEscrowTxnRef = txnRef;
+      activeEscrowPaymentUrl = paymentUrl;
+
+      const depositAmt = Number(order.escrowDeposit || order.price || 0);
+      const orderId = order.id;
+
+      document.getElementById('vietqrModalAmount').textContent = formatVND(depositAmt);
+      document.getElementById('vietqrModalContent').textContent = 'KYQUY ' + orderId;
+
+      const qrApiUrl = 'https://img.vietqr.io/image/MB-0988776655-compact2.png?amount=' + depositAmt + '&addInfo=KYQUY%20' + encodeURIComponent(orderId) + '&accountName=SAN%20GD%20SKILLRENTAL%20ESCROW';
+      document.getElementById('vietqrModalImg').src = qrApiUrl;
+
+      const linkEl = document.getElementById('linkOpenVnpayGateway');
+      if (linkEl && paymentUrl) {
+        linkEl.href = paymentUrl;
+      }
+
+      document.getElementById('vietqrModal').style.display = 'flex';
+
+      let remaining = 15 * 60;
+      if (vietqrTimer) clearInterval(vietqrTimer);
+      vietqrTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(vietqrTimer);
+          closeVietQrModal();
+          showToast('Hết thời gian thanh toán', 'Vui lòng kiểm tra mục Đơn hàng để thanh toán lại.', 'warning');
+          return;
+        }
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        const el = document.getElementById('vietqrCountdown');
+        if (el) el.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      }, 1000);
+
+      if (vietqrPollInterval) clearInterval(vietqrPollInterval);
+      vietqrPollInterval = setInterval(async () => {
+        try {
+          const st = await apiRequest('/api/payments/order-status/' + encodeURIComponent(orderId));
+          if (st.success && st.isPaid) {
+            clearInterval(vietqrPollInterval);
+            clearInterval(vietqrTimer);
+            closeVietQrModal();
+            localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
+            document.getElementById('modalOrderId').textContent = orderId;
+            document.getElementById('successModal').style.display = 'flex';
+          }
+        } catch (e) {}
+      }, 2000);
+    }
+
+    function closeVietQrModal() {
+      document.getElementById('vietqrModal').style.display = 'none';
+      if (vietqrTimer) clearInterval(vietqrTimer);
+      if (vietqrPollInterval) clearInterval(vietqrPollInterval);
+      updateSubmitLabel();
+    }
+
+    async function onCustomerConfirmVietQrPaid() {
+      if (!activeEscrowOrder) return;
+      const btn = document.getElementById('btnConfirmVietQrPaid');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang xác nhận ký quỹ...';
+
+      try {
+        const res = await apiRequest('/api/payments/confirm-order-payment', {
+          method: 'POST',
+          body: JSON.stringify({
+            orderId: activeEscrowOrder.id,
+            txnRef: activeEscrowTxnRef
+          })
+        });
+
+        if (res.success) {
+          closeVietQrModal();
+          localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
+          document.getElementById('modalOrderId').textContent = activeEscrowOrder.id;
+          document.getElementById('successModal').style.display = 'flex';
+        } else {
+          showToast('Chưa thể xác nhận', res.message || 'Không thể xác nhận thanh toán. Vui lòng thử lại.', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công';
+        }
+      } catch (err) {
+        showToast('Lỗi kết nối', err.message || 'Không kết nối được với máy chủ.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công';
+      }
     }
 
     async function submitEscrowOrder() {
@@ -446,7 +610,13 @@
           })
         });
         if (result.success && result.paymentUrl) {
-          // Thanh toán qua cổng VNPay: đơn đã được tạo ở trạng thái chờ thanh toán
+          if (selectedMethod === 'vietqr') {
+            btn.disabled = false;
+            updateSubmitLabel();
+            const firstOrder = (result.orders && result.orders[0]) || { id: 'DH_CART', escrowDeposit: Number(draft.total) };
+            openVietQrModal(firstOrder, result.txnRef, result.paymentUrl);
+            return;
+          }
           localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
           showToast('Đang chuyển tới VNPay', result.message || 'Vui lòng hoàn tất thanh toán trên cổng VNPay.', 'success');
           window.location.href = result.paymentUrl;
@@ -493,7 +663,12 @@
       });
 
       if (res.success && res.paymentUrl) {
-        // Thanh toán qua cổng VNPay: đơn đã được tạo ở trạng thái chờ thanh toán
+        if (selectedMethod === 'vietqr') {
+          btn.disabled = false;
+          updateSubmitLabel();
+          openVietQrModal(res.order, res.txnRef, res.paymentUrl);
+          return;
+        }
         localStorage.removeItem('SKILLRENTAL_CHECKOUT_DRAFT');
         showToast('Đang chuyển tới VNPay', res.message || 'Vui lòng hoàn tất thanh toán trên cổng VNPay.', 'success');
         window.location.href = res.paymentUrl;

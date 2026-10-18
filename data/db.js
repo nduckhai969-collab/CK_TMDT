@@ -340,6 +340,36 @@ const INITIAL_DATABASE = {
 
   orders: [
     {
+      id: 'DH008841',
+      customerId: 'USR003',
+      customerName: 'Lê Hoàng Long',
+      customerPhone: '0988 776 655',
+      customerAddress: 'Quận 1, TP. Hồ Chí Minh',
+      providerId: 'PRV001',
+      providerName: 'Nguyễn Văn An',
+      providerPhone: '0901 234 567',
+      serviceId: 'SVC001',
+      serviceTitle: 'Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành',
+      price: 6500000,
+      priceFormatted: '6.500.000đ',
+      platformFee: 325000,
+      escrowDeposit: 6825000,
+      escrowStatus: 'escrow_held',
+      orderStatus: 'pending',
+      paymentMethod: 'Ví điện tử VNPay (Escrow 100%)',
+      date: '18/10/2026 09:15',
+      deadline: '10 ngày làm việc',
+      scheduledDate: '2026-10-20',
+      scheduledTime: '08:00 - 10:00',
+      notes: 'Chào bạn An, bên mình cần ưu tiên hoàn thành trước 3 luồng chính: Đặt đơn, Xem bản đồ tài xế và Trang ví để kịp thuyết trình với cổ đông.',
+      milestones: [
+        { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: '18/10/2026 09:15' },
+        { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: false, time: 'Chờ tiếp nhận' },
+        { title: 'Bàn giao sản phẩm / hoàn thành dịch vụ', done: false, time: 'Chờ bàn giao' },
+        { title: 'Khách hàng nghiệm thu & Giải ngân Escrow', done: false, time: 'Chờ nghiệm thu' }
+      ]
+    },
+    {
       id: 'DH001234',
       customerId: 'USR003',
       customerName: 'Lê Hoàng Long',

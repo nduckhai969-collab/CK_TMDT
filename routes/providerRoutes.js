@@ -1035,18 +1035,192 @@ router.get('/', (req, res) => {
   ========================================================== */
 
   res.json({
-
     success: true,
-
     total: total,
-
     providers: providers,
-
     priceRange: priceRange
-
   });
-
 });
 
+// ==========================================================
+// PROVIDER COMPLAINTS & DISPUTES (UC-45)
+// ==========================================================
+router.get('/me/complaints', requireProvider, (req, res) => {
+  const { status } = req.query;
+  const p = getMyProvider(req);
+  const allComplaints = db.getCollection('complaints') || [];
+
+  let complaints = allComplaints.filter(c => {
+    if (p && (c.defendantId === p.id || c.defendantUserId === req.authUser.id)) return true;
+    if (c.defendantId === req.authUser.id) return true;
+    if (c.defendant && p && c.defendant.includes(p.name)) return true;
+    if (c.defendant && c.defendant.includes(req.authUser.name)) return true;
+    return false;
+  });
+
+  if (status) {
+    if (status === 'active') {
+      complaints = complaints.filter(c => ['submitted', 'pending', 'under_review', 'awaiting_information'].includes(c.status));
+    } else if (status === 'resolved') {
+      complaints = complaints.filter(c => ['resolved', 'rejected'].includes(c.status));
+    } else {
+      complaints = complaints.filter(c => c.status === status);
+    }
+  }
+
+  res.json({ success: true, total: complaints.length, complaints });
+});
+
+router.post('/complaints/:id/defense', requireProvider, async (req, res) => {
+  try {
+    const defenseText = req.body.defenseText || req.body.providerClaim;
+    const attachments = req.body.attachments;
+
+    if (!defenseText || !defenseText.trim()) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung giải trình chi tiết!' });
+    }
+
+    const complaints = db.getCollection('complaints') || [];
+    const complaint = complaints.find(c => c.id === req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ success: false, message: 'Hồ sơ khiếu nại không tồn tại!' });
+    }
+
+    const p = getMyProvider(req);
+    const isDefendant = (p && (complaint.defendantId === p.id || complaint.defendantUserId === req.authUser.id || (complaint.defendant && complaint.defendant.includes(p.name)))) ||
+      complaint.defendantId === req.authUser.id ||
+      (complaint.defendant && complaint.defendant.includes(req.authUser.name));
+
+    if (!isDefendant) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền phản hồi khiếu nại của Provider khác.' });
+    }
+
+    if (['resolved', 'rejected'].includes(complaint.status)) {
+      return res.status(400).json({ success: false, message: 'Khiếu nại này đã có phán quyết cuối cùng, không thể gửi thêm giải trình.' });
+    }
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    complaint.providerClaim = defenseText.trim();
+    if (['submitted', 'pending', 'awaiting_information'].includes(complaint.status)) {
+      complaint.status = 'under_review';
+    }
+    complaint.updatedAt = dateStr;
+
+    if (Array.isArray(attachments) && attachments.length) {
+      complaint.evidence = (complaint.evidence || []).concat(attachments);
+    }
+
+    if (!complaint.timeline) complaint.timeline = [];
+    complaint.timeline.push({
+      time: dateStr,
+      actor: req.authUser.id,
+      actorName: req.authUser.name,
+      role: 'Provider',
+      action: 'provider_defense',
+      note: `Provider gửi bản giải trình: ${defenseText.trim().substring(0, 150)}${defenseText.trim().length > 150 ? '...' : ''}`,
+      status: complaint.status
+    });
+
+    await db.saveCollectionAndWait('complaints', complaints);
+
+    const { createNotification } = require('../services/notificationService');
+    createNotification(complaint.complainantId, 'Chuyên gia đã gửi bản giải trình',
+      `Chuyên gia đã bổ sung nội dung giải trình cho khiếu nại ${complaint.id}. BQT sàn đang thụ lý xem xét.`,
+      'info', '/customer_complaints.html');
+
+    res.json({
+      success: true,
+      message: 'Đã gửi bản giải trình chứng cứ tới Ban Quản Trị sàn thành công!',
+      complaint
+    });
+  } catch (err) {
+    console.error('[providerRoutes] Lỗi submit defense:', err);
+    res.status(500).json({ success: false, message: 'Lỗi ghi Firestore: ' + err.message });
+  }
+});
+
+router.post('/complaints/:id/accept-refund', requireProvider, async (req, res) => {
+  try {
+    const { note } = req.body;
+    const complaints = db.getCollection('complaints') || [];
+    const complaint = complaints.find(c => c.id === req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ success: false, message: 'Hồ sơ khiếu nại không tồn tại!' });
+    }
+
+    const p = getMyProvider(req);
+    const isDefendant = (p && (complaint.defendantId === p.id || complaint.defendantUserId === req.authUser.id || (complaint.defendant && complaint.defendant.includes(p.name)))) ||
+      complaint.defendantId === req.authUser.id ||
+      (complaint.defendant && complaint.defendant.includes(req.authUser.name));
+
+    if (!isDefendant) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên khiếu nại này.' });
+    }
+
+    if (['resolved', 'rejected'].includes(complaint.status)) {
+      return res.status(400).json({ success: false, message: 'Khiếu nại này đã được giải quyết trước đó.' });
+    }
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    complaint.status = 'resolved';
+    complaint.resolution = 'refund_customer';
+    complaint.verdict = 'Provider tự nguyện chấp thuận hoàn lại 100% tiền ký quỹ Escrow cho khách hàng';
+    complaint.resolutionNote = note || 'Chuyên gia tự nguyện hoàn tiền theo thỏa thuận';
+    complaint.resolvedAt = dateStr;
+    complaint.resolvedBy = `${req.authUser.name} (Provider)`;
+    complaint.updatedAt = dateStr;
+
+    if (!complaint.timeline) complaint.timeline = [];
+    complaint.timeline.push({
+      time: dateStr,
+      actor: req.authUser.id,
+      actorName: req.authUser.name,
+      role: 'Provider',
+      action: 'voluntary_refund',
+      note: 'Chuyên gia tự nguyện chấp nhận hoàn 100% tiền ký quỹ cho khách hàng',
+      status: 'resolved'
+    });
+
+    const { processForceRefund } = require('../services/orderService');
+    try {
+      processForceRefund(complaint.orderId);
+    } catch (orderErr) {
+      console.warn('[providerRoutes] Cập nhật hoàn tiền order cảnh báo:', orderErr.message);
+      const orders = db.getCollection('orders') || [];
+      const order = orders.find(o => o.id === complaint.orderId);
+      if (order) {
+        order.escrowStatus = 'refunded';
+        order.orderStatus = 'cancelled';
+        const users = db.getCollection('users') || [];
+        const cust = users.find(u => u.id === order.customerId);
+        if (cust) cust.balance = (cust.balance || 0) + (Number(order.escrowDeposit) || Number(order.price) || 0);
+        db.saveCollection('users', users);
+        db.saveCollection('orders', orders);
+      }
+    }
+
+    await db.saveCollectionAndWait('complaints', complaints);
+
+    const { createNotification } = require('../services/notificationService');
+    createNotification(complaint.complainantId, 'Chuyên gia đã đồng ý hoàn tiền',
+      `Chuyên gia đã đồng ý hoàn 100% tiền ký quỹ đơn hàng ${complaint.orderId} vào ví của bạn. Vụ tranh chấp đã kết thúc.`,
+      'success', '/customer_complaints.html');
+
+    res.json({
+      success: true,
+      message: 'Đã hoàn tất chấp nhận hoàn tiền 100% cho khách hàng!',
+      complaint
+    });
+  } catch (err) {
+    console.error('[providerRoutes] Lỗi accept refund:', err);
+    res.status(500).json({ success: false, message: 'Lỗi ghi Firestore: ' + err.message });
+  }
+});
 
 module.exports = router;

@@ -136,14 +136,14 @@ router.post('/state', (req, res) => {
 });
 
 // ============================================================================
-// 3. USER MANAGEMENT (UC-52, UC-53, UC-53b)
+// 3. USER MANAGEMENT (UC-52, UC-53, UC-53b) - FIRESTORE SINGLE SOURCE OF TRUTH
 // ============================================================================
 router.get('/users', (req, res) => {
   const { role, status, q } = req.query;
   let users = db.getCollection('users');
 
   if (role && role !== 'all') {
-    users = users.filter(u => u.role.toLowerCase() === role.toLowerCase());
+    users = users.filter(u => u.role && u.role.toLowerCase() === role.toLowerCase());
   }
   if (status && status !== 'all') {
     users = users.filter(u => u.status === status);
@@ -161,54 +161,137 @@ router.get('/users', (req, res) => {
   res.json({ success: true, total: users.length, users });
 });
 
-// Lock user account (UC-53)
-router.post('/users/:id/lock', (req, res) => {
-  const { reason, duration } = req.body;
-  if (!reason || !reason.trim()) {
-    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do khóa tài khoản!' });
-  }
-
+// Single user detail from Firestore
+router.get('/users/:id', (req, res) => {
   const users = db.getCollection('users');
   const user = users.find(u => u.id === req.params.id);
 
   if (!user) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
   }
 
-  const durationText = duration === 'permanent' ? 'Vĩnh viễn' : (duration ? `${duration} ngày` : '7 ngày');
-  user.status = 'locked';
-  user.lockReason = reason.trim();
-  user.lockDuration = durationText;
-
-  db.saveCollection('users', users);
-
-  res.json({
-    success: true,
-    message: `Đã khóa tài khoản ${user.name} (${durationText}).`,
-    user
-  });
+  res.json({ success: true, user });
 });
 
-// Unlock user account
-router.post('/users/:id/unlock', (req, res) => {
-  const users = db.getCollection('users');
-  const user = users.find(u => u.id === req.params.id);
+// Lock user account (UC-53) - Firestore Single Source of Truth
+router.post('/users/:id/lock', async (req, res) => {
+  try {
+    const { reason, duration } = req.body;
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do khóa tài khoản!' });
+    }
 
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+    const users = db.getCollection('users');
+    const user = users.find(u => u.id === req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
+    }
+
+    // Nghiệp vụ bảo mật: Không được phép tự khóa tài khoản Quản trị viên hệ thống
+    if (user.role === 'Admin' || user.id === 'ADM001' || user.id === 'ADM002') {
+      return res.status(400).json({ success: false, message: 'Không thể khóa tài khoản Quản trị viên hệ thống!' });
+    }
+
+    const isPermanent = duration === 'permanent';
+    const durationDays = parseInt(duration, 10) || 7;
+    const durationText = isPermanent ? 'Vĩnh viễn' : `${durationDays} ngày`;
+
+    const now = new Date();
+    const expiresDate = isPermanent ? null : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+    user.status = 'locked';
+    user.lockReason = reason.trim();
+    user.lockDuration = durationText;
+    user.isPermanentLock = isPermanent;
+    user.lockedAt = now.toLocaleString('vi-VN');
+    user.lockExpiresAt = expiresDate ? expiresDate.toISOString() : null;
+    user.lockExpiresAtFormatted = expiresDate ? expiresDate.toLocaleString('vi-VN') : 'Vĩnh viễn';
+    user.lockedBy = (req.authUser && (req.authUser.name || req.authUser.email)) || 'Admin Quản Trị B4';
+
+    // Đồng bộ vô hiệu hóa tài khoản Firebase Authentication (nếu có tài khoản đăng nhập)
+    const { auth } = require('../firebase');
+    if (auth && (user.uid || user.email)) {
+      try {
+        let fbUid = user.uid;
+        if (!fbUid && user.email) {
+          const record = await auth.getUserByEmail(user.email).catch(() => null);
+          if (record) fbUid = record.uid;
+        }
+        if (fbUid) {
+          await auth.updateUser(fbUid, { disabled: true }).catch(err => {
+            console.warn('[Admin] Firebase Auth disable warning:', err.message);
+          });
+        }
+      } catch (authErr) {
+        console.warn('[Admin] Firebase Auth disable check failed:', authErr.message);
+      }
+    }
+
+    // Ghi đè bền vững trực tiếp vào Firestore
+    await db.saveCollectionAndWait('users', users);
+
+    res.json({
+      success: true,
+      message: `Đã khóa tài khoản ${user.name} (${durationText}) thành công.`,
+      user
+    });
+  } catch (error) {
+    console.error('[Admin] Lỗi khóa người dùng:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
   }
+});
 
-  user.status = 'active';
-  user.lockReason = '';
-  user.lockDuration = '';
+// Unlock user account - Firestore Single Source of Truth
+router.post('/users/:id/unlock', async (req, res) => {
+  try {
+    const users = db.getCollection('users');
+    const user = users.find(u => u.id === req.params.id);
 
-  db.saveCollection('users', users);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
+    }
 
-  res.json({
-    success: true,
-    message: `Đã mở khóa tài khoản ${user.name} thành công.`,
-    user
-  });
+    user.status = 'active';
+    user.lockReason = '';
+    user.lockDuration = '';
+    user.isPermanentLock = false;
+    user.lockExpiresAt = null;
+    user.lockExpiresAtFormatted = null;
+    user.unlockedAt = new Date().toLocaleString('vi-VN');
+    user.unlockedBy = (req.authUser && (req.authUser.name || req.authUser.email)) || 'Admin Quản Trị B4';
+
+    // Khôi phục quyền đăng nhập Firebase Authentication (nếu có)
+    const { auth } = require('../firebase');
+    if (auth && (user.uid || user.email)) {
+      try {
+        let fbUid = user.uid;
+        if (!fbUid && user.email) {
+          const record = await auth.getUserByEmail(user.email).catch(() => null);
+          if (record) fbUid = record.uid;
+        }
+        if (fbUid) {
+          await auth.updateUser(fbUid, { disabled: false }).catch(err => {
+            console.warn('[Admin] Firebase Auth enable warning:', err.message);
+          });
+        }
+      } catch (authErr) {
+        console.warn('[Admin] Firebase Auth enable check failed:', authErr.message);
+      }
+    }
+
+    // Ghi đè bền vững trực tiếp vào Firestore
+    await db.saveCollectionAndWait('users', users);
+
+    res.json({
+      success: true,
+      message: `Đã mở khóa tài khoản ${user.name} thành công.`,
+      user
+    });
+  } catch (error) {
+    console.error('[Admin] Lỗi mở khóa người dùng:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
+  }
 });
 
 // Unlock Requests / Appeals (UC-53b)
@@ -217,52 +300,66 @@ router.get('/unlock-requests', (req, res) => {
   res.json({ success: true, total: requests.length, requests });
 });
 
-router.post('/unlock-requests/:id/decide', (req, res) => {
-  const { decision } = req.body; // 'approve', 'probation', 'reject', 'reject_perm'
-  const requests = db.getCollection('unlockRequests');
-  const reqIndex = requests.findIndex(r => r.id === req.params.id || r.userId === req.params.id);
+router.post('/unlock-requests/:id/decide', async (req, res) => {
+  try {
+    const { decision } = req.body; // 'approve', 'probation', 'reject', 'reject_perm'
+    const requests = db.getCollection('unlockRequests');
+    const reqIndex = requests.findIndex(r => r.id === req.params.id || r.userId === req.params.id);
 
-  if (reqIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn khiếu nại mở khóa!' });
+    if (reqIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn khiếu nại mở khóa!' });
+    }
+
+    const request = requests[reqIndex];
+    const users = db.getCollection('users');
+    const user = users.find(u => u.id === request.id || u.id === request.userId);
+
+    let message = '';
+    const now = new Date();
+
+    if (decision === 'approve') {
+      if (user) {
+        user.status = 'active';
+        user.lockReason = '';
+        user.lockDuration = '';
+        user.isPermanentLock = false;
+        user.lockExpiresAt = null;
+        user.unlockedAt = now.toLocaleString('vi-VN');
+      }
+      message = `Tài khoản ${request.name} đã được phục hồi quyền truy cập thành công.`;
+      requests.splice(reqIndex, 1);
+    } else if (decision === 'probation') {
+      if (user) {
+        user.status = 'active';
+        user.lockReason = 'Đang theo dõi thử thách 30 ngày';
+        user.lockDuration = '30 ngày thử thách';
+        user.isPermanentLock = false;
+        user.lockExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      }
+      message = `Tài khoản ${request.name} được chuyển sang chế độ theo dõi thử thách 30 ngày.`;
+      requests.splice(reqIndex, 1);
+    } else if (decision === 'reject_perm') {
+      if (user) {
+        user.status = 'locked';
+        user.lockDuration = 'Vĩnh viễn';
+        user.isPermanentLock = true;
+        user.lockExpiresAt = null;
+      }
+      message = `Đã giữ nguyên án khóa vĩnh viễn với tài khoản ${request.name}.`;
+      requests.splice(reqIndex, 1);
+    } else {
+      message = `Đã từ chối đơn mở khóa của ${request.name}.`;
+      requests.splice(reqIndex, 1);
+    }
+
+    await db.saveCollectionAndWait('users', users);
+    await db.saveCollectionAndWait('unlockRequests', requests);
+
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error('[Admin] Lỗi xử lý yêu cầu mở khóa:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
   }
-
-  const request = requests[reqIndex];
-  const users = db.getCollection('users');
-  const user = users.find(u => u.id === request.id || u.id === request.userId);
-
-  let message = '';
-  if (decision === 'approve') {
-    if (user) {
-      user.status = 'active';
-      user.lockReason = '';
-      user.lockDuration = '';
-    }
-    message = `Tài khoản ${request.name} đã được phục hồi quyền truy cập thành công.`;
-    requests.splice(reqIndex, 1);
-  } else if (decision === 'probation') {
-    if (user) {
-      user.status = 'active';
-      user.lockReason = 'Đang theo dõi thử thách 30 ngày';
-      user.lockDuration = '30 ngày thử thách';
-    }
-    message = `Tài khoản ${request.name} được chuyển sang chế độ theo dõi thử thách 30 ngày.`;
-    requests.splice(reqIndex, 1);
-  } else if (decision === 'reject_perm') {
-    if (user) {
-      user.status = 'locked';
-      user.lockDuration = 'Vĩnh viễn';
-    }
-    message = `Đã giữ nguyên án khóa vĩnh viễn với tài khoản ${request.name}.`;
-    requests.splice(reqIndex, 1);
-  } else {
-    message = `Đã từ chối đơn mở khóa của ${request.name}.`;
-    requests.splice(reqIndex, 1);
-  }
-
-  db.saveCollection('users', users);
-  db.saveCollection('unlockRequests', requests);
-
-  res.json({ success: true, message });
 });
 
 // ============================================================================
@@ -615,69 +712,240 @@ router.post('/comments/:id/status', (req, res) => {
 // 8. DISPUTES & COMPLAINTS RESOLUTION (UC-64, UC-65)
 // ============================================================================
 router.get('/complaints', (req, res) => {
-  const complaints = db.getCollection('complaints');
+  const { status, priority, search } = req.query;
+  let complaints = db.getCollection('complaints') || [];
+
+  if (status && status !== 'all') {
+    if (status === 'pending') {
+      complaints = complaints.filter(c => ['submitted', 'pending', 'under_review', 'awaiting_information'].includes(c.status));
+    } else if (status === 'resolved') {
+      complaints = complaints.filter(c => ['resolved', 'rejected'].includes(c.status));
+    } else {
+      complaints = complaints.filter(c => c.status === status);
+    }
+  }
+
+  if (priority && priority !== 'all') {
+    complaints = complaints.filter(c => c.priority === priority);
+  }
+
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase();
+    complaints = complaints.filter(c =>
+      (c.id && c.id.toLowerCase().includes(q)) ||
+      (c.orderId && c.orderId.toLowerCase().includes(q)) ||
+      (c.complainant && c.complainant.toLowerCase().includes(q)) ||
+      (c.defendant && c.defendant.toLowerCase().includes(q)) ||
+      (c.reason && c.reason.toLowerCase().includes(q))
+    );
+  }
+
   res.json({ success: true, total: complaints.length, complaints });
 });
 
-router.post('/complaints/:id/resolve', (req, res) => {
-  const { resolution, refundPercentage = 100, note } = req.body;
-  const complaints = db.getCollection('complaints');
-  const complaint = complaints.find(c => c.id === req.params.id);
-
-  if (!complaint) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
-  }
-
-  complaint.status = 'resolved';
-  complaint.resolution = resolution;
-  complaint.resolutionNote = note || '';
-
-  const orders = db.getCollection('orders');
-  const order = orders.find(o => o.id === complaint.orderId);
-  const users = db.getCollection('users');
-
-  if (order) {
-    const totalDeposit = Number(order.escrowDeposit) || Number(order.price) || 0;
-    const priceNum = Number(order.price) || 0;
-
-    if (resolution === 'refund_customer') {
-      order.escrowStatus = 'refunded';
-      order.orderStatus = 'cancelled';
-      // Refund customer
-      const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
-      if (cust) cust.balance = (cust.balance || 0) + totalDeposit;
-    } else if (resolution === 'pay_provider') {
-      order.escrowStatus = 'completed';
-      order.orderStatus = 'completed';
-      // Pay provider
-      const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
-      if (prov) prov.balance = (prov.balance || 0) + priceNum;
-    } else if (resolution === 'partial_refund') {
-      const pct = Math.max(0, Math.min(100, Number(refundPercentage)));
-      const refundAmt = Math.round(priceNum * (pct / 100));
-      const payAmt = priceNum - refundAmt;
-
-      order.escrowStatus = 'partial_refunded';
-      order.orderStatus = 'completed';
-
-      const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
-      if (cust) cust.balance = (cust.balance || 0) + refundAmt;
-
-      const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
-      if (prov) prov.balance = (prov.balance || 0) + payAmt;
+// Admin updates complaint status (e.g. under_review or awaiting_information)
+router.post('/complaints/:id/status', async (req, res) => {
+  try {
+    const { status, note } = req.body;
+    if (!status || !['under_review', 'awaiting_information', 'submitted', 'pending'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ. Chọn under_review hoặc awaiting_information.' });
     }
 
-    db.saveCollection('orders', orders);
-    db.saveCollection('users', users);
+    const complaints = db.getCollection('complaints') || [];
+    const complaint = complaints.find(c => c.id === req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
+    }
+
+    if (['resolved', 'rejected'].includes(complaint.status)) {
+      return res.status(400).json({ success: false, message: 'Khiếu nại đã có phán quyết cuối cùng, không thể đổi trạng thái trung gian.' });
+    }
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    complaint.status = status;
+    complaint.updatedAt = dateStr;
+
+    if (!complaint.timeline) complaint.timeline = [];
+    const statusLabels = {
+      under_review: 'Admin tiếp nhận & Đang xem xét chứng cứ',
+      awaiting_information: 'Admin yêu cầu các bên bổ sung thông tin chứng cứ',
+      submitted: 'Chờ phân xử'
+    };
+    complaint.timeline.push({
+      time: dateStr,
+      actor: req.authUser.id,
+      actorName: req.authUser.name || 'Admin',
+      role: 'Admin',
+      action: 'admin_status_change',
+      note: `${statusLabels[status] || status}${note ? ': ' + note : ''}`,
+      status
+    });
+
+    await db.saveCollectionAndWait('complaints', complaints);
+
+    // Notify parties
+    const { createNotification, notifyProvider } = require('../services/notificationService');
+    if (complaint.complainantId) {
+      createNotification(complaint.complainantId, 'Cập nhật tiến độ khiếu nại',
+        `Khiếu nại ${complaint.id} đã được chuyển sang trạng thái: "${statusLabels[status] || status}". ${note || ''}`,
+        'info', '/customer_complaints.html');
+    }
+    if (complaint.defendantId) {
+      notifyProvider(complaint.defendantId, 'Cập nhật tiến độ khiếu nại',
+        `Khiếu nại ${complaint.id} đã được Admin cập nhật trạng thái: "${statusLabels[status] || status}". ${note || ''}`,
+        'info', '/complaint.html');
+    }
+
+    res.json({
+      success: true,
+      message: `Đã cập nhật trạng thái khiếu nại thành "${statusLabels[status] || status}"!`,
+      complaint
+    });
+  } catch (err) {
+    console.error('[adminRoutes] Lỗi cập nhật trạng thái complaint:', err);
+    res.status(500).json({ success: false, message: 'Lỗi ghi Firestore: ' + err.message });
   }
+});
 
-  db.saveCollection('complaints', complaints);
+router.post('/complaints/:id/resolve', async (req, res) => {
+  try {
+    const { resolution, refundPercentage = 100, note, verdict } = req.body;
+    const complaints = db.getCollection('complaints') || [];
+    const complaint = complaints.find(c => c.id === req.params.id);
 
-  res.json({
-    success: true,
-    message: 'Phán quyết tranh chấp đã được thực thi và tiền ký quỹ Escrow đã được xử lý thỏa đáng!',
-    complaint
-  });
+    if (!complaint) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
+    }
+
+    if (complaint.status === 'resolved' || complaint.status === 'rejected') {
+      return res.status(400).json({ success: false, message: 'Khiếu nại này đã có phán quyết trước đó. Không thể phán quyết lại!' });
+    }
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    complaint.resolution = resolution;
+    complaint.resolutionNote = note || '';
+    complaint.resolvedAt = dateStr;
+    complaint.resolvedBy = req.authUser.name || 'Admin';
+    complaint.updatedAt = dateStr;
+
+    let decisionLabel = verdict || '';
+
+    const orders = db.getCollection('orders') || [];
+    const order = orders.find(o => o.id === complaint.orderId);
+    const users = db.getCollection('users') || [];
+    const { createNotification, notifyProvider } = require('../services/notificationService');
+
+    if (resolution === 'refund_customer') {
+      complaint.status = 'resolved';
+      if (!decisionLabel) decisionLabel = 'Hoàn tiền 100% cho Khách hàng';
+      complaint.verdict = decisionLabel;
+
+      if (order) {
+        order.escrowStatus = 'refunded';
+        order.orderStatus = 'cancelled';
+        if (!order.milestones) order.milestones = [];
+        order.milestones.push({ title: 'Admin giải quyết khiếu nại: Hoàn 100% tiền ký quỹ cho khách hàng', done: true, time: dateStr });
+
+        const totalDeposit = Number(order.escrowDeposit) || Number(order.price) || 0;
+        const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
+        if (cust) {
+          cust.balance = (cust.balance || 0) + totalDeposit;
+        }
+      }
+    } else if (resolution === 'pay_provider') {
+      complaint.status = 'resolved';
+      if (!decisionLabel) decisionLabel = 'Giải ngân 100% cho Provider';
+      complaint.verdict = decisionLabel;
+
+      if (order) {
+        order.escrowStatus = 'completed';
+        order.orderStatus = 'completed';
+        if (!order.milestones) order.milestones = [];
+        order.milestones.push({ title: 'Admin giải quyết khiếu nại: Bác bỏ khiếu nại và giải ngân tiền cho Provider', done: true, time: dateStr });
+
+        const priceNum = Number(order.price) || 0;
+        const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
+        if (prov) {
+          prov.balance = (prov.balance || 0) + priceNum;
+        }
+      }
+    } else if (resolution === 'partial_refund') {
+      complaint.status = 'resolved';
+      const pct = Math.max(0, Math.min(100, Number(refundPercentage) || 50));
+      if (!decisionLabel) decisionLabel = `Bồi thường ${pct}/${100 - pct} giữa hai bên`;
+      complaint.verdict = decisionLabel;
+      complaint.refundPercentage = pct;
+
+      if (order) {
+        const priceNum = Number(order.price) || 0;
+        const refundAmt = Math.round(priceNum * (pct / 100));
+        const payAmt = priceNum - refundAmt;
+
+        order.escrowStatus = 'partial_refunded';
+        order.orderStatus = 'cancelled';
+        if (!order.milestones) order.milestones = [];
+        order.milestones.push({ title: `Admin giải quyết khiếu nại: Bồi thường ${pct}% cho khách và giải ngân ${100 - pct}% cho provider`, done: true, time: dateStr });
+
+        const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
+        if (cust) cust.balance = (cust.balance || 0) + refundAmt;
+
+        const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
+        if (prov) prov.balance = (prov.balance || 0) + payAmt;
+      }
+    } else if (resolution === 'reject') {
+      complaint.status = 'rejected';
+      if (!decisionLabel) decisionLabel = 'Bác bỏ khiếu nại của Khách hàng';
+      complaint.verdict = decisionLabel;
+
+      if (order) {
+        order.escrowStatus = 'escrow_held';
+        order.orderStatus = 'processing';
+        if (!order.milestones) order.milestones = [];
+        order.milestones.push({ title: 'Admin bác bỏ khiếu nại: Đơn hàng tiếp tục thực hiện', done: true, time: dateStr });
+      }
+    }
+
+    if (!complaint.timeline) complaint.timeline = [];
+    complaint.timeline.push({
+      time: dateStr,
+      actor: req.authUser.id,
+      actorName: req.authUser.name || 'Admin',
+      role: 'Admin',
+      action: 'admin_resolution',
+      note: `Phán quyết: ${decisionLabel}${note ? '. Lý do: ' + note : ''}`,
+      status: complaint.status
+    });
+
+    if (order) await db.saveCollectionAndWait('orders', orders);
+    await db.saveCollectionAndWait('users', users);
+    await db.saveCollectionAndWait('complaints', complaints);
+
+    // Notify Customer & Provider
+    if (complaint.complainantId) {
+      createNotification(complaint.complainantId, 'Phán quyết khiếu nại đã có kết quả',
+        `Admin đã đưa ra phán quyết cho khiếu nại ${complaint.id}: ${decisionLabel}. ${note ? 'Ghi chú: ' + note : ''}`,
+        'success', '/customer_complaints.html');
+    }
+    if (complaint.defendantId) {
+      notifyProvider(complaint.defendantId, 'Phán quyết khiếu nại đã có kết quả',
+        `Admin đã đưa ra phán quyết cho khiếu nại ${complaint.id}: ${decisionLabel}. ${note ? 'Ghi chú: ' + note : ''}`,
+        'info', '/complaint.html');
+    }
+
+    res.json({
+      success: true,
+      message: `Phán quyết tranh chấp đã được thực thi thành công: "${decisionLabel}"!`,
+      complaint
+    });
+  } catch (err) {
+    console.error('[adminRoutes] Lỗi resolve complaint:', err);
+    res.status(500).json({ success: false, message: 'Lỗi ghi Firestore: ' + err.message });
+  }
 });
 
 // ============================================================================

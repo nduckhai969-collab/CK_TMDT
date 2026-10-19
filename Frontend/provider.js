@@ -273,16 +273,26 @@ window.providerApi = {
   },
 
   // Complaints & Disputes (UC-45)
-  getMyComplaints: async () => {
-    const res = await fetch(`${API_BASE}/api/providers/me/complaints`, { headers: getAuthHeader() });
+  getMyComplaints: async (status) => {
+    const url = status ? `${API_BASE}/api/providers/me/complaints?status=${encodeURIComponent(status)}` : `${API_BASE}/api/providers/me/complaints`;
+    const res = await fetch(url, { headers: getAuthHeader() });
     return res.json();
   },
 
-  submitDefense: async (complaintId, providerClaim) => {
+  submitDefense: async (complaintId, providerClaim, attachments) => {
     const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/defense`, {
       method: 'POST',
       headers: getAuthHeader(),
-      body: JSON.stringify({ providerClaim })
+      body: JSON.stringify({ providerClaim, defenseText: providerClaim, attachments })
+    });
+    return res.json();
+  },
+
+  acceptRefund: async (complaintId, note) => {
+    const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/accept-refund`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ note })
     });
     return res.json();
   },

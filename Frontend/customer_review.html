@@ -154,8 +154,9 @@
 
   <script src="customer.js"></script>
   <script>
-    let currentRating = 0;
+    let currentRating = 5;
     let targetOrder = null;
+    let existingReview = null;
 
     const ratingTexts = {
       1: 'Rất Không Hài Lòng (1/5 Sao)',
@@ -176,13 +177,18 @@
         document.getElementById('btnSubmitReview').disabled = true;
         return;
       }
+      setRating(5);
       loadOrderInfo(orderId);
     });
 
     async function loadOrderInfo(orderId) {
-      const res = await apiRequest(`/api/orders/${orderId}`);
-      if (res.success && res.order) {
-        targetOrder = res.order;
+      const [orderRes, reviewRes] = await Promise.all([
+        apiRequest(`/api/orders/${orderId}`),
+        apiRequest(`/api/reviews`)
+      ]);
+
+      if (orderRes.success && orderRes.order) {
+        targetOrder = orderRes.order;
         document.getElementById('orderIdText').textContent = targetOrder.id;
         document.getElementById('orderServiceTitle').textContent = targetOrder.serviceTitle;
         document.getElementById('orderProviderName').textContent = targetOrder.providerName;
@@ -196,9 +202,25 @@
           avatar.src = providerResult.provider.avatar;
           avatar.style.display = 'block';
         }
+
+        // Check if already reviewed
+        if (reviewRes.success && Array.isArray(reviewRes.reviews)) {
+          existingReview = reviewRes.reviews.find(r => r.orderId === orderId);
+          if (existingReview) {
+            setRating(Number(existingReview.rating) || 5);
+            document.getElementById('reviewText').value = existingReview.content || '';
+            const tags = Array.isArray(existingReview.criteria) ? existingReview.criteria : [];
+            document.querySelectorAll('.tag-choice').forEach(tagEl => {
+              if (tags.includes(tagEl.textContent.trim())) tagEl.classList.add('selected');
+              else tagEl.classList.remove('selected');
+            });
+            document.getElementById('btnSubmitReview').innerHTML = `<i class="fa-solid fa-pen-to-square"></i> Cập Nhật Đánh Giá`;
+            showToast('Thông Báo', 'Đơn hàng này đã có đánh giá. Bạn có thể chỉnh sửa và cập nhật lại.', 'info');
+          }
+        }
       } else {
         document.getElementById('reviewForm').hidden = true;
-        showToast('Không tìm thấy đơn hàng', res.message || 'Kiểm tra lại mã đơn hàng.', 'error');
+        showToast('Không tìm thấy đơn hàng', orderRes.message || 'Kiểm tra lại mã đơn hàng.', 'error');
       }
     }
 
@@ -229,37 +251,50 @@
       }
       const btn = document.getElementById('btnSubmitReview');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi...`;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Xử Lý...`;
 
       const user = getCurrentCustomer();
       const selectedTags = Array.from(document.querySelectorAll('.tag-choice.selected')).map(t => t.textContent.trim());
 
-      const payload = {
-        orderId: targetOrder.id,
-        providerId: targetOrder.providerId,
-        providerName: targetOrder.providerName,
-        customerId: user.id,
-        customerName: user.name,
-        serviceTitle: targetOrder.serviceTitle,
-        rating: currentRating,
-        content: document.getElementById('reviewText').value,
-        criteria: selectedTags
-      };
+      let res;
+      if (existingReview) {
+        // Update existing review
+        res = await apiRequest(`/api/reviews/${encodeURIComponent(existingReview.id)}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            rating: currentRating,
+            content: document.getElementById('reviewText').value.trim(),
+            criteria: selectedTags
+          })
+        });
+      } else {
+        // Create new review
+        const payload = {
+          orderId: targetOrder.id,
+          providerId: targetOrder.providerId,
+          providerName: targetOrder.providerName,
+          customerId: user.id,
+          customerName: user.name,
+          serviceTitle: targetOrder.serviceTitle,
+          rating: currentRating,
+          content: document.getElementById('reviewText').value.trim(),
+          criteria: selectedTags
+        };
+        res = await apiRequest('/api/reviews', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+      }
 
-      const res = await apiRequest('/api/reviews', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      if (res.success) {
-        showToast('Cảm Ơn Đánh Giá!', 'Đánh giá của bạn đã được công khai trên hồ sơ chuyên gia.', 'success');
+      if (res && res.success) {
+        showToast('Thành Công!', existingReview ? 'Đánh giá đã được cập nhật thành công!' : 'Cảm ơn bạn! Đánh giá đã được gửi công khai.', 'success');
         setTimeout(() => {
           window.location.href = 'customer_reviews.html';
         }, 1200);
       } else {
-        showToast('Lỗi', res.message || 'Không thể gửi đánh giá', 'error');
+        showToast('Lỗi', res?.message || 'Không thể gửi đánh giá', 'error');
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay`;
+        btn.innerHTML = existingReview ? `<i class="fa-solid fa-pen-to-square"></i> Cập Nhật Đánh Giá` : `<i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay`;
       }
     }
   </script>

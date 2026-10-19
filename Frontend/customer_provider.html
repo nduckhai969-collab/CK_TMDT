@@ -58,6 +58,36 @@ async function loadProviderDetail(id){
   document.getElementById('scoreStars').textContent='★'.repeat(Math.max(0,Math.min(5,Math.round(Number(p.rating)||0))));
   document.getElementById('reviewCount').textContent=`${Number(p.reviewCount)||0} đánh giá trên hồ sơ`;
   document.getElementById('ratingBars').innerHTML=[5,4,3,2,1].map(n=>{const count=reviews.filter(r=>Number(r.rating)===n).length;const percent=reviews.length?Math.round(count/reviews.length*100):0;return `<div class="rating-row"><span>${n} ★</span><div class="rating-track"><div class="rating-fill" style="width:${percent}%"></div></div><span>${count}</span></div>`}).join('');
-  document.getElementById('reviewsContainer').innerHTML=reviews.length?reviews.slice(0,3).map(r=>`<div style="border-top:1px solid #edf0f2;padding-top:10px;margin-top:10px"><strong style="font-size:12px">${r.customerName||'Khách hàng'}</strong><span style="float:right;color:#e7ad37">${'★'.repeat(Math.max(0,Math.min(5,Number(r.rating)||0)))}</span><p style="margin-top:5px">${r.content||''}</p></div>`).join(''):'<div class="empty-reviews">Chưa có đánh giá chi tiết từ khách hàng trong hệ thống.</div>';
+  document.getElementById('reviewsContainer').innerHTML=reviews.length?reviews.map(r=>{
+    const stars = '★'.repeat(Math.max(0,Math.min(5,Math.round(Number(r.rating)||0))));
+    const replyHtml = r.reply && r.reply.content ? `
+      <div style="margin-top:8px; margin-left:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-left:3px solid #16a34a; border-radius:8px; padding:9px 12px; font-size:12.5px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <strong style="color:#15803d; font-size:11.5px;"><i class="fa-solid fa-reply"></i> Phản hồi từ chuyên gia</strong>
+          <span style="font-size:10.5px; color:#64748b;">${r.reply.date || ''}</span>
+        </div>
+        <div style="color:#1e293b; line-height:1.55; white-space:pre-wrap;">${r.reply.content}</div>
+      </div>
+    ` : '';
+    const criteriaHtml = Array.isArray(r.criteria) && r.criteria.length ? `
+      <div style="margin-top:6px; display:flex; gap:5px; flex-wrap:wrap;">
+        ${r.criteria.map(c => `<span style="padding:2px 7px; background:#f1f5f9; color:#475569; border-radius:999px; font-size:10.5px; font-weight:600;">${c}</span>`).join('')}
+      </div>
+    ` : '';
+    return `
+      <div style="border-top:1px solid #edf0f2; padding:12px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size:13px; color:#0f172a;">${r.customerName || 'Khách hàng'}</strong>
+            <span style="font-size:11px; color:#8792a0; margin-left:6px;">${r.date || ''}</span>
+          </div>
+          <span style="color:#e7ad37; font-size:13px;">${stars}</span>
+        </div>
+        <p style="margin:6px 0 0; font-size:13px; color:#334155; line-height:1.55;">${r.content || ''}</p>
+        ${criteriaHtml}
+        ${replyHtml}
+      </div>
+    `;
+  }).join('') : '<div class="empty-reviews">Chưa có đánh giá chi tiết từ khách hàng trong hệ thống.</div>';
 }
 </script></body></html>

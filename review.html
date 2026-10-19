@@ -4,13 +4,114 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Đánh giá & Uy tín - SkillRental Partner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .star-amber { color: #F59E0B; }
+    .star-muted { color: #CBD5E1; }
+    .criteria-chip-sm {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #F1F5F9;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 5px;
+      margin-top: 4px;
+    }
+    .review-reply-box {
+      margin-top: 14px;
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-left: 4px solid #16A34A;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .review-reply-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .reply-form-box {
+      margin-top: 14px;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .tab-item {
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .avatar-circle {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: #FFFFFF;
+      background: #3B82F6;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .avatar-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .stat-bar-track {
+      flex: 1;
+      height: 8px;
+      background: var(--bg-subtle, #E2E8F0);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .stat-bar-fill {
+      height: 100%;
+      background: var(--warning, #F59E0B);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .btn-action-ghost {
+      background: transparent;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748B;
+      cursor: pointer;
+      padding: 3px 7px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .btn-action-ghost:hover {
+      background: #E2E8F0;
+      color: #0F172A;
+    }
+    .btn-action-ghost.danger:hover {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="Frontend/js/firebase-config.js"></script>
+  <script src="Frontend/js/firebase-client.js"></script>
 </head>
 <body>
 
   <div class="app-container">
+    <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="sidebar-logo">
         <div class="brand-icon">S</div>
@@ -41,129 +142,461 @@
       </nav>
 
       <div class="sidebar-profile">
-        <div class="avatar">NV</div>
+        <div class="avatar" id="sidebarAvatar">NV</div>
         <div class="profile-info">
-          <div class="profile-name">Nguyễn Văn Pro</div>
-          <div class="profile-role">Senior UI/UX & Web Dev</div>
+          <div class="profile-name" id="sidebarName">Nguyễn Văn Pro</div>
+          <div class="profile-role" id="sidebarRole">Senior Provider</div>
         </div>
       </div>
     </aside>
 
+    <!-- MAIN CONTENT -->
     <main class="main-wrapper">
       <header class="top-header">
-        <div class="header-title">Đánh Giá & Uy Tín Từ Khách Hàng</div>
+        <div class="header-title">Đánh Giá & Phản Hồi Khách Hàng</div>
         <div class="header-actions">
-          <span class="badge badge-success">Rating 4.9 / 5.0 ⭐</span>
+          <span class="badge badge-success" id="topRatingBadge"><i class="fa-solid fa-star star-amber"></i> Rating 5.0 / 5.0</span>
         </div>
       </header>
 
       <div class="content-body">
+        <!-- SCORE & BREAKDOWN SUMMARY -->
         <div class="grid-3" style="margin-bottom: 24px;">
-          <div class="card" style="text-align: center;">
-            <div style="font-size: 42px; font-weight: 800; color: var(--text-main);">4.9</div>
-            <div class="star-rating" style="font-size: 18px; margin: 4px 0;">
+          <!-- Overall rating -->
+          <div class="card" style="text-align: center; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:24px;">
+            <div id="statAvgRating" style="font-size: 46px; font-weight: 800; color: var(--text-main); line-height:1;">5.0</div>
+            <div class="star-rating" id="statStarIcons" style="font-size: 19px; margin: 8px 0; color:#F59E0B;">
               <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
             </div>
-            <div style="font-size: 13px; color: var(--text-muted);">Tổng cộng 128 đánh giá từ Khách hàng</div>
+            <div id="statTotalReviews" style="font-size: 13px; color: var(--text-muted);">0 đánh giá từ khách hàng</div>
+            <div id="statUnrepliedBadge" style="margin-top:10px; font-size:12px; font-weight:700; color:#D97706; background:#FEF3C7; padding:4px 10px; border-radius:999px; display:none;">
+              <i class="fa-solid fa-clock"></i> <span id="statUnrepliedText">0</span> đánh giá chờ phản hồi
+            </div>
           </div>
 
-          <div class="card" style="grid-column: span 2;">
-            <div class="card-title" style="margin-bottom: 12px;">Chỉ Số Hài Lòng Khách Hàng</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
+          <!-- Rating breakdown bars -->
+          <div class="card" style="grid-column: span 2; padding:22px 26px;">
+            <div class="card-title" style="margin-bottom: 14px; font-size:15px; font-weight:700;">
+              Chỉ Số Hài Lòng Khách Hàng (Tỷ lệ phân bổ sao)
+            </div>
+            <div style="display:flex; flex-direction:column; gap:9px;" id="ratingBarsContainer">
               <div style="display:flex; align-items:center; gap:12px; font-size:12px;">
-                <span>5 Sao</span>
-                <div style="flex:1; height:8px; background:var(--bg-subtle); border-radius:4px; overflow:hidden;">
-                  <div style="width: 85%; height:100%; background:var(--warning);"></div>
-                </div>
-                <span>110</span>
+                <span style="width:40px; font-weight:600;">5 Sao</span>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="bar5" style="width: 0%;"></div></div>
+                <span style="width:25px; text-align:right;" id="count5">0</span>
               </div>
               <div style="display:flex; align-items:center; gap:12px; font-size:12px;">
-                <span>4 Sao</span>
-                <div style="flex:1; height:8px; background:var(--bg-subtle); border-radius:4px; overflow:hidden;">
-                  <div style="width: 10%; height:100%; background:var(--warning);"></div>
-                </div>
-                <span>12</span>
+                <span style="width:40px; font-weight:600;">4 Sao</span>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="bar4" style="width: 0%;"></div></div>
+                <span style="width:25px; text-align:right;" id="count4">0</span>
               </div>
               <div style="display:flex; align-items:center; gap:12px; font-size:12px;">
-                <span>3 Sao</span>
-                <div style="flex:1; height:8px; background:var(--bg-subtle); border-radius:4px; overflow:hidden;">
-                  <div style="width: 3%; height:100%; background:var(--warning);"></div>
-                </div>
-                <span>4</span>
+                <span style="width:40px; font-weight:600;">3 Sao</span>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="bar3" style="width: 0%;"></div></div>
+                <span style="width:25px; text-align:right;" id="count3">0</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; font-size:12px;">
+                <span style="width:40px; font-weight:600;">2 Sao</span>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="bar2" style="width: 0%;"></div></div>
+                <span style="width:25px; text-align:right;" id="count2">0</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; font-size:12px;">
+                <span style="width:40px; font-weight:600;">1 Sao</span>
+                <div class="stat-bar-track"><div class="stat-bar-fill" id="bar1" style="width: 0%;"></div></div>
+                <span style="width:25px; text-align:right;" id="count1">0</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="tab-list">
-            <div class="tab-item active">Tất Cả (128)</div>
-            <div class="tab-item">5 Sao (110)</div>
-            <div class="tab-item">4 Sao (12)</div>
-            <div class="tab-item">Chưa Phản Hồi (3)</div>
+        <!-- REVIEWS CARD WITH TABS -->
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div class="tab-list" id="reviewTabs" style="padding:12px 18px 0; border-bottom:1px solid #E2E8F0; background:#FAFAFA;">
+            <div class="tab-item active" onclick="switchTab('all')">Tất Cả (<span id="tabCountAll">0</span>)</div>
+            <div class="tab-item" onclick="switchTab('unreplied')">Chưa Phản Hồi (<span id="tabCountUnreplied" style="color:#D97706; font-weight:800;">0</span>)</div>
+            <div class="tab-item" onclick="switchTab('5')">5 Sao (<span id="tabCount5">0</span>)</div>
+            <div class="tab-item" onclick="switchTab('4')">4 Sao (<span id="tabCount4">0</span>)</div>
+            <div class="tab-item" onclick="switchTab('low')">1 - 3 Sao (<span id="tabCountLow">0</span>)</div>
           </div>
 
-          <div class="review-item">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div style="display:flex; gap:12px; align-items:center;">
-                <div class="avatar">KH</div>
-                <div>
-                  <div style="font-weight: 600;">Phạm Nhật Hoàng</div>
-                  <div style="font-size: 12px; color: var(--text-muted);">Gói: Thiết kế Landing Page UI/UX</div>
-                </div>
-              </div>
-              <div style="text-align:right;">
-                <div class="star-rating">
-                  <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-                </div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top:2px;">10/09/2026</div>
-              </div>
-            </div>
-            
-            <div style="margin-top: 10px; color: var(--text-main);">
-              Anh Pro làm việc cực kỳ chuyên nghiệp, hỗ trợ sửa đổi theo đúng ý thương hiệu của công ty. Sẽ tiếp tục hợp tác các dự án sau!
-            </div>
-
-            <div class="review-reply-box">
-              <div style="font-weight: 600; font-size: 12px; color: var(--primary-accent);"><i class="fa-solid fa-reply"></i> Phản hồi của bạn:</div>
-              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Cảm ơn Hoàng đã tin tưởng lựa chọn dịch vụ của mình. Chúc dự án của bạn phát triển bùng nổ nhé!</div>
+          <!-- REVIEWS LIST CONTAINER -->
+          <div id="reviewsList" style="padding:16px 20px;">
+            <div style="text-align:center; padding:40px; color:#64748B;">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px; margin-bottom:10px;"></i>
+              <p>Đang tải danh sách đánh giá từ hệ thống...</p>
             </div>
           </div>
-
-          <div class="review-item">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div style="display:flex; gap:12px; align-items:center;">
-                <div class="avatar" style="background:#FEF3C7; color:#B45309;">DT</div>
-                <div>
-                  <div style="font-weight: 600;">Đỗ Thu Thảo</div>
-                  <div style="font-size: 12px; color: var(--text-muted);">Gói: Lập Trình Frontend ReactJS</div>
-                </div>
-              </div>
-              <div style="text-align:right;">
-                <div class="star-rating">
-                  <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>
-                </div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top:2px;">Hôm qua</div>
-              </div>
-            </div>
-            
-            <div style="margin-top: 10px; color: var(--text-main);">
-              Code chạy nhanh, mượt mà. Tuy nhiên thời gian bàn giao trễ hơn 3 tiếng so với dự kiến ban đầu.
-            </div>
-
-            <div style="margin-top: 12px; background: var(--bg-subtle); padding: 12px; border-radius: 8px;">
-              <div class="form-label">Viết phản hồi khách hàng:</div>
-              <div style="display:flex; gap:8px;">
-                <input type="text" class="form-control" placeholder="Nhập câu trả lời lịch sự..." style="flex:1;">
-                <button class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane"></i> Phản Hồi</button>
-              </div>
-            </div>
-          </div>
-
         </div>
+
       </div>
     </main>
   </div>
 
+  <div id="toastBox"></div>
+
+  <script src="Frontend/provider.js"></script>
+  <script>
+    let allReviews = [];
+    let currentFilter = 'all';
+
+    const escapeHTML = str => String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    function getInitials(name) {
+      if (!name) return 'KH';
+      const parts = name.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    const AVATAR_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4', '#6366F1'];
+    function getColorForName(name) {
+      if (!name) return AVATAR_COLORS[0];
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadReviews();
+    });
+
+    async function loadReviews() {
+      try {
+        const res = await window.providerApi.getMyReviews();
+        if (res && res.success) {
+          allReviews = res.reviews || [];
+          renderStats(res.stats || calculateLocalStats(allReviews));
+          renderReviews();
+        } else {
+          showEmptyState('Không thể tải đánh giá', res?.message || 'Vui lòng thử lại sau.');
+        }
+      } catch (err) {
+        console.error('Error loading reviews:', err);
+        showEmptyState('Lỗi kết nối', 'Không thể kết nối đến máy chủ.');
+      }
+    }
+
+    function calculateLocalStats(reviews) {
+      const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      let sum = 0;
+      let unreplied = 0;
+      let replied = 0;
+      reviews.forEach(r => {
+        const star = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 5)));
+        breakdown[star] = (breakdown[star] || 0) + 1;
+        sum += Number(r.rating || 0);
+        if (r.reply && r.reply.content) replied++;
+        else unreplied++;
+      });
+      const avg = reviews.length ? Math.round((sum / reviews.length) * 10) / 10 : 5.0;
+      return { averageRating: avg, reviewCount: reviews.length, unrepliedCount: unreplied, repliedCount: replied, breakdown };
+    }
+
+    function renderStats(stats) {
+      const avg = Number(stats.averageRating || 5.0).toFixed(1);
+      const total = stats.reviewCount || allReviews.length;
+      const unreplied = stats.unrepliedCount || 0;
+      const bd = stats.breakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+
+      // Top badge & main score
+      document.getElementById('topRatingBadge').innerHTML = `<i class="fa-solid fa-star star-amber"></i> Rating ${avg} / 5.0 ⭐`;
+      document.getElementById('statAvgRating').textContent = avg;
+      document.getElementById('statTotalReviews').textContent = `Tổng cộng ${total} đánh giá từ Khách hàng`;
+
+      // Star icons
+      const fullStars = Math.round(Number(avg));
+      let starsHtml = '';
+      for (let i = 1; i <= 5; i++) {
+        starsHtml += `<i class="fa-solid fa-star ${i <= fullStars ? 'star-amber' : 'star-muted'}"></i>`;
+      }
+      document.getElementById('statStarIcons').innerHTML = starsHtml;
+
+      // Unreplied warning badge
+      const unrepliedBadge = document.getElementById('statUnrepliedBadge');
+      if (unreplied > 0) {
+        document.getElementById('statUnrepliedText').textContent = unreplied;
+        unrepliedBadge.style.display = 'inline-block';
+      } else {
+        unrepliedBadge.style.display = 'none';
+      }
+
+      // Breakdown bars
+      [5, 4, 3, 2, 1].forEach(star => {
+        const count = bd[star] || 0;
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        const bar = document.getElementById(`bar${star}`);
+        const cntEl = document.getElementById(`count${star}`);
+        if (bar) bar.style.width = `${pct}%`;
+        if (cntEl) cntEl.textContent = count;
+      });
+
+      // Update Tab Badges
+      const count5 = bd[5] || 0;
+      const count4 = bd[4] || 0;
+      const countLow = (bd[3] || 0) + (bd[2] || 0) + (bd[1] || 0);
+
+      document.getElementById('tabCountAll').textContent = total;
+      document.getElementById('tabCountUnreplied').textContent = unreplied;
+      document.getElementById('tabCount5').textContent = count5;
+      document.getElementById('tabCount4').textContent = count4;
+      document.getElementById('tabCountLow').textContent = countLow;
+    }
+
+    function switchTab(tab) {
+      currentFilter = tab;
+      const tabs = document.querySelectorAll('#reviewTabs .tab-item');
+      tabs.forEach(t => t.classList.remove('active'));
+
+      const map = { all: 0, unreplied: 1, '5': 2, '4': 3, low: 4 };
+      if (tabs[map[tab]]) tabs[map[tab]].classList.add('active');
+
+      renderReviews();
+    }
+
+    function renderReviews() {
+      const container = document.getElementById('reviewsList');
+      if (!allReviews.length) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:48px 20px; color:#64748B;">
+            <i class="fa-regular fa-star" style="font-size:36px; color:#CBD5E1; margin-bottom:12px;"></i>
+            <h4 style="font-size:16px; font-weight:700; color:#1E293B; margin-bottom:6px;">Chưa Có Đánh Giá Nào</h4>
+            <p style="font-size:13px; margin:0;">Khi hoàn tất các đơn hàng dịch vụ, khách hàng sẽ để lại đánh giá và nhận xét tại đây.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let filtered = allReviews;
+      if (currentFilter === 'unreplied') {
+        filtered = allReviews.filter(r => !r.reply || !r.reply.content);
+      } else if (currentFilter === '5') {
+        filtered = allReviews.filter(r => Number(r.rating) === 5);
+      } else if (currentFilter === '4') {
+        filtered = allReviews.filter(r => Number(r.rating) === 4);
+      } else if (currentFilter === 'low') {
+        filtered = allReviews.filter(r => Number(r.rating) <= 3);
+      }
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:36px 20px; color:#64748B;">
+            <i class="fa-solid fa-filter" style="font-size:26px; color:#CBD5E1; margin-bottom:10px;"></i>
+            <p style="font-size:13.5px; margin:0;">Không có đánh giá nào phù hợp với bộ lọc này.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(r => {
+        const rating = Math.max(1, Math.min(5, Number(r.rating) || 5));
+        const criteria = Array.isArray(r.criteria) ? r.criteria : [];
+        const hasReply = r.reply && r.reply.content;
+        const initials = getInitials(r.customerName);
+        const avatarColor = getColorForName(r.customerName);
+
+        let starsHtml = '';
+        for (let i = 1; i <= 5; i++) {
+          starsHtml += `<i class="fa-solid fa-star ${i <= rating ? 'star-amber' : 'star-muted'}"></i>`;
+        }
+
+        return `
+          <div class="review-item" id="reviewCard-${escapeHTML(r.id)}" style="padding:18px 0; border-bottom:1px solid #F1F5F9;">
+            <!-- Customer & Rating Header -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; gap:12px; align-items:center;">
+                <div class="avatar-circle" style="background:${avatarColor};">
+                  ${r.customerAvatar ? `<img src="${escapeHTML(r.customerAvatar)}" alt="${escapeHTML(r.customerName)}">` : initials}
+                </div>
+                <div>
+                  <div style="font-weight: 700; color:#0F172A; font-size:14.5px;">${escapeHTML(r.customerName || 'Khách hàng')}</div>
+                  <div style="font-size: 12px; color: var(--text-muted); margin-top:2px;">
+                    Dịch vụ: <strong style="color:#334155;">${escapeHTML(r.serviceTitle || 'Dịch vụ đã hoàn tất')}</strong>
+                    ${r.orderId ? ` • Mã đơn: <span style="font-family:monospace; font-weight:600; color:#16A34A;">${escapeHTML(r.orderId)}</span>` : ''}
+                  </div>
+                </div>
+              </div>
+              
+              <div style="text-align:right;">
+                <div class="star-rating" style="font-size:14px;">
+                  ${starsHtml}
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top:3px;">
+                  <i class="fa-regular fa-calendar-days"></i> ${escapeHTML(r.date || 'Gần đây')}
+                </div>
+              </div>
+            </div>
+
+            <!-- Criteria tags -->
+            ${criteria.length ? `
+              <div style="margin-top:10px;">
+                ${criteria.map(c => `<span class="criteria-chip-sm"><i class="fa-solid fa-check" style="color:#16A34A; font-size:9px;"></i> ${escapeHTML(c)}</span>`).join('')}
+              </div>
+            ` : ''}
+
+            <!-- Review text content -->
+            <div style="margin-top: 10px; color: #334155; font-size:13.5px; line-height:1.6; white-space:pre-wrap;">
+              ${escapeHTML(r.content || '')}
+            </div>
+
+            <!-- Provider Reply Box or Action Input -->
+            <div id="replyArea-${escapeHTML(r.id)}" style="margin-top:10px;">
+              ${hasReply ? renderReplyBoxHtml(r) : renderReplyFormHtml(r.id)}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderReplyBoxHtml(r) {
+      const reply = r.reply || {};
+      return `
+        <div class="review-reply-box" id="replyBoxContent-${escapeHTML(r.id)}">
+          <div class="review-reply-box-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="background:#16A34A; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px;">
+                <i class="fa-solid fa-reply"></i> PHẢN HỒI CỦA BẠN
+              </span>
+              <span style="font-size:11.5px; color:#64748B;">
+                ${escapeHTML(reply.date || 'Hôm nay')}
+              </span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-action-ghost" onclick="toggleEditReply('${escapeHTML(r.id)}')">
+                <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa
+              </button>
+              <button class="btn-action-ghost danger" onclick="deleteReplyAction('${escapeHTML(r.id)}')">
+                <i class="fa-solid fa-trash-can"></i> Xóa
+              </button>
+            </div>
+          </div>
+          <div style="font-size: 13.5px; color: #1E293B; line-height:1.55; white-space:pre-wrap;" id="replyTextDisplay-${escapeHTML(r.id)}">${escapeHTML(reply.content || '')}</div>
+        </div>
+
+        <!-- Inline Edit Box (hidden by default) -->
+        <div class="reply-form-box" id="editBox-${escapeHTML(r.id)}" style="display:none;">
+          <label style="font-size:12.5px; font-weight:700; color:#0F172A; display:block; margin-bottom:6px;">
+            Cập nhật nội dung phản hồi:
+          </label>
+          <textarea class="form-control" id="editInput-${escapeHTML(r.id)}" rows="2" style="width:100%; font-size:13.5px; padding:10px; margin-bottom:8px;">${escapeHTML(reply.content || '')}</textarea>
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="toggleEditReply('${escapeHTML(r.id)}')">Hủy</button>
+            <button class="btn btn-primary btn-sm" onclick="sendReplyAction('${escapeHTML(r.id)}', true)">
+              <i class="fa-solid fa-check"></i> Lưu Thay Đổi
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderReplyFormHtml(revId) {
+      return `
+        <div class="reply-form-box" id="replyForm-${escapeHTML(revId)}">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <div style="font-size:12.5px; font-weight:700; color:#475569;">
+              <i class="fa-regular fa-comment-dots" style="color:#16A34A;"></i> Gửi phản hồi đến khách hàng:
+            </div>
+            <span style="font-size:11px; color:#94A3B8;">Phản hồi công khai trên trang chuyên gia</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-start;">
+            <textarea class="form-control" id="replyInput-${escapeHTML(revId)}" placeholder="Cảm ơn khách hàng hoặc giải thích phản hồi dịch vụ một cách lịch thiệp..." rows="2" style="flex:1; font-size:13px; padding:8px 12px; resize:vertical;"></textarea>
+            <button class="btn btn-primary btn-sm" id="btnReply-${escapeHTML(revId)}" onclick="sendReplyAction('${escapeHTML(revId)}', false)" style="padding:10px 18px; font-weight:700; white-space:nowrap;">
+              <i class="fa-solid fa-paper-plane"></i> Phản Hồi
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleEditReply(revId) {
+      const editBox = document.getElementById(`editBox-${revId}`);
+      const contentBox = document.getElementById(`replyBoxContent-${revId}`);
+      if (!editBox) return;
+      const isHidden = editBox.style.display === 'none';
+      editBox.style.display = isHidden ? 'block' : 'none';
+      if (contentBox) contentBox.style.display = isHidden ? 'none' : 'block';
+    }
+
+    async function sendReplyAction(revId, isEdit = false) {
+      const inputId = isEdit ? `editInput-${revId}` : `replyInput-${revId}`;
+      const input = document.getElementById(inputId);
+      const text = input ? input.value.trim() : '';
+
+      if (!text) {
+        showToast('Vui lòng nhập nội dung phản hồi!');
+        if (input) input.focus();
+        return;
+      }
+
+      const btn = document.getElementById(isEdit ? `btnReply-${revId}` : `btnReply-${revId}`);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang gửi...`;
+      }
+
+      try {
+        const res = await window.providerApi.replyReview(revId, text);
+        if (res && res.success) {
+          showToast(res.message || 'Đã gửi phản hồi thành công!', 'success');
+          // Update in-memory review item
+          const target = allReviews.find(r => r.id === revId);
+          if (target) {
+            const now = new Date();
+            const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+            target.reply = {
+              content: text,
+              date: dateStr,
+              createdAt: now.toISOString()
+            };
+          }
+          // Recompute stats and re-render
+          renderStats(calculateLocalStats(allReviews));
+          renderReviews();
+        } else {
+          showToast(res?.message || 'Không thể gửi phản hồi.', 'error');
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Phản Hồi`;
+          }
+        }
+      } catch (err) {
+        console.error('Error replying review:', err);
+        showToast('Lỗi khi gửi phản hồi. Vui lòng thử lại!', 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Phản Hồi`;
+        }
+      }
+    }
+
+    async function deleteReplyAction(revId) {
+      if (!confirm('Bạn có chắc chắn muốn xóa phản hồi cho đánh giá này?')) return;
+      try {
+        const res = await window.providerApi.deleteReviewReply(revId);
+        if (res && res.success) {
+          showToast('Đã gỡ phản hồi đánh giá.', 'success');
+          const target = allReviews.find(r => r.id === revId);
+          if (target) {
+            delete target.reply;
+          }
+          renderStats(calculateLocalStats(allReviews));
+          renderReviews();
+        } else {
+          showToast(res?.message || 'Không thể xóa phản hồi.', 'error');
+        }
+      } catch (err) {
+        showToast('Lỗi kết nối khi xóa phản hồi.', 'error');
+      }
+    }
+
+    function showEmptyState(title, subtitle) {
+      document.getElementById('reviewsList').innerHTML = `
+        <div style="text-align:center; padding:40px; color:#64748B;">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size:26px; color:#EF4444; margin-bottom:10px;"></i>
+          <h4 style="font-size:15px; font-weight:700; color:#1E293B;">${escapeHTML(title)}</h4>
+          <p style="font-size:13px; margin:0;">${escapeHTML(subtitle)}</p>
+        </div>
+      `;
+    }
+  </script>
 </body>
 </html>

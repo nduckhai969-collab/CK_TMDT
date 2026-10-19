@@ -9,7 +9,7 @@ const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
 const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, checkAutoReleaseOrders } = require('../services/orderService');
 const { isVisibleToProvider } = require('../services/checkoutService');
-const { replyToReview } = require('../services/reviewService');
+const { replyToReview, deleteReviewReply } = require('../services/reviewService');
 
 function getMyProvider(req) {
   const providers = db.getCollection('providers') || [];
@@ -250,13 +250,52 @@ router.post('/orders/:id/cancel', requireProvider, orderAction(req => processCan
 router.get('/me/reviews', requireProvider, (req, res) => {
   const provider = getMyProvider(req);
   const reviews = (db.getCollection('reviews') || []).filter(r => r.providerId === provider.id);
-  res.json({ success: true, total: reviews.length, reviews });
+
+  const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  let totalRatingSum = 0;
+  let unrepliedCount = 0;
+  let repliedCount = 0;
+
+  reviews.forEach(r => {
+    const star = Math.min(5, Math.max(1, Math.round(Number(r.rating) || 5)));
+    breakdown[star] = (breakdown[star] || 0) + 1;
+    totalRatingSum += Number(r.rating || 0);
+    if (r.reply && r.reply.content) {
+      repliedCount++;
+    } else {
+      unrepliedCount++;
+    }
+  });
+
+  const avg = reviews.length ? Math.round((totalRatingSum / reviews.length) * 10) / 10 : 5.0;
+
+  res.json({
+    success: true,
+    total: reviews.length,
+    stats: {
+      averageRating: avg,
+      reviewCount: reviews.length,
+      unrepliedCount,
+      repliedCount,
+      breakdown
+    },
+    reviews
+  });
 });
 
 router.post('/reviews/:id/reply', requireProvider, (req, res) => {
   try {
     const review = replyToReview(req.params.id, req.authUser.id, req.body.reply || req.body.content);
-    res.json({ success: true, message: 'Đã trả lời đánh giá.', review });
+    res.json({ success: true, message: 'Đã gửi phản hồi đánh giá thành công.', review });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/reviews/:id/reply', requireProvider, (req, res) => {
+  try {
+    const review = deleteReviewReply(req.params.id, req.authUser.id);
+    res.json({ success: true, message: 'Đã gỡ phản hồi đánh giá.', review });
   } catch (err) {
     res.status(err.status || 400).json({ success: false, message: err.message });
   }

@@ -534,6 +534,7 @@ window.adminApi = {
   rejectPayout: (id, reason) => fetch(`${API_BASE}/api/admin/payouts/${id}/reject`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ reason }) }).then(r => r.json()),
   forceReleaseOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-release`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
   forceRefundOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-refund`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  getReviews: () => fetch(`${API_BASE}/api/admin/reviews`, { headers: getAdminAuthHeaders() }).then(r => r.json()),
   moderateReview: (id, status, note) => fetch(`${API_BASE}/api/admin/reviews/${id}/status`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ status, note }) }).then(r => r.json())
 };
 

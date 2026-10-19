@@ -272,6 +272,14 @@ window.providerApi = {
     return res.json();
   },
 
+  deleteReviewReply: async (reviewId) => {
+    const res = await fetch(`${API_BASE}/api/providers/reviews/${reviewId}/reply`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    return res.json();
+  },
+
   // Complaints & Disputes (UC-45)
   getMyComplaints: async (status) => {
     const url = status ? `${API_BASE}/api/providers/me/complaints?status=${encodeURIComponent(status)}` : `${API_BASE}/api/providers/me/complaints`;

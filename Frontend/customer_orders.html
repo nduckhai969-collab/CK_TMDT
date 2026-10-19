@@ -498,19 +498,19 @@
                     <i class="fa-solid fa-rotate-right"></i> Thanh toán lại
                   </button>
                 ` : ''}
-                ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') ? `
+                ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') && !isDisputed ? `
                   <button onclick="cancelCustomerOrder('${o.id}', ${o.paymentStatus === 'pending'})" class="btn btn-outline btn-sm" style="border-color:#94a3b8;color:#475569;font-weight:700">
                     <i class="fa-solid fa-xmark"></i> Hủy đơn
-                  </button>
-                ` : ''}
-                ${isDelivered ? `
-                  <button onclick="cancelCustomerOrder('${o.id}', false, true)" class="btn btn-outline btn-sm" style="border-color:#fca5a5;color:#b91c1c;font-weight:700">
-                    <i class="fa-solid fa-scale-balanced"></i> Khiếu nại đơn
                   </button>
                 ` : ''}
                 ${!isCompleted && !isDisputed && !isCancelled && o.paymentStatus !== 'pending' ? `
                   <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fecaca;color:#b91c1c;font-weight:700">
                     <i class="fa-solid fa-shield-halved"></i> Khiếu nại
+                  </a>
+                ` : ''}
+                ${isDisputed ? `
+                  <a href="customer_complaints.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fca5a5;color:#b91c1c;background:#fff1f2;font-weight:700">
+                    <i class="fa-solid fa-scale-balanced"></i> Xem khiếu nại
                   </a>
                 ` : ''}
 
@@ -520,7 +520,7 @@
                   </button>
                 ` : ''}
 
-                ${isDelivered || (isEscrowHeld && !isCompleted && !isDisputed) ? `
+                ${(isDelivered || (isEscrowHeld && !isCompleted)) && !isDisputed ? `
                   <button onclick="openReleaseModal('${o.id}', ${o.price})" class="btn btn-primary" style="font-weight:700">
                     <i class="fa-solid fa-circle-check"></i> Nghiệm thu & giải ngân
                   </button>

@@ -615,69 +615,240 @@ router.post('/comments/:id/status', (req, res) => {
 // 8. DISPUTES & COMPLAINTS RESOLUTION (UC-64, UC-65)
 // ============================================================================
 router.get('/complaints', (req, res) => {
-  const complaints = db.getCollection('complaints');
+  const { status, priority, search } = req.query;
+  let complaints = db.getCollection('complaints') || [];
+
+  if (status && status !== 'all') {
+    if (status === 'pending') {
+      complaints = complaints.filter(c => ['submitted', 'pending', 'under_review', 'awaiting_information'].includes(c.status));
+    } else if (status === 'resolved') {
+      complaints = complaints.filter(c => ['resolved', 'rejected'].includes(c.status));
+    } else {
+      complaints = complaints.filter(c => c.status === status);
+    }
+  }
+
+  if (priority && priority !== 'all') {
+    complaints = complaints.filter(c => c.priority === priority);
+  }
+
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase();
+    complaints = complaints.filter(c =>
+      (c.id && c.id.toLowerCase().includes(q)) ||
+      (c.orderId && c.orderId.toLowerCase().includes(q)) ||
+      (c.complainant && c.complainant.toLowerCase().includes(q)) ||
+      (c.defendant && c.defendant.toLowerCase().includes(q)) ||
+      (c.reason && c.reason.toLowerCase().includes(q))
+    );
+  }
+
   res.json({ success: true, total: complaints.length, complaints });
 });
 
-router.post('/complaints/:id/resolve', (req, res) => {
-  const { resolution, refundPercentage = 100, note } = req.body;
-  const complaints = db.getCollection('complaints');
-  const complaint = complaints.find(c => c.id === req.params.id);
-
-  if (!complaint) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
-  }
-
-  complaint.status = 'resolved';
-  complaint.resolution = resolution;
-  complaint.resolutionNote = note || '';
-
-  const orders = db.getCollection('orders');
-  const order = orders.find(o => o.id === complaint.orderId);
-  const users = db.getCollection('users');
-
-  if (order) {
-    const totalDeposit = Number(order.escrowDeposit) || Number(order.price) || 0;
-    const priceNum = Number(order.price) || 0;
-
-    if (resolution === 'refund_customer') {
-      order.escrowStatus = 'refunded';
-      order.orderStatus = 'cancelled';
-      // Refund customer
-      const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
-      if (cust) cust.balance = (cust.balance || 0) + totalDeposit;
-    } else if (resolution === 'pay_provider') {
-      order.escrowStatus = 'completed';
-      order.orderStatus = 'completed';
-      // Pay provider
-      const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
-      if (prov) prov.balance = (prov.balance || 0) + priceNum;
-    } else if (resolution === 'partial_refund') {
-      const pct = Math.max(0, Math.min(100, Number(refundPercentage)));
-      const refundAmt = Math.round(priceNum * (pct / 100));
-      const payAmt = priceNum - refundAmt;
-
-      order.escrowStatus = 'partial_refunded';
-      order.orderStatus = 'completed';
-
-      const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
-      if (cust) cust.balance = (cust.balance || 0) + refundAmt;
-
-      const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
-      if (prov) prov.balance = (prov.balance || 0) + payAmt;
+// Admin updates complaint status (e.g. under_review or awaiting_information)
+router.post('/complaints/:id/status', async (req, res) => {
+  try {
+    const { status, note } = req.body;
+    if (!status || !['under_review', 'awaiting_information', 'submitted', 'pending'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ. Chọn under_review hoặc awaiting_information.' });
     }
 
-    db.saveCollection('orders', orders);
-    db.saveCollection('users', users);
+    const complaints = db.getCollection('complaints') || [];
+    const complaint = complaints.find(c => c.id === req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
+    }
+
+    if (['resolved', 'rejected'].includes(complaint.status)) {
+      return res.status(400).json({ success: false, message: 'Khiếu nại đã có phán quyết cuối cùng, không thể đổi trạng thái trung gian.' });
+    }
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    complaint.status = status;
+    complaint.updatedAt = dateStr;
+
+    if (!complaint.timeline) complaint.timeline = [];
+    const statusLabels = {
+      under_review: 'Admin tiếp nhận & Đang xem xét chứng cứ',
+      awaiting_information: 'Admin yêu cầu các bên bổ sung thông tin chứng cứ',
+      submitted: 'Chờ phân xử'
+    };
+    complaint.timeline.push({
+      time: dateStr,
+      actor: req.authUser.id,
+      actorName: req.authUser.name || 'Admin',
+      role: 'Admin',
+      action: 'admin_status_change',
+      note: `${statusLabels[status] || status}${note ? ': ' + note : ''}`,
+      status
+    });
+
+    await db.saveCollectionAndWait('complaints', complaints);
+
+    // Notify parties
+    const { createNotification, notifyProvider } = require('../services/notificationService');
+    if (complaint.complainantId) {
+      createNotification(complaint.complainantId, 'Cập nhật tiến độ khiếu nại',
+        `Khiếu nại ${complaint.id} đã được chuyển sang trạng thái: "${statusLabels[status] || status}". ${note || ''}`,
+        'info', '/customer_complaints.html');
+    }
+    if (complaint.defendantId) {
+      notifyProvider(complaint.defendantId, 'Cập nhật tiến độ khiếu nại',
+        `Khiếu nại ${complaint.id} đã được Admin cập nhật trạng thái: "${statusLabels[status] || status}". ${note || ''}`,
+        'info', '/complaint.html');
+    }
+
+    res.json({
+      success: true,
+      message: `Đã cập nhật trạng thái khiếu nại thành "${statusLabels[status] || status}"!`,
+      complaint
+    });
+  } catch (err) {
+    console.error('[adminRoutes] Lỗi cập nhật trạng thái complaint:', err);
+    res.status(500).json({ success: false, message: 'Lỗi ghi Firestore: ' + err.message });
   }
+});
 
-  db.saveCollection('complaints', complaints);
+router.post('/complaints/:id/resolve', async (req, res) => {
+  try {
+    const { resolution, refundPercentage = 100, note, verdict } = req.body;
+    const complaints = db.getCollection('complaints') || [];
+    const complaint = complaints.find(c => c.id === req.params.id);
 
-  res.json({
-    success: true,
-    message: 'Phán quyết tranh chấp đã được thực thi và tiền ký quỹ Escrow đã được xử lý thỏa đáng!',
-    complaint
-  });
+    if (!complaint) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
+    }
+
+    if (complaint.status === 'resolved' || complaint.status === 'rejected') {
+      return res.status(400).json({ success: false, message: 'Khiếu nại này đã có phán quyết trước đó. Không thể phán quyết lại!' });
+    }
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    complaint.resolution = resolution;
+    complaint.resolutionNote = note || '';
+    complaint.resolvedAt = dateStr;
+    complaint.resolvedBy = req.authUser.name || 'Admin';
+    complaint.updatedAt = dateStr;
+
+    let decisionLabel = verdict || '';
+
+    const orders = db.getCollection('orders') || [];
+    const order = orders.find(o => o.id === complaint.orderId);
+    const users = db.getCollection('users') || [];
+    const { createNotification, notifyProvider } = require('../services/notificationService');
+
+    if (resolution === 'refund_customer') {
+      complaint.status = 'resolved';
+      if (!decisionLabel) decisionLabel = 'Hoàn tiền 100% cho Khách hàng';
+      complaint.verdict = decisionLabel;
+
+      if (order) {
+        order.escrowStatus = 'refunded';
+        order.orderStatus = 'cancelled';
+        if (!order.milestones) order.milestones = [];
+        order.milestones.push({ title: 'Admin giải quyết khiếu nại: Hoàn 100% tiền ký quỹ cho khách hàng', done: true, time: dateStr });
+
+        const totalDeposit = Number(order.escrowDeposit) || Number(order.price) || 0;
+        const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
+        if (cust) {
+          cust.balance = (cust.balance || 0) + totalDeposit;
+        }
+      }
+    } else if (resolution === 'pay_provider') {
+      complaint.status = 'resolved';
+      if (!decisionLabel) decisionLabel = 'Giải ngân 100% cho Provider';
+      complaint.verdict = decisionLabel;
+
+      if (order) {
+        order.escrowStatus = 'completed';
+        order.orderStatus = 'completed';
+        if (!order.milestones) order.milestones = [];
+        order.milestones.push({ title: 'Admin giải quyết khiếu nại: Bác bỏ khiếu nại và giải ngân tiền cho Provider', done: true, time: dateStr });
+
+        const priceNum = Number(order.price) || 0;
+        const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
+        if (prov) {
+          prov.balance = (prov.balance || 0) + priceNum;
+        }
+      }
+    } else if (resolution === 'partial_refund') {
+      complaint.status = 'resolved';
+      const pct = Math.max(0, Math.min(100, Number(refundPercentage) || 50));
+      if (!decisionLabel) decisionLabel = `Bồi thường ${pct}/${100 - pct} giữa hai bên`;
+      complaint.verdict = decisionLabel;
+      complaint.refundPercentage = pct;
+
+      if (order) {
+        const priceNum = Number(order.price) || 0;
+        const refundAmt = Math.round(priceNum * (pct / 100));
+        const payAmt = priceNum - refundAmt;
+
+        order.escrowStatus = 'partial_refunded';
+        order.orderStatus = 'cancelled';
+        if (!order.milestones) order.milestones = [];
+        order.milestones.push({ title: `Admin giải quyết khiếu nại: Bồi thường ${pct}% cho khách và giải ngân ${100 - pct}% cho provider`, done: true, time: dateStr });
+
+        const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
+        if (cust) cust.balance = (cust.balance || 0) + refundAmt;
+
+        const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
+        if (prov) prov.balance = (prov.balance || 0) + payAmt;
+      }
+    } else if (resolution === 'reject') {
+      complaint.status = 'rejected';
+      if (!decisionLabel) decisionLabel = 'Bác bỏ khiếu nại của Khách hàng';
+      complaint.verdict = decisionLabel;
+
+      if (order) {
+        order.escrowStatus = 'escrow_held';
+        order.orderStatus = 'processing';
+        if (!order.milestones) order.milestones = [];
+        order.milestones.push({ title: 'Admin bác bỏ khiếu nại: Đơn hàng tiếp tục thực hiện', done: true, time: dateStr });
+      }
+    }
+
+    if (!complaint.timeline) complaint.timeline = [];
+    complaint.timeline.push({
+      time: dateStr,
+      actor: req.authUser.id,
+      actorName: req.authUser.name || 'Admin',
+      role: 'Admin',
+      action: 'admin_resolution',
+      note: `Phán quyết: ${decisionLabel}${note ? '. Lý do: ' + note : ''}`,
+      status: complaint.status
+    });
+
+    if (order) await db.saveCollectionAndWait('orders', orders);
+    await db.saveCollectionAndWait('users', users);
+    await db.saveCollectionAndWait('complaints', complaints);
+
+    // Notify Customer & Provider
+    if (complaint.complainantId) {
+      createNotification(complaint.complainantId, 'Phán quyết khiếu nại đã có kết quả',
+        `Admin đã đưa ra phán quyết cho khiếu nại ${complaint.id}: ${decisionLabel}. ${note ? 'Ghi chú: ' + note : ''}`,
+        'success', '/customer_complaints.html');
+    }
+    if (complaint.defendantId) {
+      notifyProvider(complaint.defendantId, 'Phán quyết khiếu nại đã có kết quả',
+        `Admin đã đưa ra phán quyết cho khiếu nại ${complaint.id}: ${decisionLabel}. ${note ? 'Ghi chú: ' + note : ''}`,
+        'info', '/complaint.html');
+    }
+
+    res.json({
+      success: true,
+      message: `Phán quyết tranh chấp đã được thực thi thành công: "${decisionLabel}"!`,
+      complaint
+    });
+  } catch (err) {
+    console.error('[adminRoutes] Lỗi resolve complaint:', err);
+    res.status(500).json({ success: false, message: 'Lỗi ghi Firestore: ' + err.message });
+  }
 });
 
 // ============================================================================

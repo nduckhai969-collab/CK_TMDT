@@ -7,6 +7,17 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 380px; }
+    .toast { display: flex; gap: 12px; align-items: flex-start; background: #FFF; border: 1px solid #E2E8F0; padding: 14px 18px; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+    .toast-success { border-left: 4px solid #16A34A; }
+    .toast-error { border-left: 4px solid #DC2626; }
+    .toast-info { border-left: 4px solid #2563EB; }
+    .toast-warning { border-left: 4px solid #D97706; }
+    .timeline-item { position: relative; padding-left: 18px; border-left: 2px solid #E2E8F0; margin-left: 6px; padding-bottom: 10px; }
+    .timeline-item:last-child { border-left-color: transparent; }
+    .timeline-dot { position: absolute; left: -5px; top: 3px; width: 8px; height: 8px; border-radius: 50%; background: #2563EB; }
+  </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
@@ -37,7 +48,7 @@
         <a href="payment.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Thanh toán & Phí sàn</span></a>
         <a href="income.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Ví & Thu nhập</span></a>
         <a href="review.html" class="nav-link"><i class="fa-solid fa-star"></i><span>Đánh giá & Uy tín</span></a>
-        <a href="complaint.html" class="nav-link active"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);">1</span></a>
+        <a href="complaint.html" class="nav-link active"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" id="sidebar-complaint-count" style="background-color: var(--warning);">0</span></a>
 
         <div class="nav-section-title">Dịch vụ hệ thống</div>
         <a href="package.html" class="nav-link"><i class="fa-solid fa-box-archive"></i><span>Mua dịch vụ</span></a>
@@ -47,8 +58,8 @@
       <div class="sidebar-profile">
         <div class="avatar">NV</div>
         <div class="profile-info">
-          <div class="profile-name">Nguyễn Văn Pro</div>
-          <div class="profile-role">Senior UI/UX & Web Dev</div>
+          <div class="profile-name">Chuyên gia</div>
+          <div class="profile-role">Provider Portal</div>
         </div>
       </div>
     </aside>
@@ -57,118 +68,315 @@
       <header class="top-header">
         <div class="header-title">Trung Tâm Khiếu Nại & Tranh Chấp</div>
         <div class="header-actions">
-          <span class="badge badge-warning">1 Ca Cần Phản Hồi</span>
-          <!-- Switcher to Admin Portal -->
+          <span class="badge badge-warning" id="header-action-badge">Đang kiểm tra...</span>
           <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
             <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
           </a>
         </div>
       </header>
 
-      <div class="content-body">
-        <div class="card" style="border-left: 4px solid var(--danger);">
-          <div class="card-header">
-            <div>
-              <div class="card-title" style="color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Yêu Cầu Giải Trình Tranh Chấp (1 Đơn Hàng)</div>
-              <div class="card-subtitle">Mã sự cố #CMP-9901 • Mã đơn hàng #ORD-8821</div>
-            </div>
-            <span class="badge badge-warning">Thời hạn phản hồi: 11 giờ 45 phút</span>
-          </div>
-
-          <div class="grid-2" style="margin-bottom: 20px;">
-            <div style="background: var(--bg-subtle); padding: 16px; border-radius: 8px;">
-              <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Nội dung phản ánh từ Khách hàng</div>
-              <div style="font-size: 13px;"><strong>Khách hàng:</strong> Lê Hoàng Nam</div>
-              <div style="font-size: 13px; margin: 4px 0;"><strong>Vấn đề:</strong> Sản phẩm chưa tối ưu tốt giao diện di động theo thỏa thuận.</div>
-              <div style="font-size: 13px;"><strong>Đề xuất:</strong> Hoàn 50% chi phí hoặc sửa lại giao diện trong 24h.</div>
-            </div>
-
-            <div style="background: var(--bg-subtle); padding: 16px; border-radius: 8px;">
-              <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Bằng chứng Khách hàng cung cấp</div>
-              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Ảnh đính kèm từ khách hàng:</div>
-              <div style="display:flex; gap:8px;">
-                <div style="width:70px; height:70px; background:#E2E8F0; border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">Ảnh 1.png</div>
-                <div style="width:70px; height:70px; background:#E2E8F0; border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">Ảnh 2.png</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Nội dung giải trình gửi Ban Quản Trị Sàn</label>
-            <textarea class="form-control" id="providerDefenseText" placeholder="Trình bày chi tiết phương án và bằng chứng trao đổi trước đó..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Đính kèm ảnh/file đối chứng</label>
-            <input type="file" class="form-control" style="padding-top: 8px;">
-          </div>
-
-          <div style="display:flex; gap:12px;">
-            <button class="btn btn-primary" onclick="submitDefenseAction('KN-2025-01')">
-              <i class="fa-solid fa-shield-halved"></i> GỬI BẰNG CHỨNG GIẢI TRÌNH
-            </button>
-            <button class="btn btn-danger" onclick="acceptRefundAction('KN-2025-01')">
-              <i class="fa-solid fa-rotate-left"></i> Đồng Ý Hoàn Tiền Cho Khách
-            </button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Lịch Sử Tranh Chấp Đã Xử Lý</div>
-          </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Mã Sự Cố</th>
-                <th>Khách Hàng</th>
-                <th>Lý Do</th>
-                <th>Kết Luận Ban Quản Trị</th>
-                <th>Trạng Thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>#CMP-8812</td>
-                <td>Trần Đức Anh</td>
-                <td>Trễ hạn bàn giao 1 ngày</td>
-                <td>Provider giải trình hợp lệ (Có tin nhắn thỏa thuận gia hạn)</td>
-                <td><span class="badge badge-success"><span class="badge-dot"></span> Đã đóng ca</span></td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="content-body" id="disputes-content-container">
+        <!-- Live container: populated from Firestore -->
+        <div style="text-align:center; padding:50px; color:#64748B;">
+          <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+          <p style="margin-top:12px;">Đang tải danh sách khiếu nại tranh chấp từ Firestore...</p>
         </div>
       </div>
     </main>
   </div>
 
+  <div class="toast-container" id="toast-container"></div>
+
   <script src="provider.js"></script>
   <script>
+    let myComplaints = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProviderComplaints();
+    });
+
+    function showToast(title, message = '', type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `
+        <div style="font-size:18px; color:${type === 'success' ? '#16A34A' : type === 'error' ? '#DC2626' : type === 'warning' ? '#D97706' : '#2563EB'};">
+          <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i>
+        </div>
+        <div>
+          <strong style="font-size:13px; display:block; color:#0F172A;">${title}</strong>
+          ${message ? `<div style="font-size:12px; color:#64748B; margin-top:2px;">${message}</div>` : ''}
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    async function loadProviderComplaints() {
+      const container = document.getElementById('disputes-content-container');
+      const badge = document.getElementById('header-action-badge');
+      const sidebarBadge = document.getElementById('sidebar-complaint-count');
+
+      try {
+        const res = await window.providerApi.getMyComplaints();
+        if (!res || !res.success) {
+          container.innerHTML = `
+            <div class="card" style="text-align:center; padding:36px; color:#DC2626;">
+              <i class="fa-solid fa-triangle-exclamation" style="font-size:32px; margin-bottom:10px;"></i>
+              <h3 style="margin:0 0 6px;">Không thể tải dữ liệu từ Firestore</h3>
+              <p style="color:#64748B; font-size:13px;">${res?.message || 'Lỗi kết nối máy chủ'}</p>
+              <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="loadProviderComplaints()">Thử lại</button>
+            </div>
+          `;
+          return;
+        }
+
+        myComplaints = res.complaints || [];
+
+        const activeList = myComplaints.filter(c => ['submitted', 'pending', 'under_review', 'awaiting_information'].includes(c.status));
+        const resolvedList = myComplaints.filter(c => ['resolved', 'rejected'].includes(c.status));
+
+        if (badge) {
+          badge.textContent = `${activeList.length} Ca Cần Phản Hồi`;
+          badge.className = activeList.length ? 'badge badge-warning' : 'badge badge-success';
+        }
+        if (sidebarBadge) {
+          sidebarBadge.textContent = activeList.length;
+          sidebarBadge.style.backgroundColor = activeList.length ? 'var(--warning)' : '#94A3B8';
+        }
+
+        renderProviderDisputes(activeList, resolvedList);
+      } catch (err) {
+        console.error('[complaint.html] Lỗi nạp Firestore:', err);
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:36px; color:#DC2626;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:32px; margin-bottom:10px;"></i>
+            <h3 style="margin:0 0 6px;">Không thể kết nối cơ sở dữ liệu Firestore</h3>
+            <p style="color:#64748B; font-size:13px;">${err.message}</p>
+            <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="loadProviderComplaints()">Thử lại</button>
+          </div>
+        `;
+      }
+    }
+
+    function renderProviderDisputes(activeList, resolvedList) {
+      const container = document.getElementById('disputes-content-container');
+
+      let activeSectionHtml = '';
+      if (!activeList.length) {
+        activeSectionHtml = `
+          <div class="card" style="text-align:center; padding:40px 20px; margin-bottom:24px;">
+            <div style="width:56px; height:56px; border-radius:50%; background:#DCFCE7; color:#16A34A; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 12px;">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 style="font-size:16px; font-weight:700; color:#0F172A; margin:0 0 6px;">Không có khiếu nại nào cần giải trình</h3>
+            <p style="font-size:13px; color:#64748B; margin:0;">
+              Tuyệt vời! Hiện tại các đơn hàng của bạn đều diễn ra thuận lợi hoặc các tranh chấp đã được giải quyết xong.
+            </p>
+          </div>
+        `;
+      } else {
+        activeSectionHtml = activeList.map(c => {
+          const statusTextMap = {
+            submitted: 'Chờ Provider phản hồi',
+            pending: 'Chờ phân xử',
+            under_review: 'Đang được Admin thẩm định',
+            awaiting_information: 'Admin yêu cầu bổ sung thông tin'
+          };
+          const statusBadge = `<span class="badge ${c.status === 'awaiting_information' ? 'badge-danger' : 'badge-warning'}">${statusTextMap[c.status] || c.status}</span>`;
+
+          const timelineHtml = (c.timeline && c.timeline.length) ? `
+            <div style="background:#F8FAFC; border-radius:8px; padding:12px; margin-top:14px; font-size:12px;">
+              <div style="font-weight:700; color:#0F172A; margin-bottom:8px;"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử trao đổi:</div>
+              ${c.timeline.map(t => `
+                <div class="timeline-item">
+                  <div class="timeline-dot"></div>
+                  <span style="color:#64748B;">${t.time} • <strong>${t.actorName || t.role}</strong>:</span>
+                  <div style="color:#334155; margin-top:2px;">${t.note}</div>
+                </div>
+              `).join('')}
+            </div>
+          ` : '';
+
+          const evidenceItems = (c.evidence && c.evidence.length) ? c.evidence.map(e => `
+            <div style="padding:6px 10px; background:#E2E8F0; border-radius:6px; font-size:11.5px; color:#334155;">
+              <i class="fa-solid fa-file-image"></i> ${e.name || 'Ảnh chụp chứng cứ'}
+            </div>
+          `).join('') : '<div style="font-size:12px; color:#94A3B8;">Khách hàng không đính kèm tệp chứng cứ rời.</div>';
+
+          return `
+            <div class="card" style="border-left: 4px solid var(--danger); margin-bottom:24px;" id="dispute-card-${c.id}">
+              <div class="card-header">
+                <div>
+                  <div class="card-title" style="color: var(--danger); font-size:16px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Yêu Cầu Giải Trình Tranh Chấp: ${c.id}
+                  </div>
+                  <div class="card-subtitle" style="font-size:13px; margin-top:3px;">
+                    Mã đơn hàng: <strong>${c.orderId}</strong> • Dịch vụ: <strong>${c.serviceTitle || 'Dịch vụ'}</strong> • Tranh chấp: <strong style="color:#16A34A;">${c.amount || 'Theo đơn'}</strong>
+                  </div>
+                </div>
+                <div>${statusBadge}</div>
+              </div>
+
+              <div class="grid-2" style="margin-bottom: 20px;">
+                <div style="background: var(--bg-subtle); padding: 16px; border-radius: 8px;">
+                  <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px; font-size:13.5px;">
+                    <i class="fa-solid fa-user"></i> Nội dung phản ánh từ Khách hàng
+                  </div>
+                  <div style="font-size: 13px;"><strong>Khách hàng:</strong> ${c.complainant || 'Khách hàng'}</div>
+                  <div style="font-size: 13px; margin: 4px 0; color:#DC2626;"><strong>Lý do khiếu nại:</strong> ${c.reason || '—'}</div>
+                  <div style="font-size: 13px; background:#FFF; padding:10px; border-radius:6px; border:1px solid #E2E8F0; line-height:1.6; margin-top:6px;">
+                    ${c.userClaim || 'Chưa cung cấp mô tả.'}
+                  </div>
+                </div>
+
+                <div style="background: var(--bg-subtle); padding: 16px; border-radius: 8px;">
+                  <div style="font-weight: 700; color: var(--text-main); margin-bottom: 6px; font-size:13.5px;">
+                    <i class="fa-solid fa-paperclip"></i> Bằng chứng Khách hàng cung cấp
+                  </div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                    ${evidenceItems}
+                  </div>
+                  ${timelineHtml}
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="font-weight:700;">Nội dung giải trình gửi Ban Quản Trị Sàn & Khách Hàng <span style="color:#DC2626;">*</span></label>
+                <textarea class="form-control" id="providerDefenseText-${c.id}" rows="4" placeholder="Trình bày chi tiết phương án, tiến độ thực hiện và thỏa thuận đã trao đổi để Admin có căn cứ bảo vệ bạn...">${c.providerClaim && c.providerClaim !== 'Chờ Provider phản hồi giải trình' ? c.providerClaim : ''}</textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="font-weight:700;">Đính kèm tên tệp/ảnh đối chứng (nếu có)</label>
+                <input type="text" class="form-control" id="providerAttachment-${c.id}" placeholder="Ví dụ: Anh_chat_thoa_thuan.png, Link_file_ban_giao.zip">
+              </div>
+
+              <div style="display:flex; gap:12px; justify-content:space-between; align-items:center; border-top:1px solid #E2E8F0; padding-top:14px; margin-top:14px;">
+                <button class="btn btn-primary" onclick="submitDefenseAction('${c.id}')" id="btn-defense-${c.id}">
+                  <i class="fa-solid fa-shield-halved"></i> ${c.providerClaim && c.providerClaim !== 'Chờ Provider phản hồi giải trình' ? 'CẬP NHẬT BẢN GIẢI TRÌNH' : 'GỬI BẰNG CHỨNG GIẢI TRÌNH'}
+                </button>
+                <button class="btn btn-danger" onclick="acceptRefundAction('${c.id}')" id="btn-refund-${c.id}">
+                  <i class="fa-solid fa-rotate-left"></i> Đồng Ý Hoàn Tiền Cho Khách
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const resolvedRows = resolvedList.length ? resolvedList.map(c => `
+        <tr>
+          <td><strong>${c.id}</strong></td>
+          <td>${c.orderId}</td>
+          <td>${c.complainant || '—'}</td>
+          <td style="max-width:240px;">${c.reason || '—'}</td>
+          <td style="color:#16A34A; font-weight:600;">${c.verdict || c.resolution || 'Đã giải quyết'}</td>
+          <td>${c.resolvedAt || '—'}</td>
+          <td><span class="badge ${c.status === 'resolved' ? 'badge-success' : 'badge-neutral'}">${c.status === 'resolved' ? 'Đã đóng ca' : 'Bị từ chối'}</span></td>
+        </tr>
+      `).join('') : `
+        <tr>
+          <td colspan="7" style="text-align:center; padding:24px; color:#64748B;">Chưa có lịch sử tranh chấp nào được đóng.</td>
+        </tr>
+      `;
+
+      container.innerHTML = `
+        ${activeSectionHtml}
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Tranh Chấp Đã Xử Lý (${resolvedList.length})</div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Mã Sự Cố</th>
+                <th>Mã Đơn</th>
+                <th>Khách Hàng</th>
+                <th>Lý Do</th>
+                <th>Kết Luận Ban Quản Trị</th>
+                <th>Thời Gian</th>
+                <th>Trạng Thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${resolvedRows}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
     async function submitDefenseAction(complaintId) {
-      const text = document.getElementById('providerDefenseText').value.trim();
+      const textarea = document.getElementById(`providerDefenseText-${complaintId}`);
+      const text = textarea ? textarea.value.trim() : '';
+
       if (!text) {
-        showToast('Vui lòng nhập nội dung giải trình chi tiết!');
+        showToast('Thiếu thông tin', 'Vui lòng nhập nội dung giải trình chi tiết!', 'warning');
+        if (textarea) textarea.focus();
         return;
       }
 
-      showToast('Đang gửi bản giải trình tới Admin...', 'info');
+      const attInput = document.getElementById(`providerAttachment-${complaintId}`);
+      const attName = attInput ? attInput.value.trim() : '';
+      const attachments = attName ? [{ name: attName, type: 'file' }] : [];
+
+      const btn = document.getElementById(`btn-defense-${complaintId}`);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang gửi lên Firestore...`;
+      }
+
       try {
-        if (window.providerApi) {
-          const res = await window.providerApi.submitDefense(complaintId, text);
-          if (res && res.success) {
-            showToast(res.message);
-          } else {
-            showToast(res.message || 'Lỗi khi gửi giải trình');
-          }
+        const res = await window.providerApi.submitDefense(complaintId, text, attachments);
+        if (res && res.success) {
+          showToast('Đã gửi giải trình thành công', res.message, 'success');
+          await loadProviderComplaints();
+        } else {
+          showToast('Lỗi gửi giải trình', res?.message || 'Không thể lưu vào Firestore', 'error');
         }
-      } catch (e) {
-        showToast('Đã gửi bản giải trình thành công!');
+      } catch (err) {
+        showToast('Lỗi Firestore', err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-shield-halved"></i> GỬI BẰNG CHỨNG GIẢI TRÌNH`;
+        }
       }
     }
 
     async function acceptRefundAction(complaintId) {
-      if (confirm('Bạn có chắc chắn muốn chấp nhận hoàn lại 100% tiền cọc Escrow cho khách hàng?')) {
-        showToast('Đã ghi nhận yêu cầu hoàn tiền cho khách hàng!');
+      if (!confirm('Bạn có chắc chắn muốn chấp nhận hoàn lại 100% tiền cọc Escrow cho khách hàng?\nThao tác này sẽ cập nhật trực tiếp vào Firestore và giải quyết dứt điểm vụ tranh chấp.')) {
+        return;
+      }
+
+      const btn = document.getElementById(`btn-refund-${complaintId}`);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang xử lý...`;
+      }
+
+      try {
+        const res = await window.providerApi.acceptRefund(complaintId, 'Provider tự nguyện chấp nhận hoàn tiền cho khách.');
+        if (res && res.success) {
+          showToast('Đã chấp thuận hoàn tiền', res.message, 'success');
+          await loadProviderComplaints();
+        } else {
+          showToast('Lỗi xử lý', res?.message || 'Không thể cập nhật Firestore', 'error');
+        }
+      } catch (err) {
+        showToast('Lỗi Firestore', err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Đồng Ý Hoàn Tiền Cho Khách`;
+        }
       }
     }
   </script>

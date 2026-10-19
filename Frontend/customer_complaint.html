@@ -67,10 +67,31 @@
       <!-- Complaint Form -->
       <form id="complaintForm" onsubmit="submitComplaint(event)">
 
+        <div id="orderPreviewCard" style="display:none; background:#F8FAFC; border:1px solid #CBD5E1; border-radius:12px; padding:16px; margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <div>
+              <div style="font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase;">Thông tin đơn hàng</div>
+              <h3 id="previewServiceTitle" style="font-size:15px; font-weight:700; color:#0F172A; margin:2px 0 0;">—</h3>
+            </div>
+            <div id="previewEscrowBadge" style="font-size:11px; font-weight:700; padding:4px 10px; border-radius:9999px; background:#DCFCE7; color:#15803D;">
+              Đang Ký Quỹ
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px; color:#475569;">
+            <div>Chuyên gia: <strong id="previewProviderName" style="color:#0F172A;">—</strong></div>
+            <div>Giá trị bảo vệ: <strong id="previewPrice" style="color:#DC2626;">—</strong></div>
+          </div>
+        </div>
+
+        <div id="orderStatusWarning" style="display:none; background:#FFFBEB; border:1px solid #FCD34D; border-radius:10px; padding:14px 18px; margin-bottom:20px; color:#92400E; font-size:13px; line-height:1.5;">
+          <i class="fa-solid fa-circle-exclamation" style="margin-right:6px;"></i>
+          <span id="orderStatusWarningText"></span>
+        </div>
+
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
           <div>
             <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Mã Đơn Hàng Cần Khiếu Nại <span style="color:#EF4444;">*</span></label>
-            <input type="text" id="orderIdInput" required placeholder="Nhập mã đơn hàng" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+            <input type="text" id="orderIdInput" onchange="lookupOrder(this.value)" required placeholder="Ví dụ: ORD-001" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
           </div>
           <div>
             <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Số Tiền Yêu Cầu Hoàn Lại (VNĐ) <span style="color:#EF4444;">*</span></label>
@@ -96,11 +117,12 @@
         </div>
 
         <div style="margin-bottom:24px;">
-          <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Tải Lên Bằng Chứng / Ảnh Chụp Màn Hình</label>
-          <div style="border:2px dashed #CBD5E1; border-radius:10px; padding:20px; text-align:center; background:#F8FAFC; cursor:pointer;" onclick="showToast('Đã Đính Kèm', 'Đã tải lên tệp ảnh chụp bằng chứng giao việc', 'info')">
-            <i class="fa-solid fa-cloud-arrow-up" style="font-size:28px; color:#94A3B8; margin-bottom:6px;"></i>
-            <div style="font-size:13px; font-weight:600; color:#0F172A;">Bấm để tải ảnh chụp lỗi hoặc tài liệu chứng minh</div>
-            <div style="font-size:11.5px; color:#64748B;">Hỗ trợ PNG, JPG, PDF (tối đa 15MB)</div>
+          <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Bằng Chứng Đính Kèm / Liên Kết Ảnh Chụp (Tùy chọn)</label>
+          <input type="text" id="evidenceInput" placeholder="Ví dụ: Link ảnh chụp trao đổi, Drive hoặc ghi chú tệp bằng chứng" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; margin-bottom:10px;">
+          <div style="border:2px dashed #CBD5E1; border-radius:10px; padding:18px; text-align:center; background:#F8FAFC; cursor:pointer;" onclick="attachMockProof()">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size:24px; color:#94A3B8; margin-bottom:6px;"></i>
+            <div id="evidenceDisplayLabel" style="font-size:13px; font-weight:600; color:#0F172A;">Bấm để đính kèm tệp bằng chứng (PNG, JPG, PDF)</div>
+            <div style="font-size:11.5px; color:#64748B;">Dung lượng tối đa 15MB</div>
           </div>
         </div>
 
@@ -125,6 +147,9 @@
   <script src="js/number-format.js"></script>
   <script src="customer.js"></script>
   <script>
+    let currentLoadedOrder = null;
+    let attachedEvidenceName = '';
+
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
       document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
@@ -133,8 +158,77 @@
       const orderId = urlParams.get('orderId');
       if (orderId) {
         document.getElementById('orderIdInput').value = orderId;
+        lookupOrder(orderId);
       }
     });
+
+    function attachMockProof() {
+      attachedEvidenceName = `bang_chung_${Date.now()}.png`;
+      document.getElementById('evidenceDisplayLabel').innerHTML = `<span style="color:#15803D;"><i class="fa-solid fa-circle-check"></i> Đã đính kèm tệp: ${attachedEvidenceName}</span>`;
+      if (!document.getElementById('evidenceInput').value) {
+        document.getElementById('evidenceInput').value = attachedEvidenceName;
+      }
+      showToast('Đã Đính Kèm', `Đã chọn tệp bằng chứng: ${attachedEvidenceName}`, 'info');
+    }
+
+    async function lookupOrder(orderId) {
+      if (!orderId || !orderId.trim()) return;
+      const warningEl = document.getElementById('orderStatusWarning');
+      const previewCard = document.getElementById('orderPreviewCard');
+      const submitBtn = document.getElementById('btnSubmitComplaint');
+      warningEl.style.display = 'none';
+      previewCard.style.display = 'none';
+      submitBtn.disabled = false;
+
+      const user = getCurrentCustomer();
+      if (!user) return;
+
+      try {
+        const res = await apiRequest(`/api/orders/${encodeURIComponent(orderId.trim())}`);
+        if (!res.success || !res.order) {
+          warningEl.style.display = 'block';
+          document.getElementById('orderStatusWarningText').textContent = 'Không tìm thấy đơn hàng hoặc đơn không thuộc về tài khoản này.';
+          submitBtn.disabled = true;
+          return;
+        }
+
+        const o = res.order;
+        currentLoadedOrder = o;
+
+        // Display preview card
+        previewCard.style.display = 'block';
+        document.getElementById('previewServiceTitle').textContent = o.serviceTitle || 'Dịch vụ';
+        document.getElementById('previewProviderName').textContent = o.providerName || 'Chuyên gia';
+        const priceVal = o.escrowDeposit || o.price || 0;
+        document.getElementById('previewPrice').textContent = formatVND(priceVal);
+
+        // Auto-fill amount if empty
+        const amountInput = document.getElementById('refundAmountInput');
+        if (!amountInput.value) {
+          amountInput.value = formatThousands(priceVal);
+        }
+
+        // Validate eligibility
+        if (o.orderStatus === 'disputed') {
+          warningEl.style.display = 'block';
+          document.getElementById('orderStatusWarningText').innerHTML = `Đơn hàng này hiện <strong>đang có khiếu nại tranh chấp được xử lý</strong>. Toàn bộ tiền đã bị đóng băng. <a href="customer_complaints.html?orderId=${encodeURIComponent(o.id)}" style="color:#DC2626; font-weight:700; text-decoration:underline;">Nhấn vào đây để xem hồ sơ tranh chấp</a>.`;
+          submitBtn.disabled = true;
+        } else if (o.paymentStatus === 'pending') {
+          warningEl.style.display = 'block';
+          document.getElementById('orderStatusWarningText').textContent = 'Đơn hàng chưa hoàn tất thanh toán hoặc ký quỹ nên không thể mở tranh chấp.';
+          submitBtn.disabled = true;
+        } else if (o.orderStatus === 'cancelled') {
+          warningEl.style.display = 'block';
+          document.getElementById('orderStatusWarningText').textContent = 'Đơn hàng này đã bị hủy.';
+          submitBtn.disabled = true;
+        } else if (o.orderStatus === 'completed') {
+          warningEl.style.display = 'block';
+          document.getElementById('orderStatusWarningText').textContent = 'Đơn hàng này đã hoàn tất và tiền ký quỹ đã được giải ngân cho chuyên gia.';
+        }
+      } catch (e) {
+        console.error('Error fetching order:', e);
+      }
+    }
 
     async function submitComplaint(e) {
       e.preventDefault();
@@ -144,14 +238,16 @@
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi Khiếu Nại...`;
 
       const user = getCurrentCustomer();
+      const evidence = document.getElementById('evidenceInput').value.trim() || attachedEvidenceName;
       const payload = {
-        orderId: document.getElementById('orderIdInput').value,
+        orderId: document.getElementById('orderIdInput').value.trim(),
         complainantId: user.id,
         complainant: `${user.name} (Khách hàng)`,
         reason: document.getElementById('complaintReason').value,
         amount: document.getElementById('refundAmountInput').value,
-        userClaim: document.getElementById('complaintDetail').value,
-        priority: 'high'
+        userClaim: document.getElementById('complaintDetail').value.trim(),
+        priority: 'high',
+        evidence: evidence || null
       };
 
       const res = await apiRequest('/api/complaints', {

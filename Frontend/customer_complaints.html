@@ -52,12 +52,54 @@
       <button type="button" class="complaint-tab" onclick="filterComplaints('pending',this)">Đang xử lý <span id="tabPending">0</span></button>
       <button type="button" class="complaint-tab" onclick="filterComplaints('resolved',this)">Đã giải quyết <span id="tabResolved">0</span></button>
     </div>
-    <div id="complaintsList"><div style="padding:42px;text-align:center;color:#64748b"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><p>Đang tải khiếu nại...</p></div></div>
-  </main>
-  <div id="complaintDetailModal" style="display:none;position:fixed;inset:0;z-index:9999;background:#0f172a99;align-items:center;justify-content:center;padding:18px" onclick="if(event.target===this)closeComplaintDetail()">
-    <section style="width:min(620px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 60px #0f172a40">
-      <header style="padding:19px 22px;background:#fff7f7;border-bottom:1px solid #fee2e2;display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div id="detailComplaintId" style="font-size:11px;font-weight:800;color:#b91c1c"></div><h2 id="detailComplaintTitle" style="font-size:18px;margin:5px 0 0"></h2></div><button type="button" onclick="closeComplaintDetail()" aria-label="Đóng" style="width:34px;height:34px;border:0;border-radius:9px;background:white;color:#64748b;cursor:pointer"><i class="fa-solid fa-xmark"></i></button></header>
-      <div style="padding:22px;display:grid;gap:14px"><div id="detailComplaintMeta" style="font-size:12px;line-height:1.7;color:#64748b"></div><div><strong style="font-size:12px">Nội dung bạn gửi</strong><p id="detailUserClaim" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#475569;background:#f8fafc;border-radius:10px;padding:13px;font-size:13px"></p></div><div><strong style="font-size:12px">Phản hồi từ Provider</strong><p id="detailProviderClaim" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#475569;background:#f8fafc;border-radius:10px;padding:13px;font-size:13px"></p></div><div id="detailResolutionWrap" style="display:none"><strong style="font-size:12px">Kết quả xử lý</strong><p id="detailResolution" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#166534;background:#f0fdf4;border-radius:10px;padding:13px;font-size:13px"></p></div></div>
+    <div id="complaintsList"><div style="padding:42px;text-align:center;color:#64748b"><i class="fa-solid fa-c  <div id="complaintDetailModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.6);align-items:center;justify-content:center;padding:18px;" onclick="if(event.target===this)closeComplaintDetail()">
+    <section style="width:min(680px,100%);max-height:90vh;overflow-y:auto;background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(15,23,42,0.25);">
+      <header style="padding:20px 24px;background:#FFF7F7;border-bottom:1px solid #FEE2E2;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="detailComplaintId" style="font-size:12px;font-weight:800;color:#B91C1C;"></span>
+            <span id="detailStatusBadge"></span>
+          </div>
+          <h2 id="detailComplaintTitle" style="font-size:18px;font-weight:700;margin:6px 0 0;color:#0F172A;"></h2>
+        </div>
+        <button type="button" onclick="closeComplaintDetail()" aria-label="Đóng" style="width:36px;height:36px;border:0;border-radius:10px;background:#FFF;color:#64748B;cursor:pointer;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </header>
+
+      <div style="padding:24px;display:grid;gap:18px;">
+        <div id="detailComplaintMeta" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:14px;font-size:12.5px;line-height:1.7;color:#475569;"></div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#0F172A;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Nội dung khiếu nại của bạn</div>
+          <div id="detailUserClaim" style="white-space:pre-wrap;line-height:1.65;color:#334155;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px;font-size:13px;"></div>
+        </div>
+
+        <div id="detailEvidenceWrap" style="display:none;">
+          <div style="font-size:12px;font-weight:700;color:#0F172A;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Bằng chứng đính kèm</div>
+          <div id="detailEvidence" style="font-size:13px;color:#1E40AF;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;word-break:break-all;"></div>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#0F172A;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Phản hồi / Giải trình từ Chuyên gia</div>
+          <div id="detailProviderClaim" style="white-space:pre-wrap;line-height:1.65;color:#334155;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px;font-size:13px;"></div>
+        </div>
+
+        <div id="detailResolutionWrap" style="display:none;">
+          <div style="font-size:12px;font-weight:700;color:#15803D;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Quyết định & Kết luận từ Ban Quản Trị</div>
+          <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:14px;font-size:13px;">
+            <div id="detailResolutionVerdict" style="font-weight:700;color:#166534;margin-bottom:4px;"></div>
+            <div id="detailResolutionNote" style="color:#14532D;line-height:1.6;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#0F172A;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <i class="fa-solid fa-clock-rotate-left" style="color:#64748B;"></i> Lịch sử xử lý & trao đổi
+          </div>
+          <div id="detailTimeline" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:16px;"></div>
+        </div>
+      </div>
     </section>
   </div>
   <div id="footer-placeholder"></div>
@@ -65,12 +107,30 @@
   <script>
     let complaints = [];
     let complaintFilter = 'all';
+
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
       document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
       loadComplaints();
     });
-    function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
+
+    function escapeHTML(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    }
+
+    const STATUS_MAP = {
+      submitted: { label: 'Đã gửi khiếu nại', badgeClass: 'pending', color: '#1D4ED8', bg: '#EFF6FF', icon: 'fa-paper-plane' },
+      under_review: { label: 'Đang xem xét', badgeClass: 'pending', color: '#B45309', bg: '#FEF3C7', icon: 'fa-magnifying-glass' },
+      awaiting_information: { label: 'Chờ bổ sung thông tin', badgeClass: 'pending', color: '#C2410C', bg: '#FFEDD5', icon: 'fa-circle-question' },
+      resolved: { label: 'Đã giải quyết', badgeClass: 'resolved', color: '#15803D', bg: '#DCFCE7', icon: 'fa-circle-check' },
+      rejected: { label: 'Đã từ chối', badgeClass: 'rejected', color: '#991B1B', bg: '#FEE2E2', icon: 'fa-circle-xmark' }
+    };
+
+    function getStatusBadge(status) {
+      const s = STATUS_MAP[status] || { label: status || 'Đang xử lý', color: '#475569', bg: '#F1F5F9', icon: 'fa-clock' };
+      return `<span style="font-size:11px;font-weight:700;padding:5px 11px;border-radius:9999px;background:${s.bg};color:${s.color};display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid ${s.icon}"></i> ${s.label}</span>`;
+    }
+
     async function loadComplaints() {
       const user = getCurrentCustomer();
       const list = document.getElementById('complaintsList');
@@ -78,46 +138,160 @@
         list.innerHTML = '<section style="padding:38px;text-align:center;background:white;border:1px solid #e2e8f0;border-radius:15px"><i class="fa-solid fa-lock" style="font-size:30px;color:#94a3b8"></i><h3>Đăng nhập để xem khiếu nại</h3><p style="color:#64748b">Thông tin khiếu nại chỉ hiển thị với tài khoản khách hàng đã gửi.</p><button class="btn btn-primary" onclick="openAuthModal(\'login\')">Đăng nhập</button></section>';
         return;
       }
-      const result = await apiRequest(`/api/complaints?complainantId=${encodeURIComponent(user.id)}`);
-      if (!result.success) { list.innerHTML = '<div style="padding:35px;text-align:center;color:#b91c1c;background:white;border-radius:14px">Không tải được danh sách khiếu nại. Vui lòng thử tải lại trang.</div>'; return; }
-      complaints = result.complaints || [];
-      document.getElementById('countAll').textContent = document.getElementById('tabAll').textContent = complaints.length;
-      document.getElementById('countPending').textContent = document.getElementById('tabPending').textContent = complaints.filter(item => item.status !== 'resolved').length;
-      document.getElementById('countResolved').textContent = document.getElementById('tabResolved').textContent = complaints.filter(item => item.status === 'resolved').length;
-      renderComplaints();
+
+      list.innerHTML = '<div style="padding:42px;text-align:center;color:#64748b"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><p>Đang tải dữ liệu khiếu nại từ Firestore...</p></div>';
+
+      try {
+        const result = await apiRequest(`/api/complaints?complainantId=${encodeURIComponent(user.id)}`);
+        if (!result.success) {
+          list.innerHTML = `<div style="padding:35px;text-align:center;color:#b91c1c;background:white;border-radius:14px;border:1px solid #fca5a5;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:24px;margin-bottom:8px;"></i>
+            <p><strong>Lỗi Firestore:</strong> ${escapeHTML(result.message || 'Không thể tải dữ liệu khiếu nại')}</p>
+          </div>`;
+          return;
+        }
+
+        complaints = result.complaints || [];
+        document.getElementById('countAll').textContent = document.getElementById('tabAll').textContent = complaints.length;
+        document.getElementById('countPending').textContent = document.getElementById('tabPending').textContent = complaints.filter(item => item.status !== 'resolved' && item.status !== 'rejected').length;
+        document.getElementById('countResolved').textContent = document.getElementById('tabResolved').textContent = complaints.filter(item => item.status === 'resolved' || item.status === 'rejected').length;
+        renderComplaints();
+
+        // Check if query params ask for a specific order or complaint
+        const urlParams = new URLSearchParams(window.location.search);
+        const reqOrderId = urlParams.get('orderId');
+        const reqComplaintId = urlParams.get('complaintId');
+        if (reqOrderId) {
+          const match = complaints.find(c => c.orderId === reqOrderId);
+          if (match) openComplaintDetail(match.id);
+        } else if (reqComplaintId) {
+          openComplaintDetail(reqComplaintId);
+        }
+      } catch (err) {
+        list.innerHTML = `<div style="padding:35px;text-align:center;color:#b91c1c;background:white;border-radius:14px;border:1px solid #fca5a5;">
+          <p>Không thể kết nối đến máy chủ. Vui lòng thử lại sau.</p>
+        </div>`;
+      }
     }
+
     function filterComplaints(filter, button) {
       complaintFilter = filter;
       document.querySelectorAll('.complaint-tab').forEach(tab => tab.classList.remove('active'));
       button.classList.add('active');
       renderComplaints();
     }
+
     function renderComplaints() {
-      const items = complaintFilter === 'all' ? complaints : complaints.filter(item => complaintFilter === 'resolved' ? item.status === 'resolved' : item.status !== 'resolved');
+      const items = complaintFilter === 'all' 
+        ? complaints 
+        : complaints.filter(item => complaintFilter === 'resolved' 
+            ? (item.status === 'resolved' || item.status === 'rejected') 
+            : (item.status !== 'resolved' && item.status !== 'rejected'));
+
       const list = document.getElementById('complaintsList');
       if (!items.length) {
-        list.innerHTML = '<section style="padding:42px;text-align:center;background:white;border:1px solid #e2e8f0;border-radius:15px"><div style="width:54px;height:54px;margin:auto;display:grid;place-items:center;border-radius:16px;background:#f1f5f9;color:#64748b;font-size:21px"><i class="fa-solid fa-shield"></i></div><h3 style="margin:13px 0 5px">Chưa có khiếu nại nào</h3><p style="color:#64748b;font-size:13px">Nếu có vấn đề với đơn hàng, bạn có thể gửi khiếu nại từ trang đơn hàng.</p><a class="btn btn-primary" href="customer_orders.html">Mở đơn hàng</a></section>';
+        list.innerHTML = '<section style="padding:42px;text-align:center;background:white;border:1px solid #e2e8f0;border-radius:15px"><div style="width:54px;height:54px;margin:auto;display:grid;place-items:center;border-radius:16px;background:#f1f5f9;color:#64748b;font-size:21px"><i class="fa-solid fa-shield"></i></div><h3 style="margin:13px 0 5px">Chưa có khiếu nại nào trong danh mục này</h3><p style="color:#64748b;font-size:13px">Dữ liệu được tải trực tiếp từ hệ thống Firestore.</p><a class="btn btn-primary" href="customer_orders.html" style="margin-top:8px;">Mở đơn hàng</a></section>';
         return;
       }
+
       list.innerHTML = items.map(item => {
-        const resolved = item.status === 'resolved';
-        return `<article class="complaint-card" role="button" tabindex="0" onclick="openComplaintDetail('${escapeHTML(item.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openComplaintDetail('${escapeHTML(item.id)}')}"><div class="complaint-card-main"><div><div class="complaint-tags"><span class="complaint-tag">${escapeHTML(item.id)}</span><span class="complaint-tag ${resolved ? 'resolved' : 'pending'}"><i class="fa-solid ${resolved ? 'fa-circle-check' : 'fa-hourglass-half'}"></i> ${resolved ? 'Đã giải quyết' : 'Đang xử lý'}</span></div><h3 style="font-size:15px;margin:0 0 6px;color:#172033">${escapeHTML(item.reason || 'Khiếu nại đơn hàng')}</h3><div style="font-size:12px;color:#64748b">Đơn hàng <strong>${escapeHTML(item.orderId)}</strong> · ${escapeHTML(item.defendant || 'Provider')}</div></div><div style="font-size:13px;font-weight:800;color:#b91c1c">${escapeHTML(item.amount || 'Theo giá trị đơn')}</div></div><div class="complaint-card-footer"><span><i class="fa-regular fa-calendar"></i> Gửi lúc ${escapeHTML(item.createdAt || '—')}</span><span>${resolved ? 'Xem kết quả xử lý' : 'Nhấn để xem nội dung và tiến độ'} <i class="fa-solid fa-arrow-right"></i></span></div></article>`;
+        const isDone = item.status === 'resolved' || item.status === 'rejected';
+        return `
+          <article class="complaint-card" role="button" tabindex="0" onclick="openComplaintDetail('${escapeHTML(item.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openComplaintDetail('${escapeHTML(item.id)}')}">
+            <div class="complaint-card-main">
+              <div>
+                <div class="complaint-tags">
+                  <span class="complaint-tag">${escapeHTML(item.id)}</span>
+                  ${getStatusBadge(item.status)}
+                </div>
+                <h3 style="font-size:15px;margin:0 0 6px;color:#172033">${escapeHTML(item.reason || 'Khiếu nại đơn hàng')}</h3>
+                <div style="font-size:12.5px;color:#64748b">
+                  Đơn hàng <strong>${escapeHTML(item.orderId)}</strong> · Chuyên gia: <strong>${escapeHTML(item.defendant || 'Provider')}</strong>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px;color:#64748B;margin-bottom:2px;">Yêu cầu hoàn</div>
+                <div style="font-size:15px;font-weight:800;color:#B91C1C">${escapeHTML(item.amount || 'Theo giá trị đơn')}</div>
+              </div>
+            </div>
+            <div class="complaint-card-footer">
+              <span><i class="fa-regular fa-calendar"></i> Gửi lúc ${escapeHTML(item.createdAt || '—')}</span>
+              <span style="color:#B91C1C;font-weight:600;">Xem chi tiết & tiến độ <i class="fa-solid fa-arrow-right"></i></span>
+            </div>
+          </article>
+        `;
       }).join('');
     }
+
     function openComplaintDetail(id) {
       const item = complaints.find(complaint => complaint.id === id);
       if (!item) return;
-      document.getElementById('detailComplaintId').textContent = `${item.id} · Đơn hàng ${item.orderId}`;
+
+      document.getElementById('detailComplaintId').textContent = `${item.id} · Đơn ${item.orderId}`;
+      document.getElementById('detailStatusBadge').innerHTML = getStatusBadge(item.status);
       document.getElementById('detailComplaintTitle').textContent = item.reason || 'Khiếu nại đơn hàng';
-      document.getElementById('detailComplaintMeta').textContent = `Trạng thái: ${item.status === 'resolved' ? 'Đã giải quyết' : 'Đang xử lý'} · Gửi lúc: ${item.createdAt || '—'} · Provider: ${item.defendant || '—'} · Số tiền: ${item.amount || 'Theo giá trị đơn'}`;
-      document.getElementById('detailUserClaim').textContent = item.userClaim || 'Không có nội dung.';
-      document.getElementById('detailProviderClaim').textContent = item.providerClaim || 'Chưa có phản hồi từ Provider.';
-      document.getElementById('detailResolutionWrap').style.display = item.resolution ? '' : 'none';
-      const resolutionLabels = { refund_customer: 'Hoàn tiền cho khách hàng', pay_provider: 'Giải ngân cho Provider', partial_refund: 'Hoàn tiền một phần' };
-      document.getElementById('detailResolution').textContent = resolutionLabels[item.resolution] || item.resolution || '';
+
+      document.getElementById('detailComplaintMeta').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div>Chuyên gia liên quan: <strong>${escapeHTML(item.defendant || '—')}</strong></div>
+          <div>Dịch vụ: <strong>${escapeHTML(item.serviceTitle || '—')}</strong></div>
+          <div>Thời điểm gửi: <strong>${escapeHTML(item.createdAt || '—')}</strong></div>
+          <div>Số tiền yêu cầu: <strong style="color:#DC2626;">${escapeHTML(item.amount || 'Theo giá trị đơn')}</strong></div>
+        </div>
+      `;
+
+      document.getElementById('detailUserClaim').textContent = item.userClaim || 'Không có mô tả chi tiết.';
+
+      const evWrap = document.getElementById('detailEvidenceWrap');
+      if (item.evidence) {
+        evWrap.style.display = 'block';
+        document.getElementById('detailEvidence').innerHTML = `<i class="fa-solid fa-paperclip"></i> ${escapeHTML(item.evidence)}`;
+      } else {
+        evWrap.style.display = 'none';
+      }
+
+      document.getElementById('detailProviderClaim').textContent = item.providerClaim || 'Chuyên gia chưa gửi nội dung giải trình hoặc phản hồi.';
+
+      const resWrap = document.getElementById('detailResolutionWrap');
+      if (item.status === 'resolved' || item.status === 'rejected' || item.verdict) {
+        resWrap.style.display = 'block';
+        const verdictTitles = {
+          refund_customer: 'Chấp nhận khiếu nại — Hoàn tiền 100% cho Khách hàng',
+          pay_provider: 'Bác bỏ khiếu nại — Giải ngân 100% cho Chuyên gia',
+          partial_refund: 'Phân định hòa giải — Hoàn tiền 50% cho Khách hàng & Giải ngân 50% cho Chuyên gia',
+          reject: 'Từ chối giải quyết khiếu nại'
+        };
+        document.getElementById('detailResolutionVerdict').innerHTML = `<i class="fa-solid fa-gavel"></i> ${verdictTitles[item.verdict] || verdictTitles[item.resolution] || 'Đã có kết quả giải quyết'}`;
+        document.getElementById('detailResolutionNote').textContent = item.resolutionNote || 'Admin đã hoàn tất kiểm tra chứng cứ và thực hiện cập nhật ví Escrow.';
+      } else {
+        resWrap.style.display = 'none';
+      }
+
+      // Render timeline
+      const timelineEl = document.getElementById('detailTimeline');
+      const timelineList = Array.isArray(item.timeline) && item.timeline.length ? item.timeline : [
+        { time: item.createdAt || '—', actor: 'Khách hàng', action: 'Gửi khiếu nại tranh chấp', note: item.reason }
+      ];
+
+      timelineEl.innerHTML = timelineList.map((evt, idx) => `
+        <div style="display:flex;gap:12px;padding:8px 0;border-left:2px solid #E2E8F0;margin-left:8px;padding-left:14px;position:relative;">
+          <div style="position:absolute;left:-7px;top:10px;width:12px;height:12px;border-radius:50%;background:#DC2626;border:2px solid #FFF;"></div>
+          <div style="min-width:0;flex:1;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <strong style="font-size:12.5px;color:#0F172A;">${escapeHTML(evt.actor || evt.role || 'Hệ thống')}: ${escapeHTML(evt.action || 'Cập nhật')}</strong>
+              <span style="font-size:11px;color:#94A3B8;">${escapeHTML(evt.time || '—')}</span>
+            </div>
+            ${evt.note ? `<div style="font-size:12px;color:#475569;margin-top:3px;background:#FFF;padding:8px 10px;border-radius:8px;border:1px solid #E2E8F0;">${escapeHTML(evt.note)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+
       document.getElementById('complaintDetailModal').style.display = 'flex';
     }
-    function closeComplaintDetail() { document.getElementById('complaintDetailModal').style.display = 'none'; }
+
+    function closeComplaintDetail() {
+      document.getElementById('complaintDetailModal').style.display = 'none';
+    }
   </script>
 </body>
 </html>

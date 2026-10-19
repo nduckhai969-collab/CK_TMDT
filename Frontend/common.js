@@ -17,8 +17,8 @@ const DEFAULT_STATE = {
     { id: 'USR006', name: 'Vũ Thị Minh', email: 'minh.vu@example.com', phone: '0944 889 900', role: 'Customer', joinDate: '02/08/2024', spentOrEarned: '18.400.000đ', status: 'active', lockReason: '' },
     { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', status: 'locked', lockReason: 'Gian lận đánh giá và sử dụng tài khoản ảo', lockDuration: 'Vĩnh viễn' },
     { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', joinDate: '10/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
-    { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', joinDate: '15/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
-    { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', status: 'active', lockReason: '' }
+    { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', status: 'active', lockReason: '' },
+    { id: 'ADM002', name: 'SkillRental Admin', email: 'skillrentaladmin@gmail.com', phone: '0999 888 666', role: 'Admin', joinDate: '17/10/2026', spentOrEarned: '0đ', status: 'active', lockReason: '' }
   ],
 
   // UC-54, UC-55: Provider Approvals
@@ -286,9 +286,7 @@ window.adminUtils = {
   isAdminAccount(user) {
     if (!user) return false;
     const role = String(user.role || '').toLowerCase();
-    const id = String(user.id || '').toUpperCase();
-    const email = String(user.email || '').toLowerCase();
-    return role === 'admin' || id.startsWith('ADM') || email.includes('admin@');
+    return role === 'admin';
   }
 };
 
@@ -397,13 +395,22 @@ function syncUserToAdminState(userData) {
     if (userData.name && (!existing.name || existing.name.includes('@'))) {
       existing.name = String(userData.name).trim();
     }
-    if (userData.phone && !existing.phone) {
-      existing.phone = String(userData.phone).trim();
+    if (userData.id) {
+      existing.id = userData.id;
+    }
+    if (userData.role) {
+      existing.role = userData.role;
+    }
+    if (userData.status) {
+      existing.status = userData.status;
+    }
+    if (typeof userData.balance === 'number') {
+      existing.balance = userData.balance;
     }
 
     targetUser = existing;
   } else {
-    // Tài khoản MỚI: Sinh ID USRxxx tiếp theo an toàn
+    // Tài khoản MỚI: Sử dụng ID và vai trò từ hồ sơ xác thực hợp lệ
     const maxNum = state.users.reduce((m, u) => {
       const match = /^USR(\d+)$/.exec(u.id || '');
       return match ? Math.max(m, parseInt(match[1], 10)) : m;
@@ -413,9 +420,10 @@ function syncUserToAdminState(userData) {
     const now = new Date();
     const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
-    // Bảo mật: Người dùng mới chỉ được là Customer hoặc Provider, tuyệt đối không được tự chọn Admin
-    const requestedRole = userData.role || 'Customer';
-    const safeRole = requestedRole === 'Provider' ? 'Provider' : 'Customer';
+    // Vai trò lấy từ hồ sơ xác thực hợp lệ (Admin, Provider hoặc Customer)
+    const safeRole = (userData.role === 'Admin' || userData.role === 'Provider')
+      ? userData.role
+      : 'Customer';
 
     targetUser = {
       id: assignedId,
@@ -485,33 +493,48 @@ async function syncStateWithServer() {
   updateSidebarBadges();
 }
 
+// Helper lấy Header xác thực cho Admin Portal (hỗ trợ x-user-id và Bearer token)
+function getAdminAuthHeaders(extraHeaders = {}) {
+  const headers = { ...extraHeaders };
+  try {
+    const raw = localStorage.getItem('SKILLRENTAL_CURRENT_USER');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u && (u.id || u.uid)) {
+        headers['x-user-id'] = u.id || u.uid;
+      }
+    }
+  } catch (_) {}
+  return headers;
+}
+
 // Admin API client methods
 window.adminApi = {
-  getDashboard: () => fetch(`${API_BASE}/api/admin/dashboard`).then(r => r.json()),
-  getStatistics: (from, to) => fetch(`${API_BASE}/api/admin/statistics` + (from && to ? `?startDate=${encodeURIComponent(from)}&endDate=${encodeURIComponent(to)}` : '')).then(r => r.json()),
-  getUsers: (params) => fetch(`${API_BASE}/api/admin/users` + (params ? '?' + new URLSearchParams(params) : '')).then(r => r.json()),
-  getUser: (id) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}`).then(r => r.json()),
-  lockUser: (id, reason, duration) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, duration }) }).then(r => r.json()),
-  unlockUser: (id) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/unlock`, { method: 'POST' }).then(r => r.json()),
-  getUnlockRequests: () => fetch(`${API_BASE}/api/admin/unlock-requests`).then(r => r.json()),
-  decideUnlock: (id, decision) => fetch(`${API_BASE}/api/admin/unlock-requests/${encodeURIComponent(id)}/decide`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }) }).then(r => r.json()),
-  approveProvider: (id) => fetch(`${API_BASE}/api/admin/providers/${id}/approve`, { method: 'POST' }).then(r => r.json()),
-  rejectProvider: (id, reason) => fetch(`${API_BASE}/api/admin/providers/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
-  approveSkill: (id) => fetch(`${API_BASE}/api/admin/skills/${id}/approve`, { method: 'POST' }).then(r => r.json()),
-  rejectSkill: (id, reason) => fetch(`${API_BASE}/api/admin/skills/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
-  approveService: (id) => fetch(`${API_BASE}/api/admin/services/${id}/approve`, { method: 'POST' }).then(r => r.json()),
-  approveServicePrice: (id) => fetch(`${API_BASE}/api/admin/services/${id}/approve-price`, { method: 'POST' }).then(r => r.json()),
-  lockService: (id, reason) => fetch(`${API_BASE}/api/admin/services/${id}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
-  unlockService: (id) => fetch(`${API_BASE}/api/admin/services/${id}/unlock`, { method: 'POST' }).then(r => r.json()),
-  getComplaints: (params) => fetch(`${API_BASE}/api/admin/complaints` + (params ? '?' + new URLSearchParams(params) : '')).then(r => r.json()),
-  updateComplaintStatus: (id, status, note) => fetch(`${API_BASE}/api/admin/complaints/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, note }) }).then(r => r.json()),
-  resolveComplaint: (id, resolution, refundPercentage, note, verdict) => fetch(`${API_BASE}/api/admin/complaints/${id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resolution, refundPercentage, note, verdict }) }).then(r => r.json()),
-  resolveReport: (id, action, note) => fetch(`${API_BASE}/api/admin/reports/${id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, note }) }).then(r => r.json()),
-  approvePayout: (id) => fetch(`${API_BASE}/api/admin/payouts/${id}/approve`, { method: 'POST' }).then(r => r.json()),
-  rejectPayout: (id, reason) => fetch(`${API_BASE}/api/admin/payouts/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
-  forceReleaseOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-release`, { method: 'POST' }).then(r => r.json()),
-  forceRefundOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-refund`, { method: 'POST' }).then(r => r.json()),
-  moderateReview: (id, status, note) => fetch(`${API_BASE}/api/admin/reviews/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, note }) }).then(r => r.json())
+  getDashboard: () => fetch(`${API_BASE}/api/admin/dashboard`, { headers: getAdminAuthHeaders() }).then(r => r.json()),
+  getStatistics: (from, to) => fetch(`${API_BASE}/api/admin/statistics` + (from && to ? `?startDate=${encodeURIComponent(from)}&endDate=${encodeURIComponent(to)}` : ''), { headers: getAdminAuthHeaders() }).then(r => r.json()),
+  getUsers: (params) => fetch(`${API_BASE}/api/admin/users` + (params ? '?' + new URLSearchParams(params) : ''), { headers: getAdminAuthHeaders() }).then(r => r.json()),
+  getUser: (id) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}`, { headers: getAdminAuthHeaders() }).then(r => r.json()),
+  lockUser: (id, reason, duration) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/lock`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ reason, duration }) }).then(r => r.json()),
+  unlockUser: (id) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/unlock`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  getUnlockRequests: () => fetch(`${API_BASE}/api/admin/unlock-requests`, { headers: getAdminAuthHeaders() }).then(r => r.json()),
+  decideUnlock: (id, decision) => fetch(`${API_BASE}/api/admin/unlock-requests/${encodeURIComponent(id)}/decide`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ decision }) }).then(r => r.json()),
+  approveProvider: (id) => fetch(`${API_BASE}/api/admin/providers/${id}/approve`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  rejectProvider: (id, reason) => fetch(`${API_BASE}/api/admin/providers/${id}/reject`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ reason }) }).then(r => r.json()),
+  approveSkill: (id) => fetch(`${API_BASE}/api/admin/skills/${id}/approve`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  rejectSkill: (id, reason) => fetch(`${API_BASE}/api/admin/skills/${id}/reject`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ reason }) }).then(r => r.json()),
+  approveService: (id) => fetch(`${API_BASE}/api/admin/services/${id}/approve`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  approveServicePrice: (id) => fetch(`${API_BASE}/api/admin/services/${id}/approve-price`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  lockService: (id, reason) => fetch(`${API_BASE}/api/admin/services/${id}/lock`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ reason }) }).then(r => r.json()),
+  unlockService: (id) => fetch(`${API_BASE}/api/admin/services/${id}/unlock`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  getComplaints: (params) => fetch(`${API_BASE}/api/admin/complaints` + (params ? '?' + new URLSearchParams(params) : ''), { headers: getAdminAuthHeaders() }).then(r => r.json()),
+  updateComplaintStatus: (id, status, note) => fetch(`${API_BASE}/api/admin/complaints/${id}/status`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ status, note }) }).then(r => r.json()),
+  resolveComplaint: (id, resolution, refundPercentage, note, verdict) => fetch(`${API_BASE}/api/admin/complaints/${id}/resolve`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ resolution, refundPercentage, note, verdict }) }).then(r => r.json()),
+  resolveReport: (id, action, note) => fetch(`${API_BASE}/api/admin/reports/${id}/resolve`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ action, note }) }).then(r => r.json()),
+  approvePayout: (id) => fetch(`${API_BASE}/api/admin/payouts/${id}/approve`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  rejectPayout: (id, reason) => fetch(`${API_BASE}/api/admin/payouts/${id}/reject`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ reason }) }).then(r => r.json()),
+  forceReleaseOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-release`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  forceRefundOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-refund`, { method: 'POST', headers: getAdminAuthHeaders() }).then(r => r.json()),
+  moderateReview: (id, status, note) => fetch(`${API_BASE}/api/admin/reviews/${id}/status`, { method: 'POST', headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ status, note }) }).then(r => r.json())
 };
 
 // Reset state helper
@@ -520,10 +543,65 @@ function resetAppStateToDefault() {
   location.reload();
 }
 
+// Kiểm tra phiên đăng nhập và đồng bộ thông tin Quản trị viên lên Topbar
+function checkAdminAuthAndSyncUI() {
+  const sessionRaw = localStorage.getItem('SKILLRENTAL_CURRENT_USER');
+  let currentUser = null;
+  if (sessionRaw) {
+    try { currentUser = JSON.parse(sessionRaw); } catch (_) {}
+  }
+
+  const nameEl = document.querySelector('.admin-info strong');
+  const roleEl = document.querySelector('.admin-info span');
+  const avatarEl = document.querySelector('.admin-avatar');
+
+  if (currentUser && currentUser.role === 'Admin') {
+    if (nameEl && currentUser.name) nameEl.textContent = currentUser.name;
+    if (roleEl) roleEl.textContent = 'Quản trị viên (' + (currentUser.id || 'Admin') + ')';
+    if (avatarEl) {
+      if (currentUser.avatar && !currentUser.avatar.includes('unsplash')) {
+        avatarEl.innerHTML = `<img src="${currentUser.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = (currentUser.name || 'A').charAt(0).toUpperCase();
+      }
+    }
+  } else if (currentUser && currentUser.role && currentUser.role !== 'Admin') {
+    // Nếu đang đăng nhập với quyền Customer / Provider mà cố vào trang Quản trị
+    alert('Tài khoản của bạn không có quyền Quản trị viên (Admin). Vui lòng đăng nhập với tài khoản Admin.');
+    window.location.href = currentUser.role === 'Provider' ? 'dashboard.html' : 'customer.html';
+  } else if (!currentUser) {
+    // Nếu chưa đăng nhập: yêu cầu đăng nhập tài khoản Quản trị viên
+    const currentFile = window.location.pathname.substring(window.location.pathname.lastIndexOf('/') + 1);
+    const isAdminPage = ['admin.html', 'users.html', 'providers.html', 'services.html', 'orders.html', 'complaints.html', 'reports.html', 'statistics.html', 'cashflow.html'].includes(currentFile);
+    if (isAdminPage) {
+      alert('Vui lòng đăng nhập với tài khoản Quản trị viên (Admin) để tiếp tục.');
+      window.location.href = 'index.html?auth=login';
+    }
+  }
+}
+
+// Hàm đăng xuất dùng chung cho Admin Portal
+function handleLogout() {
+  try {
+    if (window.SkillAuth && typeof window.SkillAuth.logout === 'function') {
+      window.SkillAuth.logout();
+    }
+  } catch (_) {}
+  localStorage.removeItem('SKILLRENTAL_CURRENT_USER');
+  if (typeof showToast === 'function') {
+    showToast('Đăng xuất thành công', 'Bạn đã đăng xuất khỏi phiên làm việc', 'info');
+  }
+  setTimeout(() => {
+    window.location.href = 'index.html?logout=1';
+  }, 400);
+}
+window.handleLogout = handleLogout;
+
 // ============================================================================
 // AUTOMATIC NAVIGATION ACTIVE STATE & BADGE COUNTS
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
+  checkAdminAuthAndSyncUI();
   highlightActiveMenu();
   updateSidebarBadges();
   bindSubtabEvents();

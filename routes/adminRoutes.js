@@ -136,14 +136,14 @@ router.post('/state', (req, res) => {
 });
 
 // ============================================================================
-// 3. USER MANAGEMENT (UC-52, UC-53, UC-53b)
+// 3. USER MANAGEMENT (UC-52, UC-53, UC-53b) - FIRESTORE SINGLE SOURCE OF TRUTH
 // ============================================================================
 router.get('/users', (req, res) => {
   const { role, status, q } = req.query;
   let users = db.getCollection('users');
 
   if (role && role !== 'all') {
-    users = users.filter(u => u.role.toLowerCase() === role.toLowerCase());
+    users = users.filter(u => u.role && u.role.toLowerCase() === role.toLowerCase());
   }
   if (status && status !== 'all') {
     users = users.filter(u => u.status === status);
@@ -161,54 +161,137 @@ router.get('/users', (req, res) => {
   res.json({ success: true, total: users.length, users });
 });
 
-// Lock user account (UC-53)
-router.post('/users/:id/lock', (req, res) => {
-  const { reason, duration } = req.body;
-  if (!reason || !reason.trim()) {
-    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do khóa tài khoản!' });
-  }
-
+// Single user detail from Firestore
+router.get('/users/:id', (req, res) => {
   const users = db.getCollection('users');
   const user = users.find(u => u.id === req.params.id);
 
   if (!user) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
   }
 
-  const durationText = duration === 'permanent' ? 'Vĩnh viễn' : (duration ? `${duration} ngày` : '7 ngày');
-  user.status = 'locked';
-  user.lockReason = reason.trim();
-  user.lockDuration = durationText;
-
-  db.saveCollection('users', users);
-
-  res.json({
-    success: true,
-    message: `Đã khóa tài khoản ${user.name} (${durationText}).`,
-    user
-  });
+  res.json({ success: true, user });
 });
 
-// Unlock user account
-router.post('/users/:id/unlock', (req, res) => {
-  const users = db.getCollection('users');
-  const user = users.find(u => u.id === req.params.id);
+// Lock user account (UC-53) - Firestore Single Source of Truth
+router.post('/users/:id/lock', async (req, res) => {
+  try {
+    const { reason, duration } = req.body;
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do khóa tài khoản!' });
+    }
 
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+    const users = db.getCollection('users');
+    const user = users.find(u => u.id === req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
+    }
+
+    // Nghiệp vụ bảo mật: Không được phép tự khóa tài khoản Quản trị viên hệ thống
+    if (user.role === 'Admin' || user.id === 'ADM001' || user.id === 'ADM002') {
+      return res.status(400).json({ success: false, message: 'Không thể khóa tài khoản Quản trị viên hệ thống!' });
+    }
+
+    const isPermanent = duration === 'permanent';
+    const durationDays = parseInt(duration, 10) || 7;
+    const durationText = isPermanent ? 'Vĩnh viễn' : `${durationDays} ngày`;
+
+    const now = new Date();
+    const expiresDate = isPermanent ? null : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+    user.status = 'locked';
+    user.lockReason = reason.trim();
+    user.lockDuration = durationText;
+    user.isPermanentLock = isPermanent;
+    user.lockedAt = now.toLocaleString('vi-VN');
+    user.lockExpiresAt = expiresDate ? expiresDate.toISOString() : null;
+    user.lockExpiresAtFormatted = expiresDate ? expiresDate.toLocaleString('vi-VN') : 'Vĩnh viễn';
+    user.lockedBy = (req.authUser && (req.authUser.name || req.authUser.email)) || 'Admin Quản Trị B4';
+
+    // Đồng bộ vô hiệu hóa tài khoản Firebase Authentication (nếu có tài khoản đăng nhập)
+    const { auth } = require('../firebase');
+    if (auth && (user.uid || user.email)) {
+      try {
+        let fbUid = user.uid;
+        if (!fbUid && user.email) {
+          const record = await auth.getUserByEmail(user.email).catch(() => null);
+          if (record) fbUid = record.uid;
+        }
+        if (fbUid) {
+          await auth.updateUser(fbUid, { disabled: true }).catch(err => {
+            console.warn('[Admin] Firebase Auth disable warning:', err.message);
+          });
+        }
+      } catch (authErr) {
+        console.warn('[Admin] Firebase Auth disable check failed:', authErr.message);
+      }
+    }
+
+    // Ghi đè bền vững trực tiếp vào Firestore
+    await db.saveCollectionAndWait('users', users);
+
+    res.json({
+      success: true,
+      message: `Đã khóa tài khoản ${user.name} (${durationText}) thành công.`,
+      user
+    });
+  } catch (error) {
+    console.error('[Admin] Lỗi khóa người dùng:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
   }
+});
 
-  user.status = 'active';
-  user.lockReason = '';
-  user.lockDuration = '';
+// Unlock user account - Firestore Single Source of Truth
+router.post('/users/:id/unlock', async (req, res) => {
+  try {
+    const users = db.getCollection('users');
+    const user = users.find(u => u.id === req.params.id);
 
-  db.saveCollection('users', users);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
+    }
 
-  res.json({
-    success: true,
-    message: `Đã mở khóa tài khoản ${user.name} thành công.`,
-    user
-  });
+    user.status = 'active';
+    user.lockReason = '';
+    user.lockDuration = '';
+    user.isPermanentLock = false;
+    user.lockExpiresAt = null;
+    user.lockExpiresAtFormatted = null;
+    user.unlockedAt = new Date().toLocaleString('vi-VN');
+    user.unlockedBy = (req.authUser && (req.authUser.name || req.authUser.email)) || 'Admin Quản Trị B4';
+
+    // Khôi phục quyền đăng nhập Firebase Authentication (nếu có)
+    const { auth } = require('../firebase');
+    if (auth && (user.uid || user.email)) {
+      try {
+        let fbUid = user.uid;
+        if (!fbUid && user.email) {
+          const record = await auth.getUserByEmail(user.email).catch(() => null);
+          if (record) fbUid = record.uid;
+        }
+        if (fbUid) {
+          await auth.updateUser(fbUid, { disabled: false }).catch(err => {
+            console.warn('[Admin] Firebase Auth enable warning:', err.message);
+          });
+        }
+      } catch (authErr) {
+        console.warn('[Admin] Firebase Auth enable check failed:', authErr.message);
+      }
+    }
+
+    // Ghi đè bền vững trực tiếp vào Firestore
+    await db.saveCollectionAndWait('users', users);
+
+    res.json({
+      success: true,
+      message: `Đã mở khóa tài khoản ${user.name} thành công.`,
+      user
+    });
+  } catch (error) {
+    console.error('[Admin] Lỗi mở khóa người dùng:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
+  }
 });
 
 // Unlock Requests / Appeals (UC-53b)
@@ -217,52 +300,66 @@ router.get('/unlock-requests', (req, res) => {
   res.json({ success: true, total: requests.length, requests });
 });
 
-router.post('/unlock-requests/:id/decide', (req, res) => {
-  const { decision } = req.body; // 'approve', 'probation', 'reject', 'reject_perm'
-  const requests = db.getCollection('unlockRequests');
-  const reqIndex = requests.findIndex(r => r.id === req.params.id || r.userId === req.params.id);
+router.post('/unlock-requests/:id/decide', async (req, res) => {
+  try {
+    const { decision } = req.body; // 'approve', 'probation', 'reject', 'reject_perm'
+    const requests = db.getCollection('unlockRequests');
+    const reqIndex = requests.findIndex(r => r.id === req.params.id || r.userId === req.params.id);
 
-  if (reqIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn khiếu nại mở khóa!' });
+    if (reqIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn khiếu nại mở khóa!' });
+    }
+
+    const request = requests[reqIndex];
+    const users = db.getCollection('users');
+    const user = users.find(u => u.id === request.id || u.id === request.userId);
+
+    let message = '';
+    const now = new Date();
+
+    if (decision === 'approve') {
+      if (user) {
+        user.status = 'active';
+        user.lockReason = '';
+        user.lockDuration = '';
+        user.isPermanentLock = false;
+        user.lockExpiresAt = null;
+        user.unlockedAt = now.toLocaleString('vi-VN');
+      }
+      message = `Tài khoản ${request.name} đã được phục hồi quyền truy cập thành công.`;
+      requests.splice(reqIndex, 1);
+    } else if (decision === 'probation') {
+      if (user) {
+        user.status = 'active';
+        user.lockReason = 'Đang theo dõi thử thách 30 ngày';
+        user.lockDuration = '30 ngày thử thách';
+        user.isPermanentLock = false;
+        user.lockExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      }
+      message = `Tài khoản ${request.name} được chuyển sang chế độ theo dõi thử thách 30 ngày.`;
+      requests.splice(reqIndex, 1);
+    } else if (decision === 'reject_perm') {
+      if (user) {
+        user.status = 'locked';
+        user.lockDuration = 'Vĩnh viễn';
+        user.isPermanentLock = true;
+        user.lockExpiresAt = null;
+      }
+      message = `Đã giữ nguyên án khóa vĩnh viễn với tài khoản ${request.name}.`;
+      requests.splice(reqIndex, 1);
+    } else {
+      message = `Đã từ chối đơn mở khóa của ${request.name}.`;
+      requests.splice(reqIndex, 1);
+    }
+
+    await db.saveCollectionAndWait('users', users);
+    await db.saveCollectionAndWait('unlockRequests', requests);
+
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error('[Admin] Lỗi xử lý yêu cầu mở khóa:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
   }
-
-  const request = requests[reqIndex];
-  const users = db.getCollection('users');
-  const user = users.find(u => u.id === request.id || u.id === request.userId);
-
-  let message = '';
-  if (decision === 'approve') {
-    if (user) {
-      user.status = 'active';
-      user.lockReason = '';
-      user.lockDuration = '';
-    }
-    message = `Tài khoản ${request.name} đã được phục hồi quyền truy cập thành công.`;
-    requests.splice(reqIndex, 1);
-  } else if (decision === 'probation') {
-    if (user) {
-      user.status = 'active';
-      user.lockReason = 'Đang theo dõi thử thách 30 ngày';
-      user.lockDuration = '30 ngày thử thách';
-    }
-    message = `Tài khoản ${request.name} được chuyển sang chế độ theo dõi thử thách 30 ngày.`;
-    requests.splice(reqIndex, 1);
-  } else if (decision === 'reject_perm') {
-    if (user) {
-      user.status = 'locked';
-      user.lockDuration = 'Vĩnh viễn';
-    }
-    message = `Đã giữ nguyên án khóa vĩnh viễn với tài khoản ${request.name}.`;
-    requests.splice(reqIndex, 1);
-  } else {
-    message = `Đã từ chối đơn mở khóa của ${request.name}.`;
-    requests.splice(reqIndex, 1);
-  }
-
-  db.saveCollection('users', users);
-  db.saveCollection('unlockRequests', requests);
-
-  res.json({ success: true, message });
 });
 
 // ============================================================================

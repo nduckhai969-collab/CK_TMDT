@@ -15,7 +15,10 @@ const DEFAULT_STATE = {
     { id: 'USR004', name: 'Hoàng Văn Nam', email: 'nam.hoang@example.com', phone: '0933 221 100', role: 'Customer', joinDate: '20/05/2024', spentOrEarned: '5.200.000đ', status: 'locked', lockReason: 'Hủy đơn hàng liên tục 5 lần không lý do', lockDuration: '7 ngày' },
     { id: 'USR005', name: 'Phạm Hữu Cường', email: 'cuong.pham@example.com', phone: '0977 445 566', role: 'Provider', joinDate: '18/06/2024', spentOrEarned: '74.000.000đ', status: 'active', lockReason: '' },
     { id: 'USR006', name: 'Vũ Thị Minh', email: 'minh.vu@example.com', phone: '0944 889 900', role: 'Customer', joinDate: '02/08/2024', spentOrEarned: '18.400.000đ', status: 'active', lockReason: '' },
-    { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', status: 'locked', lockReason: 'Gian lận đánh giá và sử dụng tài khoản ảo', lockDuration: 'Vĩnh viễn' }
+    { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', status: 'locked', lockReason: 'Gian lận đánh giá và sử dụng tài khoản ảo', lockDuration: 'Vĩnh viễn' },
+    { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', joinDate: '10/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
+    { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', joinDate: '15/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
+    { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', status: 'active', lockReason: '' }
   ],
 
   // UC-54, UC-55: Provider Approvals
@@ -136,10 +139,50 @@ const DEFAULT_STATE = {
       defendant: 'Đặng Quốc Huy (Provider)',
       reason: 'Cài đặt phần mềm độc hại làm treo hệ điều hành và không hoàn thành cam kết',
       priority: 'urgent',
-      status: 'pending',
+      status: 'resolved',
       amount: '600.000đ',
+      verdict: 'Hoàn tiền 100% cho Khách hàng',
+      resolvedAt: '25/04/2025 15:40',
       userClaim: 'Provider cài tool crack làm máy bị nhiễm mã độc tống tiền ransomware. Đơn hàng hoàn toàn không đạt yêu cầu.',
       providerClaim: 'Khách hàng yêu cầu bẻ khóa game lậu, tôi đã cảnh báo trước nhưng khách vẫn đồng ý tiến hành.'
+    },
+    {
+      id: 'KN-2025-03',
+      orderId: 'DH001233',
+      complainant: 'Lê Minh Hoàng (Khách)',
+      defendant: 'Trần Thị Lan (Provider)',
+      reason: 'Chậm deadline bàn giao bản thiết kế bộ nhận diện thương hiệu hơn 5 ngày',
+      priority: 'normal',
+      status: 'pending',
+      amount: '2.800.000đ',
+      userClaim: 'Theo thỏa thuận ban đầu hạn chót bàn giao logo là ngày 02/05, đến nay Provider không phản hồi tin nhắn và trễ hạn làm ảnh hưởng chiến dịch ra mắt thương hiệu.',
+      providerClaim: 'Tôi có nhắn tin xin gia hạn 2 ngày do mất điện khu vực làm hỏng ổ cứng đang render file vector. Tôi đã khôi phục xong và sẵn sàng bàn giao file gốc kèm 3 mẫu thiết kế bù.'
+    },
+    {
+      id: 'KN-2025-04',
+      orderId: 'DH001234',
+      complainant: 'Trần Thị Mai (Khách)',
+      defendant: 'Nguyễn Văn An (Provider)',
+      reason: 'Giao diện website không responsive đúng chuẩn trên màn hình điện thoại di động',
+      priority: 'high',
+      status: 'pending',
+      amount: '4.500.000đ',
+      userClaim: 'Website chạy trên máy tính rất tốt nhưng khi mở trên iPhone bị vỡ khung menu và lỗi hiển thị giỏ hàng. Yêu cầu sửa gấp hoặc hoàn trả một phần chi phí.',
+      providerClaim: 'Tôi đã kiểm tra, menu bị tràn do khách hàng tự ý chèn ảnh banner kích thước quá lớn không đúng tài liệu hướng dẫn. Tôi đồng ý hỗ trợ sửa CSS lại miễn phí cho khách.'
+    },
+    {
+      id: 'KN-2025-05',
+      orderId: 'DH001231',
+      complainant: 'Phạm Thị Lan (Khách)',
+      defendant: 'Phạm Hữu Cường (Provider)',
+      reason: 'Hủy lịch học Speaking không báo trước và không sắp xếp buổi học bù',
+      priority: 'normal',
+      status: 'resolved',
+      amount: '700.000đ',
+      verdict: 'Chia bồi thường 50 / 50 giữa hai bên',
+      resolvedAt: '26/04/2025 18:20',
+      userClaim: 'Thầy Cường hủy 2 buổi học liên tiếp sát giờ khiến tôi không kịp chuẩn bị cho kỳ thi IELTS tuần tới.',
+      providerClaim: 'Tôi bị sốt xuất huyết đột xuất phải nhập viện cấp cứu, đã nhờ trợ giảng gửi tài liệu tự học và sẵn sàng dạy bù 3 buổi sau khi xuất viện.'
     }
   ],
 
@@ -199,8 +242,56 @@ const DEFAULT_STATE = {
 };
 
 // ============================================================================
-// LOCALSTORAGE SYNC & RETRIEVAL
+// BACKEND API BASE & LOCALSTORAGE SYNC & RETRIEVAL
 // ============================================================================
+const API_BASE = (typeof window !== 'undefined' && window.location.protocol.startsWith('http') && (window.location.port === '3000' || window.location.port === '')) ? '' : 'http://localhost:3000';
+
+// Utility helpers for dates, prices and admin session
+window.adminUtils = {
+  parsePrice(val) {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const num = String(val).replace(/[^\d]/g, '');
+    return parseInt(num, 10) || 0;
+  },
+  formatMoney(num) {
+    return Number(num || 0).toLocaleString('vi-VN') + 'đ';
+  },
+  parseOrderDate(dateStr) {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return dateStr;
+    const s = String(dateStr).trim();
+    const dmyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmyMatch) {
+      const day = parseInt(dmyMatch[1], 10);
+      const month = parseInt(dmyMatch[2], 10) - 1;
+      const year = parseInt(dmyMatch[3], 10);
+      return new Date(year, month, day);
+    }
+    const ymdMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (ymdMatch) {
+      const year = parseInt(ymdMatch[1], 10);
+      const month = parseInt(ymdMatch[2], 10) - 1;
+      const day = parseInt(ymdMatch[3], 10);
+      return new Date(year, month, day);
+    }
+    const parsed = new Date(s);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  },
+  toISO(d) {
+    if (!d || !(d instanceof Date)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  },
+  isAdminAccount(user) {
+    if (!user) return false;
+    const role = String(user.role || '').toLowerCase();
+    const id = String(user.id || '').toUpperCase();
+    const email = String(user.email || '').toLowerCase();
+    return role === 'admin' || id.startsWith('ADM') || email.includes('admin@');
+  }
+};
+
 function getAppState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -208,7 +299,38 @@ function getAppState() {
       saveAppState(DEFAULT_STATE);
       return JSON.parse(JSON.stringify(DEFAULT_STATE));
     }
-    return JSON.parse(raw);
+    const state = JSON.parse(raw);
+    if (!state || typeof state !== 'object') {
+      saveAppState(DEFAULT_STATE);
+      return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    }
+    // Ensure all required collections exist and smart-merge missing default items (like newly added complaints)
+    const collections = ['users', 'orders', 'packages', 'services', 'reviews', 'complaints', 'reports', 'payouts', 'pendingProviders', 'skillApprovals', 'packagePurchases'];
+    let stateChanged = false;
+
+    collections.forEach(key => {
+      if (!Array.isArray(state[key])) {
+        state[key] = Array.isArray(DEFAULT_STATE[key]) ? JSON.parse(JSON.stringify(DEFAULT_STATE[key])) : [];
+        stateChanged = true;
+      } else if (Array.isArray(DEFAULT_STATE[key])) {
+        // Tự động bổ sung các bản ghi mặc định mới nếu trong localStorage chưa có mã ID đó
+        const existingIds = new Set(state[key].map(item => item && item.id).filter(Boolean));
+        DEFAULT_STATE[key].forEach(defaultItem => {
+          if (defaultItem && defaultItem.id && !existingIds.has(defaultItem.id)) {
+            state[key].push(JSON.parse(JSON.stringify(defaultItem)));
+            stateChanged = true;
+          }
+        });
+      }
+    });
+
+    if (stateChanged) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    return state;
   } catch (err) {
     console.error('Error reading localStorage state:', err);
     return JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -218,10 +340,179 @@ function getAppState() {
 function saveAppState(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    window.dispatchEvent(new CustomEvent('appStateUpdated', { detail: state }));
+    // Asynchronously push changes to backend if available
+    if (typeof fetch !== 'undefined') {
+      fetch(`${API_BASE}/api/admin/state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      }).catch(() => {
+        // Silently ignore offline backend sync warnings
+      });
+    }
   } catch (err) {
     console.error('Error saving state to localStorage:', err);
   }
 }
+
+/**
+ * Đồng bộ người dùng (Đăng ký mới hoặc Đăng nhập Google) vào SKILL_RENTAL_ADMIN_STATE_V1
+ * Đảm bảo:
+ * - ID người dùng ổn định (dạng USRxxx, không đổi khi đăng nhập lại)
+ * - Không trùng lặp tài khoản
+ * - Bảo toàn vai trò (role), số dư, trạng thái nếu tài khoản đã tồn tại
+ * - Không cho phép tự nâng quyền Admin
+ * - Phát sự kiện appStateUpdated & skillrental:users-synced để cập nhật Admin ngay lập tức
+ */
+function syncUserToAdminState(userData) {
+  if (!userData || !userData.email) return null;
+
+  const state = getAppState();
+  const cleanEmail = String(userData.email || '').trim().toLowerCase();
+  const uid = userData.uid ? String(userData.uid) : null;
+
+  // Tìm tài khoản đã tồn tại theo email hoặc theo UID
+  const existingIndex = state.users.findIndex(u => {
+    const uEmail = String(u.email || '').trim().toLowerCase();
+    const uUid = u.uid ? String(u.uid) : null;
+    return (cleanEmail && uEmail === cleanEmail) || (uid && uUid === uid);
+  });
+
+  let targetUser;
+
+  if (existingIndex !== -1) {
+    // Tài khoản ĐÃ TỒN TẠI: Liên kết & cập nhật an toàn, không tạo mới, không ghi đè vai trò
+    const existing = state.users[existingIndex];
+
+    if (uid && (!existing.uid || existing.uid !== uid)) {
+      existing.uid = uid;
+    }
+    if (userData.authProvider && !existing.authProvider) {
+      existing.authProvider = userData.authProvider;
+    }
+    if (userData.avatar && (!existing.avatar || existing.avatar.includes('unsplash'))) {
+      existing.avatar = userData.avatar;
+    }
+    if (userData.name && (!existing.name || existing.name.includes('@'))) {
+      existing.name = String(userData.name).trim();
+    }
+    if (userData.phone && !existing.phone) {
+      existing.phone = String(userData.phone).trim();
+    }
+
+    targetUser = existing;
+  } else {
+    // Tài khoản MỚI: Sinh ID USRxxx tiếp theo an toàn
+    const maxNum = state.users.reduce((m, u) => {
+      const match = /^USR(\d+)$/.exec(u.id || '');
+      return match ? Math.max(m, parseInt(match[1], 10)) : m;
+    }, 0);
+    const assignedId = userData.id || `USR${String(maxNum + 1).padStart(3, '0')}`;
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+    // Bảo mật: Người dùng mới chỉ được là Customer hoặc Provider, tuyệt đối không được tự chọn Admin
+    const requestedRole = userData.role || 'Customer';
+    const safeRole = requestedRole === 'Provider' ? 'Provider' : 'Customer';
+
+    targetUser = {
+      id: assignedId,
+      uid: uid || '',
+      name: String(userData.name || '').trim() || cleanEmail.split('@')[0],
+      email: userData.email.trim(),
+      phone: userData.phone ? String(userData.phone).trim() : '',
+      role: safeRole,
+      joinDate: userData.joinDate || dateStr,
+      spentOrEarned: userData.spentOrEarned || '0đ',
+      balance: typeof userData.balance === 'number' ? userData.balance : 0,
+      status: userData.status || 'active',
+      lockReason: userData.lockReason || '',
+      lockDuration: userData.lockDuration || '',
+      avatar: userData.avatar || '',
+      authProvider: userData.authProvider || 'email'
+    };
+
+    state.users.push(targetUser);
+  }
+
+  saveAppState(state);
+  window.dispatchEvent(new CustomEvent('skillrental:users-synced', { detail: { user: targetUser, state } }));
+  return targetUser;
+}
+
+window.syncUserToAdminState = syncUserToAdminState;
+if (window.adminUtils) {
+  window.adminUtils.syncUserToAdminState = syncUserToAdminState;
+}
+window.DEFAULT_STATE = DEFAULT_STATE;
+window.STORAGE_KEY = STORAGE_KEY;
+
+// Auto-sync state with backend server ONLY IF localStorage has no state yet!
+// Uses the public /api/data/seed endpoint (no auth required) which reads
+// directly from data/database.json and maps fields to admin-compatible format.
+async function syncStateWithServer() {
+  try {
+    // If localStorage already has state, do NOT overwrite user data with demo seed!
+    const existing = localStorage.getItem(STORAGE_KEY);
+    if (existing) {
+      updateSidebarBadges();
+      return;
+    }
+
+    // Primary: public seed endpoint backed by data/database.json
+    const res = await fetch(`${API_BASE}/api/data/seed`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.state) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.state));
+        // Reload once so all page render functions use the real database.json data.
+        // The second load will skip this block (localStorage already set above).
+        if (typeof window.onServerStateSynced === 'function') {
+          window.onServerStateSynced(data.state);
+        } else {
+          location.reload();
+        }
+        return;
+      }
+    }
+  } catch (err) {
+    console.log('Server sync: Running offline or cached mode — using DEFAULT_STATE seed');
+  }
+  // Fallback: seed from DEFAULT_STATE when server is unavailable
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_STATE));
+  updateSidebarBadges();
+}
+
+// Admin API client methods
+window.adminApi = {
+  getDashboard: () => fetch(`${API_BASE}/api/admin/dashboard`).then(r => r.json()),
+  getStatistics: (from, to) => fetch(`${API_BASE}/api/admin/statistics` + (from && to ? `?startDate=${encodeURIComponent(from)}&endDate=${encodeURIComponent(to)}` : '')).then(r => r.json()),
+  getUsers: (params) => fetch(`${API_BASE}/api/admin/users` + (params ? '?' + new URLSearchParams(params) : '')).then(r => r.json()),
+  getUser: (id) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}`).then(r => r.json()),
+  lockUser: (id, reason, duration) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, duration }) }).then(r => r.json()),
+  unlockUser: (id) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}/unlock`, { method: 'POST' }).then(r => r.json()),
+  getUnlockRequests: () => fetch(`${API_BASE}/api/admin/unlock-requests`).then(r => r.json()),
+  decideUnlock: (id, decision) => fetch(`${API_BASE}/api/admin/unlock-requests/${encodeURIComponent(id)}/decide`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision }) }).then(r => r.json()),
+  approveProvider: (id) => fetch(`${API_BASE}/api/admin/providers/${id}/approve`, { method: 'POST' }).then(r => r.json()),
+  rejectProvider: (id, reason) => fetch(`${API_BASE}/api/admin/providers/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
+  approveSkill: (id) => fetch(`${API_BASE}/api/admin/skills/${id}/approve`, { method: 'POST' }).then(r => r.json()),
+  rejectSkill: (id, reason) => fetch(`${API_BASE}/api/admin/skills/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
+  approveService: (id) => fetch(`${API_BASE}/api/admin/services/${id}/approve`, { method: 'POST' }).then(r => r.json()),
+  approveServicePrice: (id) => fetch(`${API_BASE}/api/admin/services/${id}/approve-price`, { method: 'POST' }).then(r => r.json()),
+  lockService: (id, reason) => fetch(`${API_BASE}/api/admin/services/${id}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
+  unlockService: (id) => fetch(`${API_BASE}/api/admin/services/${id}/unlock`, { method: 'POST' }).then(r => r.json()),
+  getComplaints: (params) => fetch(`${API_BASE}/api/admin/complaints` + (params ? '?' + new URLSearchParams(params) : '')).then(r => r.json()),
+  updateComplaintStatus: (id, status, note) => fetch(`${API_BASE}/api/admin/complaints/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, note }) }).then(r => r.json()),
+  resolveComplaint: (id, resolution, refundPercentage, note, verdict) => fetch(`${API_BASE}/api/admin/complaints/${id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resolution, refundPercentage, note, verdict }) }).then(r => r.json()),
+  resolveReport: (id, action, note) => fetch(`${API_BASE}/api/admin/reports/${id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, note }) }).then(r => r.json()),
+  approvePayout: (id) => fetch(`${API_BASE}/api/admin/payouts/${id}/approve`, { method: 'POST' }).then(r => r.json()),
+  rejectPayout: (id, reason) => fetch(`${API_BASE}/api/admin/payouts/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }).then(r => r.json()),
+  forceReleaseOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-release`, { method: 'POST' }).then(r => r.json()),
+  forceRefundOrder: (id) => fetch(`${API_BASE}/api/admin/orders/${id}/force-refund`, { method: 'POST' }).then(r => r.json()),
+  moderateReview: (id, status, note) => fetch(`${API_BASE}/api/admin/reviews/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, note }) }).then(r => r.json())
+};
 
 // Reset state helper
 function resetAppStateToDefault() {
@@ -236,6 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
   highlightActiveMenu();
   updateSidebarBadges();
   bindSubtabEvents();
+  syncStateWithServer();
 });
 
 function highlightActiveMenu() {
@@ -374,17 +666,103 @@ function showToast(title, message, type = 'success') {
   }, 4000);
 }
 
+/**
+ * exportDataSimulation — Xuất dữ liệu thực tế từ localStorage ra file CSV
+ * Hỗ trợ 3 loại báo cáo: đơn hàng, người dùng, và doanh thu.
+ * Không dùng Firebase hay dịch vụ nào bên ngoài.
+ */
 function exportDataSimulation(filename) {
-  showToast('Xuất báo cáo (UC-67)', `Đang tạo và tải tệp [${filename}.xlsx]... Vui lòng đợi trong giây lát.`, 'info');
+  showToast('Xuất báo cáo (UC-67)', `Đang tạo tệp [${filename}.csv] từ dữ liệu hệ thống...`, 'info');
+
   setTimeout(() => {
-    const csvContent = "data:text/csv;charset=utf-8,ID,Tieu_De,Thoi_Gian,Trang_Thai\n1,Bao_Cao_He_Thong," + new Date().toLocaleDateString() + ",Thanh_Cong";
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${filename}_${Date.now()}.csv`);
+    const state = getAppState();
+    let csvRows = [];
+    let recordCount = 0;
+
+    // Xác định loại báo cáo dựa theo tên file
+    const nameLower = filename.toLowerCase();
+
+    if (nameLower.includes('don_hang') || nameLower.includes('orders') || nameLower.includes('bao_cao_don')) {
+      // Báo cáo đơn hàng
+      const orders = Array.isArray(state.orders) ? state.orders : [];
+      csvRows.push(['Mã đơn hàng', 'Khách hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn', 'Trạng thái Escrow', 'Trạng thái đơn', 'Ngày tạo', 'Hạn chót']);
+      orders.forEach(o => {
+        const statusText = {
+          pending: 'Chờ xử lý', confirmed: 'Đã xác nhận', processing: 'Đang thực hiện',
+          delivered: 'Đã bàn giao', completed: 'Hoàn thành', disputed: 'Khiếu nại', cancelled: 'Đã hủy'
+        }[o.orderStatus] || o.orderStatus || '';
+        csvRows.push([
+          o.id || '', o.customer || '', o.provider || '', o.service || '',
+          o.price || '', o.escrowStatus || '', statusText, o.date || '', o.deadline || ''
+        ]);
+      });
+      recordCount = orders.length;
+
+    } else if (nameLower.includes('nguoi_dung') || nameLower.includes('users')) {
+      // Báo cáo người dùng
+      const users = Array.isArray(state.users) ? state.users : [];
+      csvRows.push(['Mã người dùng', 'Họ tên', 'Email', 'Số điện thoại', 'Vai trò', 'Ngày tham gia', 'Doanh thu/Chi tiêu', 'Trạng thái', 'Lý do khóa']);
+      users.forEach(u => {
+        csvRows.push([
+          u.id || '', u.name || '', u.email || '', u.phone || '',
+          u.role || '', u.joinDate || '', u.spentOrEarned || '',
+          u.status === 'active' ? 'Hoạt động' : 'Bị khóa', u.lockReason || ''
+        ]);
+      });
+      recordCount = users.length;
+
+    } else if (nameLower.includes('doanh_thu') || nameLower.includes('revenue') || nameLower.includes('doanh thu')) {
+      // Báo cáo doanh thu - tổng hợp từ đơn hàng
+      const orders = Array.isArray(state.orders) ? state.orders : [];
+      csvRows.push(['Mã đơn hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn (VNĐ)', 'Phí hoa hồng 10% (VNĐ)', 'Trạng thái đơn', 'Ngày tạo']);
+      orders.filter(o => o.orderStatus !== 'cancelled').forEach(o => {
+        const rawPrice = String(o.price || '0').replace(/[^\d]/g, '');
+        const price = parseInt(rawPrice, 10) || 0;
+        const fee = Math.round(price * 0.1);
+        const statusText = {
+          pending: 'Chờ xử lý', confirmed: 'Đã xác nhận', processing: 'Đang thực hiện',
+          delivered: 'Đã bàn giao', completed: 'Hoàn thành', disputed: 'Khiếu nại'
+        }[o.orderStatus] || o.orderStatus || '';
+        csvRows.push([o.id || '', o.provider || '', o.service || '', price, fee, statusText, o.date || '']);
+      });
+      recordCount = csvRows.length - 1;
+
+    } else {
+      // Mặc định: xuất toàn bộ đơn hàng
+      const orders = Array.isArray(state.orders) ? state.orders : [];
+      csvRows.push(['Mã đơn hàng', 'Khách hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn', 'Trạng thái đơn', 'Ngày tạo']);
+      orders.forEach(o => {
+        csvRows.push([o.id || '', o.customer || '', o.provider || '', o.service || '', o.price || '', o.orderStatus || '', o.date || '']);
+      });
+      recordCount = orders.length;
+    }
+
+    if (recordCount === 0) {
+      showToast('Không có dữ liệu', 'Không tìm thấy bản ghi nào để xuất. Vui lòng kiểm tra bộ lọc.', 'warning');
+      return;
+    }
+
+    // Chuyển mảng rows thành nội dung CSV chuẩn UTF-8
+    const csvContent = '\uFEFF' + csvRows.map(row =>
+      row.map(cell => {
+        const val = String(cell == null ? '' : cell);
+        // Bao ngoặc kép nếu chứa dấu phẩy, xuống dòng hoặc ngoặc kép
+        return (val.includes(',') || val.includes('"') || val.includes('\n'))
+          ? '"' + val.replace(/"/g, '""') + '"'
+          : val;
+      }).join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('Tải dữ liệu hoàn tất', `Tệp báo cáo ${filename}.csv đã được lưu thành công!`, 'success');
-  }, 1000);
+    URL.revokeObjectURL(url);
+
+    showToast('Xuất dữ liệu thành công', `Đã xuất ${recordCount} bản ghi vào tệp ${filename}.csv`, 'success');
+  }, 600);
 }

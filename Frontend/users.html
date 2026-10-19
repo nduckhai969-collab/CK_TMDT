@@ -175,6 +175,10 @@
               <span>Quản trị viên hệ thống</span>
             </div>
           </div>
+          <button type="button" onclick="handleLogout()" class="btn btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:600; border:1px solid #FCA5A5; color:#DC2626; background:#FEE2E2; cursor:pointer;" title="Đăng xuất khỏi tài khoản Quản trị">
+            <span>🚪</span>
+            <span>Đăng Xuất</span>
+          </button>
         </div>
       </header>
 
@@ -393,28 +397,51 @@
       }
 
       try {
-        const res = await window.adminApi.getUsers();
-        if (!res || !res.success) {
-          if (tbody) {
-            tbody.innerHTML = `
-              <tr>
-                <td colspan="7" style="text-align:center; padding:36px; color:var(--danger);">
-                  <i class="fa-solid fa-triangle-exclamation" style="font-size:24px; display:block; margin:0 auto 8px;"></i>
-                  <strong>Lỗi kết nối Firestore:</strong> ${escapeHTML(res?.message || 'Không thể tải dữ liệu tài khoản từ Firestore.')}
-                  <div style="margin-top:12px;">
-                    <button class="btn btn-secondary btn-sm" onclick="loadUsers()">Thử lại</button>
-                  </div>
-                </td>
-              </tr>
-            `;
+        let usersData = null;
+        try {
+          const res = await window.adminApi.getUsers();
+          if (res && res.success && Array.isArray(res.users)) {
+            usersData = res.users;
           }
-          showToast('Lỗi Firestore', res?.message || 'Không thể tải danh sách người dùng từ Firestore', 'error');
+        } catch (_) {}
+
+        // Fallback sang Local State nếu máy chủ tạm thời không phản hồi
+        if (!usersData) {
+          const localState = typeof getAppState === 'function' ? getAppState() : null;
+          if (localState && Array.isArray(localState.users) && localState.users.length > 0) {
+            usersData = localState.users;
+          }
+        }
+
+        if (usersData) {
+          adminUsersList = usersData;
+          renderUsersTable();
           return;
         }
 
-        adminUsersList = res.users || [];
-        renderUsersTable();
+        if (tbody) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align:center; padding:36px; color:var(--danger);">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size:24px; display:block; margin:0 auto 8px;"></i>
+                <strong>Lỗi kết nối Firestore:</strong> Không thể tải dữ liệu tài khoản từ Firestore.
+                <div style="margin-top:12px;">
+                  <button class="btn btn-secondary btn-sm" onclick="loadUsers()">Thử lại</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }
+        showToast('Lỗi Firestore', 'Không thể tải danh sách người dùng từ Firestore', 'error');
       } catch (err) {
+        // Cố gắng khôi phục từ localState trước khi báo lỗi
+        const localState = typeof getAppState === 'function' ? getAppState() : null;
+        if (localState && Array.isArray(localState.users) && localState.users.length > 0) {
+          adminUsersList = localState.users;
+          renderUsersTable();
+          return;
+        }
+
         if (tbody) {
           tbody.innerHTML = `
             <tr>
@@ -450,16 +477,38 @@
       }
 
       try {
-        const res = await window.adminApi.getUnlockRequests();
-        if (res && res.success) {
-          adminUnlockRequests = res.requests || [];
-          renderAppealCards();
-        } else {
-          if (container) {
-            container.innerHTML = `<div style="text-align:center; padding:40px; background:#fff; border-radius:12px; border:1px solid #fed7d7; color:var(--danger);">Lỗi tải yêu cầu mở khóa từ Firestore.</div>`;
+        let reqData = null;
+        try {
+          const res = await window.adminApi.getUnlockRequests();
+          if (res && res.success && Array.isArray(res.requests)) {
+            reqData = res.requests;
+          }
+        } catch (_) {}
+
+        // Fallback sang Local State
+        if (!reqData) {
+          const localState = typeof getAppState === 'function' ? getAppState() : null;
+          if (localState && Array.isArray(localState.unlockRequests)) {
+            reqData = localState.unlockRequests;
           }
         }
+
+        if (reqData) {
+          adminUnlockRequests = reqData;
+          renderAppealCards();
+          return;
+        }
+
+        if (container) {
+          container.innerHTML = `<div style="text-align:center; padding:40px; background:#fff; border-radius:12px; border:1px solid #fed7d7; color:var(--danger);">Lỗi tải yêu cầu mở khóa từ Firestore.</div>`;
+        }
       } catch (err) {
+        const localState = typeof getAppState === 'function' ? getAppState() : null;
+        if (localState && Array.isArray(localState.unlockRequests)) {
+          adminUnlockRequests = localState.unlockRequests;
+          renderAppealCards();
+          return;
+        }
         if (container) {
           container.innerHTML = `<div style="text-align:center; padding:40px; background:#fff; border-radius:12px; border:1px solid #fed7d7; color:var(--danger);">Lỗi kết nối Firestore: ${escapeHTML(err.message)}</div>`;
         }

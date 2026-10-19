@@ -41,6 +41,7 @@
   });
 
   // 3. Tự động gắn Bearer Token vào mọi request /api/
+  // 3. Tự động gắn Bearer Token hoặc x-user-id vào mọi request /api/
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async function (input, init) {
     const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
@@ -57,6 +58,18 @@
       } catch (err) {
         console.warn('[SkillAuth] Không lấy được ID token:', err);
       }
+    }
+    // Fallback x-user-id cho Admin và chế độ Server API khi chưa có Bearer Token
+    if (!headers.has('Authorization') && !headers.has('x-user-id')) {
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const u = JSON.parse(raw);
+          if (u && (u.id || u.uid)) {
+            headers.set('x-user-id', u.id || u.uid);
+          }
+        }
+      } catch (_) {}
     }
     options.headers = headers;
     return nativeFetch(input, options);
@@ -128,8 +141,8 @@
           { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', status: 'locked', lockReason: 'Gian lận đánh giá và sử dụng tài khoản ảo', lockDuration: 'Vĩnh viễn' },
           { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', joinDate: '10/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
           { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', joinDate: '15/01/2025', spentOrEarned: '0đ', status: 'active', lockReason: '' },
-          { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'skillrentaladmin@gmail.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', status: 'active', lockReason: '' },
-          { id: 'ADM002', name: 'Admin Dự Phòng', email: 'admin@skillrental.com', phone: '0999 888 666', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', status: 'active', lockReason: '' }
+          { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', status: 'active', lockReason: '' },
+          { id: 'ADM002', name: 'SkillRental Admin', email: 'skillrentaladmin@gmail.com', phone: '0999 888 666', role: 'Admin', joinDate: '17/10/2026', spentOrEarned: '0đ', status: 'active', lockReason: '' }
         ];
     const initial = {
       users: defaultUsers,
@@ -164,26 +177,20 @@
     let targetUser;
 
     if (existingIndex !== -1) {
-      // ĐÃ TỒN TẠI: Không tạo mới, không sinh ID mới, giữ nguyên role & status & balance
+      // ĐÃ TỒN TẠI: Đồng bộ thông tin từ hồ sơ Firestore đã xác thực
       const existing = state.users[existingIndex];
-      if (uid && (!existing.uid || existing.uid !== uid)) {
-        existing.uid = uid;
-      }
-      if (userData.authProvider && !existing.authProvider) {
-        existing.authProvider = userData.authProvider;
-      }
-      if (userData.avatar && (!existing.avatar || existing.avatar.includes('unsplash'))) {
-        existing.avatar = userData.avatar;
-      }
-      if (userData.name && (!existing.name || existing.name.includes('@'))) {
-        existing.name = String(userData.name).trim();
-      }
-      if (userData.phone && !existing.phone) {
-        existing.phone = String(userData.phone).trim();
-      }
+      if (uid) existing.uid = uid;
+      if (userData.id) existing.id = userData.id;
+      if (userData.role) existing.role = userData.role;
+      if (userData.status) existing.status = userData.status;
+      if (userData.authProvider && !existing.authProvider) existing.authProvider = userData.authProvider;
+      if (userData.avatar && (!existing.avatar || existing.avatar.includes('unsplash'))) existing.avatar = userData.avatar;
+      if (userData.name && (!existing.name || existing.name.includes('@'))) existing.name = String(userData.name).trim();
+      if (userData.phone && !existing.phone) existing.phone = String(userData.phone).trim();
+      if (typeof userData.balance === 'number') existing.balance = userData.balance;
       targetUser = existing;
     } else {
-      // TÀI KHOẢN MỚI: Sinh ID USRxxx tiếp theo ổn định
+      // TÀI KHOẢN MỚI: Sử dụng ID và vai trò từ hồ sơ xác thực hợp lệ
       const maxNum = state.users.reduce((m, u) => {
         const match = /^USR(\d+)$/.exec(u.id || '');
         return match ? Math.max(m, parseInt(match[1], 10)) : m;
@@ -193,9 +200,9 @@
       const now = new Date();
       const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
-      // Bảo mật: Người dùng mới chỉ được chọn Provider hoặc Customer, không được tự nâng Admin
-      const requestedRole = userData.role || 'Customer';
-      const safeRole = requestedRole === 'Provider' ? 'Provider' : 'Customer';
+      const safeRole = (userData.role === 'Admin' || userData.role === 'Provider')
+        ? userData.role
+        : 'Customer';
 
       targetUser = {
         id: assignedId,
@@ -357,16 +364,54 @@
         return { success: false, message: 'Vui lòng nhập đầy đủ email và mật khẩu!' };
       }
 
-      let cred;
+      let cred = null;
+      let fbUser = null;
       try {
         cred = await fbAuth.signInWithEmailAndPassword(email.trim(), password);
         await cred.user.reload();
+        fbUser = cred.user;
       } catch (err) {
         return fail(err, 'Đăng nhập thất bại!');
       }
 
-      // Kiểm tra trạng thái xác nhận email
-      if (!cred.user.emailVerified) {
+      let token = null;
+      try {
+        token = await fbUser.getIdToken(true);
+      } catch (err) {
+        await fbAuth.signOut();
+        return fail(err, 'Không thể lấy token xác thực.');
+      }
+
+      let data = null;
+      try {
+        data = await callApi('/api/auth/login', 'POST', token);
+      } catch (err) {
+        await fbAuth.signOut();
+        return { success: false, message: 'Lỗi kết nối máy chủ xác thực hồ sơ: ' + (err.message || 'Lỗi mạng') };
+      }
+
+      if (!data || !data.success || !data.user) {
+        await fbAuth.signOut();
+        return {
+          success: false,
+          message: (data && data.message) || 'Tài khoản chưa có hồ sơ hợp lệ trên hệ thống.'
+        };
+      }
+
+      const verifiedUser = data.user;
+
+      // Kiểm tra trạng thái tài khoản bị khóa trên Firestore
+      if (verifiedUser.status === 'locked') {
+        await fbAuth.signOut();
+        return {
+          success: false,
+          code: 'ACCOUNT_LOCKED',
+          message: `Tài khoản đã bị tạm khóa: ${verifiedUser.lockReason || 'Vui lòng liên hệ Quản trị viên.'}`
+        };
+      }
+
+      // Kiểm tra kích hoạt email (chỉ cho Customer/Provider, không chặn Admin)
+      if (!fbUser.emailVerified && verifiedUser.role !== 'Admin') {
         await fbAuth.signOut();
         return {
           success: false,
@@ -376,22 +421,11 @@
         };
       }
 
-      const token = await cred.user.getIdToken(true);
-      let data = null;
-      try {
-        data = await callApi('/api/auth/login', 'POST', token);
-      } catch (_) {}
+      // Đảm bảo UID và thông tin lấy chính xác từ Firebase Auth & Firestore
+      verifiedUser.uid = fbUser.uid;
+      verifiedUser.email = fbUser.email || verifiedUser.email;
 
-      const userToSync = (data && data.success && data.user) ? data.user : {
-        uid: cred.user.uid,
-        name: cred.user.displayName || email.split('@')[0],
-        email: cred.user.email,
-        phone: cred.user.phoneNumber || '',
-        avatar: cred.user.photoURL || '',
-        authProvider: 'email'
-      };
-
-      const finalUser = syncUserToAdminState(userToSync);
+      const finalUser = syncUserToAdminState(verifiedUser);
 
       localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
       window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
@@ -1595,6 +1629,30 @@
       if (emailInput) emailInput.value = options.email;
     }
   };
+
+  window.redirectAfterLogin = window.redirectAfterLogin || function (user) {
+    if (!user) return;
+    if (user.role === 'Admin') {
+      window.location.href = 'admin.html';
+    } else if (user.role === 'Provider') {
+      window.location.href = 'dashboard.html';
+    } else {
+      window.location.href = 'customer.html';
+    }
+  };
+
+  function redirectAfterLogin(user) {
+    if (typeof window.redirectAfterLogin === 'function') {
+      return window.redirectAfterLogin(user);
+    }
+    if (user && user.role === 'Admin') {
+      window.location.href = 'admin.html';
+    } else if (user && user.role === 'Provider') {
+      window.location.href = 'dashboard.html';
+    } else {
+      window.location.href = 'customer.html';
+    }
+  }
 
   window.closeAuthModal = function () {
     const modal = document.getElementById('authModal');

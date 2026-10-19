@@ -16,8 +16,8 @@ const INITIAL_DATABASE = {
 
     { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', password: '123', joinDate: '10/01/2025', spentOrEarned: '0đ', balance: 500000, status: 'active', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150' },
     { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', password: '123', joinDate: '15/01/2025', spentOrEarned: '0đ', balance: 1000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150' },
-    { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'skillrentaladmin@gmail.com', phone: '0999 888 777', role: 'Admin', password: 'admin123@', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
-    { id: 'ADM002', name: 'Admin Dự Phòng', email: 'admin@skillrental.com', phone: '0999 888 666', role: 'Admin', password: 'admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }
+    { id: 'ADM001', uid: 'ZUGPGZNGOtfQTJsqIHlfEHrtSeH3', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
+    { id: 'ADM002', uid: 'xeANHaeYvocn4udmyaI8cMccCc22', name: 'SkillRental Admin', email: 'skillrentaladmin@gmail.com', phone: '0999 888 666', role: 'Admin', joinDate: '17/10/2026', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }
   ],
 
   providers: [

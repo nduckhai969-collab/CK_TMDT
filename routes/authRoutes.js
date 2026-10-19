@@ -52,6 +52,8 @@ function publicUser(user) {
     address: user.address || '',
     bio: user.bio || '',
     role: user.role,
+    status: user.status || 'active',
+    uid: user.uid || '',
     balance: typeof bal === 'number' ? bal : (Number(user.balance) || 0),
     avatar: user.avatar,
     joinDate: user.joinDate
@@ -148,9 +150,61 @@ router.post('/register', authenticate({ allowNoProfile: true, allowUnverified: t
   });
 });
 
-// Đăng nhập: frontend đăng nhập Firebase, gửi token lên đây để lấy hồ sơ
-router.post('/login', requireSignedIn, (req, res) => {
-  res.json({ success: true, message: 'Đăng nhập thành công!', user: publicUser(req.authUser) });
+// Đăng nhập: hỗ trợ cả Firebase ID token và Email/Mật khẩu (cho tài khoản Admin / Demo / Database)
+router.post('/login', async (req, res) => {
+  const token = req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
+    ? req.headers.authorization.slice(7).trim()
+    : null;
+
+  // 1. Trường hợp có Firebase ID Token (Bearer Token)
+  if (token) {
+    return authenticate()(req, res, () => {
+      res.json({ success: true, message: 'Đăng nhập thành công!', user: publicUser(req.authUser) });
+    });
+  }
+
+  // 2. Trường hợp Đăng nhập bằng Email & Mật khẩu (cho Admin / Database users)
+  const { email, password } = req.body || {};
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp email và mật khẩu!' });
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  const users = db.getCollection('users') || [];
+  const matchedUser = users.find(u => String(u.email || '').trim().toLowerCase() === cleanEmail);
+
+  if (!matchedUser) {
+    return res.status(401).json({ success: false, message: 'Tài khoản không tồn tại trên hệ thống.' });
+  }
+
+  if (matchedUser.password && matchedUser.password !== password) {
+    return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác!' });
+  }
+
+  if (matchedUser.status === 'locked') {
+    return res.status(403).json({
+      success: false,
+      code: 'ACCOUNT_LOCKED',
+      message: `Tài khoản đã bị tạm khóa: ${matchedUser.lockReason || 'Liên hệ Admin'}`
+    });
+  }
+
+  // Tạo custom token từ Firebase Admin nếu khả dụng để Client SDK đồng bộ Firebase Auth
+  let customToken = null;
+  try {
+    if (auth && typeof auth.createCustomToken === 'function') {
+      customToken = await auth.createCustomToken(matchedUser.uid || matchedUser.id, { role: matchedUser.role });
+    }
+  } catch (err) {
+    console.warn('[auth] Không thể tạo Firebase Custom Token:', err.message);
+  }
+
+  res.json({
+    success: true,
+    message: 'Đăng nhập thành công!',
+    user: publicUser(matchedUser),
+    customToken
+  });
 });
 
 // Hồ sơ hiện tại

@@ -160,7 +160,9 @@ app.get('/', (req, res) => {
 // Khởi động server (nạp dữ liệu từ Firestore trước khi nhận request)
 db.init().then(() => {
   // Gán trực tiếp vào biến server toàn cục đã khai báo ở trên
-  server = app.listen(PORT, () => {
+  // Listen on all network interfaces so other devices on the LAN can use this
+  // single backend instance instead of starting a private server per device.
+  server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`====================================================`);
     console.log(`  SKILL RENTAL PLATFORM - FULL-STACK NODE.JS SERVER `);
     console.log(`====================================================`);

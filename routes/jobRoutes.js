@@ -5,6 +5,17 @@ const { requireCustomer, requireProvider } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { createNotification, notifyProvider } = require('../services/notificationService');
 
+async function persistJobs(jobs, res) {
+  try {
+    await db.saveCollectionAndWait('jobRequests', jobs);
+    return true;
+  } catch (err) {
+    console.error('[jobs] Không lưu được yêu cầu:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa lưu được thay đổi lên hệ thống. Vui lòng thử lại.' });
+    return false;
+  }
+}
+
 function getProviderProfile(user) {
   const providers = db.getCollection('providers') || [];
   let provider = providers.find(p => p.userId === user.id);
@@ -29,9 +40,9 @@ function getProviderProfile(user) {
 }
 
 // List job requests
-router.get('/', (req, res, next) => (req.query.customerId || req.query.mine === '1') ? requireCustomer(req, res, next) : next(), (req, res) => {
+router.get('/', (req, res, next) => (req.query.customerId || req.query.mine === '1') ? requireCustomer(req, res, next) : next(), async (req, res) => {
   const { customerId, category, status, search, limit } = req.query;
-  let jobs = db.getCollection('jobRequests') || [];
+  let jobs = await db.getCollectionFresh('jobRequests');
 
   // Public marketplace only exposes requests that are still accepting proposals.
   if (!req.query.mine && !customerId) jobs = jobs.filter(j => j.status === 'open');
@@ -73,20 +84,20 @@ router.get('/', (req, res, next) => (req.query.customerId || req.query.mine === 
 });
 
 // Provider xem các yêu cầu khách đã chọn mình và đang chờ xác nhận.
-router.get('/provider/selected', requireProvider, (req, res) => {
+router.get('/provider/selected', requireProvider, async (req, res) => {
   const provider = getProviderProfile(req.authUser);
   if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
-  const jobs = (db.getCollection('jobRequests') || []).filter(job =>
+  const jobs = (await db.getCollectionFresh('jobRequests')).filter(job =>
     job.status === 'awaiting_provider' && (job.applicants || []).some(a => a.providerId === provider.id && a.status === 'selected')
   );
   res.json({ success: true, jobs });
 });
 
 // Provider xem các báo giá mình đã gửi, lấy trực tiếp từ yêu cầu trong database.
-router.get('/provider/applications', requireProvider, (req, res) => {
+router.get('/provider/applications', requireProvider, async (req, res) => {
   const provider = getProviderProfile(req.authUser);
   if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
-  const applications = (db.getCollection('jobRequests') || []).flatMap(job =>
+  const applications = (await db.getCollectionFresh('jobRequests')).flatMap(job =>
     (job.applicants || [])
       .filter(applicant => applicant.providerId === provider.id)
       .map(applicant => ({
@@ -103,8 +114,8 @@ router.get('/provider/applications', requireProvider, (req, res) => {
 });
 
 // Single job request detail
-router.get('/:id', (req, res) => {
-  const jobs = db.getCollection('jobRequests');
+router.get('/:id', async (req, res) => {
+  const jobs = await db.getCollectionFresh('jobRequests');
   const job = jobs.find(j => j.id === req.params.id);
 
   if (!job) {
@@ -125,7 +136,7 @@ router.post('/', requireCustomer, async (req, res) => {
     return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ tiêu đề, danh mục và ngân sách!' });
   }
 
-  const jobs = db.getCollection('jobRequests');
+  const jobs = await db.getCollectionFresh('jobRequests');
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   let newId;
@@ -172,8 +183,8 @@ router.post('/', requireCustomer, async (req, res) => {
 });
 
 // Customer updates an open request they own.
-router.patch('/:id', requireCustomer, (req, res) => {
-  const jobs = db.getCollection('jobRequests') || [];
+router.patch('/:id', requireCustomer, async (req, res) => {
+  const jobs = await db.getCollectionFresh('jobRequests');
   const job = jobs.find(item => item.id === req.params.id);
   if (!job) return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu.' });
   if (job.customerId !== req.authUser.id) {
@@ -199,13 +210,13 @@ router.patch('/:id', requireCustomer, (req, res) => {
     desc: String(desc).trim(),
     updatedAt: new Date().toISOString()
   });
-  db.saveCollection('jobRequests', jobs);
+  if (!await persistJobs(jobs, res)) return;
   res.json({ success: true, message: 'Đã cập nhật yêu cầu.', job });
 });
 
 // Customer can pause or reopen a request until a provider is selected.
-router.patch('/:id/status', requireCustomer, (req, res) => {
-  const jobs = db.getCollection('jobRequests') || [];
+router.patch('/:id/status', requireCustomer, async (req, res) => {
+  const jobs = await db.getCollectionFresh('jobRequests');
   const job = jobs.find(item => item.id === req.params.id);
   if (!job) return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu.' });
   if (job.customerId !== req.authUser.id) {
@@ -228,12 +239,12 @@ router.patch('/:id/status', requireCustomer, (req, res) => {
   job.status = status;
   job.closeReason = status === 'closed' ? 'customer' : null;
   job.statusUpdatedAt = new Date().toISOString();
-  db.saveCollection('jobRequests', jobs);
+  if (!await persistJobs(jobs, res)) return;
   res.json({ success: true, message: status === 'closed' ? 'Đã đóng yêu cầu, chuyên gia không thể gửi thêm đề xuất.' : 'Đã mở lại yêu cầu.', job });
 });
 
 // Provider applies to job request
-router.post('/:id/apply', requireProvider, (req, res) => {
+router.post('/:id/apply', requireProvider, async (req, res) => {
   const { proposedPrice, proposalText, estimatedDays } = req.body;
   const quote = Number(String(proposedPrice || '').replace(/[^0-9]/g, ''));
   if (!Number.isFinite(quote) || quote <= 0) {
@@ -241,7 +252,7 @@ router.post('/:id/apply', requireProvider, (req, res) => {
   }
   const provider = getProviderProfile(req.authUser);
   if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
-  const jobs = db.getCollection('jobRequests');
+  const jobs = await db.getCollectionFresh('jobRequests');
   const job = jobs.find(j => j.id === req.params.id);
 
   if (!job) {
@@ -275,7 +286,7 @@ router.post('/:id/apply', requireProvider, (req, res) => {
 
   job.applicants = job.applicants || [];
   job.applicants.push(applicant);
-  db.saveCollection('jobRequests', jobs);
+  if (!await persistJobs(jobs, res)) return;
   createNotification(job.customerId, 'Có Provider mới ứng tuyển',
     `${applicant.providerName} đã gửi báo giá ${applicant.proposedPrice} cho yêu cầu “${job.title}”. Mở danh sách ứng viên để xem hồ sơ và lựa chọn.`,
     'info', `/customer_requests.html?jobId=${encodeURIComponent(job.id)}`);
@@ -288,9 +299,9 @@ router.post('/:id/apply', requireProvider, (req, res) => {
 });
 
 // Customer selects an applicant. No order or payment is created until Provider confirms.
-router.post('/:id/accept-applicant', requireCustomer, (req, res) => {
+router.post('/:id/accept-applicant', requireCustomer, async (req, res) => {
   const { providerId } = req.body;
-  const jobs = db.getCollection('jobRequests');
+  const jobs = await db.getCollectionFresh('jobRequests');
   const job = jobs.find(j => j.id === req.params.id);
 
   if (!job) {
@@ -314,7 +325,7 @@ router.post('/:id/accept-applicant', requireCustomer, (req, res) => {
   job.status = 'awaiting_provider';
   job.selectedProviderId = applicant.providerId;
   job.statusUpdatedAt = new Date().toISOString();
-  db.saveCollection('jobRequests', jobs);
+  if (!await persistJobs(jobs, res)) return;
   createNotification(job.customerId, 'Đang chờ Provider xác nhận',
     `Bạn đã chọn ${applicant.providerName} cho yêu cầu “${job.title}”. Chưa có khoản tiền nào bị trừ; Provider cần xác nhận trước khi bạn ký quỹ.`,
     'info', `/customer_requests.html?jobId=${encodeURIComponent(job.id)}`);
@@ -330,14 +341,14 @@ router.post('/:id/accept-applicant', requireCustomer, (req, res) => {
 });
 
 // Provider confirms or declines the customer's selection. Payment starts only after confirmation.
-router.post('/:id/provider-response', requireProvider, (req, res) => {
+router.post('/:id/provider-response', requireProvider, async (req, res) => {
   const { action } = req.body || {};
   if (!['confirm', 'decline'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Phản hồi không hợp lệ.' });
   }
   const provider = getProviderProfile(req.authUser);
   if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
-  const jobs = db.getCollection('jobRequests') || [];
+  const jobs = await db.getCollectionFresh('jobRequests');
   const job = jobs.find(item => item.id === req.params.id);
   if (!job) return res.status(404).json({ success: false, message: 'Không tìm thấy yêu cầu.' });
   if (job.status !== 'awaiting_provider' || job.selectedProviderId !== provider.id) {
@@ -353,7 +364,7 @@ router.post('/:id/provider-response', requireProvider, (req, res) => {
     createNotification(job.customerId, 'Provider đã xác nhận',
       `${applicant.providerName} đã nhận yêu cầu “${job.title}”. Vui lòng thanh toán ký quỹ để bắt đầu.`,
       'success', `/customer_requests.html?jobId=${encodeURIComponent(job.id)}&action=pay`);
-    db.saveCollection('jobRequests', jobs);
+    if (!await persistJobs(jobs, res)) return;
     return res.json({ success: true, message: 'Đã xác nhận nhận việc. Khách hàng sẽ được mời ký quỹ.', job });
   }
 
@@ -363,7 +374,7 @@ router.post('/:id/provider-response', requireProvider, (req, res) => {
   job.statusUpdatedAt = new Date().toISOString();
   createNotification(job.customerId, 'Provider từ chối yêu cầu',
     `${applicant.providerName} chưa thể nhận yêu cầu “${job.title}”. Bạn có thể chọn ứng viên khác.`, 'warning', '/customer_requests.html');
-  db.saveCollection('jobRequests', jobs);
+  if (!await persistJobs(jobs, res)) return;
   return res.json({ success: true, message: 'Đã từ chối lời mời. Yêu cầu được mở lại để khách chọn Provider khác.', job });
 });
 

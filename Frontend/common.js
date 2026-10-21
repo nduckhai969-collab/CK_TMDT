@@ -244,7 +244,14 @@ const DEFAULT_STATE = {
 // ============================================================================
 // BACKEND API BASE & LOCALSTORAGE SYNC & RETRIEVAL
 // ============================================================================
-const API_BASE = (typeof window !== 'undefined' && window.location.protocol.startsWith('http') && (window.location.port === '3000' || window.location.port === '')) ? '' : 'http://localhost:3000';
+const API_BASE = (() => {
+  if (typeof window === 'undefined') return '';
+  if (window.SKILLRENTAL_API_BASE !== undefined) return String(window.SKILLRENTAL_API_BASE).replace(/\/$/, '');
+  const { protocol, hostname, port } = window.location;
+  if (!/^https?:$/.test(protocol)) return 'http://localhost:3000';
+  if (!port || port === '3000' || (protocol === 'https:' && port === '443')) return '';
+  return `${protocol}//${hostname}:3000`;
+})();
 
 // Utility helpers for dates, prices and admin session
 window.adminUtils = {

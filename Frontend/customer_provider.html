@@ -89,5 +89,23 @@ async function loadProviderDetail(id){
       </div>
     `;
   }).join('') : '<div class="empty-reviews">Chưa có đánh giá chi tiết từ khách hàng trong hệ thống.</div>';
+  loadProviderPosts(id);
+}
+async function loadProviderPosts(id){
+  const container=document.getElementById('postsContainer');
+  try{
+    const result=await apiRequest(`/api/providers/${encodeURIComponent(id)}/posts`);
+    if(!result.success)throw new Error(result.message||'Không tải được bài đăng.');
+    container.replaceChildren();
+    if(!Array.isArray(result.posts)||!result.posts.length){container.textContent='Provider chưa có bài viết công khai.';return}
+    result.posts.forEach(post=>{
+      const card=document.createElement('article');
+      card.style.cssText='padding:12px 0;border-top:1px solid #edf0f2';
+      const title=document.createElement('h3');title.textContent=post.title||'Bài viết Provider';title.style.cssText='font-size:14px;margin:0 0 6px;color:#182230';
+      const meta=document.createElement('small');meta.textContent=[post.category,post.date].filter(Boolean).join(' · ');meta.style.color='#8792a0';
+      const content=document.createElement('p');content.textContent=post.content||post.summary||'';content.style.margin='8px 0 0';
+      card.append(title,meta,content);container.appendChild(card);
+    });
+  }catch(error){container.textContent=error.message||'Chưa tải được bài viết.'}
 }
 </script></body></html>

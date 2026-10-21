@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
-const os = require('os');
 
 const authRoutes = require('./routes/authRoutes');
 const providerRoutes = require('./routes/providerRoutes');
@@ -161,22 +160,15 @@ app.get('/', (req, res) => {
 // Khởi động server (nạp dữ liệu từ Firestore trước khi nhận request)
 db.init().then(() => {
   // Gán trực tiếp vào biến server toàn cục đã khai báo ở trên
-  // Listen on all network interfaces so other devices on the LAN can use this
-  // single backend instance instead of starting a private server per device.
-  server = app.listen(PORT, '0.0.0.0', () => {
-    const lanAddresses = Object.values(os.networkInterfaces())
-      .flatMap(interfaces => interfaces || [])
-      .filter(address => address.family === 'IPv4' && !address.internal)
-      .map(address => `http://${address.address}:${PORT}`);
+  server = app.listen(PORT, () => {
     console.log(`====================================================`);
     console.log(`  SKILL RENTAL PLATFORM - FULL-STACK NODE.JS SERVER `);
     console.log(`====================================================`);
-    console.log(`  - Máy này:             http://localhost:${PORT}`);
-    console.log(`  - Trên mạng LAN:       ${lanAddresses.join(', ') || 'Không tìm thấy IPv4 LAN'}`);
-    console.log(`  - Trang chủ:           /index.html`);
-    console.log(`  - Khám phá kỹ năng:    /customer.html`);
-    console.log(`  - Kênh Provider:       /dashboard.html`);
-    console.log(`  - Cổng quản trị:       /admin.html`);
+    console.log(`  - URL Máy Chủ:         http://localhost:${PORT}`);
+    console.log(`  - Trang Chủ:           http://localhost:${PORT}/index.html`);
+    console.log(`  - Khám Phá Kỹ Năng:    http://localhost:${PORT}/customer.html`);
+    console.log(`  - Kênh Provider:       http://localhost:${PORT}/dashboard.html`);
+    console.log(`  - Cổng Quản Trị:       http://localhost:${PORT}/admin.html`);
     console.log(`  - Hỗ trợ CORS:         WebStorm, LiveServer, Fetch All Origins`);
     console.log(`====================================================`);
   });

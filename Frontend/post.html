@@ -181,10 +181,10 @@
             showToast(res.message);
             document.getElementById('postTitleInput').value = '';
             document.getElementById('postContentText').value = '';
-          }
+          } else showToast(res && res.message ? res.message : 'Không thể lưu bài viết.');
         }
       } catch (e) {
-        showToast('Đã xuất bản bài viết thành công!');
+        showToast('Không thể kết nối máy chủ. Bài viết chưa được lưu.');
       }
     }
   </script>

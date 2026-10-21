@@ -733,6 +733,18 @@ class Database {
     return clone(this.cache[name] || []);
   }
 
+  // Read the latest committed collection from Firestore. Use this for public
+  // reads that must be visible across server instances immediately.
+  async getCollectionFresh(name) {
+    await this.flush();
+    const snap = await firestore.collection(name).get();
+    const rows = snap.docs.map(d => d.data());
+    rows.sort((a, b) => (a._idx ?? 0) - (b._idx ?? 0));
+    this.cache[name] = rows.map(({ _idx, ...rest }) => rest);
+    this.snapshot[name] = new Map(rows.map(row => [docKey(row.id), stable(row)]));
+    return clone(this.cache[name]);
+  }
+
   saveCollection(name, items) {
     if (!Array.isArray(items)) return false;
     const next = clone(items);

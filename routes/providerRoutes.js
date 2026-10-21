@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const db = require('../data/db');
-const { auth } = require('../firebase');
+const { auth, firestore } = require('../firebase');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireProvider, requireSignedIn } = require('./customerAuth');
 const { generateId } = require('../utils/id');
@@ -41,11 +41,17 @@ function getMyProvider(req) {
   return p;
 }
 
+async function getMyProviderFresh(req) {
+  const providers = await db.getCollectionFresh('providers');
+  return providers.find(p => p.userId === req.authUser.id || p.id === req.authUser.id) ||
+    (req.authUser.email && providers.find(p => p.email && p.email.toLowerCase() === req.authUser.email.toLowerCase())) || null;
+}
+
 // Homepage summaries and provider detail endpoints used by the customer portal.
-router.get('/stats', (req, res) => {
-  const providers = db.getCollection('providers') || [];
-  const jobs = db.getCollection('jobRequests') || [];
-  const services = db.getCollection('services') || [];
+router.get('/stats', async (req, res) => {
+  const [providers, jobs, services] = await Promise.all([
+    db.getCollectionFresh('providers'), db.getCollectionFresh('jobRequests'), db.getCollectionFresh('services')
+  ]);
   const ratings = providers.map(p => Number(p.rating)).filter(Number.isFinite);
   const skills = new Set(providers.flatMap(p => Array.isArray(p.skills) ? p.skills : []));
   res.json({
@@ -59,15 +65,15 @@ router.get('/stats', (req, res) => {
   });
 });
 
-router.get('/featured', (req, res) => {
-  const providers = [...(db.getCollection('providers') || [])]
+router.get('/featured', async (req, res) => {
+  const providers = [...(await db.getCollectionFresh('providers'))]
     .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
 });
 
-router.get('/newest', (req, res) => {
-  const providers = [...(db.getCollection('providers') || [])]
+router.get('/newest', async (req, res) => {
+  const providers = [...(await db.getCollectionFresh('providers'))]
     .sort((a, b) => new Date(b.createdAt || b.joinDate || 0) - new Date(a.createdAt || a.joinDate || 0));
   // When the demo records have no registration timestamp, show the most recently
   // appended provider records first.
@@ -320,11 +326,14 @@ router.get('/:id/availability', (req, res) => {
   res.json({ success: true, availability });
 });
 
-router.get('/:id', (req, res) => {
-  const provider = (db.getCollection('providers') || []).find(p => p.id === req.params.id);
+router.get('/:id', async (req, res) => {
+  const [providers, allServices, allReviews] = await Promise.all([
+    db.getCollectionFresh('providers'), db.getCollectionFresh('services'), db.getCollectionFresh('reviews')
+  ]);
+  const provider = providers.find(p => p.id === req.params.id);
   if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
-  const services = (db.getCollection('services') || []).filter(s => s.providerId === provider.id && s.status !== 'inactive');
-  const reviews = (db.getCollection('reviews') || []).filter(r => r.providerId === provider.id);
+  const services = allServices.filter(s => s.providerId === provider.id && s.status !== 'inactive');
+  const reviews = allReviews.filter(r => r.providerId === provider.id);
   res.json({ success: true, provider, services, reviews });
 });
 
@@ -550,25 +559,68 @@ router.post('/packages/purchase', requireProvider, (req, res) => {
   });
 });
 
-router.get('/me/posts', requireProvider, (req, res) => {
-  const posts = (db.getCollection('posts') || []).filter(p => p.providerId === getMyProvider(req).id);
-  res.json({ success: true, posts });
+router.get('/me/posts', requireProvider, async (req, res) => {
+  try {
+    const provider = await getMyProviderFresh(req);
+    if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+    const snapshot = await firestore.collection('posts').where('providerId', '==', provider.id).get();
+    const posts = snapshot.docs.map(doc => doc.data())
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    res.json({ success: true, posts });
+  } catch (err) {
+    console.error('[providers] Không tải được bài đăng:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa tải được bài đăng từ hệ thống.' });
+  }
 });
 
-router.post('/posts', requireProvider, (req, res) => {
-  const postData = req.body;
-  const posts = db.getCollection('posts') || [];
-  const provider = getMyProvider(req);
-  posts.unshift({
-    ...postData,
-    id: generateId('POST'),
+router.get('/:id/posts', async (req, res) => {
+  try {
+    const snapshot = await firestore.collection('posts').where('providerId', '==', req.params.id).get();
+    const posts = snapshot.docs.map(doc => doc.data())
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    res.json({ success: true, posts });
+  } catch (err) {
+    console.error('[providers] Không tải được bài đăng công khai:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa tải được bài đăng từ hệ thống.' });
+  }
+});
+
+router.post('/posts', requireProvider, async (req, res) => {
+  const postData = req.body || {};
+  const title = String(postData.title || '').trim();
+  const content = String(postData.content || '').trim();
+  if (!title || !content) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập tiêu đề và nội dung bài viết.' });
+  }
+  let provider;
+  try {
+    provider = await getMyProviderFresh(req);
+  } catch (err) {
+    console.error('[providers] Không tải được hồ sơ Provider:', err.message);
+    return res.status(503).json({ success: false, message: 'Chưa xác minh được hồ sơ Provider.' });
+  }
+  if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+  const id = generateId('POST');
+  const now = new Date();
+  const post = {
+    title,
+    category: String(postData.category || '').trim(),
+    summary: String(postData.summary || content.slice(0, 150)).trim(),
+    content,
+    id,
     providerId: provider.id,
     providerName: provider.name,
-    date: formatDateTime(new Date()).split(' ')[0],
+    date: formatDateTime(now).split(' ')[0],
+    createdAt: now.toISOString(),
     likes: 0
-  });
-  db.saveCollection('posts', posts);
-  res.json({ success: true, message: 'Đăng bài thành công' });
+  };
+  try {
+    await firestore.collection('posts').doc(id).create(post);
+    res.status(201).json({ success: true, message: 'Đăng bài thành công', post });
+  } catch (err) {
+    console.error('[providers] Không lưu được bài đăng:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa lưu được bài đăng lên hệ thống. Vui lòng thử lại.' });
+  }
 });
 
 /* ============================================================
@@ -576,7 +628,7 @@ router.post('/posts', requireProvider, (req, res) => {
    Danh sách Provider + filter + sort + priceRange
 ============================================================ */
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
 
   const {
     category,
@@ -595,8 +647,7 @@ router.get('/', (req, res) => {
      LẤY TOÀN BỘ PROVIDER
   ========================================================== */
 
-  const allProviders =
-      db.getCollection('providers') || [];
+  const allProviders = await db.getCollectionFresh('providers');
 
 
   /* ==========================================================

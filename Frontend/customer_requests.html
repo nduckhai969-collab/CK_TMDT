@@ -458,6 +458,10 @@
       if (!silent) container.innerHTML = '<div style="padding:32px;text-align:center;color:#64748b"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải yêu cầu của bạn...</div>';
 
       try {
+        const detailModalWasOpen = document.getElementById('requestDetailModal').style.display === 'flex';
+        const applicantsModalWasOpen = document.getElementById('applicantsModal').style.display === 'flex';
+        const detailJobId = detailModalWasOpen ? currentDetailJob?.id : null;
+        const applicantsJobId = applicantsModalWasOpen ? currentModalJob?.id : null;
         // Lấy ID hồ sơ từ backend theo Firebase token, tránh dùng ID cũ trong localStorage.
         const profileRes = await apiRequest('/api/auth/me');
         if (!profileRes.success || !profileRes.user || profileRes.user.role !== 'Customer') {
@@ -476,6 +480,8 @@
         document.getElementById('statOpen').textContent = myJobs.filter(j => j.status === 'open').length;
         document.getElementById('statApplicants').textContent = myJobs.reduce((sum, j) => sum + (j.applicants || []).length, 0);
         renderJobsList();
+        if (detailJobId && myJobs.some(job => job.id === detailJobId)) openRequestDetails(detailJobId);
+        if (applicantsJobId && myJobs.some(job => job.id === applicantsJobId)) openApplicantsModal(applicantsJobId);
 
         const params = new URLSearchParams(window.location.search);
         if (params.get('action') === 'pay' && params.get('jobId')) {

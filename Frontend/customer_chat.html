@@ -226,6 +226,13 @@
         document.getElementById('chatInput').placeholder = 'Chọn Provider để bắt đầu nhắn tin';
         document.querySelector('.chat-main > div:last-child').style.display = 'none';
       }
+
+      // Khởi động chu kỳ Polling tự động làm mới cho khách hàng
+      setInterval(loadMessagesSilently, 2500);
+      setInterval(async () => {
+        await loadChatThreads();
+        renderConversationsList();
+      }, 5000);
     });
 
     async function loadChatThreads() {
@@ -253,7 +260,7 @@
         return;
       }
       container.innerHTML = contacts.map(c => `
-        <div class="conversation-item ${c.id === currentPartner.id ? 'active' : ''}" onclick="selectPartnerById('${c.id}')">
+        <div class="conversation-item ${currentPartner && c.id === currentPartner.id ? 'active' : ''}" onclick="selectPartnerById('${c.id}')">
           <div style="position:relative;">
             <img src="${c.avatar || ''}" alt="${c.name}" onerror="this.style.display='none'" style="width:42px;height:42px;border-radius:10px;object-fit:cover;border:1px solid #E2E8F0;${c.avatar ? '' : 'display:none;'}">
             <div style="position:absolute; bottom:-1px; right:-1px; width:10px; height:10px; border-radius:50%; background:#22C55E; border:1.5px solid #FFF;"></div>
@@ -293,17 +300,10 @@
       loadMessages();
     }
 
-    async function loadMessages() {
-      if (!currentPartner) return;
-      const user = getCurrentCustomer();
-      if (!user || user.role !== 'Customer') {
-        document.getElementById('messagesContainer').innerHTML = '<div style="padding:28px;text-align:center;color:#64748B"><i class="fa-solid fa-lock" style="font-size:28px"></i><p>Đăng nhập bằng tài khoản khách hàng để xem cuộc trò chuyện.</p><button class="btn btn-primary" onclick="openAuthModal(\'login\')">Đăng nhập</button></div>';
-        return;
-      }
-      const res = await apiRequest(`/api/chat?user1=${user.id}&user2=${currentPartner.id}`);
-      const container = document.getElementById('messagesContainer');
+    let lastCustomerMsgCount = -1;
 
-      const msgs = res.success && Array.isArray(res.messages) ? res.messages : [];
+    function renderCustomerMessages(msgs, user) {
+      const container = document.getElementById('messagesContainer');
       container.replaceChildren();
       if (!msgs.length) {
         const empty = document.createElement('div');
@@ -313,7 +313,16 @@
       }
       msgs.forEach(message => {
         const bubble = document.createElement('div');
-        bubble.className = `msg-bubble ${message.fromUserId === user.id ? 'mine' : 'theirs'}`;
+        const isMine = message.fromUserId === user.id;
+        bubble.className = `msg-bubble ${isMine ? 'mine' : 'theirs'}`;
+
+        if (message.isAutoReply) {
+          const autoBadge = document.createElement('div');
+          autoBadge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;margin-bottom:4px;';
+          autoBadge.innerHTML = '<i class="fa-solid fa-robot"></i> Phản hồi tự động';
+          bubble.appendChild(autoBadge);
+        }
+
         const body = document.createElement('div');
         body.textContent = message.text || '';
         const time = document.createElement('div');
@@ -324,6 +333,32 @@
       });
 
       container.scrollTop = container.scrollHeight;
+      lastCustomerMsgCount = msgs.length;
+    }
+
+    async function loadMessages() {
+      if (!currentPartner) return;
+      const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') {
+        document.getElementById('messagesContainer').innerHTML = '<div style="padding:28px;text-align:center;color:#64748B"><i class="fa-solid fa-lock" style="font-size:28px"></i><p>Đăng nhập bằng tài khoản khách hàng để xem cuộc trò chuyện.</p><button class="btn btn-primary" onclick="openAuthModal(\'login\')">Đăng nhập</button></div>';
+        return;
+      }
+      const res = await apiRequest(`/api/chat?user1=${user.id}&user2=${currentPartner.id}`);
+      const msgs = res.success && Array.isArray(res.messages) ? res.messages : [];
+      renderCustomerMessages(msgs, user);
+    }
+
+    async function loadMessagesSilently() {
+      if (!currentPartner) return;
+      const user = getCurrentCustomer();
+      if (!user || user.role !== 'Customer') return;
+      try {
+        const res = await apiRequest(`/api/chat?user1=${user.id}&user2=${currentPartner.id}`);
+        const msgs = res.success && Array.isArray(res.messages) ? res.messages : [];
+        if (msgs.length !== lastCustomerMsgCount) {
+          renderCustomerMessages(msgs, user);
+        }
+      } catch (e) {}
     }
 
     async function sendMessage() {
@@ -334,6 +369,8 @@
       if (!text) return;
 
       const user = getCurrentCustomer();
+      input.value = '';
+
       const result = await apiRequest('/api/chat', {
         method: 'POST',
         body: JSON.stringify({
@@ -342,11 +379,13 @@
           text: text
         })
       });
+
       if (!result.success) {
         showToast('Chưa gửi được', result.message || 'Vui lòng thử lại.', 'error');
+        input.value = text;
         return;
       }
-      input.value = '';
+
       await loadMessages();
       await loadChatThreads();
       renderConversationsList();

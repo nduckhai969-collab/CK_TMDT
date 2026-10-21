@@ -11,6 +11,86 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-client.js"></script>
+  <style>
+    .quick-chip {
+      padding: 4px 10px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 9999px;
+      font-size: 11.5px;
+      color: #334155;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .quick-chip:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      border-color: #94a3b8;
+    }
+    .auto-reply-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-box {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 520px;
+      padding: 26px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .switch-toggle {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch-toggle input { opacity: 0; width: 0; height: 0; }
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider-toggle {
+      background-color: #16a34a;
+    }
+    input:checked + .slider-toggle:before {
+      transform: translateX(20px);
+    }
+  </style>
 </head>
 <body>
 
@@ -29,15 +109,15 @@
         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-card-clip"></i><span>Hồ Sơ & Dịch Vụ</span></a>
 
         <div class="nav-section-title">Công việc & Đơn hàng</div>
-        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);">6</span></a>
-        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);">2</span></a>
+        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span></a>
+        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span></a>
 
         <div class="nav-section-title">Kinh doanh & Khách hàng</div>
-        <a href="chat.html" class="nav-link active"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count">3</span></a>
+        <a href="chat.html" class="nav-link active"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span></a>
         <a href="payment.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Thanh toán & Phí sàn</span></a>
         <a href="income.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Ví & Thu nhập</span></a>
         <a href="review.html" class="nav-link"><i class="fa-solid fa-star"></i><span>Đánh giá & Uy tín</span></a>
-        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);">1</span></a>
+        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span></a>
 
         <div class="nav-section-title">Dịch vụ hệ thống</div>
         <a href="package.html" class="nav-link"><i class="fa-solid fa-box-archive"></i><span>Mua dịch vụ</span></a>
@@ -45,10 +125,10 @@
       </nav>
 
       <div class="sidebar-profile">
-        <div class="avatar">NV</div>
+        <div class="avatar" id="sidebarAvatar">NV</div>
         <div class="profile-info">
-          <div class="profile-name">Nguyễn Văn Pro</div>
-          <div class="profile-role">Senior UI/UX & Web Dev</div>
+          <div class="profile-name" id="sidebarProviderName">Chuyên gia</div>
+          <div class="profile-role" id="sidebarProviderRole">Partner Portal</div>
         </div>
       </div>
     </aside>
@@ -56,98 +136,63 @@
     <main class="main-wrapper">
       <header class="top-header">
         <div class="header-title">Tin Nhắn & Trao Đổi Với Khách Hàng</div>
-        <div class="header-actions">
+        <div class="header-actions" style="display:flex; align-items:center; gap:10px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="openAutoReplyModal()" style="font-weight:700; border-color:#86efac; color:#15803d; background:#f0fdf4;">
+            <i class="fa-solid fa-robot"></i> Cài Đặt Phản Hồi Tự Động
+          </button>
           <span class="badge badge-success"><span class="badge-dot"></span> Trực tuyến</span>
-          <!-- Switcher to Admin Portal -->
-          <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
-            <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
-          </a>
         </div>
       </header>
 
       <div class="content-body">
         <div class="chat-container">
+          <!-- Cột danh sách cuộc hội thoại -->
           <div class="chat-sidebar">
             <div class="chat-search">
-              <input type="text" class="form-control" placeholder="Tìm kiếm hội thoại..." style="height: 38px;">
+              <input type="text" class="form-control" id="chatSearchInput" oninput="filterConversations()" placeholder="Tìm kiếm hội thoại..." style="height: 38px;">
             </div>
-            <div class="chat-list">
-              <div class="chat-item active">
-                <div class="avatar" style="background-color: #DBEAFE; color: #1D4ED8;">AN</div>
-                <div class="chat-item-info" style="flex:1; overflow:hidden;">
-                  <div style="display:flex; justify-content:space-between;">
-                    <span class="chat-item-name">Nguyễn Văn An</span>
-                    <span class="chat-item-time">10:42</span>
-                  </div>
-                  <div class="chat-item-msg">Dạ em đã kiểm tra bản phác thảo logo...</div>
-                </div>
-              </div>
-
-              <div class="chat-item">
-                <div class="avatar" style="background-color: #DCFCE7; color: #15803D;">TH</div>
-                <div class="chat-item-info" style="flex:1; overflow:hidden;">
-                  <div style="display:flex; justify-content:space-between;">
-                    <span class="chat-item-name">Trần Thiện Hoàng</span>
-                    <span class="chat-item-time">Hôm qua</span>
-                  </div>
-                  <div class="chat-item-msg">Bên mình có nhận thiết kế app Figma không ạ?</div>
-                </div>
-              </div>
-
-              <div class="chat-item">
-                <div class="avatar" style="background-color: #FEF3C7; color: #B45309;">LM</div>
-                <div class="chat-item-info" style="flex:1; overflow:hidden;">
-                  <div style="display:flex; justify-content:space-between;">
-                    <span class="chat-item-name">Lê Minh Tuấn</span>
-                    <span class="chat-item-time">14/09</span>
-                  </div>
-                  <div class="chat-item-msg">Cảm ơn bạn, dự án chạy rất tốt!</div>
-                </div>
+            <div class="chat-list" id="chatThreadsContainer">
+              <div style="text-align:center; padding:30px; color:#64748b; font-size:13px;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải danh sách tin nhắn...
               </div>
             </div>
           </div>
 
-          <div class="chat-main">
+          <!-- Khung chat chính -->
+          <div class="chat-main" id="chatMainArea">
             <div class="chat-header">
               <div style="display:flex; align-items:center; gap:12px;">
-                <div class="avatar" style="background-color: #DBEAFE; color: #1D4ED8;">AN</div>
+                <div class="avatar" id="activePartnerAvatar" style="background-color: #DBEAFE; color: #1D4ED8;">KH</div>
                 <div>
-                  <div style="font-weight: 600;">Nguyễn Văn An</div>
-                  <div style="font-size: 11px; color: var(--primary-accent);">● Đang hoạt động - Đơn hàng #ORD-9942</div>
+                  <div style="font-weight: 700; font-size: 15px;" id="activePartnerName">Chọn một cuộc trò chuyện</div>
+                  <div style="font-size: 11px; color: var(--primary-accent);" id="activePartnerStatus">● Sẵn sàng kết nối</div>
                 </div>
               </div>
-              <div style="display:flex; gap:8px;">
-                <button class="btn btn-outline btn-sm"><i class="fa-solid fa-phone"></i> Gọi trao đổi</button>
-                <button class="btn btn-primary btn-sm"><i class="fa-solid fa-file-contract"></i> Tạo Hợp Đồng</button>
+              <div style="display:flex; gap:8px;" id="headerActionButtons">
+                <a id="btnViewOrderOrProfile" href="bookings.html" class="btn btn-outline btn-sm"><i class="fa-solid fa-calendar-check"></i> Xem Lịch Đặt</a>
               </div>
             </div>
 
+            <!-- Khung tin nhắn -->
             <div class="chat-messages" id="chatMessagesContainer">
-              <div class="msg-bubble msg-incoming">
-                Chào anh An, bên em cần chỉnh sửa lại font chữ logo theo màu thương hiệu #16A34A nhé.
-                <div class="msg-time">10:35 AM</div>
-              </div>
-
-              <div class="msg-bubble msg-outgoing">
-                Chào bạn, mình đã nhận yêu cầu. Đã cập nhật xong bộ nhận diện font chữ và xuất file Vector SVG/PNG cho bạn rồi nhé.
-                <div style="margin-top: 8px; background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
-                  <i class="fa-solid fa-file-pdf" style="font-size: 20px;"></i>
-                  <div style="font-size: 12px; text-align: left;">
-                    <div>Logo_Brand_v2_Export.pdf</div>
-                    <div style="opacity: 0.8; font-size: 10px;">4.2 MB • Hoàn thành</div>
-                  </div>
-                </div>
-                <div class="msg-time">10:40 AM</div>
-              </div>
-
-              <div class="msg-bubble msg-incoming">
-                Dạ em cảm ơn anh nhiều ạ! Để em nghiệm thu đơn hàng luôn nhé.
-                <div class="msg-time">10:42 AM</div>
+              <div style="margin:auto; text-align:center; color:#94a3b8; font-size:13.5px;">
+                <i class="fa-solid fa-comments" style="font-size:36px; margin-bottom:10px; color:#cbd5e1;"></i>
+                <div>Chọn khách hàng từ danh sách bên trái để bắt đầu trao đổi.</div>
               </div>
             </div>
 
+            <!-- Thanh Trả lời nhanh (Quick Replies) -->
+            <div class="quick-replies-bar" style="padding: 7px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; overflow-x: auto; align-items: center;">
+              <span style="font-size: 11.5px; font-weight: 700; color: #64748b; white-space: nowrap;"><i class="fa-solid fa-bolt" style="color: #eab308;"></i> Trả lời nhanh:</span>
+              <button type="button" class="quick-chip" onclick="applyQuickReply('Chào bạn, tôi sẵn sàng nhận việc và triển khai ngay!')">👋 Nhận việc ngay</button>
+              <button type="button" class="quick-chip" onclick="applyQuickReply('Bạn vui lòng gửi thêm file mô tả hoặc tài liệu chi tiết nhé.')">📁 Xin file mô tả</button>
+              <button type="button" class="quick-chip" onclick="applyQuickReply('Tôi đã xem qua yêu cầu, sẽ chuẩn bị báo giá chi tiết gửi bạn ngay.')">⚡ Báo giá ngay</button>
+              <button type="button" class="quick-chip" onclick="applyQuickReply('Dự án này bạn mong muốn hoàn thành vào ngày nào?')">📅 Hỏi thời hạn</button>
+            </div>
+
+            <!-- Thanh nhập tin nhắn -->
             <div class="chat-footer">
-              <button class="btn btn-outline" style="width: 44px; padding: 0;"><i class="fa-solid fa-paperclip"></i></button>
+              <button class="btn btn-outline" style="width: 44px; padding: 0;" title="Đính kèm file" onclick="alert('Tính năng gửi file đang được kích hoạt.')"><i class="fa-solid fa-paperclip"></i></button>
               <input type="text" class="form-control" id="chatInputText" placeholder="Nhập tin nhắn trao đổi với khách hàng..." style="flex:1;">
               <button class="btn btn-primary" id="btnSendChat" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i> Gửi</button>
             </div>
@@ -157,72 +202,344 @@
     </main>
   </div>
 
+  <!-- MODAL: CÀI ĐẶT PHẢN HỒI MẶC ĐỊNH (AUTO-REPLY) -->
+  <div class="modal-overlay" id="autoReplyModal">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <h3 style="margin:0; font-size:18px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+          <i class="fa-solid fa-robot" style="color:#16a34a;"></i> Cài Đặt Phản Hồi Tự Động
+        </h3>
+        <button type="button" onclick="closeAutoReplyModal()" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">&times;</button>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:700; font-size:13.5px; color:#0f172a;">Kích hoạt phản hồi tự động</div>
+          <div style="font-size:12px; color:#64748b; margin-top:2px;">Tự động gửi lời chào & tiếp nhận khi khách hàng gửi tin nhắn mới</div>
+        </div>
+        <label class="switch-toggle">
+          <input type="checkbox" id="chkAutoReplyEnabled" checked>
+          <span class="slider-toggle"></span>
+        </label>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Nội dung phản hồi mặc định:</label>
+        <textarea id="txtAutoReplyMessage" rows="4" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:13px; font-family:inherit; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
+      </div>
+
+      <!-- Presets -->
+      <div style="margin-bottom:18px;">
+        <div style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:6px;">Mẫu câu soạn sẵn:</div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="setPresetReply(1)" style="text-align:left; font-size:12px; border-color:#cbd5e1;">
+            <strong>Mẫu 1: Tiếp nhận & Chào hỏi</strong> — "Chào bạn! Tôi đã nhận được tin nhắn và sẽ phản hồi trong ít phút..."
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="setPresetReply(2)" style="text-align:left; font-size:12px; border-color:#cbd5e1;">
+            <strong>Mẫu 2: Đang bận làm dự án</strong> — "Chào bạn! Hiện tôi đang tập trung làm việc, sẽ trả lời bạn trong 15-30 phút..."
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="setPresetReply(3)" style="text-align:left; font-size:12px; border-color:#cbd5e1;">
+            <strong>Mẫu 3: Hướng dẫn gửi file</strong> — "Chào bạn! Bạn vui lòng đính kèm file mô tả hoặc ngân sách để tôi báo giá..."
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn btn-outline" onclick="closeAutoReplyModal()">Hủy Bỏ</button>
+        <button type="button" class="btn btn-primary" id="btnSaveAutoReply" onclick="saveAutoReplySettings()">
+          <i class="fa-solid fa-floppy-disk"></i> Lưu Cài Đặt
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="provider.js"></script>
   <script>
-    const currentPartnerId = 'USR003'; // Lê Hoàng Long
-    const myId = 'USR001';             // Nguyễn Văn An
+    let activePartnerId = null;
+    let allThreads = [];
+    let myProvider = null;
+    let chatPollTimer = null;
+    let threadsPollTimer = null;
 
-    async function loadChatMessages() {
-      try {
-        const res = await fetch(`${API_BASE}/api/chat?user1=${myId}&user2=${currentPartnerId}`, { headers: { 'x-user-id': myId } });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.messages && data.messages.length > 0) {
-            const container = document.getElementById('chatMessagesContainer');
-            container.innerHTML = data.messages.map(m => `
-              <div class="msg-bubble ${m.fromUserId === myId ? 'msg-outgoing' : 'msg-incoming'}">
-                ${m.text}
-                <div class="msg-time">${m.time}</div>
-              </div>
-            `).join('');
-            container.scrollTop = container.scrollHeight;
-          }
-        }
-      } catch (e) {
-        console.log('Chat offline mode');
+    document.addEventListener('DOMContentLoaded', async () => {
+      myProvider = getCurrentProvider();
+      if (myProvider) {
+        document.getElementById('sidebarProviderName').textContent = myProvider.name || 'Chuyên gia';
+        document.getElementById('sidebarProviderRole').textContent = myProvider.specialty || 'Partner Portal';
+        const initials = (myProvider.name || 'PR').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
       }
-    }
 
-    async function sendChatMessage() {
-      const input = document.getElementById('chatInputText');
-      const text = input ? input.value.trim() : '';
-      if (!text) return;
+      await loadChatThreads();
+      await loadAutoReplySettings();
 
-      input.value = '';
-      const container = document.getElementById('chatMessagesContainer');
-      const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
-      // Immediate UI append
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'msg-bubble msg-outgoing';
-      msgDiv.innerHTML = `${text}<div class="msg-time">${timeStr}</div>`;
-      container.appendChild(msgDiv);
-      container.scrollTop = container.scrollHeight;
-
-      try {
-        await fetch(`${API_BASE}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-user-id': myId },
-          body: JSON.stringify({
-            fromUserId: myId,
-            toUserId: currentPartnerId,
-            text
-          })
-        });
-      } catch (e) {
-        console.warn('Failed to send chat to backend:', e);
+      // Kiểm tra tham số URL nếu có yêu cầu mở cuộc chat cụ thể
+      const urlParams = new URLSearchParams(window.location.search);
+      const withUser = urlParams.get('with');
+      if (withUser) {
+        selectConversation(withUser);
+      } else if (allThreads.length > 0) {
+        selectConversation(allThreads[0].partnerId);
       }
-    }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      loadChatMessages();
       const input = document.getElementById('chatInputText');
       if (input) {
         input.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') sendChatMessage();
         });
       }
+
+      // Khởi động chu kỳ Polling tự động làm mới
+      chatPollTimer = setInterval(loadActiveMessagesSilently, 2500);
+      threadsPollTimer = setInterval(loadChatThreadsSilently, 5000);
     });
+
+    async function loadChatThreads() {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/threads`, { headers: getAuthHeader() });
+        const json = await res.json();
+        if (json.success && Array.isArray(json.threads)) {
+          allThreads = json.threads;
+          renderChatThreads();
+        }
+      } catch (err) {
+        console.error('Không tải được danh sách hội thoại:', err);
+      }
+    }
+
+    async function loadChatThreadsSilently() {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/threads`, { headers: getAuthHeader() });
+        const json = await res.json();
+        if (json.success && Array.isArray(json.threads)) {
+          allThreads = json.threads;
+          renderChatThreads();
+        }
+      } catch (err) {}
+    }
+
+    function renderChatThreads() {
+      const container = document.getElementById('chatThreadsContainer');
+      const query = (document.getElementById('chatSearchInput')?.value || '').trim().toLowerCase();
+
+      const filtered = allThreads.filter(t => !query || (t.name || '').toLowerCase().includes(query) || (t.lastMessage || '').toLowerCase().includes(query));
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:32px 16px; color:#94a3b8; font-size:12.5px;">
+            <i class="fa-regular fa-comment-dots" style="font-size:28px; margin-bottom:8px; color:#cbd5e1;"></i>
+            <div>Chưa có cuộc trò chuyện nào từ khách hàng.</div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => {
+        const isActive = t.partnerId === activePartnerId;
+        const initials = (t.name || 'KH').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+        return `
+          <div class="chat-item ${isActive ? 'active' : ''}" onclick="selectConversation('${t.partnerId}')" style="cursor:pointer;">
+            <div class="avatar" style="background-color: #DBEAFE; color: #1D4ED8; font-weight:700;">${initials}</div>
+            <div class="chat-item-info" style="flex:1; overflow:hidden;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="chat-item-name" style="font-weight:700; font-size:13.5px; color:#0f172a;">${t.name}</span>
+                <span class="chat-item-time" style="font-size:11px; color:#94a3b8;">${t.lastTime || ''}</span>
+              </div>
+              <div class="chat-item-msg" style="font-size:12px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                ${t.lastMessage || 'Chưa có tin nhắn'}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function filterConversations() {
+      renderChatThreads();
+    }
+
+    function selectConversation(partnerId) {
+      activePartnerId = partnerId;
+      renderChatThreads();
+
+      const partner = allThreads.find(t => t.partnerId === partnerId);
+      if (partner) {
+        document.getElementById('activePartnerName').textContent = partner.name;
+        document.getElementById('activePartnerStatus').textContent = `● Khách hàng · ${partner.role || 'Đang kết nối'}`;
+        const initials = (partner.name || 'KH').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+        document.getElementById('activePartnerAvatar').textContent = initials;
+      } else {
+        document.getElementById('activePartnerName').textContent = `Khách hàng (${partnerId})`;
+      }
+
+      loadActiveMessages();
+    }
+
+    async function loadActiveMessages() {
+      if (!activePartnerId) return;
+      const container = document.getElementById('chatMessagesContainer');
+      container.innerHTML = '<div style="margin:auto; text-align:center; color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải tin nhắn...</div>';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/chat?user2=${encodeURIComponent(activePartnerId)}`, {
+          headers: getAuthHeader()
+        });
+        const json = await res.json();
+        renderMessages(json.messages || []);
+      } catch (err) {
+        container.innerHTML = '<div style="margin:auto; text-align:center; color:#dc2626;">Lỗi tải tin nhắn. Vui lòng thử lại.</div>';
+      }
+    }
+
+    async function loadActiveMessagesSilently() {
+      if (!activePartnerId) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/chat?user2=${encodeURIComponent(activePartnerId)}`, {
+          headers: getAuthHeader()
+        });
+        const json = await res.json();
+        if (json.success && Array.isArray(json.messages)) {
+          renderMessages(json.messages);
+        }
+      } catch (err) {}
+    }
+
+    let lastRenderedCount = -1;
+    function renderMessages(messages) {
+      const container = document.getElementById('chatMessagesContainer');
+      if (messages.length === 0) {
+        container.innerHTML = `
+          <div style="margin:auto; text-align:center; color:#94a3b8; font-size:13.5px;">
+            <i class="fa-regular fa-paper-plane" style="font-size:32px; margin-bottom:10px; color:#cbd5e1;"></i>
+            <div>Chưa có tin nhắn nào với khách hàng này. Hãy bắt đầu cuộc trò chuyện!</div>
+          </div>`;
+        lastRenderedCount = 0;
+        return;
+      }
+
+      if (messages.length === lastRenderedCount) return; // Tránh giật màn hình nếu không có tin nhắn mới
+
+      const myId = myProvider ? (myProvider.providerId || myProvider.id) : 'USR001';
+      container.innerHTML = messages.map(m => {
+        const isOutgoing = m.fromUserId === myId || m.fromUserId === 'USR001' || (myProvider && m.fromUserId === myProvider.userId);
+        const autoBadge = m.isAutoReply ? '<div class="auto-reply-badge"><i class="fa-solid fa-robot"></i> Phản hồi tự động</div>' : '';
+        return `
+          <div class="msg-bubble ${isOutgoing ? 'msg-outgoing' : 'msg-incoming'}">
+            ${autoBadge}
+            <div>${escapeHtml(m.text)}</div>
+            <div class="msg-time">${m.time || ''}</div>
+          </div>`;
+      }).join('');
+
+      container.scrollTop = container.scrollHeight;
+      lastRenderedCount = messages.length;
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function sendChatMessage() {
+      if (!activePartnerId) {
+        alert('Vui lòng chọn một cuộc trò chuyện để gửi tin nhắn.');
+        return;
+      }
+
+      const input = document.getElementById('chatInputText');
+      const text = input ? input.value.trim() : '';
+      if (!text) return;
+
+      input.value = '';
+      const myId = myProvider ? (myProvider.providerId || myProvider.id) : 'USR001';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: getAuthHeader(),
+          body: JSON.stringify({
+            fromUserId: myId,
+            toUserId: activePartnerId,
+            text
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          await loadActiveMessages();
+          await loadChatThreadsSilently();
+        } else {
+          alert(json.message || 'Không thể gửi tin nhắn.');
+        }
+      } catch (err) {
+        console.error('Lỗi gửi tin nhắn:', err);
+      }
+    }
+
+    function applyQuickReply(msg) {
+      const input = document.getElementById('chatInputText');
+      if (input) {
+        input.value = msg;
+        input.focus();
+      }
+    }
+
+    // ==========================================
+    // AUTO-REPLY SETTINGS MODAL LOGIC
+    // ==========================================
+    async function loadAutoReplySettings() {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/auto-reply`, { headers: getAuthHeader() });
+        const json = await res.json();
+        if (json.success && json.autoReply) {
+          document.getElementById('chkAutoReplyEnabled').checked = Boolean(json.autoReply.enabled);
+          document.getElementById('txtAutoReplyMessage').value = json.autoReply.message || '';
+        }
+      } catch (e) {}
+    }
+
+    function openAutoReplyModal() {
+      document.getElementById('autoReplyModal').style.display = 'flex';
+    }
+
+    function closeAutoReplyModal() {
+      document.getElementById('autoReplyModal').style.display = 'none';
+    }
+
+    function setPresetReply(index) {
+      const presets = {
+        1: 'Chào bạn! Cảm ơn bạn đã liên hệ với tôi. Tôi đã nhận được tin nhắn và sẽ phản hồi bạn trong ít phút. Bạn có thể để lại yêu cầu cụ thể hoặc gửi tài liệu nhé!',
+        2: 'Xin chào! Hiện tôi đang tập trung hoàn thiện dự án cho khách hàng nên sẽ kiểm tra và phản hồi lại bạn trong vòng 15-30 phút tới. Rất mong bạn thông cảm!',
+        3: 'Chào bạn! Tôi rất vui được hỗ trợ. Để tiết kiệm thời gian, bạn vui lòng gửi kèm file thiết kế, tài liệu yêu cầu hoặc ngân sách dự kiến để tôi tư vấn chuẩn xác nhất nhé!'
+      };
+      if (presets[index]) {
+        document.getElementById('txtAutoReplyMessage').value = presets[index];
+      }
+    }
+
+    async function saveAutoReplySettings() {
+      const enabled = document.getElementById('chkAutoReplyEnabled').checked;
+      const message = document.getElementById('txtAutoReplyMessage').value.trim();
+      const btn = document.getElementById('btnSaveAutoReply');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/auto-reply`, {
+          method: 'PUT',
+          headers: getAuthHeader(),
+          body: JSON.stringify({ enabled, message })
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert('🎉 ' + json.message);
+          closeAutoReplyModal();
+        } else {
+          alert('Lỗi: ' + (json.message || 'Không thể lưu cài đặt.'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối khi lưu cài đặt phản hồi mặc định.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu Cài Đặt';
+      }
+    }
   </script>
 </body>
 </html>

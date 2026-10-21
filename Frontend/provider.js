@@ -206,6 +206,15 @@ window.providerApi = {
     return res.json();
   },
 
+  rejectOrder: async (id, reason) => {
+    const res = await fetch(`${API_BASE}/api/providers/orders/${id}/reject`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ reason })
+    });
+    return res.json();
+  },
+
   updateOrderProgress: async (id, progressPercent, completedTasks, notes) => {
     const res = await fetch(`${API_BASE}/api/providers/orders/${id}/progress`, {
       method: 'POST',
@@ -312,6 +321,11 @@ window.providerApi = {
 // ============================================================
 // 3. COMMON UI HELPERS & INITIALIZATION
 // ============================================================
+function formatVND(amount) {
+  return Number(amount || 0).toLocaleString('vi-VN') + 'đ';
+}
+window.formatVND = formatVND;
+
 function showProviderToast(msg, type = 'success') {
   let toast = document.getElementById('toastBox');
   let msgEl = document.getElementById('toastMessage') || document.getElementById('toastMsg');

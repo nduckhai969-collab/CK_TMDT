@@ -8,15 +8,16 @@ const INITIAL_DATABASE = {
   users: [
     { id: 'USR001', name: 'Nguyễn Văn An', email: 'an.nguyen@example.com', phone: '0901 234 567', role: 'Provider', password: '123', joinDate: '12/01/2024', spentOrEarned: '112.500.000đ', balance: 25000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' },
     { id: 'USR002', name: 'Trần Thị Lan', email: 'lan.tran@example.com', phone: '0912 345 678', role: 'Provider', password: '123', joinDate: '03/02/2024', spentOrEarned: '89.200.000đ', balance: 18500000, status: 'active', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150' },
-    { id: 'USR003', name: 'Lê Hoàng Long', email: 'long.le@example.com', phone: '0988 776 655', role: 'Customer', password: '123', joinDate: '15/03/2024', spentOrEarned: '24.600.000đ', balance: 15000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
-    { id: 'USR004', name: 'Hoàng Văn Nam', email: 'nam.hoang@example.com', phone: '0933 221 100', role: 'Customer', password: '123', joinDate: '20/05/2024', spentOrEarned: '5.200.000đ', balance: 3500000, status: 'locked', lockReason: 'Hủy đơn hàng liên tục 5 lần', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' },
+    { id: 'USR003', name: 'Lê Hoàng Long', email: 'long.le@example.com', phone: '0988 776 655', role: 'Customer', password: '123', joinDate: '15/03/2024', spentOrEarned: '24.600.000đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
+    { id: 'USR004', name: 'Hoàng Văn Nam', email: 'nam.hoang@example.com', phone: '0933 221 100', role: 'Customer', password: '123', joinDate: '20/05/2024', spentOrEarned: '5.200.000đ', balance: 0, status: 'locked', lockReason: 'Hủy đơn hàng liên tục 5 lần', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' },
     { id: 'USR005', name: 'Phạm Hữu Cường', email: 'cuong.pham@example.com', phone: '0977 445 566', role: 'Provider', password: '123', joinDate: '18/06/2024', spentOrEarned: '74.000.000đ', balance: 12000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150' },
-    { id: 'USR006', name: 'Vũ Thị Minh', email: 'minh.vu@example.com', phone: '0944 889 900', role: 'Customer', password: '123', joinDate: '02/08/2024', spentOrEarned: '18.400.000đ', balance: 8000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
+    { id: 'USR006', name: 'Vũ Thị Minh', email: 'minh.vu@example.com', phone: '0944 889 900', role: 'Customer', password: '123', joinDate: '02/08/2024', spentOrEarned: '18.400.000đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
     { id: 'USR007', name: 'Đặng Quốc Huy', email: 'huy.dang@example.com', phone: '0911 334 455', role: 'Provider', password: '123', joinDate: '11/09/2024', spentOrEarned: '12.000.000đ', balance: 2000000, status: 'locked', lockReason: 'Gian lận đánh giá', avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150' },
 
     { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', password: '123', joinDate: '10/01/2025', spentOrEarned: '0đ', balance: 500000, status: 'active', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150' },
     { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', password: '123', joinDate: '15/01/2025', spentOrEarned: '0đ', balance: 1000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150' },
-    { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', password: 'admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }
+    { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'skillrentaladmin@gmail.com', phone: '0999 888 777', role: 'Admin', password: 'admin123@', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
+    { id: 'ADM002', name: 'Admin Dự Phòng', email: 'admin@skillrental.com', phone: '0999 888 666', role: 'Admin', password: 'admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }
   ],
 
   providers: [
@@ -338,6 +339,36 @@ const INITIAL_DATABASE = {
   ],
 
   orders: [
+    {
+      id: 'DH008841',
+      customerId: 'USR003',
+      customerName: 'Lê Hoàng Long',
+      customerPhone: '0988 776 655',
+      customerAddress: 'Quận 1, TP. Hồ Chí Minh',
+      providerId: 'PRV001',
+      providerName: 'Nguyễn Văn An',
+      providerPhone: '0901 234 567',
+      serviceId: 'SVC001',
+      serviceTitle: 'Thiết kế lại toàn bộ UI/UX cho App giao hàng nội thành',
+      price: 6500000,
+      priceFormatted: '6.500.000đ',
+      platformFee: 325000,
+      escrowDeposit: 6825000,
+      escrowStatus: 'escrow_held',
+      orderStatus: 'pending',
+      paymentMethod: 'Ví điện tử VNPay (Escrow 100%)',
+      date: '18/10/2026 09:15',
+      deadline: '10 ngày làm việc',
+      scheduledDate: '2026-10-20',
+      scheduledTime: '08:00 - 10:00',
+      notes: 'Chào bạn An, bên mình cần ưu tiên hoàn thành trước 3 luồng chính: Đặt đơn, Xem bản đồ tài xế và Trang ví để kịp thuyết trình với cổ đông.',
+      milestones: [
+        { title: 'Ký quỹ Escrow bảo vệ 100% thành công', done: true, time: '18/10/2026 09:15' },
+        { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: false, time: 'Chờ tiếp nhận' },
+        { title: 'Bàn giao sản phẩm / hoàn thành dịch vụ', done: false, time: 'Chờ bàn giao' },
+        { title: 'Khách hàng nghiệm thu & Giải ngân Escrow', done: false, time: 'Chờ nghiệm thu' }
+      ]
+    },
     {
       id: 'DH001234',
       customerId: 'USR003',

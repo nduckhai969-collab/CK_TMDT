@@ -7,10 +7,16 @@ const crypto = require('crypto');
 // Đọc cấu hình lúc gọi hàm (không cache) để đổi .env là có hiệu lực ngay sau khi khởi động lại.
 function getConfig() {
   const port = process.env.PORT || 3000;
+  const rawUrl = process.env.VNPAY_URL || '';
+  // Nếu trỏ tới sandbox.vnpayment.vn (nơi các mã demo/test thường xuyên bị VNPay thu hồi gây lỗi 72)
+  // hoặc để trống -> tự động dùng cổng giả lập VNPay Sandbox nội bộ (/vnpay_gateway.html)
+  const isSandboxExpired = !rawUrl || rawUrl.includes('sandbox.vnpayment.vn') || rawUrl.includes('/vnpay_gateway.html');
+  const finalUrl = isSandboxExpired ? '/vnpay_gateway.html' : rawUrl;
+
   return {
     tmnCode: process.env.VNPAY_TMN_CODE || 'SKILLRENTAL',
-    hashSecret: process.env.VNPAY_HASH_SECRET || 'MYSECRETKEY1234567890',
-    url: process.env.VNPAY_URL || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
+    hashSecret: process.env.VNPAY_HASH_SECRET || 'RAIQUIVYHUANZVOMLMWUNYGUMGNHUZZE',
+    url: finalUrl,
     returnUrl: process.env.VNPAY_RETURN_URL || `http://localhost:${port}/api/payments/vnpay/return`,
     expireMinutes: Number(process.env.VNPAY_EXPIRE_MINUTES) || 15
   };

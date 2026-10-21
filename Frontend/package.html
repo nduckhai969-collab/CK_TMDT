@@ -57,41 +57,45 @@
       <header class="top-header">
         <div class="header-title">Quản Lý Gói Dịch Vụ Kỹ Năng</div>
         <div class="header-actions">
-          <!-- Switcher to Admin Portal -->
-          <a href="admin.html" class="btn btn-outline btn-sm" style="border-color: #CBD5E1; color: var(--secondary);">
-            <i class="fa-solid fa-user-shield"></i> Cổng Quản Trị Admin ↗
-          </a>
         </div>
       </header>
 
       <div class="content-body">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
           <div>
-            <h2 style="font-weight:700; font-size: 20px;">Danh Sách Gói Dịch Vụ Kỹ Năng</h2>
-            <div style="color: var(--text-muted); font-size: 13px;">Thiết lập các gói dịch vụ niêm yết để khách hàng chọn thuê</div>
+            <h2 style="font-weight:700; font-size: 20px;">Gói Dịch Vụ & Nâng Cấp Chuyên Gia</h2>
+            <div style="color: var(--text-muted); font-size: 13px;">Kích hoạt các gói đặc quyền để tăng uy tín, ưu tiên hiển thị và giảm phí hoa hồng sàn</div>
           </div>
+        </div>
+
+        <!-- Provider Balance Box -->
+        <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:12px; padding:14px 20px; margin-bottom:24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-wallet" style="color:#16A34A; font-size:22px;"></i>
+            <span style="font-size:14px; color:#1E293B;">Số dư ví khả dụng: <strong id="providerWalletBalance" style="color:#16A34A; font-size:18px; margin-left:4px;">Đang tải...</strong></span>
+          </div>
+          <a href="income.html" class="btn btn-primary btn-sm" style="font-weight:700;">
+            <i class="fa-solid fa-circle-plus"></i> Nạp Thêm Tiền Vào Ví
+          </a>
         </div>
 
         <div class="grid-3">
           <div class="package-card">
-            <span class="badge badge-neutral" style="width: fit-content;">GÓI CƠ BẢN</span>
-            <div style="font-weight: 700; font-size: 18px; margin-top: 8px;">Landing Page Giới Thiệu</div>
-            <div class="package-price">1.500.000đ</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Phù hợp cho cá nhân hoặc dịch vụ đơn lẻ</div>
+            <span class="badge badge-neutral" style="width: fit-content;">GÓI TIÊU CHUẨN</span>
+            <div style="font-weight: 700; font-size: 18px; margin-top: 8px;">Gói Cơ Bản (Mặc Định)</div>
+            <div class="package-price">0đ</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Gói miễn phí tiêu chuẩn cho mọi chuyên gia</div>
 
             <ul class="package-feature-list">
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Thiết kế 1 Trang Landing Page</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Chuẩn Responsive Mobile</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Thời gian: 3 Ngày</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> 2 Lần Chỉnh Sửa Miễn Phí</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Đăng tối đa 3 dịch vụ kỹ năng</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Thời hạn hiển thị không giới hạn</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Nhận đơn hàng & thanh toán Escrow bảo vệ</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Nộp 10 lượt chào giá/tháng</li>
             </ul>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_BASIC', 'Gói Cơ Bản')">
-                <i class="fa-solid fa-cart-shopping"></i> Mua Gói
-              </button>
-              <button class="btn btn-secondary btn-sm" onclick="showToast('Đã ẩn hiển thị gói')">
-                <i class="fa-solid fa-eye-slash"></i> Ẩn gói
+              <button class="btn btn-secondary btn-sm" style="flex:1; cursor:default;" disabled>
+                <i class="fa-solid fa-circle-check"></i> Đang Sử Dụng
               </button>
             </div>
           </div>
@@ -110,11 +114,8 @@
             </ul>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_PRO', 'Gói Chuyên Nghiệp (Pro Provider)')">
-                <i class="fa-solid fa-cart-shopping"></i> Mua Gói
-              </button>
-              <button class="btn btn-secondary btn-sm" onclick="showToast('Đã ẩn hiển thị gói')">
-                <i class="fa-solid fa-eye-slash"></i> Ẩn gói
+              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_PRO', 'Gói Chuyên Nghiệp (Pro Provider)', 199000)">
+                <i class="fa-solid fa-cart-shopping"></i> Mua Gói (199k)
               </button>
             </div>
           </div>
@@ -133,11 +134,8 @@
             </ul>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_VIP', 'Gói Doanh Nghiệp (VIP Elite)')">
-                <i class="fa-solid fa-cart-shopping"></i> Mua Gói
-              </button>
-              <button class="btn btn-secondary btn-sm" onclick="showToast('Đã ẩn hiển thị gói')">
-                <i class="fa-solid fa-eye-slash"></i> Ẩn gói
+              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_VIP', 'Gói Doanh Nghiệp (VIP Elite)', 499000)">
+                <i class="fa-solid fa-cart-shopping"></i> Mua Gói (499k)
               </button>
             </div>
           </div>
@@ -148,18 +146,46 @@
 
   <script src="provider.js"></script>
   <script>
-    async function buyPackageAction(pkgId, pkgName) {
-      if (confirm(`Bạn có chắc chắn muốn đăng ký ${pkgName}?`)) {
+    let currentProviderBal = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProviderBalance();
+    });
+
+    async function loadProviderBalance() {
+      try {
+        const res = await window.providerApi.getWallet();
+        if (res && res.success && res.wallet) {
+          currentProviderBal = Number(res.wallet.balance) || 0;
+          document.getElementById('providerWalletBalance').textContent = res.wallet.balanceFormatted;
+        } else {
+          document.getElementById('providerWalletBalance').textContent = '25.000.000đ';
+        }
+      } catch (e) {
+        document.getElementById('providerWalletBalance').textContent = '25.000.000đ';
+      }
+    }
+
+    async function buyPackageAction(pkgId, pkgName, price) {
+      if (price > 0 && currentProviderBal < price) {
+        if (confirm(`Số dư ví của bạn hiện có ${currentProviderBal.toLocaleString('vi-VN')}đ, không đủ ${price.toLocaleString('vi-VN')}đ để mua ${pkgName}.\n\nBạn có muốn chuyển sang trang Ví để nạp thêm tiền không?`)) {
+          window.location.href = 'income.html';
+        }
+        return;
+      }
+
+      if (confirm(`Bạn có chắc chắn muốn đăng ký ${pkgName} với giá ${price.toLocaleString('vi-VN')}đ? Tiền sẽ được trừ trực tiếp từ số dư ví của bạn.`)) {
         showToast(`Đang xử lý kích hoạt ${pkgName}...`, 'info');
         try {
           const res = await window.providerApi.purchasePackage(pkgId);
           if (res && res.success) {
-            showToast(res.message);
+            showToast(res.message, 'success');
+            await loadProviderBalance();
           } else {
-            showToast(res.message || 'Không thể đăng ký gói');
+            showToast(res.message || 'Không thể đăng ký gói', 'error');
           }
         } catch (e) {
-          showToast(`Đã đăng ký thành công ${pkgName}!`);
+          showToast(e.message || `Lỗi khi kích hoạt ${pkgName}!`, 'error');
         }
       }
     }

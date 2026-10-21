@@ -269,6 +269,7 @@
     let currentModalJob = null;
     let currentDetailJob = null;
     let editingJobId = null;
+    let jobsLoadInFlight = false;
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('requests');
@@ -280,6 +281,11 @@
       document.getElementById('jobDeadline').value = d.toISOString().split('T')[0];
 
       loadJobs();
+      window.setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        if (new URLSearchParams(window.location.search).get('action') === 'pay') return;
+        loadJobs({ silent: true });
+      }, 15000);
     });
 
     function switchTab(tab) {
@@ -432,7 +438,8 @@
       }
     }
 
-    async function loadJobs() {
+    async function loadJobs({ silent = false } = {}) {
+      if (jobsLoadInFlight) return;
       const sessionUser = getCurrentCustomer();
       if (!sessionUser || sessionUser.role !== 'Customer') {
         myJobs = [];
@@ -446,8 +453,9 @@
         return;
       }
 
+      jobsLoadInFlight = true;
       const container = document.getElementById('jobsListContainer');
-      container.innerHTML = '<div style="padding:32px;text-align:center;color:#64748b"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải yêu cầu của bạn...</div>';
+      if (!silent) container.innerHTML = '<div style="padding:32px;text-align:center;color:#64748b"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải yêu cầu của bạn...</div>';
 
       try {
         // Lấy ID hồ sơ từ backend theo Firebase token, tránh dùng ID cũ trong localStorage.
@@ -481,6 +489,7 @@
         }
       } catch (error) {
         console.error('Không tải được yêu cầu của tài khoản:', error);
+        if (silent) return;
         myJobs = [];
         document.getElementById('jobCountBadge').textContent = '0';
         document.getElementById('statTotal').textContent = '0';
@@ -488,6 +497,8 @@
         document.getElementById('statApplicants').textContent = '0';
         container.innerHTML = `<div style="padding:32px;text-align:center;color:#b91c1c">Không tải được yêu cầu của tài khoản hiện tại. Vui lòng thử lại.
           <div style="margin-top:12px"><button class="btn btn-outline" onclick="loadJobs()"><i class="fa-solid fa-rotate-right"></i> Thử lại</button></div></div>`;
+      } finally {
+        jobsLoadInFlight = false;
       }
     }
 

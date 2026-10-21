@@ -7,8 +7,8 @@
     "start": "node server.js",
     "dev": "node server.js",
     "seed": "node scripts/seedFirebase.js",
-    "seed:cart-demo": "node scripts/seedCartDemo.js",
-    "test:payment": "node scripts/testPayment.js"
+    "test:payment": "node scripts/testPayment.js",
+    "check": "node scripts/checkFrontend.js"
   },
   "repository": {
     "type": "git",

@@ -59,5 +59,23 @@ async function loadProviderDetail(id){
   document.getElementById('reviewCount').textContent=`${Number(p.reviewCount)||0} đánh giá trên hồ sơ`;
   document.getElementById('ratingBars').innerHTML=[5,4,3,2,1].map(n=>{const count=reviews.filter(r=>Number(r.rating)===n).length;const percent=reviews.length?Math.round(count/reviews.length*100):0;return `<div class="rating-row"><span>${n} ★</span><div class="rating-track"><div class="rating-fill" style="width:${percent}%"></div></div><span>${count}</span></div>`}).join('');
   document.getElementById('reviewsContainer').innerHTML=reviews.length?reviews.slice(0,3).map(r=>`<div style="border-top:1px solid #edf0f2;padding-top:10px;margin-top:10px"><strong style="font-size:12px">${r.customerName||'Khách hàng'}</strong><span style="float:right;color:#e7ad37">${'★'.repeat(Math.max(0,Math.min(5,Number(r.rating)||0)))}</span><p style="margin-top:5px">${r.content||''}</p></div>`).join(''):'<div class="empty-reviews">Chưa có đánh giá chi tiết từ khách hàng trong hệ thống.</div>';
+  loadProviderPosts(id);
+}
+async function loadProviderPosts(id){
+  const container=document.getElementById('postsContainer');
+  try{
+    const result=await apiRequest(`/api/providers/${encodeURIComponent(id)}/posts`);
+    if(!result.success)throw new Error(result.message||'Không tải được bài đăng.');
+    container.replaceChildren();
+    if(!Array.isArray(result.posts)||!result.posts.length){container.textContent='Provider chưa có bài viết công khai.';return}
+    result.posts.forEach(post=>{
+      const card=document.createElement('article');
+      card.style.cssText='padding:12px 0;border-top:1px solid #edf0f2';
+      const title=document.createElement('h3');title.textContent=post.title||'Bài viết Provider';title.style.cssText='font-size:14px;margin:0 0 6px;color:#182230';
+      const meta=document.createElement('small');meta.textContent=[post.category,post.date].filter(Boolean).join(' · ');meta.style.color='#8792a0';
+      const content=document.createElement('p');content.textContent=post.content||post.summary||'';content.style.margin='8px 0 0';
+      card.append(title,meta,content);container.appendChild(card);
+    });
+  }catch(error){container.textContent=error.message||'Chưa tải được bài viết.'}
 }
 </script></body></html>

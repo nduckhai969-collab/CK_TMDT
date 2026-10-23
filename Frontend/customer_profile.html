@@ -109,6 +109,21 @@
                     0 10px 25px -5px rgba(15, 23, 42, 0.12);
         }
 
+        .profile-hero.has-cover {
+            background-size: cover !important;
+            background-position: center !important;
+        }
+
+        .profile-hero.has-cover::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(2px);
+            z-index: 1;
+            pointer-events: none;
+        }
+
         .profile-hero::after {
             content: "";
 
@@ -1359,12 +1374,12 @@
 
                     <div
                             class="profile-avatar"
-                            id="profileAvatar"
+                            id="profileAvatar" style="cursor: pointer;" onclick="document.getElementById('avatarFileInput').click()" title="Nhấn để đổi ảnh đại diện"
                     >
                         KH
                     </div>
 
-                    <input type="file" id="avatarFileInput" accept="image/png,image/jpeg,image/webp" hidden>
+                    <input type="file" id="avatarFileInput" accept="image/*" hidden>
                     <button type="button" id="changeAvatarButton" class="avatar-change-button" title="Đổi ảnh đại diện" aria-label="Đổi ảnh đại diện">
                         <i class="fa-solid fa-camera"></i>
                     </button>
@@ -1439,6 +1454,17 @@
             </div>
 
             <div class="profile-actions">
+                <input type="file" id="customerCoverFileInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="changeCustomerCover(event)">
+                <button
+                        type="button"
+                        class="hero-btn hero-btn-outline"
+                        id="btnChangeCover"
+                        onclick="document.getElementById('customerCoverFileInput').click()"
+                        title="Đổi ảnh bìa hồ sơ"
+                >
+                    <i class="fa-solid fa-camera"></i>
+                    Đổi Ảnh Bìa
+                </button>
 
                 <button
                         type="button"
@@ -1691,6 +1717,26 @@
                                 <label class="form-label" for="inputBio">Giới thiệu bản thân</label>
                                 <textarea id="inputBio" class="form-input" rows="4" maxlength="1000" placeholder="Chia sẻ đôi điều về bạn, sở thích hoặc cách bạn muốn được hỗ trợ..." style="min-height:110px;resize:vertical;"></textarea>
                                 <div class="form-note">Tối đa 1000 ký tự. Nội dung này hiển thị trên hồ sơ của bạn.</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="inputAvatarUrl">Link ảnh đại diện (Avatar URL)</label>
+                                <div style="display:flex;gap:6px;">
+                                    <input type="text" id="inputAvatarUrl" class="form-input" placeholder="https://... hoặc dùng nút camera phía trên">
+                                    <button type="button" class="btn-profile btn-outline-profile" onclick="document.getElementById('avatarFileInput').click()" title="Tải ảnh từ máy" style="padding:0 12px;white-space:nowrap;">
+                                        <i class="fa-solid fa-upload"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="inputCoverUrl">Link ảnh bìa (Cover URL)</label>
+                                <div style="display:flex;gap:6px;">
+                                    <input type="text" id="inputCoverUrl" class="form-input" placeholder="https://... hoặc dùng nút Đổi Ảnh Bìa">
+                                    <button type="button" class="btn-profile btn-outline-profile" onclick="document.getElementById('customerCoverFileInput').click()" title="Tải ảnh từ máy" style="padding:0 12px;white-space:nowrap;">
+                                        <i class="fa-solid fa-upload"></i>
+                                    </button>
+                                </div>
                             </div>
 
                         </div>
@@ -2377,11 +2423,58 @@
 
     }
 
+    async function changeCustomerCover(event) {
+        const input = event.currentTarget;
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (!file.type.toLowerCase().startsWith('image/') && !/\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
+            showToast('Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.', true);
+            input.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('Ảnh bìa phải có dung lượng tối đa 10 MB.', true);
+            input.value = '';
+            return;
+        }
+
+        const button = document.getElementById('btnChangeCover');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
+        }
+
+        try {
+            const uploadResponse = await apiRequest('/api/auth/profile/cover', {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file
+            });
+            if (!uploadResponse || !uploadResponse.success) {
+                showToast(uploadResponse?.message || 'Không thể tải ảnh bìa lên máy chủ.', true);
+                return;
+            }
+            currentUser = { ...currentUser, ...(uploadResponse.user || {}), cover: uploadResponse.cover || uploadResponse.user?.cover };
+            setCurrentCustomer(currentUser);
+            renderProfile();
+            showToast('Đã cập nhật ảnh bìa thành công.');
+        } catch (error) {
+            console.error('Không thể tải ảnh bìa lên máy chủ:', error);
+            showToast('Không thể tải ảnh bìa lên. Vui lòng kiểm tra kết nối rồi thử lại.', true);
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<i class="fa-solid fa-camera"></i> Đổi Ảnh Bìa';
+            }
+            input.value = '';
+        }
+    }
+
     async function changeCustomerAvatar(event) {
         const input = event.currentTarget;
         const file = input.files && input.files[0];
         if (!file) return;
-        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        if (!file.type.toLowerCase().startsWith('image/') && !/\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
             showToast('Chỉ hỗ trợ ảnh JPG, PNG hoặc WebP.', true);
             input.value = '';
             return;
@@ -2478,6 +2571,20 @@
         document.getElementById('profileBioSummary').textContent = bio || 'Chưa có phần giới thiệu. Hãy thêm vài dòng về bạn trong mục Thông Tin Cá Nhân.';
 
         /* =========================
+           COVER
+        ========================= */
+        const heroEl = document.querySelector('.profile-hero');
+        if (heroEl) {
+            if (currentUser.cover && currentUser.cover.trim() !== '') {
+                heroEl.style.backgroundImage = `url("${currentUser.cover}")`;
+                heroEl.classList.add('has-cover');
+            } else {
+                heroEl.style.backgroundImage = '';
+                heroEl.classList.remove('has-cover');
+            }
+        }
+
+        /* =========================
            AVATAR
         ========================= */
 
@@ -2534,6 +2641,10 @@
             address;
 
         document.getElementById('inputBio').value = bio;
+        const iAvt = document.getElementById('inputAvatarUrl');
+        if (iAvt) iAvt.value = currentUser.avatar || '';
+        const iCov = document.getElementById('inputCoverUrl');
+        if (iCov) iCov.value = currentUser.cover || '';
 
         /* =========================
            ACCOUNT
@@ -2777,6 +2888,9 @@
                     .value
                     .trim();
 
+                const avatar = document.getElementById('inputAvatarUrl')?.value?.trim();
+                const cover = document.getElementById('inputCoverUrl')?.value?.trim();
+
                 if (bio.length > 1000) {
                     showToast('Phần giới thiệu không được vượt quá 1000 ký tự.', true);
                     return;
@@ -2804,7 +2918,9 @@
                                     name,
                                     phone,
                                     address,
-                                    bio
+                                    bio,
+                                    ...(avatar ? { avatar } : {}),
+                                    ...(cover ? { cover } : {})
                                 })
                             }
                         );

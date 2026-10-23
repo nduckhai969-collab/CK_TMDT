@@ -65,17 +65,64 @@ router.get('/', requireCustomer, (req, res) => {
 
 // Thêm vào danh sách đặt lịch
 router.post('/items', requireCustomer, (req, res) => {
-  const { serviceId, hours } = req.body;
+  const { serviceId, providerId, serviceTitle, price, hours } = req.body || {};
   
-  if (!serviceId) {
-    return res.status(400).json({ success: false, message: 'Thiếu thông tin dịch vụ.' });
-  }
-  
+  let effectiveServiceId = serviceId;
   const services = db.getCollection('services') || [];
-  const s = services.find(srv => srv.id === serviceId);
-  if (!s) {
-    return res.status(404).json({ success: false, message: 'Dịch vụ không tồn tại.' });
+  let s = null;
+
+  // Trường hợp Customer đặt trực tiếp Provider chưa có gói niêm yết (serviceId === 'default' hoặc không có serviceId)
+  if (!serviceId || serviceId === 'default') {
+    if (!providerId) {
+      return res.status(400).json({ success: false, message: 'Thiếu thông tin Provider.' });
+    }
+    const providers = db.getCollection('providers') || [];
+    const prv = providers.find(p => p.id === providerId || p.userId === providerId || (p.email && p.email.toLowerCase() === String(providerId).toLowerCase()));
+    if (!prv) {
+      return res.status(404).json({ success: false, message: 'Provider không tồn tại.' });
+    }
+
+    const baseId = `SVC_BASE_${prv.id}`;
+    s = services.find(x => x.id === baseId || (x.providerId === prv.id && x.isHourlyBase));
+    if (!s) {
+      const title = serviceTitle || (prv.specialty ? `Thuê theo giờ - ${prv.specialty}` : `Dịch vụ theo giờ (${prv.name})`);
+      const unitPrice = Number(price) > 0 ? Number(price) : (Number(prv.hourlyRate) > 0 ? Number(prv.hourlyRate) : 200000);
+      s = {
+        id: baseId,
+        providerId: prv.id,
+        providerName: prv.name,
+        providerAvatar: prv.avatar || '',
+        title: title,
+        name: title,
+        price: unitPrice,
+        category: prv.category || 'Khác',
+        duration: '1 giờ',
+        status: 'active',
+        isHourlyBase: true,
+        description: `Dịch vụ chuyên môn trực tiếp theo giờ của ${prv.name}.`,
+        createdAt: new Date().toISOString()
+      };
+      services.push(s);
+      db.saveCollection('services', services);
+    }
+    effectiveServiceId = s.id;
+
+    // Gửi thông báo cho Provider
+    const cName = req.authUser?.name || 'Khách hàng';
+    notifyProvider(
+      prv.id,
+      'Khách hàng mong muốn đặt lịch trực tiếp',
+      `Khách hàng ${cName} vừa thêm dịch vụ của bạn vào giỏ hàng và mong muốn đặt lịch trực tiếp. Bạn chưa có gói dịch vụ niêm yết, hãy cập nhật bảng giá và thiết lập gói niêm yết trong Hồ sơ để tiến hành đơn hàng!`,
+      'info',
+      'profile.html'
+    );
+  } else {
+    s = services.find(srv => srv.id === effectiveServiceId);
+    if (!s) {
+      return res.status(404).json({ success: false, message: 'Dịch vụ không tồn tại.' });
+    }
   }
+
   if (s.status && s.status !== 'active') {
     return res.status(400).json({ success: false, message: 'Dịch vụ hiện không nhận đặt hàng.' });
   }
@@ -86,7 +133,7 @@ router.post('/items', requireCustomer, (req, res) => {
     return res.status(400).json({ success: false, message: 'Số lượng phải là số nguyên từ 1 đến 99.' });
   }
 
-  const existingItem = bookingList.items.find(i => i.serviceId === serviceId);
+  const existingItem = bookingList.items.find(i => i.serviceId === effectiveServiceId);
   if (existingItem) {
     const nextQty = Number(existingItem.hours || 0) + qty;
     if (nextQty > 99) {
@@ -95,13 +142,18 @@ router.post('/items', requireCustomer, (req, res) => {
     existingItem.hours = nextQty;
   } else {
     bookingList.items.push({
-      serviceId,
+      serviceId: effectiveServiceId,
       hours: qty
     });
   }
 
   updateBookingList(bookingList);
-  res.json({ success: true, message: 'Đã thêm dịch vụ vào danh sách đặt lịch!', bookingList });
+  res.json({
+    success: true,
+    message: 'Đã thêm dịch vụ vào danh sách đặt lịch!',
+    serviceId: effectiveServiceId,
+    bookingList
+  });
 });
 
 // Cập nhật số giờ
@@ -164,13 +216,34 @@ router.post('/checkout', requireCustomer, (req, res) => {
     const { specs, total } = buildCartSpecs(bookingList, schedulesByProvider);
 
     if (walletPayment) {
-      const customerBalance = Number(customer.balance);
-      if (!Number.isFinite(customerBalance) || customerBalance < 0 || customerBalance < total) {
+      // Đối soát số dư thực tế từ lịch sử ví
+      const txns = db.getCollection('walletTransactions') || [];
+      const userTxns = txns.filter(t => 
+        (t.userId === customer.id || (customer.uid && t.userId === customer.uid)) &&
+        (t.status === 'success' || t.status === 'completed')
+      );
+      const hasDeposit = userTxns.some(t => t.type === 'deposit');
+      let realBalance = 0;
+      if (hasDeposit) {
+        const totalDeposits = userTxns
+          .filter(t => t.type === 'deposit' || t.type === 'refund')
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const totalDeductions = userTxns
+          .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+          .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+        realBalance = Math.max(0, totalDeposits - totalDeductions);
+      } else {
+        realBalance = Math.max(0, Number(customer.balance) || 0);
+      }
+
+      if (realBalance < total) {
         return res.status(400).json({
           success: false,
-          message: `Số dư không đủ. Bạn cần ${total.toLocaleString('vi-VN')}đ, nhưng số dư hiện tại là ${(Number.isFinite(customerBalance) ? customerBalance : 0).toLocaleString('vi-VN')}đ.`
+          message: `Số dư ví không đủ. Bạn cần ${total.toLocaleString('vi-VN')}đ, nhưng số dư khả dụng hiện tại là ${realBalance.toLocaleString('vi-VN')}đ. Vui lòng nạp thêm tiền hoặc chọn VietQR.`
         });
       }
+      customer.balance = realBalance;
+
       const orders = createOrders(customer, specs, { mode: 'wallet', paymentMethod, customerPhone, customerAddress, notes });
       bookingList.items = [];
       updateBookingList(bookingList);
@@ -189,6 +262,7 @@ router.post('/checkout', requireCustomer, (req, res) => {
       returnOrigin: allowedFrontendOrigin(req.headers.origin),
       ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress
     });
+
     bookingList.items = [];
     updateBookingList(bookingList);
     res.json({

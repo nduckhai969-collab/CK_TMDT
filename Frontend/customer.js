@@ -18,9 +18,17 @@
  * ============================================================
  */
 
-const API_BASE = (typeof window !== 'undefined' && window.location.protocol.startsWith('http') && (window.location.port === '3000' || window.location.port === '')) ? '' : 'http://localhost:3000';
+const API_BASE = (() => {
+  if (typeof window === 'undefined') return '';
+  if (window.SKILLRENTAL_API_BASE !== undefined) return String(window.SKILLRENTAL_API_BASE).replace(/\/$/, '');
+  const { protocol, hostname, port } = window.location;
+  if (!/^https?:$/.test(protocol)) return 'http://localhost:3000';
+  if (!port || port === '3000' || (protocol === 'https:' && port === '443')) return '';
+  return `${protocol}//${hostname}:3000`;
+})();
 
 const SESSION_KEY = 'SKILLRENTAL_CURRENT_USER';
+const CUSTOMER_SESSION_KEY = 'SKILLRENTAL_CUSTOMER_USER';
 
 
 // ============================================================
@@ -28,6 +36,15 @@ const SESSION_KEY = 'SKILLRENTAL_CURRENT_USER';
 // ============================================================
 
 function getCurrentCustomer() {
+  const cRaw = localStorage.getItem(CUSTOMER_SESSION_KEY);
+  if (cRaw) {
+    try {
+      const cUser = JSON.parse(cRaw);
+      if (cUser && cUser.id && !['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(cUser.id) && cUser.role === 'Customer') {
+        return cUser;
+      }
+    } catch (_) {}
+  }
   const raw = localStorage.getItem(SESSION_KEY);
 
   if (!raw) {
@@ -65,6 +82,9 @@ function setCurrentCustomer(user) {
       JSON.stringify(user)
   );
 
+  if (user.role === 'Customer') {
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+  }
   return true;
 }
 
@@ -111,6 +131,9 @@ function requireCustomerLogin(callback) {
     callback(user);
   }
 
+  if (user.role === 'Customer') {
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+  }
   return true;
 }
 

@@ -733,6 +733,18 @@ class Database {
     return clone(this.cache[name] || []);
   }
 
+  // Read the latest committed collection from Firestore. Use this for public
+  // reads that must be visible across server instances immediately.
+  async getCollectionFresh(name) {
+    await this.flush();
+    const snap = await firestore.collection(name).get();
+    const rows = snap.docs.map(d => d.data());
+    rows.sort((a, b) => (a._idx ?? 0) - (b._idx ?? 0));
+    this.cache[name] = rows.map(({ _idx, ...rest }) => rest);
+    this.snapshot[name] = new Map(rows.map(row => [docKey(row.id), stable(row)]));
+    return clone(this.cache[name]);
+  }
+
   saveCollection(name, items) {
     if (!Array.isArray(items)) return false;
     const next = clone(items);
@@ -742,6 +754,20 @@ class Database {
       }
     });
     this.cache[name] = next;
+
+    // Lưu đồng bộ xuống file database.json cục bộ để dữ liệu không bao giờ bị mất khi restart server
+    try {
+      if (fs.existsSync(DB_FILE)) {
+        let currentDb = {};
+        try {
+          currentDb = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        } catch (_) {}
+        currentDb[name] = next;
+        fs.writeFileSync(DB_FILE, JSON.stringify(currentDb, null, 2), 'utf8');
+      }
+    } catch (fsErr) {
+      console.warn(`[db] Lưu file cục bộ database.json thất bại (${name}):`, fsErr.message);
+    }
 
     const old = this.snapshot[name] || new Map();
     const fresh = new Map();

@@ -166,6 +166,8 @@
     if (existingIndex !== -1) {
       // ĐÃ TỒN TẠI: Không tạo mới, không sinh ID mới, giữ nguyên role & status & balance
       const existing = state.users[existingIndex];
+      if (typeof userData.balance === 'number') existing.balance = userData.balance;
+      if (userData.id && !existing.id) existing.id = userData.id;
       if (uid && (!existing.uid || existing.uid !== uid)) {
         existing.uid = uid;
       }
@@ -394,6 +396,11 @@
       const finalUser = syncUserToAdminState(userToSync);
 
       localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+      if (finalUser.role === 'Provider') {
+        localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(finalUser));
+      } else if (finalUser.role === 'Customer') {
+        localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(finalUser));
+      }
       window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
       return { success: true, user: finalUser };
     },
@@ -550,6 +557,11 @@
         const finalUser = syncUserToAdminState(userToSync);
 
         localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+      if (finalUser.role === 'Provider') {
+        localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(finalUser));
+      } else if (finalUser.role === 'Customer') {
+        localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(finalUser));
+      }
         window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
         return { success: true, user: finalUser };
       } catch (err) {
@@ -584,6 +596,11 @@
 
         const finalUser = syncUserToAdminState(userToSync);
         localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+      if (finalUser.role === 'Provider') {
+        localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(finalUser));
+      } else if (finalUser.role === 'Customer') {
+        localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(finalUser));
+      }
         window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
         return { success: true, user: finalUser };
       } catch (err) {

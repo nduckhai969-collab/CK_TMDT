@@ -559,10 +559,10 @@ router.get('/balance', (req, res) => {
     const totalDeductions = userTxns
       .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
       .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
-    realBalance = Math.max(0, totalDeposits - totalDeductions);
+    realBalance = Math.max(Number(customer.balance) || 0, totalDeposits - totalDeductions);
   } else {
     // Tài khoản chưa có bất kỳ giao dịch nạp nào thành công -> về 0đ
-    realBalance = 0;
+    realBalance = Math.max(0, Number(customer.balance) || 0);
   }
 
   if (customer.balance !== realBalance) {

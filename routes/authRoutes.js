@@ -44,8 +44,18 @@ function publicUser(user) {
     }
   }
 
+  let providerId = undefined;
+  if (user && user.role === 'Provider') {
+    const providers = db.getCollection('providers') || [];
+    const prv = providers.find(p => p.userId === user.id || p.id === user.id || (p.email && p.email.toLowerCase() === (user.email || '').toLowerCase()));
+    if (prv) {
+      providerId = prv.id;
+    }
+  }
+
   return {
     id: user.id,
+    providerId: providerId,
     name: user.name,
     email: user.email,
     phone: user.phone,
@@ -54,6 +64,7 @@ function publicUser(user) {
     role: user.role,
     balance: typeof bal === 'number' ? bal : (Number(user.balance) || 0),
     avatar: user.avatar,
+    cover: user.cover || '',
     joinDate: user.joinDate
   };
 }
@@ -98,6 +109,7 @@ router.post('/register', authenticate({ allowNoProfile: true, allowUnverified: t
       if (phone) existingUser.phone = String(phone).trim();
       if (role === 'Provider' || role === 'Customer') existingUser.role = role;
       db.saveCollection('users', users);
+
       try {
         await auth.setCustomUserClaims(req.firebaseUser.uid, { role: existingUser.role });
       } catch (err) {
@@ -135,6 +147,49 @@ router.post('/register', authenticate({ allowNoProfile: true, allowUnverified: t
   users.push(newUser);
   db.saveCollection('users', users);
 
+  if (safeRole === 'Provider') {
+    const providers = db.getCollection('providers') || [];
+    let prv = providers.find(p => p.userId === newUser.id || (p.email && p.email.toLowerCase() === email.toLowerCase()));
+    if (!prv) {
+      const maxPrv = providers.reduce((m, p) => {
+        const match = /^PRV(\d+)$/.exec(p.id || '');
+        return match ? Math.max(m, parseInt(match[1], 10)) : m;
+      }, 0);
+      const defaultSlots = [
+        { day: 'T2', morning: true, afternoon: true, evening: true },
+        { day: 'T3', morning: true, afternoon: true, evening: true },
+        { day: 'T4', morning: true, afternoon: true, evening: true },
+        { day: 'T5', morning: true, afternoon: true, evening: true },
+        { day: 'T6', morning: true, afternoon: true, evening: true },
+        { day: 'T7', morning: true, afternoon: true, evening: false },
+        { day: 'CN', morning: false, afternoon: false, evening: false }
+      ];
+      prv = {
+        id: `PRV${String(maxPrv + 1).padStart(3, '0')}`,
+        userId: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        avatar: newUser.avatar || '',
+        rating: 5.0,
+        reviews: 0,
+        completedOrders: 0,
+        createdAt: dateStr,
+        verified: false,
+        hourlyRate: 200000,
+        specialty: 'Chuyên gia kỹ năng & Tư vấn',
+        category: 'IT',
+        skills: ['Chuyên môn', 'Làm việc chuyên nghiệp'],
+        availabilityStatus: 'ready',
+        workingHours: 'T2-T7, 08:00-20:00',
+        schedule: { mode: 'ready', slots: defaultSlots },
+        dateExceptions: {}
+      };
+      providers.unshift(prv);
+      db.saveCollection('providers', providers);
+    }
+  }
+
   try {
     await auth.setCustomUserClaims(req.firebaseUser.uid, { role: safeRole });
   } catch (err) {
@@ -171,7 +226,7 @@ router.get('/users', requireAdmin, (req, res) => {
 });
 
 // Upload file avatar lên backend; Firestore chỉ lưu URL, không lưu nội dung ảnh.
-router.put('/profile/avatar', requireSignedIn, express.raw({ type: 'image/*', limit: '5mb' }), async (req, res) => {
+router.put('/profile/avatar', requireSignedIn, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '10mb' }), async (req, res) => {
   if (!Buffer.isBuffer(req.body) || !req.body.length) {
     return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh JPG, PNG hoặc WebP.' });
   }
@@ -187,8 +242,8 @@ router.put('/profile/avatar', requireSignedIn, express.raw({ type: 'image/*', li
     return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
   }
 
-  const uid = String(req.firebaseUser.uid || '').replace(/[^a-zA-Z0-9_-]/g, '');
-  if (!uid) return res.status(400).json({ success: false, message: 'Không xác định được tài khoản Firebase.' });
+  const uid = String(req.firebaseUser?.uid || req.authUser?.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!uid) return res.status(400).json({ success: false, message: 'Không xác định được tài khoản.' });
 
   const fileName = `${randomUUID()}.${extension}`;
   const relativePath = path.posix.join('avatars', uid, fileName);
@@ -205,6 +260,21 @@ router.put('/profile/avatar', requireSignedIn, express.raw({ type: 'image/*', li
     const previousAvatar = users[index].avatar;
     users[index].avatar = avatar;
     db.saveCollection('users', users);
+
+    // Đồng bộ sang collection 'providers' nếu người dùng là Provider
+    const providers = db.getCollection('providers') || [];
+    const pIndex = providers.findIndex(p => p.userId === req.authUser.id || p.id === req.authUser.id || (p.email && p.email.toLowerCase() === (req.authUser.email || '').toLowerCase()));
+    if (pIndex !== -1) {
+      providers[pIndex].avatar = avatar;
+      db.saveCollection('providers', providers);
+    }
+
+    // Đồng bộ sang Firebase Auth nếu có UID
+    if (req.firebaseUser && req.firebaseUser.uid) {
+      try {
+        await auth.updateUser(req.firebaseUser.uid, { photoURL: avatar });
+      } catch (_) {}
+    }
 
     // Xóa file cũ chỉ khi nó nằm trong thư mục upload do ứng dụng quản lý.
     if (previousAvatar) {
@@ -225,9 +295,72 @@ router.put('/profile/avatar', requireSignedIn, express.raw({ type: 'image/*', li
   }
 });
 
+// Upload file ảnh bìa (cover) lên backend
+router.put('/profile/cover', requireSignedIn, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) {
+    return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh JPG, PNG hoặc WebP.' });
+  }
+
+  const extension = detectImageType(req.body);
+  if (!extension) {
+    return res.status(415).json({ success: false, message: 'File không phải ảnh JPG, PNG hoặc WebP hợp lệ.' });
+  }
+
+  const users = db.getCollection('users');
+  const index = users.findIndex(u => u.id === req.authUser.id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+  }
+
+  const uid = String(req.firebaseUser?.uid || req.authUser?.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!uid) return res.status(400).json({ success: false, message: 'Không xác định được tài khoản.' });
+
+  const fileName = `${randomUUID()}.${extension}`;
+  const relativePath = path.posix.join('covers', uid, fileName);
+  const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
+  const absolutePath = path.resolve(uploadRoot, ...relativePath.split('/'));
+  if (!absolutePath.startsWith(uploadRoot + path.sep)) {
+    return res.status(400).json({ success: false, message: 'Đường dẫn lưu ảnh không hợp lệ.' });
+  }
+
+  try {
+    await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true });
+    await fs.promises.writeFile(absolutePath, req.body, { flag: 'wx', mode: 0o640 });
+    const cover = `${req.protocol}://${req.get('host')}/uploads/${relativePath.split('/').map(encodeURIComponent).join('/')}`;
+    const previousCover = users[index].cover;
+    users[index].cover = cover;
+    db.saveCollection('users', users);
+
+    // Đồng bộ sang collection 'providers' nếu người dùng là Provider
+    const providers = db.getCollection('providers') || [];
+    const pIndex = providers.findIndex(p => p.userId === req.authUser.id || p.id === req.authUser.id || (p.email && p.email.toLowerCase() === (req.authUser.email || '').toLowerCase()));
+    if (pIndex !== -1) {
+      providers[pIndex].cover = cover;
+      db.saveCollection('providers', providers);
+    }
+
+    // Xóa file cũ nếu có
+    if (previousCover) {
+      try {
+        const previousUrl = new URL(previousCover, cover);
+        const previousPath = decodeURIComponent(previousUrl.pathname);
+        if (previousUrl.origin === new URL(cover).origin && previousPath.startsWith('/uploads/covers/')) {
+          const oldFile = path.resolve(uploadRoot, ...previousPath.slice('/uploads/'.length).split('/'));
+          if (oldFile.startsWith(uploadRoot + path.sep) && oldFile !== absolutePath) await fs.promises.unlink(oldFile).catch(() => {});
+        }
+      } catch (_) {}
+    }
+
+    return res.json({ success: true, message: 'Đã cập nhật ảnh bìa thành công!', cover, user: publicUser(users[index]) });
+  } catch (err) {
+    console.error('[auth] Upload cover:', err.message);
+    return res.status(500).json({ success: false, message: 'Không thể lưu ảnh bìa lúc này.' });
+  }
+});
+
 // Cập nhật hồ sơ
-router.put('/profile', requireSignedIn, (req, res) => {
-  const { name, phone, address, avatar, bio } = req.body || {};
+router.put('/profile', requireSignedIn, async (req, res) => {
+  const { name, phone, address, avatar, cover, bio } = req.body || {};
 
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, message: 'Họ tên không được để trống!' });
@@ -243,6 +376,7 @@ router.put('/profile', requireSignedIn, (req, res) => {
   users[index].phone = phone ? phone.trim() : '';
   users[index].address = address ? address.trim() : '';
   if (avatar) users[index].avatar = avatar;
+  if (cover !== undefined) users[index].cover = cover;
   if (Object.prototype.hasOwnProperty.call(req.body || {}, 'bio')) {
     const trimmedBio = String(bio || '').trim();
     if (trimmedBio.length > 1000) {
@@ -251,6 +385,29 @@ router.put('/profile', requireSignedIn, (req, res) => {
     users[index].bio = trimmedBio;
   }
   db.saveCollection('users', users);
+
+  // Đồng bộ sang collection 'providers' nếu là provider
+  const providers = db.getCollection('providers') || [];
+  const pIndex = providers.findIndex(p => p.userId === req.authUser.id || p.id === req.authUser.id || (p.email && p.email.toLowerCase() === (req.authUser.email || '').toLowerCase()));
+  if (pIndex !== -1) {
+    if (name) providers[pIndex].name = name.trim();
+    if (phone !== undefined) providers[pIndex].phone = phone.trim();
+    if (avatar) providers[pIndex].avatar = avatar;
+    if (cover !== undefined) providers[pIndex].cover = cover;
+    if (address !== undefined) providers[pIndex].location = address.trim();
+    if (bio !== undefined) providers[pIndex].bio = bio.trim();
+    db.saveCollection('providers', providers);
+  }
+
+  // Đồng bộ sang Firebase Auth
+  if (req.firebaseUser && req.firebaseUser.uid) {
+    try {
+      const fbUpdate = {};
+      if (name) fbUpdate.displayName = name.trim();
+      if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://'))) fbUpdate.photoURL = avatar;
+      if (Object.keys(fbUpdate).length > 0) await auth.updateUser(req.firebaseUser.uid, fbUpdate);
+    } catch (_) {}
+  }
 
   res.json({ success: true, message: 'Cập nhật thông tin thành công!', user: publicUser(users[index]) });
 });

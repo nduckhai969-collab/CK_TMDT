@@ -53,7 +53,7 @@
       submittedReviews = reviewResult.reviews || [];
       const orders = orderResult.orders || [];
       const reviewedOrders = new Set(submittedReviews.map(review => review.orderId));
-      const pending = orders.filter(order => order.orderStatus === 'completed' && !reviewedOrders.has(order.id));
+      const pending = orders.filter(order => order.orderStatus === 'completed' && !reviewedOrders.has(order.id) && !order.hasReviewed);
       const avg = submittedReviews.length ? (submittedReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / submittedReviews.length).toFixed(1) : '—';
       document.getElementById('reviewCount').textContent = submittedReviews.length;
       document.getElementById('reviewAverage').textContent = avg === '—' ? avg : `${avg} / 5`;
@@ -72,7 +72,8 @@
       container.innerHTML = submittedReviews.map(review => {
         const rating = Math.max(0, Math.min(5, Number(review.rating) || 0));
         const criteria = Array.isArray(review.criteria) ? review.criteria : [];
-        return `<article class="review-card"><div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><strong style="font-size:14px">${escapeReview(review.providerName || 'Chuyên gia')}</strong><span class="review-stars" aria-label="${rating} trên 5 sao">${'★'.repeat(rating)}${'☆'.repeat(5-rating)}</span><span style="font-size:11px;color:#64748b">${rating}/5</span></div><div style="font-size:11px;color:#64748b;margin-top:5px">${escapeReview(review.serviceTitle || 'Dịch vụ')} · Đơn ${escapeReview(review.orderId || '—')}</div><p style="font-size:13px;line-height:1.65;color:#475569;margin:12px 0 0;white-space:pre-wrap">${escapeReview(review.content || '')}</p>${criteria.length ? `<div class="review-criteria">${criteria.map(item => `<span class="criteria-chip">${escapeReview(item)}</span>`).join('')}</div>` : ''}</div><div style="font-size:11px;color:#94a3b8;white-space:nowrap">${escapeReview(review.date || '')}</div></article>`;
+        const replyText = typeof review.reply === 'string' ? review.reply : (review.reply?.content || '');
+        return `<article class="review-card"><div><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><strong style="font-size:14px">${escapeReview(review.providerName || 'Chuyên gia')}</strong><span class="review-stars" aria-label="${rating} trên 5 sao">${'★'.repeat(rating)}${'☆'.repeat(5-rating)}</span><span style="font-size:11px;color:#64748b">${rating}/5</span></div><div style="font-size:11px;color:#64748b;margin-top:5px">${escapeReview(review.serviceTitle || 'Dịch vụ')} · Đơn ${escapeReview(review.orderId || '—')}</div><p style="font-size:13px;line-height:1.65;color:#475569;margin:12px 0 0;white-space:pre-wrap">${escapeReview(review.content || '')}</p>${criteria.length ? `<div class="review-criteria">${criteria.map(item => `<span class="criteria-chip">${escapeReview(item)}</span>`).join('')}</div>` : ''}${replyText ? `<div style="margin-top:12px;padding:10px 14px;background:#F0FDF4;border-left:3px solid #16A34A;border-radius:0 8px 8px 0;font-size:12.5px;color:#166534"><strong><i class="fa-solid fa-reply"></i> Phản hồi từ chuyên gia:</strong> ${escapeReview(replyText)}</div>` : ''}</div><div style="font-size:11px;color:#94a3b8;white-space:nowrap">${escapeReview(review.date || '')}</div></article>`;
       }).join('');
     }
   </script>

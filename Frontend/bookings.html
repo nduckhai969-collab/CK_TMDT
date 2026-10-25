@@ -364,12 +364,22 @@
                   <span class="k">Bạn thực nhận</span><span class="v" style="color:var(--primary); font-size:16px;">${formatVND(net)}</span>
                 </div>
 
-                <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="confirmAcceptOrder('${order.id}')">
-                  <i class="fa-solid fa-check"></i> Tiếp Nhận Đơn Hàng &amp; Bắt Đầu
-                </button>
-                <button class="btn btn-outline btn-block" style="margin-top:8px; border-color:#FECDD3; color:#E11D48;" onclick="confirmRejectOrder('${order.id}')">
-                  <i class="fa-solid fa-ban"></i> Từ Chối Đơn (Hoàn Cọc Khách)
-                </button>
+                ${order.cancellationRequest?.status === 'pending' && order.cancellationRequest.requester === 'Customer' ? `
+                  <div style="margin-top:14px;padding:12px;border:1px solid #fed7aa;border-radius:9px;background:#fff7ed;color:#9a3412;font-size:12px">
+                    <strong>Khách yêu cầu hủy</strong><div style="margin-top:5px">${escapeHtml(order.cancellationRequest.reason || '')}</div>
+                    <div style="display:flex;gap:8px;margin-top:10px">
+                      <button class="btn btn-primary btn-sm" onclick="respondProviderCancellation('${order.id}', true)">Chấp thuận</button>
+                      <button class="btn btn-outline btn-sm" onclick="respondProviderCancellation('${order.id}', false)">Từ chối</button>
+                    </div>
+                  </div>
+                ` : `
+                  <button class="btn btn-primary btn-block btn-lg" style="margin-top:20px;" onclick="confirmAcceptOrder('${order.id}')">
+                    <i class="fa-solid fa-check"></i> Tiếp Nhận Đơn Hàng &amp; Bắt Đầu
+                  </button>
+                  <button class="btn btn-outline btn-block" style="margin-top:8px; border-color:#FECDD3; color:#E11D48;" onclick="confirmRejectOrder('${order.id}')">
+                    <i class="fa-solid fa-ban"></i> Từ Chối Đơn (Hoàn Cọc Khách)
+                  </button>
+                `}
               </div>
             </div>
           </div>
@@ -551,6 +561,18 @@
                   <span class="badge-dot"></span> ${percent === 100 ? 'Sẵn sàng bàn giao (100%)' : `Đang Tiến Hành (${percent}%)`}
                 </span>
               </div>
+
+              ${curOrder.cancellationRequest?.status === 'pending' && curOrder.cancellationRequest.requester === 'Customer' ? `
+                <div style="margin:12px 0;padding:13px;border:1px solid #fed7aa;border-radius:10px;background:#fff7ed;color:#9a3412">
+                  <strong>Khách yêu cầu hủy đơn</strong>
+                  <div style="font-size:13px;margin-top:5px">Lý do: ${escapeHtml(curOrder.cancellationRequest.reason || '—')}</div>
+                  <div style="font-size:12px;margin-top:4px">Chấp thuận sẽ hủy đơn và hoàn 100% tiền ký quỹ cho khách. Từ chối thì đơn tiếp tục.</div>
+                  <div style="display:flex;gap:8px;margin-top:10px">
+                    <button class="btn btn-primary btn-sm" onclick="respondProviderCancellation('${curOrder.id}', true)">Chấp thuận hủy</button>
+                    <button class="btn btn-outline btn-sm" onclick="respondProviderCancellation('${curOrder.id}', false)">Từ chối yêu cầu</button>
+                  </div>
+                </div>
+              ` : ''}
 
               <!-- Progress Bar -->
               <div style="margin-bottom:20px;">
@@ -784,9 +806,13 @@
     async function confirmRejectOrder(orderId) {
       const reason = window.prompt('Nhập lý do từ chối đơn hàng (tiền ký quỹ sẽ được hoàn 100% về ví của khách):', 'Lịch trình bận, không thể sắp xếp công việc');
       if (reason === null) return;
+      if (!reason.trim()) {
+        showToast('Thiếu lý do', 'Vui lòng nhập lý do từ chối đơn hàng.');
+        return;
+      }
       try {
         showToast('Đang từ chối đơn hàng...');
-        const res = await window.providerApi.rejectOrder(orderId, reason || 'Provider từ chối nhận việc');
+        const res = await window.providerApi.rejectOrder(orderId, reason.trim());
         if (res && res.success) {
           showToast('Đã từ chối đơn hàng. Tiền ký quỹ đã được hoàn 100% về ví khách!');
           await loadProviderOrders();
@@ -796,6 +822,22 @@
       } catch (e) {
         console.error('Reject order error:', e);
         showToast('Lỗi khi từ chối đơn hàng.');
+      }
+    }
+
+    async function respondProviderCancellation(orderId, approve) {
+      let reason = '';
+      if (!approve) reason = window.prompt('Lý do từ chối (không bắt buộc):') || '';
+      else if (!confirm('Chấp thuận yêu cầu hủy? Đơn sẽ kết thúc và tiền ký quỹ được hoàn cho khách hàng.')) return;
+      try {
+        const res = await window.providerApi.respondCancellation(orderId, approve, reason.trim());
+        if (res?.success) {
+          showToast(res.message || 'Đã xử lý yêu cầu hủy.');
+          await loadProviderOrders();
+        } else showToast(res?.message || 'Không thể xử lý yêu cầu hủy.');
+      } catch (e) {
+        console.error('Cancellation response error:', e);
+        showToast('Lỗi khi xử lý yêu cầu hủy.');
       }
     }
 
@@ -916,11 +958,11 @@
         currentProgressOrderId = orderIdParam;
         currentDeliveryOrderId = orderIdParam;
       }
-      if (tabParam === 'order') {
+      if (tabParam === 'order' || tabParam === 'tab-uc38') {
         switchOrderTab('tab-uc38', document.querySelectorAll('.tab-item')[1]);
-      } else if (tabParam === 'progress') {
+      } else if (tabParam === 'progress' || tabParam === 'tab-uc39') {
         switchOrderTab('tab-uc39', document.querySelectorAll('.tab-item')[2]);
-      } else if (tabParam === 'complete') {
+      } else if (tabParam === 'complete' || tabParam === 'tab-uc40') {
         switchOrderTab('tab-uc40', document.querySelectorAll('.tab-item')[3]);
       }
     });

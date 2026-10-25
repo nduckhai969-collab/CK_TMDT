@@ -48,6 +48,7 @@ function processAcceptOrder(orderId, userId) {
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
   assertOrderPaid(order);
+  if (order.cancellationRequest?.status === 'pending') throw httpError(409, 'Đơn đang chờ duyệt yêu cầu hủy; chưa thể tiếp nhận.');
   if (order.orderStatus !== 'pending') throw httpError(409, 'Đơn hàng không ở trạng thái chờ tiếp nhận');
 
   order.orderStatus = 'processing';
@@ -64,6 +65,7 @@ function processDeliverOrder(orderId, userId, handoverData = {}) {
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
   assertOrderPaid(order);
+  if (order.cancellationRequest?.status === 'pending') throw httpError(409, 'Đơn đang chờ duyệt yêu cầu hủy; chưa thể bàn giao.');
   if (order.orderStatus !== 'processing') throw httpError(409, 'Đơn hàng chưa được xử lý hoặc đã giao');
 
   order.orderStatus = 'delivered';
@@ -89,6 +91,7 @@ function processProgressOrder(orderId, userId, payload) {
   const order = loadOrder(orders, orderId);
   assertProviderOwnsOrder(order, userId);
   assertOrderPaid(order);
+  if (order.cancellationRequest?.status === 'pending') throw httpError(409, 'Đơn đang chờ duyệt yêu cầu hủy; chưa thể cập nhật tiến độ.');
   if (order.orderStatus !== 'processing') throw httpError(409, 'Chỉ có thể cập nhật tiến độ khi đơn đang xử lý');
 
   let note = '';
@@ -141,6 +144,15 @@ function refundCustomer(order) {
 function processCancelOrder(orderId, userId, userRole, reason) {
   const orders = db.getCollection('orders');
   const order = loadOrder(orders, orderId);
+  const cancellationReason = typeof reason === 'string' ? reason.trim() : '';
+
+  // User-initiated cancellations and delivery disputes must include an auditable reason.
+  if (['Customer', 'Provider'].includes(userRole) && !cancellationReason) {
+    throw httpError(400, 'Vui lòng nhập lý do hủy đơn.');
+  }
+  if (cancellationReason.length > 500) {
+    throw httpError(400, 'Lý do hủy đơn không được vượt quá 500 ký tự.');
+  }
 
   // Kiểm tra quyền
   if (userRole === 'Customer' && order.customerId !== userId) {
@@ -157,13 +169,58 @@ function processCancelOrder(orderId, userId, userRole, reason) {
   if (order.orderStatus === 'delivered' && userRole === 'Customer') {
     order.orderStatus = 'disputed';
     order.escrowStatus = 'disputed';
-    order.disputeReason = reason || 'Khách hàng khiếu nại chất lượng';
+    order.disputeReason = cancellationReason;
     updateOrderMilestone(order, 'Đơn hàng bị khiếu nại. Chờ Admin xử lý.');
     db.saveCollection('orders', orders);
 
     notifyProvider(order.providerId, 'Đơn hàng bị khiếu nại',
       `Đơn hàng ${order.id} bị khiếu nại bởi khách hàng.`, 'warning', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
     createNotification(order.customerId, 'Đang xử lý tranh chấp', `Đơn ${order.id} đã chuyển sang tranh chấp. Khoản ký quỹ được giữ nguyên trong khi Admin xem xét.`, 'warning', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+    return order;
+  }
+
+  // Chưa thanh toán: hủy trực tiếp vì chưa có escrow và chưa thể bắt đầu công việc.
+  if (order.paymentStatus === 'pending') {
+    const previousOrderStatus = order.orderStatus;
+    order.orderStatus = 'cancelled';
+    order.paymentStatus = 'cancelled';
+    order.escrowStatus = 'payment_cancelled';
+    order.cancelReason = cancellationReason;
+    order.cancelledBy = userRole;
+    order.cancelledAt = new Date().toISOString();
+    order.previousOrderStatus = previousOrderStatus;
+    updateOrderMilestone(order, `Đơn chờ thanh toán bị hủy: ${cancellationReason}`);
+    if (order.jobId) {
+      const jobs = db.getCollection('jobRequests') || [];
+      const job = jobs.find(j => j.id === order.jobId);
+      if (job && job.status === 'awaiting_payment') {
+        job.status = 'open';
+        job.selectedProviderId = null;
+        (job.applicants || []).forEach(a => { if (a.providerId === order.providerId && a.status === 'accepted') a.status = 'pending'; });
+        db.saveCollection('jobRequests', jobs);
+      }
+    }
+    db.saveCollection('orders', orders);
+    createNotification(order.customerId, 'Đơn chờ thanh toán đã hủy', `Đơn hàng ${order.id} đã được hủy. Không có khoản tiền nào bị trừ.`, 'info', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+    return order;
+  }
+
+  // Với đơn đã ký quỹ, yêu cầu hủy phải được bên còn lại chấp thuận trước khi hoàn tiền.
+  // Provider vẫn có thể từ chối đơn mới ở trạng thái pending trước khi bắt đầu công việc.
+  if (['Customer', 'Provider'].includes(userRole) && !(userRole === 'Provider' && order.orderStatus === 'pending')) {
+    if (order.cancellationRequest?.status === 'pending') throw httpError(409, 'Đơn hàng đã có yêu cầu hủy đang chờ phản hồi.');
+    const requester = userRole === 'Customer' ? 'Customer' : 'Provider';
+    order.cancellationRequest = {
+      status: 'pending', requester, reason: cancellationReason,
+      requestedAt: new Date().toISOString()
+    };
+    updateOrderMilestone(order, `${requester === 'Customer' ? 'Khách hàng' : 'Provider'} gửi yêu cầu hủy: ${cancellationReason}`);
+    db.saveCollection('orders', orders);
+    if (requester === 'Customer') {
+      notifyProvider(order.providerId, 'Khách yêu cầu hủy đơn', `Khách hàng yêu cầu hủy đơn ${order.id}: ${cancellationReason}. Vui lòng chấp thuận hoặc từ chối.`, 'warning', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
+    } else {
+      createNotification(order.customerId, 'Provider yêu cầu hủy đơn', `Provider yêu cầu hủy đơn ${order.id}: ${cancellationReason}. Vui lòng chấp thuận hoặc từ chối.`, 'warning', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+    }
     return order;
   }
 
@@ -175,7 +232,7 @@ function processCancelOrder(orderId, userId, userRole, reason) {
   order.orderStatus = 'cancelled';
   if (paymentPending) order.paymentStatus = 'cancelled';
   order.escrowStatus = paymentPending ? 'payment_cancelled' : 'refunded';
-  order.cancelReason = reason || 'Hủy đơn hàng';
+  order.cancelReason = cancellationReason || (userRole === 'Admin' ? 'Quản trị viên hủy đơn hàng' : 'Hủy đơn hàng');
   order.cancelledBy = userRole;
   order.cancelledAt = new Date().toISOString();
   order.cancellationUndoUntil = new Date(Date.now() + CANCELLATION_UNDO_WINDOW_MS).toISOString();
@@ -187,6 +244,20 @@ function processCancelOrder(orderId, userId, userRole, reason) {
   const refundedAmount = paymentPending ? 0 : refundCustomer(order);
   order.refundAmount = refundedAmount;
   order.refundedAt = refundedAmount > 0 ? formatDateTime(new Date()) : null;
+  if (paymentPending && order.jobId) {
+    const jobs = db.getCollection('jobRequests') || [];
+    const job = jobs.find(j => j.id === order.jobId);
+    if (job && job.status === 'awaiting_payment') {
+      job.status = 'open';
+      job.selectedProviderId = null;
+      (job.applicants || []).forEach(a => {
+        if (a.providerId === order.providerId && a.status === 'accepted') {
+          a.status = 'pending';
+        }
+      });
+      db.saveCollection('jobRequests', jobs);
+    }
+  }
   db.saveCollection('orders', orders);
 
   const cancellerName = userRole === 'Customer' ? 'Khách hàng' : (userRole === 'Admin' ? 'Quản trị viên' : 'Chuyên gia');
@@ -200,6 +271,49 @@ function processCancelOrder(orderId, userId, userRole, reason) {
     createNotification(order.customerId, 'Đã hoàn tiền',
       `Đơn hàng ${order.id} đã hủy, tiền ký quỹ đã được hoàn vào ví của bạn.`, 'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
   }
+  return order;
+}
+
+function processRespondCancellation(orderId, userId, userRole, approve, responseReason = '') {
+  const orders = db.getCollection('orders') || [];
+  const order = loadOrder(orders, orderId);
+  const request = order.cancellationRequest;
+  if (!request || request.status !== 'pending') throw httpError(409, 'Không có yêu cầu hủy nào đang chờ xử lý.');
+  if (['completed', 'cancelled', 'disputed'].includes(order.orderStatus)) throw httpError(409, 'Đơn đã kết thúc hoặc chuyển sang tranh chấp; không thể xử lý yêu cầu hủy này.');
+  if (userRole === 'Customer' && order.customerId !== userId) throw httpError(403, 'Bạn không có quyền xử lý yêu cầu này.');
+  if (userRole === 'Provider') assertProviderOwnsOrder(order, userId);
+  const expectedReviewer = request.requester === 'Customer' ? 'Provider' : 'Customer';
+  if (userRole !== expectedReviewer) throw httpError(403, 'Chỉ bên còn lại mới được phản hồi yêu cầu hủy.');
+
+  const response = typeof responseReason === 'string' ? responseReason.trim() : '';
+  if (response.length > 500) throw httpError(400, 'Nội dung phản hồi không được vượt quá 500 ký tự.');
+  if (!approve) {
+    request.status = 'rejected';
+    request.respondedBy = userRole;
+    request.respondedAt = new Date().toISOString();
+    request.responseReason = response;
+    updateOrderMilestone(order, `Yêu cầu hủy bị từ chối${response ? `: ${response}` : ''}`);
+    db.saveCollection('orders', orders);
+    if (userRole === 'Provider') createNotification(order.customerId, 'Yêu cầu hủy bị từ chối', `Provider từ chối yêu cầu hủy đơn ${order.id}${response ? `: ${response}` : ''}. Đơn tiếp tục thực hiện; nếu không thống nhất, hãy gửi khiếu nại để Admin xem xét.`, 'warning', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+    else notifyProvider(order.providerId, 'Khách không chấp thuận hủy đơn', `Khách hàng từ chối yêu cầu hủy đơn ${order.id}${response ? `: ${response}` : ''}.`, 'warning', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
+    return order;
+  }
+
+  request.status = 'approved';
+  request.respondedBy = userRole;
+  request.respondedAt = new Date().toISOString();
+  request.responseReason = response;
+  order.cancelReason = request.reason;
+  order.cancelledBy = request.requester;
+  order.cancelledAt = new Date().toISOString();
+  order.orderStatus = 'cancelled';
+  order.escrowStatus = 'refunded';
+  order.refundAmount = refundCustomer(order);
+  order.refundedAt = order.refundAmount > 0 ? formatDateTime(new Date()) : null;
+  updateOrderMilestone(order, 'Yêu cầu hủy được chấp thuận; tiền ký quỹ hoàn vào ví khách hàng.');
+  db.saveCollection('orders', orders);
+  createNotification(order.customerId, 'Yêu cầu hủy đã được chấp thuận', `Đơn ${order.id} đã hủy và tiền ký quỹ được hoàn vào ví.`, 'success', `/customer_orders.html?orderId=${encodeURIComponent(order.id)}`);
+  notifyProvider(order.providerId, 'Đơn hàng đã hủy', `Yêu cầu hủy đơn ${order.id} đã được chấp thuận.`, 'info', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
   return order;
 }
 
@@ -252,7 +366,7 @@ function processUndoCancelOrder(orderId, customerId) {
   order.escrowStatus = order.previousEscrowStatus || 'escrow_held';
   if (order.paymentStatus === 'pending') {
     // Đơn chờ thanh toán được khôi phục: cho thêm thời gian để thanh toán (nếu không sẽ bị tự hủy lại ngay)
-    order.paymentExpiresAt = new Date(Date.now() + (Number(process.env.ORDER_PAYMENT_WINDOW_MINUTES) || 30) * 60 * 1000).toISOString();
+    order.paymentExpiresAt = new Date(Date.now() + (Number(process.env.ORDER_PAYMENT_WINDOW_MINUTES) || 1440) * 60 * 1000).toISOString();
   }
   order.lastCancellationUndoneAt = new Date().toISOString();
   order.refundAmount = 0;
@@ -273,7 +387,7 @@ function processUndoCancelOrder(orderId, customerId) {
 }
 
 // Giải ngân Escrow cho người bán.
-//  - Khách nghiệm thu: chỉ khi tiền đang giữ (escrow_held) và đơn đang thực hiện/đã bàn giao.
+//  - Khách nghiệm thu: chỉ khi tiền đang giữ (escrow_held) và Provider đã bàn giao.
 //  - Admin (force): thêm cả đơn đang tranh chấp.
 function processReleaseEscrow(orderId, { customerId = null, force = false } = {}) {
   const orders = db.getCollection('orders');
@@ -282,11 +396,12 @@ function processReleaseEscrow(orderId, { customerId = null, force = false } = {}
   if (!force && order.customerId !== customerId) {
     throw httpError(403, 'Bạn không có quyền thao tác đơn hàng này.');
   }
+  if (order.cancellationRequest?.status === 'pending') throw httpError(409, 'Đơn đang chờ duyệt yêu cầu hủy; chưa thể giải ngân Escrow.');
   if (order.escrowStatus === 'completed' || order.orderStatus === 'completed') {
     throw httpError(409, 'Đơn hàng này đã được giải ngân Escrow trước đó!');
   }
   const releasableEscrow = force ? ['escrow_held', 'disputed'] : ['escrow_held'];
-  const releasableStatus = force ? ['processing', 'delivered', 'disputed'] : ['processing', 'delivered'];
+  const releasableStatus = force ? ['processing', 'delivered', 'disputed'] : ['delivered'];
   if (!releasableEscrow.includes(order.escrowStatus) || !releasableStatus.includes(order.orderStatus)) {
     throw httpError(409, 'Đơn hàng ở trạng thái hiện tại không thể giải ngân (đã hủy, hoàn tiền hoặc chưa được tiếp nhận).');
   }
@@ -361,6 +476,7 @@ function processForceRefund(orderId) {
 
   order.escrowStatus = 'refunded';
   order.orderStatus = 'cancelled';
+  if (order.cancellationRequest?.status === 'pending') order.cancellationRequest.status = 'resolved_by_admin';
   order.cancelledBy = 'Admin';
   updateOrderMilestone(order, 'Admin hoàn tiền ký quỹ cho khách hàng');
   refundCustomer(order);
@@ -395,6 +511,7 @@ module.exports = {
   processDeliverOrder,
   processProgressOrder,
   processCancelOrder,
+  processRespondCancellation,
   processUndoCancelOrder,
   processReleaseEscrow,
   processForceRefund,

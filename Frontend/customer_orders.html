@@ -103,6 +103,13 @@
       background: #E2E8F0;
       color: #94A3B8;
     }
+    .reason-modal-backdrop { display:none;position:fixed;inset:0;z-index:11000;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.58);backdrop-filter:blur(3px);box-sizing:border-box; }
+    .reason-modal { width:min(100%,540px);max-height:calc(100vh - 32px);overflow:auto;background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 24px 60px rgba(15,23,42,.24); }
+    .reason-field { display:grid;gap:7px;margin-top:16px; }
+    .reason-field label { color:#334155;font-size:13px;font-weight:700; }
+    .reason-field select,.reason-field textarea { width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;background:#fff;color:#0f172a;font:13px Inter,sans-serif;outline:none; }
+    .reason-field select:focus,.reason-field textarea:focus { border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12); }
+    .reason-field textarea { min-height:120px;resize:vertical;line-height:1.55; }
     @media(max-width:800px){.order-body{grid-template-columns:1fr}.milestones-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:600px){.orders-hero{padding:21px;align-items:flex-start;flex-direction:column}.order-head{padding:16px;flex-direction:column}.order-total{width:100%;box-sizing:border-box}.order-body{padding:14px 16px}.milestones-panel{margin:0 16px 14px;padding:13px}.order-actions{padding:13px 16px;align-items:flex-start;flex-direction:column}.order-action-group{width:100%;justify-content:flex-start}.order-action-group .btn{flex:1;justify-content:center}.status-tab{font-size:12px;padding:8px 10px}}
   </style>
@@ -133,6 +140,9 @@
     <!-- FILTER TABS -->
     <div style="background:#eef2f5;padding:5px;border-radius:12px;display:flex;gap:4px;margin-bottom:20px;overflow-x:auto;width:max-content;max-width:100%;box-sizing:border-box">
       <button type="button" class="status-tab active" onclick="filterOrders('all', this)">Tất cả <span id="countAll">0</span></button>
+      <button type="button" class="status-tab" id="tabPendingOrders" onclick="filterOrders('pending', this)">
+        <i class="fa-solid fa-clock" style="color:#d97706;margin-right:3px"></i> Chờ thanh toán <span id="countPending" style="background:#d97706;color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;margin-left:3px">0</span>
+      </button>
       <button type="button" class="status-tab" onclick="filterOrders('processing', this)">Đang làm <span id="countProcessing">0</span></button>
       <button type="button" class="status-tab" onclick="filterOrders('delivered', this)">Chờ nghiệm thu <span id="countDelivered">0</span></button>
       <button type="button" class="status-tab" onclick="filterOrders('completed', this)">Hoàn tất <span id="countCompleted">0</span></button>
@@ -140,12 +150,15 @@
     </div>
 
     <section style="background:#fff;border:1px solid #dbeafe;border-left:4px solid #2563eb;border-radius:12px;padding:15px 18px;margin-bottom:18px;color:#334155;font-size:12.5px;line-height:1.65">
-      <strong style="display:block;color:#0f172a;font-size:13px;margin-bottom:5px"><i class="fa-solid fa-circle-info" style="color:#2563eb"></i> Quy định hủy đơn</strong>
+      <strong style="display:block;color:#0f172a;font-size:13px;margin-bottom:5px"><i class="fa-solid fa-circle-info" style="color:#2563eb"></i> Quy định thanh toán ký quỹ &amp; hủy đơn</strong>
       <ul style="margin:0;padding-left:19px">
-        <li><strong>Đơn chưa thanh toán:</strong> bạn có thể hủy, không bị trừ tiền.</li>
-        <li><strong>Đơn đã thanh toán nhưng chưa bàn giao:</strong> bạn có thể hủy; tiền ký quỹ được hoàn vào ví SkillRental.</li>
-        <li><strong>Đơn đã bàn giao:</strong> chọn “Khiếu nại đơn”; đơn chuyển sang tranh chấp và tiền ký quỹ được giữ nguyên để Admin xem xét, chưa hoàn ngay.</li>
-        <li><strong>Hoàn tác:</strong> chỉ thực hiện được trong 5 phút sau khi bạn hủy. Nếu tiền đã hoàn vào ví, ví cần đủ số dư để thu hồi khoản hoàn; khung giờ dịch vụ cũng phải còn trống.</li>
+        <li><strong>Thời hạn ký quỹ:</strong> Đơn hàng chờ thanh toán được bảo lưu báo giá trong <strong>24 giờ</strong>. Quá 24 giờ chưa thanh toán, đơn tự động hủy và yêu cầu được mở lại để bạn chọn chuyên gia khác.</li>
+        <li><strong>Đơn chưa thanh toán:</strong> bạn có thể hủy bất kỳ lúc nào, không bị trừ tiền; yêu cầu tuyển dụng sẽ mở lại ngay.</li>
+        <li><strong>Đơn đã ký quỹ, chưa bàn giao:</strong> bạn gửi yêu cầu hủy kèm lý do. Provider phải chấp thuận mới hủy và hoàn 100% tiền ký quỹ; trong lúc chờ, đơn vẫn giữ nguyên và tiền chưa được hoàn hoặc giải ngân.</li>
+        <li><strong>Provider yêu cầu hủy:</strong> bạn có thể chấp thuận để hủy và hoàn tiền, hoặc từ chối để đơn tiếp tục.</li>
+        <li><strong>Không thống nhất:</strong> bên bị từ chối có thể gửi khiếu nại để Admin xem xét bằng chứng; tiền ký quỹ được giữ trong thời gian xử lý.</li>
+        <li><strong>Đơn đã bàn giao:</strong> dùng “Khiếu nại đơn”; Admin xử lý theo bằng chứng và quyết định khoản tiền được hoàn cho khách hay thanh toán cho Provider.</li>
+        <li><strong>Đơn chưa thanh toán:</strong> hủy ngay vì chưa có tiền ký quỹ. Đơn quá hạn 24 giờ cũng tự hủy và mở lại yêu cầu.</li>
       </ul>
     </section>
 
@@ -159,13 +172,50 @@
 
   </main>
 
+  <div id="cancellationReasonModal" class="reason-modal-backdrop" role="presentation" onclick="if(event.target===this)closeCancellationReasonModal()">
+    <section class="reason-modal" role="dialog" aria-modal="true" aria-labelledby="cancellationReasonTitle">
+      <header style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px 14px;border-bottom:1px solid #e2e8f0">
+        <div>
+          <div style="display:inline-flex;align-items:center;gap:7px;color:#b45309;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em"><i class="fa-solid fa-clipboard-list"></i> Thông tin xử lý đơn</div>
+          <h2 id="cancellationReasonTitle" style="margin:6px 0 0;color:#0f172a;font-size:19px;font-weight:800">Lý do hủy đơn</h2>
+        </div>
+        <button type="button" onclick="closeCancellationReasonModal()" aria-label="Đóng" style="width:34px;height:34px;border:0;border-radius:8px;background:#f1f5f9;color:#64748b;cursor:pointer"><i class="fa-solid fa-xmark"></i></button>
+      </header>
+      <form id="cancellationReasonForm" onsubmit="submitCancellationReason(event)" style="padding:4px 22px 22px">
+        <p id="cancellationReasonHelp" style="margin:12px 0 0;color:#64748b;font-size:12.5px;line-height:1.6"></p>
+        <div class="reason-field">
+          <label for="cancellationReasonCategory">Nhóm lý do <span style="color:#dc2626">*</span></label>
+          <select id="cancellationReasonCategory" required>
+            <option value="" disabled selected>Chọn nhóm lý do phù hợp</option>
+            <option>Thay đổi kế hoạch cá nhân</option>
+            <option>Thời gian hoặc lịch hẹn không phù hợp</option>
+            <option>Không còn nhu cầu sử dụng dịch vụ</option>
+            <option>Thông tin hoặc phạm vi dịch vụ chưa đúng thỏa thuận</option>
+            <option>Tiến độ hoặc chất lượng chưa đạt cam kết</option>
+            <option>Hai bên không thống nhất về cách thực hiện</option>
+            <option value="Khác">Lý do khác</option>
+          </select>
+        </div>
+        <div class="reason-field">
+          <label for="cancellationReasonDetails">Mô tả cụ thể <span style="color:#dc2626">*</span></label>
+          <textarea id="cancellationReasonDetails" required maxlength="430" placeholder="Nêu rõ lý do để bên còn lại xem xét. Nếu đã có phần việc hoàn thành, vui lòng mô tả tiến độ và nội dung hai bên đã thống nhất."></textarea>
+          <div style="display:flex;justify-content:space-between;gap:12px;color:#94a3b8;font-size:11px"><span>Lý do này sẽ được lưu trong lịch sử đơn.</span><span><strong id="cancellationReasonCount">0</strong>/430</span></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:20px">
+          <button type="button" onclick="closeCancellationReasonModal()" class="btn btn-outline" style="font-weight:700">Để sau</button>
+          <button type="submit" id="submitCancellationReasonButton" class="btn btn-primary" style="font-weight:700"><i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <!-- CONFIRM RELEASE ESCROW MODAL -->
   <div id="releaseModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
     <div style="background:#FFFFFF; border-radius:16px; max-width:480px; width:90%; padding:32px; box-shadow:0 20px 35px -5px rgba(0,0,0,0.2); animation:modalIn 0.3s ease-out;">
       <div style="width:60px; height:60px; border-radius:50%; background:#DCFCE7; color:#16A34A; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 16px;">
         <i class="fa-solid fa-hand-holding-dollar"></i>
       </div>
-      <h3 style="font-size:19px; font-weight:800; color:#0F172A; text-align:center; margin-bottom:8px;">Xác Nhận Nghiệm Thu & Giải Ngân</h3>
+      <h3 style="font-size:19px; font-weight:800; color:#0F172A; text-align:center; margin-bottom:8px;">Xác Nhận Nghiệm Thu &amp; Giải Ngân</h3>
       <p style="font-size:13.5px; color:#64748B; text-align:center; line-height:1.5; margin-bottom:20px;">
         Bạn xác nhận chuyên gia đã hoàn thành đúng chất lượng cam kết? Sau khi bấm xác nhận, số tiền <strong id="modalReleaseAmount" style="color:#16A34A;">—</strong> đang ký quỹ sẽ được mở khóa và chuyển vào ví chuyên gia ngay lập tức.
       </p>
@@ -186,7 +236,7 @@
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div>
           <h3 id="retryPaymentTitle" style="margin:0 0 4px;color:#0f172a;font-size:18px;font-weight:800">Chọn phương thức ký quỹ</h3>
-          <p style="margin:0;color:#64748b;font-size:13px">Ký quỹ Escrow bảo vệ an toàn 100% để chuyên gia tiếp nhận công việc.</p>
+          <p style="margin:0;color:#64748b;font-size:13px">Ký quỹ Escrow bảo vệ an toàn 100% để chuyên gia tiếp nhận công việc (Hiệu lực 24h).</p>
         </div>
         <button type="button" onclick="closeRetryPaymentModal()" style="background:none;border:none;font-size:18px;color:#94a3b8;cursor:pointer;padding:4px"><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -314,7 +364,7 @@
 
       <!-- Action Button -->
       <button id="btnConfirmVietQrPaid" type="button" onclick="onCustomerConfirmVietQrPaid()" class="btn btn-primary btn-block" style="width:100%; padding:13px 0; font-weight:800; font-size:14.5px; box-shadow:0 4px 14px rgba(22,163,74,0.35); margin-bottom:8px;">
-        <i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công
+        <i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã &amp; Chuyển Khoản Thành Công
       </button>
 
       <a id="linkOpenVnpayGateway" href="#" target="_blank" style="font-size:12px; color:#005BAA; font-weight:600; text-decoration:none; display:inline-block; margin-top:4px;">
@@ -335,12 +385,26 @@
     let currentCustomerBalance = 0;
     let activeRetryOrder = null;
     let activeVietQrTxnRef = null;
+    let activeCancellation = null;
     let vietqrTimer = null;
     let vietqrPollInterval = null;
+
+    function formatRemainingTime(expiresAtISO) {
+      if (!expiresAtISO) return '24 giờ';
+      const diff = Date.parse(expiresAtISO) - Date.now();
+      if (diff <= 0) return 'Đã hết hạn';
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      if (hours > 0) return `${hours} giờ ${minutes} phút`;
+      return `${Math.max(1, minutes)} phút`;
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
       document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
+      document.getElementById('cancellationReasonDetails').addEventListener('input', event => {
+        document.getElementById('cancellationReasonCount').textContent = event.target.value.length;
+      });
       loadCustomerOrders();
     });
 
@@ -374,6 +438,25 @@
         reviewedOrderIds = new Set((reviewsRes.success ? reviewsRes.reviews : []).map(review => review.orderId));
         updateCounts();
         renderOrders();
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        const orderIdParam = urlParams.get('orderId');
+        if (tabParam === 'pending' || (orderIdParam && myOrders.some(o => o.id === orderIdParam && o.paymentStatus === 'pending'))) {
+          const tabBtn = document.getElementById('tabPendingOrders');
+          if (tabBtn) filterOrders('pending', tabBtn);
+        } else if (tabParam) {
+          const tabBtn = document.querySelector(`.status-tab[onclick*="'${tabParam}'"]`);
+          if (tabBtn) filterOrders(tabParam, tabBtn);
+        }
+        if (orderIdParam) {
+          setTimeout(() => {
+            const card = document.getElementById(`customer-order-${orderIdParam}`);
+            if (card) {
+              card.open = true;
+              card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 200);
+        }
       } else {
         document.getElementById('ordersContainer').innerHTML = `
           <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; padding:40px; text-align:center; color:#EF4444;">
@@ -386,6 +469,10 @@
 
     function updateCounts() {
       document.getElementById('countAll').textContent = myOrders.length;
+      const countPendingEl = document.getElementById('countPending');
+      if (countPendingEl) {
+        countPendingEl.textContent = myOrders.filter(o => o.paymentStatus === 'pending' && o.orderStatus !== 'cancelled').length;
+      }
       document.getElementById('countProcessing').textContent = myOrders.filter(o => o.orderStatus === 'processing' || o.orderStatus === 'confirmed').length;
       document.getElementById('countDelivered').textContent = myOrders.filter(o => o.orderStatus === 'delivered').length;
       document.getElementById('countCompleted').textContent = myOrders.filter(o => o.orderStatus === 'completed').length;
@@ -403,8 +490,10 @@
       const container = document.getElementById('ordersContainer');
       let filtered = myOrders;
 
-      if (currentFilter === 'processing') {
-        filtered = myOrders.filter(o => o.orderStatus === 'processing' || o.orderStatus === 'confirmed');
+      if (currentFilter === 'pending') {
+        filtered = myOrders.filter(o => o.paymentStatus === 'pending' && o.orderStatus !== 'cancelled');
+      } else if (currentFilter === 'processing') {
+        filtered = myOrders.filter(o => (o.orderStatus === 'processing' || o.orderStatus === 'confirmed') && o.paymentStatus !== 'pending');
       } else if (currentFilter !== 'all') {
         filtered = myOrders.filter(o => o.orderStatus === currentFilter);
       }
@@ -413,8 +502,8 @@
         container.innerHTML = `
           <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:48px; text-align:center;">
             <i class="fa-solid fa-box-open" style="font-size:44px; color:#94A3B8; margin-bottom:14px;"></i>
-            <h3 style="font-size:17px; font-weight:700; color:#0F172A; margin-bottom:6px;">Không có đơn hàng nào trong mục này</h3>
-            <p style="font-size:13.5px; color:#64748B; margin-bottom:18px;">Bạn có thể khám phá danh sách chuyên gia hoặc đăng yêu cầu tuyển việc mới.</p>
+            <h3 style="font-size:17px; font-weight:700; color:#0F172A; margin-bottom:6px;">${currentFilter === 'pending' ? 'Không có đơn hàng nào chờ thanh toán' : 'Không có đơn hàng nào trong mục này'}</h3>
+            <p style="font-size:13.5px; color:#64748B; margin-bottom:18px;">${currentFilter === 'pending' ? 'Tất cả các dịch vụ của bạn đều đã được ký quỹ an toàn hoặc hoàn tất.' : 'Bạn có thể khám phá danh sách chuyên gia hoặc đăng yêu cầu tuyển việc mới.'}</p>
             <a href="customer.html" class="btn btn-primary" style="font-weight:600;"><i class="fa-solid fa-magnifying-glass"></i> Khám Phá Chuyên Gia</a>
           </div>
         `;
@@ -427,6 +516,7 @@
         const isDelivered = o.orderStatus === 'delivered';
         const isDisputed = o.orderStatus === 'disputed';
         const isCancelled = o.orderStatus === 'cancelled';
+        const cancellationPending = o.cancellationRequest?.status === 'pending';
         const canUndoCancellation = isCancelled && o.cancelledBy === 'Customer' && Number.isFinite(Date.parse(o.cancellationUndoUntil || '')) && Date.parse(o.cancellationUndoUntil) > Date.now();
 
         let badgeStatus = '';
@@ -445,7 +535,7 @@
         }
 
         return `
-          <details class="order-card" id="customer-order-${o.id}" data-order-id="${o.id}">
+          <details class="order-card" id="customer-order-${o.id}" data-order-id="${o.id}" ${currentFilter === 'pending' || o.paymentStatus === 'pending' ? 'open' : ''}>
             <summary class="order-compact">
               <span class="order-compact-main"><span class="order-compact-title">${o.serviceTitle || 'Dịch vụ theo yêu cầu'}</span><span class="order-compact-meta">Đơn ${o.id} · ${o.providerName || 'Chưa cập nhật chuyên gia'}</span></span>
               <span class="order-compact-side">${badgeStatus}<span class="order-expand-label">Xem chi tiết <i class="fa-solid fa-chevron-down"></i></span><span class="order-expand-label order-collapse-label">Thu gọn <i class="fa-solid fa-chevron-up"></i></span></span>
@@ -454,7 +544,12 @@
             <div class="order-head">
               <div style="min-width:0;flex:1">
                 <div class="order-badges"><span class="order-id">Đơn ${o.id}</span>${badgeStatus}<span class="badge-escrow"><i class="fa-solid fa-lock"></i> ${o.paymentStatus === 'pending' ? 'Chưa ký quỹ' : o.escrowStatus === 'payment_cancelled' ? 'Chưa thanh toán' : o.escrowStatus === 'completed' ? 'Đã giải ngân' : 'Đang ký quỹ'}</span></div>
-                <div class="order-meta"><span><i class="fa-regular fa-calendar"></i> Tạo ngày ${o.date || '—'}</span><span><i class="fa-regular fa-clock"></i> Hạn ${o.deadline || 'Thỏa thuận'}</span></div>
+                <div class="order-meta">
+                  <span><i class="fa-regular fa-calendar"></i> Tạo ngày ${o.date || '—'}</span>
+                  <span><i class="fa-regular fa-clock"></i> Hạn ${o.deadline || 'Thỏa thuận'}</span>
+                  ${o.paymentStatus === 'pending' ? `<span style="background:#FFFBEB;color:#D97706;border:1px solid #FDE68A;font-weight:700;"><i class="fa-solid fa-hourglass-half" style="color:#D97706"></i> Hạn ký quỹ còn: <strong style="color:#B45309">${formatRemainingTime(o.paymentExpiresAt)}</strong></span>` : ''}
+                </div>
+                ${cancellationPending ? `<div style="margin-top:10px;padding:10px 12px;border-radius:9px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px"><strong>Yêu cầu hủy đang chờ phản hồi.</strong> ${o.cancellationRequest.requester === 'Customer' ? 'Provider chưa phản hồi; đơn và khoản ký quỹ đang được giữ nguyên.' : `Provider đề nghị hủy: ${escapeHTML(o.cancellationRequest.reason || '')}`}</div>` : ''}
               </div>
               <div class="order-total"><div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Tiền ký quỹ</div><div style="font-size:20px;font-weight:800;color:#15803d;margin-top:4px">${formatVND(o.escrowDeposit || o.price)}</div></div>
             </div>
@@ -466,7 +561,13 @@
                 <div class="provider-info"><i class="fa-solid fa-user-tie" style="color:#16A34A"></i><span>Chuyên gia</span><strong>${o.providerName || 'Chưa cập nhật'}</strong>${o.providerPhone ? `<span style="color:#94a3b8">•</span><span><i class="fa-solid fa-phone" style="color:#94a3b8"></i> ${o.providerPhone}</span>` : ''}</div>
                 ${o.notes ? `<div class="order-notes"><strong>Ghi chú:</strong> ${o.notes}</div>` : ''}
               </div>
-                <div class="escrow-info"><div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:.05em;margin-bottom:8px">Bảo vệ thanh toán</div><div style="display:flex;gap:10px;align-items:flex-start;color:${o.paymentStatus === 'pending' ? '#B45309' : '#15803d'};font-size:12px;font-weight:700;line-height:1.5"><i class="fa-solid ${o.paymentStatus === 'pending' ? 'fa-clock' : 'fa-shield-halved'}" style="font-size:17px;margin-top:1px"></i><span>${o.paymentStatus === 'pending' ? 'Chờ xác nhận thanh toán. Provider chưa nhận được yêu cầu.' : 'Tiền được giữ an toàn cho đến khi bạn nghiệm thu công việc.'}</span></div></div>
+              <div class="escrow-info">
+                <div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:800;letter-spacing:.05em;margin-bottom:8px">Bảo vệ thanh toán</div>
+                <div style="display:flex;gap:10px;align-items:flex-start;color:${o.paymentStatus === 'pending' ? '#B45309' : '#15803d'};font-size:12px;font-weight:700;line-height:1.5">
+                  <i class="fa-solid ${o.paymentStatus === 'pending' ? 'fa-clock' : 'fa-shield-halved'}" style="font-size:17px;margin-top:1px"></i>
+                  <span>${o.paymentStatus === 'pending' ? 'Chờ xác nhận ký quỹ. Đơn hàng và báo giá của chuyên gia được bảo lưu trong 24 giờ. Quá 24h đơn sẽ tự hủy và yêu cầu được mở lại.' : 'Tiền được giữ an toàn cho đến khi bạn nghiệm thu công việc.'}</span>
+                </div>
+              </div>
             </div>
 
             <div class="milestones-panel">
@@ -494,17 +595,21 @@
               <a href="customer_chat.html?with=${o.providerId || ''}" class="btn btn-outline btn-sm" style="font-weight:700"><i class="fa-solid fa-comments" style="color:#16A34A"></i> Nhắn chuyên gia</a>
               <div class="order-action-group">
                 ${o.paymentStatus === 'pending' && (o.orderStatus === 'pending' || o.orderStatus === 'pending_payment') ? `
-                  <button type="button" onclick="openRetryPaymentModal('${o.id}')" class="btn btn-primary btn-sm" style="font-weight:700">
-                    <i class="fa-solid fa-rotate-right"></i> Thanh toán lại
+                  <button type="button" onclick="openRetryPaymentModal('${o.id}')" class="btn btn-primary btn-sm" style="font-weight:700; background:#D97706; border-color:#D97706;">
+                    <i class="fa-solid fa-credit-card"></i> Thanh toán ký quỹ ngay
                   </button>
                 ` : ''}
-                ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') ? `
-                  <button onclick="cancelCustomerOrder('${o.id}', ${o.paymentStatus === 'pending'})" class="btn btn-outline btn-sm" style="border-color:#94a3b8;color:#475569;font-weight:700">
+                ${cancellationPending && o.cancellationRequest.requester === 'Provider' ? `
+                  <button onclick="respondCustomerCancellation('${o.id}', true)" class="btn btn-primary btn-sm" style="font-weight:700">Chấp thuận hủy</button>
+                  <button onclick="respondCustomerCancellation('${o.id}', false)" class="btn btn-outline btn-sm" style="font-weight:700">Từ chối</button>
+                ` : ''}
+                ${!cancellationPending && (o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') ? `
+                  <button onclick="openCancellationReasonModal('${o.id}', ${o.paymentStatus === 'pending'}, false)" class="btn btn-outline btn-sm" style="border-color:#94a3b8;color:#475569;font-weight:700">
                     <i class="fa-solid fa-xmark"></i> Hủy đơn
                   </button>
                 ` : ''}
                 ${isDelivered ? `
-                  <button onclick="cancelCustomerOrder('${o.id}', false, true)" class="btn btn-outline btn-sm" style="border-color:#fca5a5;color:#b91c1c;font-weight:700">
+                  <button onclick="openCancellationReasonModal('${o.id}', false, true)" class="btn btn-outline btn-sm" style="border-color:#fca5a5;color:#b91c1c;font-weight:700">
                     <i class="fa-solid fa-scale-balanced"></i> Khiếu nại đơn
                   </button>
                 ` : ''}
@@ -520,14 +625,14 @@
                   </button>
                 ` : ''}
 
-                ${isDelivered || (isEscrowHeld && !isCompleted && !isDisputed) ? `
+                ${isDelivered && isEscrowHeld && !cancellationPending ? `
                   <button onclick="openReleaseModal('${o.id}', ${o.price})" class="btn btn-primary" style="font-weight:700">
-                    <i class="fa-solid fa-circle-check"></i> Nghiệm thu & giải ngân
+                    <i class="fa-solid fa-circle-check"></i> Nghiệm thu &amp; giải ngân
                   </button>
                 ` : ''}
 
-                ${isCompleted && !reviewedOrderIds.has(o.id) ? `
-                  <a href="customer_review.html?orderId=${o.id}" class="btn btn-primary" style="font-weight:700;background:#F59E0B;border-color:#F59E0B">
+                ${isCompleted && !reviewedOrderIds.has(o.id) && !o.hasReviewed ? `
+                  <a href="customer_review.html?orderId=${encodeURIComponent(o.id)}" class="btn btn-primary" style="font-weight:700;background:#F59E0B;border-color:#F59E0B">
                     <i class="fa-solid fa-star"></i> Đánh giá
                   </a>
                 ` : isCompleted ? '<span class="btn btn-outline btn-sm" aria-label="Đã đánh giá"><i class="fa-solid fa-check" style="color:#16a34a"></i> Đã đánh giá</span>' : ''}
@@ -561,20 +666,21 @@
 
     async function confirmReleaseEscrow() {
       if (!targetOrderId) return;
+      const completedOrderId = targetOrderId;
       const btn = document.getElementById('btnConfirmRelease');
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Xử Lý...`;
 
-      const res = await apiRequest(`/api/orders/${targetOrderId}/release-escrow`, {
+      const res = await apiRequest(`/api/orders/${encodeURIComponent(completedOrderId)}/release-escrow`, {
         method: 'PUT'
       });
 
       if (res.success) {
-        showToast('Nghiệm Thu Thành Công', res.message, 'success');
+        showToast('Nghiệm Thu Thành Công', res.message || 'Tiền ký quỹ đã giải ngân cho chuyên gia! Đang chuyển sang đánh giá...', 'success');
         closeReleaseModal();
         setTimeout(() => {
-          window.location.href = `customer_review.html?orderId=${targetOrderId}`;
-        }, 1200);
+          window.location.href = `customer_review.html?orderId=${encodeURIComponent(completedOrderId)}`;
+        }, 1000);
       } else {
         showToast('Lỗi', res.message || 'Không thể giải ngân tiền ký quỹ', 'error');
         btn.disabled = false;
@@ -658,7 +764,7 @@
         }
 
         button.disabled = true;
-        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang trừ ví & ký quỹ...';
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang trừ ví &amp; ký quỹ...';
         try {
           const res = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}/pay-with-balance`, {
             method: 'POST'
@@ -783,32 +889,81 @@
         } else {
           showToast('Chưa thể xác nhận', res.message || 'Không thể xác nhận thanh toán. Vui lòng thử lại.', 'error');
           btn.disabled = false;
-          btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công';
+          btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã &amp; Chuyển Khoản Thành Công';
         }
       } catch (err) {
         showToast('Lỗi kết nối', err.message || 'Không kết nối được với máy chủ.', 'error');
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã & Chuyển Khoản Thành Công';
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tôi Đã Quét Mã &amp; Chuyển Khoản Thành Công';
       }
     }
 
-    async function cancelCustomerOrder(orderId, paymentPending = false, isDelivered = false) {
+    function openCancellationReasonModal(orderId, paymentPending = false, isDelivered = false) {
+      activeCancellation = { orderId, paymentPending, isDelivered };
+      document.getElementById('cancellationReasonTitle').textContent = isDelivered ? 'Lý do khiếu nại đơn' : 'Lý do yêu cầu hủy đơn';
+      document.getElementById('cancellationReasonHelp').textContent = isDelivered
+        ? 'Đơn đã bàn giao sẽ chuyển sang tranh chấp. Hãy nêu rõ nội dung chưa đạt thỏa thuận; khoản ký quỹ được giữ trong khi Admin xem xét.'
+        : paymentPending
+          ? 'Đơn chưa thanh toán sẽ được hủy ngay. Không phát sinh khoản tiền hoàn.'
+          : 'Đơn đã ký quỹ sẽ chỉ hủy khi Provider chấp thuận. Trong lúc chờ, tiền vẫn được giữ trong Escrow.';
+      document.getElementById('cancellationReasonCategory').value = '';
+      document.getElementById('cancellationReasonDetails').value = '';
+      document.getElementById('cancellationReasonCount').textContent = '0';
+      document.getElementById('submitCancellationReasonButton').innerHTML = isDelivered
+        ? '<i class="fa-solid fa-scale-balanced"></i> Gửi khiếu nại'
+        : '<i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu';
+      document.getElementById('cancellationReasonModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('cancellationReasonCategory').focus(), 0);
+    }
+
+    function closeCancellationReasonModal() {
+      document.getElementById('cancellationReasonModal').style.display = 'none';
+      activeCancellation = null;
+    }
+
+    async function submitCancellationReason(event) {
+      event.preventDefault();
+      if (!activeCancellation) return;
+      const category = document.getElementById('cancellationReasonCategory').value;
+      const details = document.getElementById('cancellationReasonDetails').value.trim();
+      if (!category || !details) {
+        showToast('Thiếu thông tin', 'Vui lòng chọn nhóm lý do và mô tả cụ thể.', 'warning');
+        return;
+      }
+      const { orderId, paymentPending, isDelivered } = activeCancellation;
       const prompt = paymentPending
-        ? 'Hủy đơn đang chờ thanh toán? Đơn sẽ bị hủy và không có khoản tiền nào bị trừ.'
+        ? 'Hủy đơn đang chờ thanh toán này? Đơn hàng sẽ bị hủy, yêu cầu tuyển dụng được mở lại để bạn có thể chọn chuyên gia khác và không có khoản tiền nào bị trừ.'
         : isDelivered
           ? 'Gửi khiếu nại cho đơn đã bàn giao? Đơn sẽ chuyển sang tranh chấp. Tiền ký quỹ vẫn bị giữ cho đến khi Admin xem xét, chưa được hoàn ngay.'
-          : 'Hủy đơn này? Tiền ký quỹ sẽ được hoàn vào ví SkillRental. Bạn có thể hoàn tác trong 5 phút; nếu hoàn tác, ví cần đủ số dư để thu hồi khoản hoàn và khung giờ phải còn trống.';
+          : 'Gửi yêu cầu hủy đơn này cho Provider duyệt? Đơn vẫn tiếp tục được giữ nguyên và tiền chưa được hoàn cho đến khi Provider chấp thuận.';
       if (!confirm(prompt)) return;
-      const res = await apiRequest(`/api/orders/${orderId}/cancel`, {
-        method: 'PUT',
-        body: JSON.stringify({ reason: 'Khách hàng hủy đơn' })
+      const button = document.getElementById('submitCancellationReasonButton');
+      button.disabled = true;
+      const res = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}/cancel`, {
+        method: 'PUT', body: JSON.stringify({ reason: `${category}: ${details}` })
       });
+      button.disabled = false;
       if (res.success) {
-        showToast('Thành công', res.message || 'Đã cập nhật trạng thái đơn hàng.', 'success');
+        closeCancellationReasonModal();
+        showToast(isDelivered ? 'Đã gửi khiếu nại' : 'Đã gửi yêu cầu', res.message || 'Đã cập nhật trạng thái đơn hàng.', 'success');
         await loadCustomerOrders();
       } else {
-        showToast('Lỗi', res.message || 'Không thể hủy đơn hàng', 'error');
+        showToast('Chưa thể gửi', res.message || 'Không thể gửi yêu cầu hủy.', 'error');
       }
+    }
+
+    async function respondCustomerCancellation(orderId, approve) {
+      let reason = '';
+      if (!approve) {
+        reason = window.prompt('Lý do từ chối (không bắt buộc):') || '';
+      } else if (!confirm('Chấp thuận yêu cầu hủy? Đơn sẽ kết thúc và tiền ký quỹ được hoàn vào ví khách hàng.')) return;
+      const result = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}/cancellation-response`, {
+        method: 'PUT', body: JSON.stringify({ approve, reason: reason.trim() })
+      });
+      if (result.success) {
+        showToast('Đã xử lý yêu cầu', result.message, 'success');
+        await loadCustomerOrders();
+      } else showToast('Không thể xử lý', result.message || 'Vui lòng thử lại.', 'error');
     }
 
     async function undoCustomerOrderCancellation(orderId) {

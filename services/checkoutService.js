@@ -22,7 +22,7 @@ const MIN_PAYMENT = 10000;       // VNPay: tối thiểu 10.000đ
 const MAX_PAYMENT = 50000000;    // Giới hạn mỗi giao dịch (có thể chỉnh)
 
 function paymentWindowMs() {
-  return (Number(process.env.ORDER_PAYMENT_WINDOW_MINUTES) || 30) * 60 * 1000;
+  return (Number(process.env.ORDER_PAYMENT_WINDOW_MINUTES) || 1440) * 60 * 1000;
 }
 
 function money(n) { return `${Number(n || 0).toLocaleString('vi-VN')}đ`; }
@@ -153,6 +153,8 @@ function buildOrderDocument(spec, ctx) {
   if (gateway) {
     order.paymentRef = ctx.paymentRef;
     order.paymentExpiresAt = new Date(ctx.now.getTime() + paymentWindowMs()).toISOString();
+  } else {
+    order.paidAt = ctx.now.toISOString();
   }
   return order;
 }
@@ -175,15 +177,20 @@ function createOrders(customer, specs, { mode, paymentMethod, customerPhone, cus
     created.push(order);
 
     if (mode === 'wallet') {
-      customerRecord.balance = (Number(customerRecord.balance) || 0) - spec.escrowDeposit;
+      const newBal = (Number(customerRecord.balance) || 0) - spec.escrowDeposit;
+      customerRecord.balance = newBal;
+      const txnId = `TXN_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+      order.paymentRef = txnId;
       transactions.unshift({
-        id: `TXN_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+        id: txnId,
         userId: customerRecord.id,
         type: 'escrow',
         amount: -spec.escrowDeposit,
         status: 'completed',
         createdAt: formatDateTime(now),
-        description: `Ký quỹ Escrow cho đơn hàng ${id}`
+        description: `Ký quỹ Escrow cho đơn hàng ${id} (Trừ từ số dư ví)`,
+        orderIds: [id],
+        balanceAfter: newBal
       });
     }
   }
@@ -285,8 +292,13 @@ function startGatewayRetry({ orderId, customerId, ipAddr, bankCode, returnOrigin
   const orders = db.getCollection('orders');
   const order = orders.find((o) => o.id === orderId);
   if (!order) throw httpError(404, 'Không tìm thấy đơn hàng.');
-  if (order.customerId !== customerId) throw httpError(403, 'Bạn không có quyền thanh toán đơn hàng này.');
-  if (order.paymentStatus !== 'pending' || order.orderStatus !== 'pending') {
+  const users = db.getCollection('users') || [];
+  const customer = users.find((u) => u.id === customerId || (u.uid && u.uid === customerId));
+  const isOwner = order.customerId === customerId || (customer && (order.customerId === customer.id || order.customerId === customer.uid));
+  if (!isOwner) throw httpError(403, 'Bạn không có quyền thanh toán đơn hàng này.');
+
+  const isPendingStatus = ['pending', 'pending_payment', 'awaiting_payment'].includes(order.orderStatus);
+  if (order.paymentStatus !== 'pending' || !isPendingStatus) {
     throw httpError(409, 'Đơn hàng này không ở trạng thái chờ thanh toán.');
   }
   const amount = Number(order.escrowDeposit);
@@ -379,10 +391,18 @@ function markOrdersPaid(txn) {
   paidOrders.forEach((order) => {
     if (order.jobId) {
       const jobs = db.getCollection('jobRequests') || [];
-      const job = jobs.find((item) => item.id === order.jobId && item.customerId === order.customerId && item.status === 'awaiting_payment');
-      if (job && job.selectedProviderId === order.providerId) {
+      const job = jobs.find((item) => item.id === order.jobId);
+      if (job) {
+        job.selectedProviderId = order.providerId;
         (job.applicants || []).forEach((applicant) => {
-          if (applicant.providerId !== order.providerId && applicant.status === 'pending') applicant.status = 'rejected';
+          if (applicant.providerId !== order.providerId) {
+            if (applicant.status === 'pending' || applicant.status === 'selected') {
+              applicant.status = 'rejected';
+              notifyProvider(applicant.providerId, 'Yêu cầu tuyển dụng đã có chuyên gia', `Yêu cầu “${job.title}” đã được khách hàng giao cho một chuyên gia khác. Cảm ơn bạn đã quan tâm và gửi báo giá.`, 'info', '/jobs.html?tab=tab-uc36');
+            }
+          } else {
+            applicant.status = 'accepted';
+          }
         });
         job.status = 'closed';
         job.closeReason = 'provider_selected';
@@ -395,7 +415,7 @@ function markOrdersPaid(txn) {
       order.jobId
         ? `Khách hàng đã ký quỹ ${money(order.price)} cho yêu cầu “${order.serviceTitle}”. Bạn có thể bắt đầu thực hiện.`
         : `Bạn có lịch đặt mới từ ${order.customerName}. Tổng giá trị: ${money(order.price)}.`, 'info',
-      `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
+      order.jobId ? `/bookings.html?tab=tab-uc39&orderId=${encodeURIComponent(order.id)}` : `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
     if (order.jobId) {
       createNotification(order.customerId, 'Đã ký quỹ, công việc bắt đầu',
         `Đơn ${order.id} cho yêu cầu “${order.serviceTitle}” đã được ký quỹ an toàn. Provider có thể bắt đầu thực hiện.`,
@@ -414,7 +434,7 @@ function markOrdersPaid(txn) {
   return { paidOrders, credited };
 }
 
-// Tự hủy các đơn chờ thanh toán đã quá hạn (giải phóng khung giờ của Provider).
+// Tự hủy các đơn chờ thanh toán đã quá hạn 24 giờ (giải phóng khung giờ của Provider và mở lại yêu cầu).
 function expireUnpaidOrders(nowMs = Date.now()) {
   const orders = db.getCollection('orders') || [];
   const expired = orders.filter((o) => o.paymentStatus === 'pending' && o.orderStatus === 'pending'
@@ -422,19 +442,49 @@ function expireUnpaidOrders(nowMs = Date.now()) {
   if (!expired.length) return 0;
 
   const expiredIds = new Set(expired.map((o) => o.id));
+  const jobs = db.getCollection('jobRequests') || [];
+  let jobsModified = false;
+
   expired.forEach((order) => {
     order.orderStatus = 'cancelled';
     order.paymentStatus = 'cancelled';
     order.escrowStatus = 'payment_cancelled';
-    order.cancelReason = 'Quá hạn thanh toán';
+    order.cancelReason = 'Quá hạn thanh toán ký quỹ 24h';
     order.cancelledBy = 'System';
     order.cancelledAt = new Date(nowMs).toISOString();
     order.refundAmount = 0;
-    if (order.milestones) order.milestones.push({ title: 'Đơn tự hủy do quá hạn thanh toán', done: true, time: formatDateTime(new Date(nowMs)) });
-    createNotification(order.customerId, 'Đơn hàng đã hết hạn thanh toán',
-      `Đơn ${order.id} đã tự hủy vì chưa thanh toán đúng hạn. Không có khoản tiền nào bị trừ.`, 'warning', '/customer_orders.html');
+    if (order.milestones) order.milestones.push({ title: 'Đơn tự hủy do quá hạn thanh toán ký quỹ 24h', done: true, time: formatDateTime(new Date(nowMs)) });
+    createNotification(order.customerId, 'Đơn hàng đã hết hạn thanh toán (24h)',
+      `Đơn ${order.id} đã tự hủy vì chưa hoàn tất ký quỹ đúng hạn trong 24 giờ. Không có khoản tiền nào bị trừ.`, 'warning', '/customer_orders.html');
+
+    if (order.jobId) {
+      const job = jobs.find((j) => j.id === order.jobId);
+      if (job && (job.status === 'awaiting_payment' || job.status === 'open')) {
+        job.status = 'open';
+        job.selectedProviderId = null;
+        job.paymentOrderId = null;
+        job.statusUpdatedAt = new Date(nowMs).toISOString();
+        if (Array.isArray(job.applicants)) {
+          job.applicants.forEach((applicant) => {
+            if (applicant.providerId === order.providerId && (applicant.status === 'accepted' || applicant.status === 'selected')) {
+              applicant.status = 'pending';
+            }
+          });
+        }
+        jobsModified = true;
+        createNotification(order.customerId, 'Yêu cầu tuyển dụng được mở lại',
+          `Yêu cầu “${job.title}” đã tự động mở lại do đơn ký quỹ hết hạn 24 giờ. Bạn có thể chọn ứng viên khác hoặc tiếp tục nhận báo giá.`,
+          'info', `/customer_requests.html?jobId=${encodeURIComponent(job.id)}`);
+        notifyProvider(order.providerId, 'Hết hạn thanh toán ký quỹ yêu cầu',
+          `Khách hàng chưa thanh toán ký quỹ trong 24h cho yêu cầu “${job.title}”. Yêu cầu đã được hệ thống mở lại cho các ứng viên.`,
+          'info', `/jobs.html?tab=tab-uc36`);
+      }
+    }
   });
   db.saveCollection('orders', orders);
+  if (jobsModified) {
+    db.saveCollection('jobRequests', jobs);
+  }
 
   const transactions = db.getCollection('walletTransactions') || [];
   let touched = false;
@@ -475,17 +525,19 @@ function payOrderWithBalance({ orderId, customerId }) {
   const orders = db.getCollection('orders') || [];
   const order = orders.find((o) => o.id === orderId);
   if (!order) throw httpError(404, 'Không tìm thấy đơn hàng.');
-  if (order.customerId !== customerId) throw httpError(403, 'Bạn không có quyền thanh toán đơn hàng này.');
-  if (order.paymentStatus !== 'pending' || (order.orderStatus !== 'pending' && order.orderStatus !== 'pending_payment')) {
+  const users = db.getCollection('users') || [];
+  const customer = users.find((u) => u.id === customerId || (u.uid && u.uid === customerId));
+  const isOwner = order.customerId === customerId || (customer && (order.customerId === customer.id || order.customerId === customer.uid));
+  if (!isOwner) throw httpError(403, 'Bạn không có quyền thanh toán đơn hàng này.');
+
+  const isPendingPayment = order.paymentStatus === 'pending' || order.paymentStatus === 'unpaid' || order.escrowStatus === 'payment_pending';
+  const isPendingStatus = ['pending', 'pending_payment', 'awaiting_payment'].includes(order.orderStatus);
+  if (!isPendingPayment || !isPendingStatus) {
     throw httpError(409, 'Đơn hàng này không ở trạng thái chờ thanh toán.');
   }
 
   const depositAmt = Number(order.escrowDeposit || order.price || 0);
   if (depositAmt <= 0) throw httpError(400, 'Số tiền ký quỹ không hợp lệ.');
-
-  const users = db.getCollection('users') || [];
-  const customer = users.find((u) => u.id === customerId);
-  if (!customer) throw httpError(404, 'Không tìm thấy tài khoản khách hàng.');
 
   // Tính số dư khả dụng thực tế của khách hàng
   const txns = db.getCollection('walletTransactions') || [];
@@ -502,9 +554,9 @@ function payOrderWithBalance({ orderId, customerId }) {
     const totalDeductions = userTxns
       .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
       .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
-    realBalance = Math.max(0, totalDeposits - totalDeductions);
+    realBalance = Math.max(Number(customer.balance) || 0, totalDeposits - totalDeductions);
   } else {
-    realBalance = 0;
+    realBalance = Math.max(0, Number(customer.balance) || 0);
   }
 
   if (realBalance < depositAmt) {
@@ -558,10 +610,18 @@ function payOrderWithBalance({ orderId, customerId }) {
       order.milestones[1] = { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: true, time: formatDateTime(now) };
     }
     const jobs = db.getCollection('jobRequests') || [];
-    const job = jobs.find((item) => item.id === order.jobId && item.customerId === order.customerId && item.status === 'awaiting_payment');
-    if (job && job.selectedProviderId === order.providerId) {
+    const job = jobs.find((item) => item.id === order.jobId);
+    if (job) {
+      job.selectedProviderId = order.providerId;
       (job.applicants || []).forEach((applicant) => {
-        if (applicant.providerId !== order.providerId && applicant.status === 'pending') applicant.status = 'rejected';
+        if (applicant.providerId !== order.providerId) {
+          if (applicant.status === 'pending' || applicant.status === 'selected') {
+            applicant.status = 'rejected';
+            notifyProvider(applicant.providerId, 'Yêu cầu tuyển dụng đã có chuyên gia', `Yêu cầu “${job.title}” đã được khách hàng giao cho một chuyên gia khác. Cảm ơn bạn đã quan tâm và gửi báo giá.`, 'info', '/jobs.html?tab=tab-uc36');
+          }
+        } else {
+          applicant.status = 'accepted';
+        }
       });
       job.status = 'closed';
       job.closeReason = 'provider_selected';
@@ -578,7 +638,7 @@ function payOrderWithBalance({ orderId, customerId }) {
     order.jobId
       ? `Khách hàng đã ký quỹ ${money(order.price)} từ ví cho yêu cầu “${order.serviceTitle}”. Bạn có thể bắt đầu thực hiện.`
       : `Bạn có lịch đặt mới từ ${customer.name}. Đã ký quỹ: ${money(order.price)}.`, 'info',
-    `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
+    order.jobId ? `/bookings.html?tab=tab-uc39&orderId=${encodeURIComponent(order.id)}` : `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
 
   createNotification(customer.id, 'Ký quỹ thành công từ số dư ví',
     `Đơn hàng ${order.id} đã được ký quỹ an toàn ${money(order.escrowDeposit)} từ số dư ví SkillRental.`,

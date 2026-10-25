@@ -28,6 +28,7 @@ const API_BASE = (() => {
 })();
 
 const SESSION_KEY = 'SKILLRENTAL_CURRENT_USER';
+const CUSTOMER_SESSION_KEY = 'SKILLRENTAL_CUSTOMER_USER';
 
 
 // ============================================================
@@ -36,20 +37,29 @@ const SESSION_KEY = 'SKILLRENTAL_CURRENT_USER';
 
 function getCurrentCustomer() {
   const raw = localStorage.getItem(SESSION_KEY);
-
   if (!raw) {
+    // A role-specific cache is only a mirror; it must not resurrect a signed-out user.
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
     return null;
   }
 
   try {
     const user = JSON.parse(raw);
     if (!user || !user.id || ['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(user.id)) {
+      localStorage.removeItem(CUSTOMER_SESSION_KEY);
       (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
       return null;
     }
+    if (user.role !== 'Customer') {
+      localStorage.removeItem(CUSTOMER_SESSION_KEY);
+      return null;
+    }
+    // Keep the legacy customer cache aligned with the canonical active session.
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
     return user;
   } catch (error) {
     console.error('Session data không hợp lệ:', error);
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
     (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
     return null;
   }
@@ -72,6 +82,9 @@ function setCurrentCustomer(user) {
       JSON.stringify(user)
   );
 
+  if (user.role === 'Customer') {
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+  }
   return true;
 }
 
@@ -118,6 +131,9 @@ function requireCustomerLogin(callback) {
     callback(user);
   }
 
+  if (user.role === 'Customer') {
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+  }
   return true;
 }
 
@@ -733,7 +749,21 @@ async function refreshCustomerAccountSummary() {
   }
   const freshUser = { ...cachedUser, ...result.user };
   setCurrentCustomer(freshUser);
+  syncCustomerNavbarIdentity(freshUser);
   balanceLabel.textContent = `Số dư: ${formatVND(Number(freshUser.balance) || 0)}`;
+}
+
+function syncCustomerNavbarIdentity(user) {
+  const accountButton = document.getElementById('customerAccountButton');
+  if (accountButton) {
+    const avatar = accountButton.children[0];
+    const name = accountButton.children[1];
+    if (avatar) avatar.outerHTML = renderCustomerNavbarAvatar(user, 28);
+    if (name) name.textContent = user.name || 'Tài khoản';
+  }
+  const accountMenu = document.getElementById('customerAccountMenu');
+  const menuName = accountMenu?.firstElementChild?.firstElementChild;
+  if (menuName) menuName.textContent = user.name || 'Tài khoản';
 }
 
 async function toggleCustomerNotifications() {

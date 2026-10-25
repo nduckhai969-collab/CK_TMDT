@@ -171,6 +171,8 @@ a:hover {
   background-color: var(--primary-light);
   color: var(--primary-accent);
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .nav-link.active i {
   color: var(--primary-accent);
@@ -213,6 +215,8 @@ a:hover {
 }
 .profile-name {
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 13px;
   color: var(--text-main);
   white-space: nowrap;
@@ -313,6 +317,8 @@ a:hover {
   border-radius: var(--radius-btn);
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -378,6 +384,8 @@ a:hover {
   display: block;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   color: var(--text-main);
   margin-bottom: 6px;
 }
@@ -414,6 +422,8 @@ textarea.form-control {
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .badge-success { background-color: var(--primary-light); color: var(--primary-accent); }
 .badge-warning { background-color: var(--warning-light); color: #B45309; }
@@ -485,6 +495,8 @@ textarea.form-control {
   background-color: var(--bg-subtle);
   color: var(--text-muted);
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -545,6 +557,8 @@ textarea.form-control {
 }
 .chat-item-name {
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 13px;
   color: var(--text-main);
 }
@@ -647,6 +661,8 @@ textarea.form-control {
   color: #94A3B8;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   letter-spacing: 0.04em;
 }
 .balance-box .balance-amount {
@@ -735,6 +751,8 @@ textarea.form-control {
 .tab-item {
   padding: 10px 16px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   color: var(--text-muted);
   border-bottom: 2px solid transparent;
   cursor: pointer;
@@ -886,6 +904,8 @@ textarea.form-control {
 }
 .skill-name {
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 14px;
   color: var(--text-main);
   display: flex;
@@ -897,6 +917,8 @@ textarea.form-control {
   align-items: center;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   padding: 2px 8px;
   border-radius: var(--radius-full);
 }
@@ -1096,6 +1118,8 @@ input:checked + .slider:before {
   text-align: center;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   color: var(--text-muted);
   transition: all 0.15s ease;
   user-select: none;
@@ -1361,6 +1385,8 @@ input:checked + .slider:before {
 }
 .tl-title {
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 13.5px;
   color: var(--text-main);
 }
@@ -1384,6 +1410,8 @@ input:checked + .slider:before {
 }
 .kv-row .v {
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   color: var(--text-main);
 }
 .screen-tab-content {

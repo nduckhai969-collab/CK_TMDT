@@ -65,6 +65,10 @@
       <div class="step-pill"><span class="step-number">3</span><span>3. Nghiệm Thu &amp; Giải Ngân</span></div>
     </div>
     <h1 class="booking-title">Đặt Provider</h1>
+
+    <!-- Vacation notice banner if provider is on leave -->
+    <div id="bookingVacationNotice" style="display:none;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:20px;color:#92400e;font-size:13px;line-height:1.5;"></div>
+
     <div class="booking-columns">
       <section class="booking-form">
         <div class="field">
@@ -73,7 +77,7 @@
         </div>
         <div class="field">
           <label class="form-label">Ngày làm việc</label>
-          <p class="field-hint">Chọn ngày mong muốn. Ngày đã qua không thể đặt lịch.</p>
+          <p class="field-hint">Chọn ngày mong muốn theo lịch rảnh Provider đã cài đặt. Ngày bận hoặc nghỉ phép sẽ bị khóa.</p>
           <div class="calendar">
             <div class="calendar-head">
               <button type="button" id="prevMonth" aria-label="Tháng trước"><i class="fa-solid fa-chevron-left"></i></button>
@@ -107,7 +111,7 @@
           <div class="summary-row"><span id="serviceLine">Dịch vụ cơ bản (2 giờ)</span><strong id="servicePrice">—</strong></div>
           <div class="summary-row"><span>Phí kỹ năng cao (+25%)</span><strong id="skillFee">0đ</strong></div>
           <div class="summary-row summary-total"><span>Tổng cộng</span><strong id="totalPrice">—</strong></div>
-          <div class="demo-note"><i class="fa-solid fa-circle-info"></i> Thanh toán ở phiên bản demo, chưa có dịch vụ giữ tiền trung gian thực tế.</div>
+          <div class="demo-note"><i class="fa-solid fa-circle-info"></i> Thanh toán an toàn qua cổng ký quỹ SkillRental Escrow.</div>
         </div>
       </aside>
     </div>
@@ -140,20 +144,40 @@
       document.getElementById('addToCartBtn').onclick=addSelectedServiceToCart;
       document.getElementById('serviceCommentForm').addEventListener('submit',submitServiceComment);
     });
+
     async function loadBookingProvider(id){
-      const res=await apiRequest(`/api/providers/${id}`);
+      const res=await apiRequest(`/api/providers/${encodeURIComponent(id)}`);
       if(!res.success||!res.provider){showToast('Lỗi','Không tìm thấy Provider','error');return}
       provider=res.provider;services=res.services||[];
       document.getElementById('providerName').textContent=provider.name;
       document.getElementById('providerSpecialty').textContent=provider.specialty||'';
       document.getElementById('providerAvatar').src=provider.avatar||'';
       document.getElementById('summaryServiceTitle').textContent=`Đặt lịch với ${provider.name}`;
+
+      // Check vacation mode notice
+      if (provider.vacation && provider.vacation.active) {
+        const vNotice = document.getElementById('bookingVacationNotice');
+        if (vNotice) {
+          vNotice.style.display = 'block';
+          vNotice.innerHTML = `<strong><i class="fa-solid fa-umbrella-beach"></i> Chế độ nghỉ phép:</strong> Provider đang trong kỳ nghỉ từ <strong>${provider.vacation.from || ''}</strong> đến <strong>${provider.vacation.to || ''}</strong>. Các ngày trong thời gian này sẽ tự động bị khóa không thể đặt lịch.`;
+        }
+      }
+
       const select=document.getElementById('serviceSelect');
-      select.innerHTML=services.length?services.map(s=>`<option value="${s.id}" data-title="${s.title}" data-price="${Number(s.price)||0}">${s.title}</option>`).join(''):`<option value="default" data-title="${provider.specialty||'Dịch vụ cơ bản'}" data-price="${Number(provider.hourlyRate)||0}">${provider.specialty||'Dịch vụ cơ bản'}</option>`;
+      select.innerHTML=services.length
+        ? services.map(s=>`<option value="${s.id}" data-title="${s.title || s.name || 'Gói dịch vụ'}" data-price="${Number(s.price)||0}">${s.title || s.name || 'Gói dịch vụ'} (${formatVND(Number(s.price)||0)})</option>`).join('')
+        : `<option value="default" data-title="${provider.specialty||'Dịch vụ cơ bản'}" data-price="${Number(provider.hourlyRate)||0}">${provider.specialty||'Dịch vụ cơ bản'} (${formatVND(Number(provider.hourlyRate)||0)}/giờ)</option>`;
+
+      const urlServiceId = new URLSearchParams(location.search).get('serviceId');
+      if (urlServiceId && select.querySelector(`option[value="${urlServiceId}"]`)) {
+        select.value = urlServiceId;
+      }
+
       updateTotal();
       await loadServiceComments();
       await loadAvailability();
     }
+
     function drawCalendar(){
       const grid=document.getElementById('calendarGrid'),year=calendarMonth.getFullYear(),month=calendarMonth.getMonth();
       const today=new Date(),currentMonth=new Date(today.getFullYear(),today.getMonth(),1);
@@ -168,20 +192,24 @@
       }
       grid.querySelectorAll('[data-date]').forEach(button=>button.onclick=()=>{if(!requireCustomerLogin())return;selectedDate=button.dataset.date;selectedTime=availability[selectedDate]?.[0]||null;drawCalendar();drawTimes()});
     }
+
     function isoDate(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
     function monthKey(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`}
+
     async function loadAvailability(){
       if(!provider)return;
       const requestedMonth=monthKey(calendarMonth);availabilityLoading=true;availability={};document.getElementById('availabilityMessage').textContent='Đang kiểm tra lịch rảnh của Provider...';drawCalendar();
-      const result=await apiRequest(`/api/providers/${provider.id}/availability?month=${requestedMonth}`);
+      const result=await apiRequest(`/api/providers/${encodeURIComponent(provider.id)}/availability?month=${requestedMonth}`);
       if(requestedMonth!==monthKey(calendarMonth))return;
       availabilityLoading=false;availability=result.success?result.availability||{}:{};
       if(selectedDate&&!availability[selectedDate]?.length){selectedDate=null;selectedTime=null}
       const hasAvailability=Object.keys(availability).length>0;
-      document.getElementById('availabilityMessage').textContent=result.success?(hasAvailability?'Chỉ ngày có lịch rảnh của Provider mới chọn được.':'Provider chưa có khung giờ rảnh trong tháng này.'):'Không thể tải lịch rảnh. Vui lòng thử lại sau.';
+      document.getElementById('availabilityMessage').textContent=result.success?(hasAvailability?'Chỉ ngày có lịch rảnh của Provider mới chọn được.':'Provider chưa có khung giờ rảnh trong tháng này.') : 'Không thể tải lịch rảnh. Vui lòng thử lại sau.';
       drawCalendar();drawTimes();
     }
+
     function changeMonth(delta){const next=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+delta,1),today=new Date(),currentMonth=new Date(today.getFullYear(),today.getMonth(),1);if(next<currentMonth)return;calendarMonth=next;loadAvailability()}
+
     function drawTimes(){
       const options=selectedDate?availability[selectedDate]||[]:[];
       if(!selectedDate){document.getElementById('timeOptions').innerHTML='<span class="field-hint">Chọn ngày để xem khung giờ còn trống.</span>';return}
@@ -190,8 +218,10 @@
       document.getElementById('timeOptions').innerHTML=options.map(slot=>`<button type="button" class="time-option ${slot===selectedTime?'selected':''}">${slot}</button>`).join('');
       document.querySelectorAll('.time-option').forEach(button=>button.onclick=()=>{if(!requireCustomerLogin())return;selectedTime=button.textContent;drawTimes()});
     }
+
     function selectedService(){const option=document.getElementById('serviceSelect').selectedOptions[0];return{title:option?.dataset.title||'Dịch vụ cơ bản',price:Number(option?.dataset.price)||0}}
     function escapeComment(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
     async function loadServiceComments(){
       const serviceId=document.getElementById('serviceSelect').value,host=document.getElementById('serviceComments');
       if(!serviceId||serviceId==='default'){host.textContent='Bình luận sẽ xuất hiện khi Provider có dịch vụ niêm yết.';return}
@@ -201,6 +231,7 @@
       const comments=result.comments||[];
       host.innerHTML=comments.length?comments.map(comment=>`<article class="service-comment"><strong>${escapeComment(comment.userName||'Người dùng')}</strong><time>${escapeComment(new Date(comment.createdAt).toLocaleString('vi-VN'))}</time><p>${escapeComment(comment.content)}</p></article>`).join(''):'<div class="comments-empty">Chưa có bình luận. Hãy là người đầu tiên chia sẻ.</div>';
     }
+
     async function submitServiceComment(event){
       event.preventDefault();
       if(!requireCustomerLogin())return;
@@ -213,16 +244,18 @@
       if(!result.success){showToast('Không gửi được bình luận',result.message||'Vui lòng thử lại.','error');return}
       input.value='';showToast('Đã gửi bình luận','Bình luận của bạn đã được đăng.','success');await loadServiceComments();
     }
+
     async function addSelectedServiceToCart(){
       if(!requireCustomerLogin())return;
       const select=document.getElementById('serviceSelect'),serviceId=select.value;
-      if(!serviceId||serviceId==='default'){showToast('Chưa thể thêm giỏ','Provider chưa có dịch vụ niêm yết để thêm vào giỏ.','error');return}
+      const srv=selectedService(); const payload={ serviceId:(serviceId&&serviceId!=='default')?serviceId:'default', providerId:provider.id, serviceTitle:srv.title, price:srv.price, hours:1 };
       const button=document.getElementById('addToCartBtn');button.disabled=true;
-      const result=await apiRequest('/api/booking-list/items',{method:'POST',body:JSON.stringify({serviceId,hours:1})});
+      const result=await apiRequest('/api/booking-list/items',{method:'POST',body:JSON.stringify(payload)});
       button.disabled=false;
-      if(result.success){showToast('Đã thêm vào giỏ','Dịch vụ đã được lưu vào giỏ của bạn.','success');if(typeof refreshCustomerCartBadge==='function')refreshCustomerCartBadge()}
+      if(result.success){showToast('Đã thêm vào giỏ',result.message||'Dịch vụ đã được lưu vào giỏ của bạn.','success');if(typeof refreshCustomerCartBadge==='function')refreshCustomerCartBadge()}
       else showToast('Không thể thêm dịch vụ',result.message||'Vui lòng thử lại.','error');
     }
+
     function updateTotal(){
       const service=selectedService(),fee=document.getElementById('advancedSkill').checked?Math.round(service.price*.25):0,total=service.price+fee;
       document.getElementById('serviceLine').textContent=`${service.title} (2 giờ)`;
@@ -230,6 +263,7 @@
       document.getElementById('skillFee').textContent=formatVND(fee);
       document.getElementById('totalPrice').textContent=formatVND(total);
     }
+
     function continueToCheckout(){
       if(!requireCustomerLogin())return;
       if(!provider)return;

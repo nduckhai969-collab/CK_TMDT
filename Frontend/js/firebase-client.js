@@ -510,6 +510,8 @@
     // G. ĐĂNG XUẤT TOÀN DIỆN
     async logout() {
       localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem('SKILLRENTAL_CUSTOMER_USER');
+      localStorage.removeItem('SKILLRENTAL_PROVIDER_USER');
       try { await fbAuth.signOut(); } catch (_) {}
       window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: null } }));
       window.dispatchEvent(new CustomEvent('skillrental:logout'));
@@ -618,6 +620,11 @@
       const res = await callApi('/api/auth/profile', 'PUT', token, { name, phone, address, avatar, role });
       if (res.success && res.user) {
         localStorage.setItem(SESSION_KEY, JSON.stringify(res.user));
+        if (res.user.role === 'Customer') {
+          localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(res.user));
+        } else if (res.user.role === 'Provider') {
+          localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(res.user));
+        }
         window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: res.user } }));
       }
       return res;

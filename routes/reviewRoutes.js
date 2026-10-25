@@ -21,7 +21,7 @@ router.get('/public', (req, res) => {
 
 // List reviews
 router.get('/', requireCustomer, (req, res) => {
-  const { providerId, customerId } = req.query;
+  const { providerId, customerId, orderId } = req.query;
   if (customerId && customerId !== req.authUser.id) {
     return res.status(403).json({ success: false, message: 'Bạn không có quyền xem đánh giá của tài khoản khác.' });
   }
@@ -29,6 +29,9 @@ router.get('/', requireCustomer, (req, res) => {
 
   if (providerId) {
     reviews = reviews.filter(r => r.providerId === providerId);
+  }
+  if (orderId) {
+    reviews = reviews.filter(r => r.orderId === orderId);
   }
   res.json({
     success: true,
@@ -47,7 +50,8 @@ router.post('/', requireCustomer, (req, res) => {
     return res.status(400).json({ success: false, message: 'Chọn từ 1 đến 5 sao và nhập đánh giá từ 3 đến 2.000 ký tự.' });
   }
 
-  const order = (db.getCollection('orders') || []).find(item => item.id === orderId && item.customerId === req.authUser.id);
+  const orders = db.getCollection('orders') || [];
+  const order = orders.find(item => item.id === orderId && item.customerId === req.authUser.id);
   if (!order) {
     return res.status(403).json({ success: false, message: 'Chỉ khách hàng sở hữu đơn hàng mới có thể gửi đánh giá.' });
   }
@@ -56,10 +60,10 @@ router.post('/', requireCustomer, (req, res) => {
     return res.status(400).json({ success: false, message: 'Chỉ có thể đánh giá các đơn hàng đã hoàn thành.' });
   }
 
-  const reviews = db.getCollection('reviews');
+  const reviews = db.getCollection('reviews') || [];
   const existingReview = reviews.find(r => r.orderId === orderId);
   if (existingReview) {
-    return res.status(400).json({ success: false, message: 'Đơn hàng này đã được đánh giá.' });
+    return res.status(400).json({ success: false, message: 'Đơn hàng này đã được bạn đánh giá trước đó.' });
   }
 
   const now = new Date();
@@ -78,14 +82,24 @@ router.post('/', requireCustomer, (req, res) => {
     rating: numericRating,
     content: reviewContent,
     date: dateStr,
-    criteria: Array.isArray(criteria) ? criteria : ['Chuyên nghiệp', 'Đúng hẹn']
+    criteria: Array.isArray(criteria) && criteria.length ? criteria : ['Chuyên nghiệp', 'Đúng hẹn']
   };
 
   reviews.unshift(newReview);
   db.saveCollection('reviews', reviews);
 
+  // Cập nhật trạng thái hasReviewed trên đơn hàng
+  order.hasReviewed = true;
+  order.reviewedAt = now.toISOString();
+  order.reviewId = newId;
+  const orderIndex = orders.findIndex(item => item.id === order.id);
+  if (orderIndex !== -1) {
+    orders[orderIndex] = order;
+    db.saveCollection('orders', orders);
+  }
+
   // Recalculate provider rating
-  const providers = db.getCollection('providers');
+  const providers = db.getCollection('providers') || [];
   const provider = providers.find(p => p.id === newReview.providerId);
   if (provider) {
     const provReviews = reviews.filter(r => r.providerId === provider.id);
@@ -106,7 +120,13 @@ router.post('/', requireCustomer, (req, res) => {
   }
 
   const { notifyProvider } = require('../services/notificationService');
-  notifyProvider(order.providerId, 'Khách hàng đã đánh giá dịch vụ', `Bạn nhận được đánh giá ${numericRating}/5 cho đơn ${order.id}.`, 'success');
+  notifyProvider(
+    order.providerId,
+    'Khách hàng đã đánh giá dịch vụ',
+    `Khách hàng ${req.authUser.name} đã đánh giá ${numericRating}★ cho đơn hàng ${order.id}.`,
+    'success',
+    '/profile.html'
+  );
 
   res.status(201).json({
     success: true,

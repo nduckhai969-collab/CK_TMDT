@@ -28,6 +28,7 @@ const API_BASE = (() => {
 })();
 
 const SESSION_KEY = 'SKILLRENTAL_CURRENT_USER';
+const CUSTOMER_SESSION_KEY = 'SKILLRENTAL_CUSTOMER_USER';
 
 
 // ============================================================
@@ -35,6 +36,15 @@ const SESSION_KEY = 'SKILLRENTAL_CURRENT_USER';
 // ============================================================
 
 function getCurrentCustomer() {
+  const cRaw = localStorage.getItem(CUSTOMER_SESSION_KEY);
+  if (cRaw) {
+    try {
+      const cUser = JSON.parse(cRaw);
+      if (cUser && cUser.id && !['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(cUser.id) && cUser.role === 'Customer') {
+        return cUser;
+      }
+    } catch (_) {}
+  }
   const raw = localStorage.getItem(SESSION_KEY);
 
   if (!raw) {
@@ -72,6 +82,9 @@ function setCurrentCustomer(user) {
       JSON.stringify(user)
   );
 
+  if (user.role === 'Customer') {
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+  }
   return true;
 }
 
@@ -118,6 +131,9 @@ function requireCustomerLogin(callback) {
     callback(user);
   }
 
+  if (user.role === 'Customer') {
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+  }
   return true;
 }
 

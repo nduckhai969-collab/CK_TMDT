@@ -14,6 +14,315 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-client.js"></script>
+  <style>
+    /* Top Header & Navigation Redesign */
+    .top-header {
+      min-height: 74px !important;
+      height: auto !important;
+      padding: 12px 28px !important;
+      background: #FFFFFF !important;
+      border-bottom: 1px solid #E2E8F0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 100 !important;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    }
+    .header-main-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .header-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .header-title-text {
+      font-size: 19px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: -0.02em;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .header-code-pill {
+      background: #F1F5F9;
+      color: #334155;
+      border: 1px solid #CBD5E1;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-family: monospace;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      user-select: all;
+    }
+    .header-sub-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #64748B;
+      flex-wrap: wrap;
+    }
+    .header-public-link {
+      color: #15803D;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      padding: 2px 8px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    .header-public-link:hover {
+      background: #DCFCE7;
+      border-color: #86EFAC;
+      text-decoration: underline;
+    }
+    .header-actions {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      flex-shrink: 0 !important;
+      flex-wrap: nowrap !important;
+    }
+    #headerStatusBadge {
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding: 7px 13px !important;
+      font-size: 12.5px !important;
+      font-weight: 600 !important;
+      border-radius: 9999px !important;
+      background: #DCFCE7 !important;
+      color: #15803D !important;
+      border: 1px solid #86EFAC !important;
+      line-height: 1 !important;
+    }
+    .header-actions .btn {
+      height: 38px !important;
+      min-height: 38px !important;
+      padding: 0 13px !important;
+      font-size: 12.5px !important;
+      font-weight: 600 !important;
+      border-radius: 8px !important;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+    }
+
+    /* Modern Segmented Navigation Tabs */
+    .tab-list {
+      display: inline-flex !important;
+      background: #FFFFFF !important;
+      padding: 6px !important;
+      border-radius: 12px !important;
+      border: 1px solid #E2E8F0 !important;
+      gap: 6px !important;
+      margin-bottom: 24px !important;
+      max-width: 100% !important;
+      overflow-x: auto !important;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    }
+    .tab-item {
+      padding: 10px 20px !important;
+      font-weight: 600 !important;
+      color: #64748B !important;
+      border-radius: 8px !important;
+      cursor: pointer !important;
+      font-size: 13.5px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      border: none !important;
+      background: transparent !important;
+      transition: all 0.18s ease !important;
+      white-space: nowrap !important;
+    }
+    .tab-item:hover {
+      color: #0F172A !important;
+      background: #F1F5F9 !important;
+    }
+    .tab-item.active {
+      background: #16A34A !important;
+      color: #FFFFFF !important;
+      font-weight: 700 !important;
+      box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25) !important;
+    }
+    .tab-item.active i {
+      color: #FFFFFF !important;
+    }
+
+    /* Cover & Avatar Styles */
+    .profile-cover {
+      height: 180px !important;
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 40%, #065F46 100%);
+      background-size: cover !important;
+      background-position: center !important;
+      border-radius: var(--radius-card) var(--radius-card) 0 0 !important;
+      position: relative !important;
+    }
+    .profile-avatar-lg {
+      width: 100px !important;
+      height: 100px !important;
+      border-radius: 50% !important;
+      border: 4px solid #FFFFFF !important;
+      background: linear-gradient(135deg, #16A34A, #065F46) !important;
+      color: #FFFFFF !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 32px !important;
+      font-weight: 800 !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15) !important;
+      overflow: hidden !important;
+    }
+    .profile-online-dot {
+      width: 18px !important;
+      height: 18px !important;
+      border: 3px solid #FFFFFF !important;
+      background: #22C55E !important;
+      top: 2px !important;
+      right: 6px !important;
+      bottom: auto !important;
+      pointer-events: none !important;
+      z-index: 4 !important;
+    }
+    .profile-avatar-container {
+      cursor: pointer;
+      position: relative;
+    }
+    .avatar-hover-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.45);
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 11px;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .profile-avatar-container:hover .avatar-hover-overlay {
+      opacity: 1;
+    }
+    .profile-meta-tags {
+      display: flex !important;
+      gap: 12px !important;
+      flex-wrap: wrap !important;
+      margin-top: 14px !important;
+      font-size: 13px !important;
+      color: #475569 !important;
+    }
+    .profile-meta-tags span {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      background: #F8FAFC !important;
+      border: 1px solid #E2E8F0 !important;
+      padding: 5px 11px !important;
+      border-radius: 6px !important;
+    }
+    .profile-meta-tags i {
+      color: #16A34A !important;
+    }
+    .stat-card {
+      transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+    }
+    .provider-calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      text-align: center;
+    }
+    .provider-cal-day-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748B;
+      padding: 8px 0;
+      background: #F8FAFC;
+      border-radius: 6px;
+    }
+    .provider-cal-cell {
+      min-height: 68px;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: stretch;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: #FFFFFF;
+      user-select: none;
+    }
+    .provider-cal-cell:hover:not(.is-past) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    }
+    .provider-cal-cell.is-available {
+      background: #F0FDF4;
+      border-color: #86EFAC;
+    }
+    .provider-cal-cell.is-busy {
+      background: #FEF2F2;
+      border-color: #FECACA;
+    }
+    .provider-cal-cell.is-holiday {
+      background: #F8FAFC;
+      border-color: #E2E8F0;
+      color: #94A3B8;
+    }
+    .provider-cal-cell.is-vacation {
+      background: #FFFBEB;
+      border-color: #FDE68A;
+    }
+    .provider-cal-cell.is-past {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .provider-cal-date-num {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0F172A;
+      text-align: left;
+    }
+    .provider-cal-status-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 4px;
+      margin-top: 4px;
+      display: inline-block;
+    }
+  </style>
 </head>
 <body>
 
@@ -91,7 +400,7 @@
       </nav>
 
       <div class="sidebar-profile">
-        <div class="avatar">NV</div>
+        <div class="avatar">--</div>
         <div class="profile-info">
           <div class="profile-name">Nguyễn Văn Pro</div>
           <div class="profile-role">Senior UI/UX & Web Dev</div>
@@ -104,16 +413,39 @@
       
       <!-- Top Sticky Header -->
       <header class="top-header">
-        <div class="header-title">Quản Lý Hồ Sơ & Dịch Vụ Provider</div>
+        <!-- top header -->
+        <div class="header-main-info">
+          <div class="header-title-row">
+            <h1 class="header-title-text"><i class="fa-solid fa-id-card-clip" style="color:#16A34A; margin-right:6px;"></i> Quản Lý Hồ Sơ &amp; Dịch Vụ</h1>
+            <span class="header-code-pill" id="displayProviderCodeBadge" title="Mã định danh chuyên gia">Mã: Đang tải...</span>
+          </div>
+          <div class="header-sub-row" id="displayProviderPublicUrlRow">
+            <span><i class="fa-regular fa-eye" style="color:#64748B;"></i> Khách hàng xem hồ sơ tại:</span>
+            <a href="#" id="linkPublicProfile" target="_blank" class="header-public-link" title="Mở trang xem hồ sơ thực tế">
+              <i class="fa-solid fa-link"></i> <span id="linkPublicProfileText">customer_provider.html</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i>
+            </a>
+          </div>
+        </div>
+        <div style="display:none"><div><div>
+
+
+          </div>
+
+
+          </div>
+        </div>
         <div class="header-actions">
           <span class="badge badge-success" id="headerStatusBadge">
             <span class="badge-dot"></span> Đang Sẵn Sàng Nhận Việc
           </span>
-          <button class="btn btn-outline btn-sm" onclick="showToast('Đang mở trang xem trước hồ sơ công khai!')">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Xem Trước Hồ Sơ
+          <button class="btn btn-outline btn-sm" id="btnCopyPublicLink" onclick="copyPublicBookingLink()" title="Sao chép link hồ sơ để gửi khách hàng">
+            <i class="fa-regular fa-copy"></i> Copy Link
+          </button>
+          <button class="btn btn-outline btn-sm" id="btnPreviewPublic" onclick="previewPublicProfile()">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Xem Trước
           </button>
           <button class="btn btn-primary btn-sm" onclick="showToast('Đã lưu tất cả thay đổi cấu hình thành công!')">
-            <i class="fa-solid fa-floppy-disk"></i> Lưu Thay Đổi
+            <i class="fa-solid fa-check"></i> Lưu Cấu Hình
           </button>
         </div>
       </header>
@@ -146,7 +478,8 @@
           <div class="profile-header-card">
             <div class="profile-cover">
               <div class="profile-cover-action">
-                <button class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.9);" onclick="showToast('Đã mở công cụ tải lên ảnh bìa mới!')">
+                <input type="file" id="providerCoverFileInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="uploadProviderCoverFile(this)">
+                <button type="button" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.95); font-weight:600; box-shadow:0 2px 6px rgba(0,0,0,0.18);" onclick="document.getElementById('providerCoverFileInput').click()">
                   <i class="fa-solid fa-camera"></i> Đổi ảnh bìa
                 </button>
               </div>
@@ -154,8 +487,16 @@
 
             <div class="profile-header-content">
               <div class="profile-avatar-row">
-                <div class="profile-avatar-container">
-                  <div class="profile-avatar-lg">NV</div>
+                <input type="file" id="providerAvatarFileInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="uploadProviderAvatarFile(this)">
+                <div class="profile-avatar-container" onclick="triggerProviderAvatarUpload(event)" title="Nhấn để đổi ảnh đại diện">
+                  <div class="profile-avatar-lg">--</div>
+                  <div class="avatar-hover-overlay">
+                    <i class="fa-solid fa-camera" style="font-size:16px;"></i>
+                    <span>Đổi ảnh</span>
+                  </div>
+                  <button type="button" class="avatar-camera-btn" title="Đổi ảnh đại diện" onclick="triggerProviderAvatarUpload(event);" style="position:absolute; right:0; bottom:2px; width:32px; height:32px; border-radius:50%; background:#16A34A; color:#FFFFFF; border:2.5px solid #FFFFFF; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.25); z-index:3; transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                    <i class="fa-solid fa-camera" style="font-size:13px;"></i>
+                  </button>
                   <span class="profile-online-dot" title="Đang online"></span>
                 </div>
                 <div style="display: flex; gap: 10px;">
@@ -183,9 +524,9 @@
                 <div class="profile-meta-tags">
                   <span><i class="fa-solid fa-location-dot"></i> <span id="viewLocation">Cầu Giấy, Hà Nội</span></span>
                   <span><i class="fa-solid fa-language"></i> Tiếng Việt (Bản ngữ), Tiếng Anh (IELTS 7.0)</span>
-                  <span><i class="fa-solid fa-envelope"></i> pro.nguyen@skillrental.vn</span>
-                  <span><i class="fa-solid fa-phone"></i> 0987.654.321</span>
-                  <span><i class="fa-solid fa-clock"></i> Tham gia: Tháng 03/2024</span>
+                  <span><i class="fa-solid fa-envelope"></i> <span id="viewEmail">pro.nguyen@skillrental.vn</span></span>
+                  <span><i class="fa-solid fa-phone"></i> <span id="viewPhone">0987.654.321</span></span>
+                  <span><i class="fa-solid fa-clock"></i> <span id="viewJoinDate">Tham gia: Tháng 03/2024</span></span>
                 </div>
 
                 <!-- Completeness Progress -->
@@ -208,7 +549,7 @@
             <div class="stat-card">
               <div>
                 <div class="stat-label">Đánh Giá Uy Tín</div>
-                <div class="stat-value">4.9 ⭐ <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">(128)</span></div>
+                <div class="stat-value" id="statRatingDisplay">4.9 ⭐ <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">(128)</span></div>
               </div>
               <div class="stat-icon" style="background-color: var(--warning-light); color: #B45309;">
                 <i class="fa-solid fa-star"></i>
@@ -228,7 +569,7 @@
             <div class="stat-card">
               <div>
                 <div class="stat-label">Đơn Hàng Hoàn Tất</div>
-                <div class="stat-value">142 <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">dự án</span></div>
+                <div class="stat-value" id="statOrdersDisplay">142 <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">dự án</span></div>
               </div>
               <div class="stat-icon" style="background-color: var(--info-light); color: var(--info);">
                 <i class="fa-solid fa-circle-check"></i>
@@ -588,13 +929,13 @@
               <h2 style="font-weight:700; font-size: 18px; color: var(--secondary);">Gói Dịch Vụ Niêm Yết Cố Định (Fixed Price Packages)</h2>
               <div style="color: var(--text-muted); font-size: 13px;">Gói định giá chuẩn hóa giúp khách hàng dễ dàng lựa chọn và đặt hàng ngay lập tức</div>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openModal('editPackageModal')">
+            <button class="btn btn-primary btn-sm" onclick="openCreateServiceModal()">
               <i class="fa-solid fa-plus"></i> Tạo Gói Dịch Vụ Mới
             </button>
           </div>
 
           <!-- 3 Package Cards -->
-          <div class="grid-3" style="margin-bottom: 24px;">
+          <div id="packagesContainer" class="grid-3" style="margin-bottom: 24px;">
             
             <!-- Basic Package -->
             <div class="package-card">
@@ -868,9 +1209,70 @@
                   <span style="width: 14px; height: 14px; background: #F1F5F9; border: 1px solid var(--border-color); border-radius: 3px;"></span> Slot bận / Nghỉ ngơi
                 </span>
               </div>
-              <button class="btn btn-primary btn-sm" onclick="showToast('Đã lưu ma trận lịch rảnh tuần thành công!')">
+              <button class="btn btn-primary btn-sm" onclick="saveWeeklyScheduleMatrix()">
                 <i class="fa-solid fa-check"></i> Lưu Lịch Rảnh Tuần
               </button>
+            </div>
+          </div>
+
+          <!-- Monthly Calendar & Date Exceptions Override -->
+          <div class="card" style="margin-top: 24px; margin-bottom: 24px;">
+            <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div class="card-title">
+                  <i class="fa-solid fa-calendar-alt" style="color: var(--primary);"></i> Lịch Tháng &amp; Tùy Chỉnh Ngày Ngoại Lệ (Monthly Calendar &amp; Day Overrides)
+                </div>
+                <div class="card-subtitle">
+                  Xem chi tiết từng ngày trong tháng theo lịch làm việc. Nhấp vào <strong>bất kỳ ngày nào</strong> để chuyển đổi giữa <strong>Mở Rảnh (Xanh lá)</strong> và <strong>Khóa Bận (Đỏ)</strong>.
+                </div>
+              </div>
+
+              <!-- Month Navigation Controls -->
+              <div style="display:flex; align-items:center; gap: 10px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="changeProviderMonth(-1)" title="Tháng trước">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span id="providerMonthTitle" style="font-weight: 800; font-size: 15px; color: var(--secondary); min-width: 140px; text-align: center;">Tháng 10, 2026</span>
+                <button type="button" class="btn btn-outline btn-sm" onclick="changeProviderMonth(1)" title="Tháng sau">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="resetProviderMonthToCurrent()">
+                  Hôm nay
+                </button>
+              </div>
+            </div>
+
+            <!-- Month Calendar Grid -->
+            <div style="padding: 16px 0;">
+              <div id="providerMonthlyCalendarGrid" class="provider-calendar-grid">
+                <!-- Rendered dynamically by profile-app.js -->
+              </div>
+            </div>
+
+            <!-- Legend & Action Row -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 12px; padding-top: 14px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary);">
+              <div style="display:flex; gap: 18px; align-items:center; flex-wrap: wrap;">
+                <span style="display:flex; align-items:center; gap: 6px;">
+                  <span style="width: 14px; height: 14px; background: #DCFCE7; border: 1.5px solid #16A34A; border-radius: 4px;"></span> Ngày Mở Rảnh (Khách đặt được)
+                </span>
+                <span style="display:flex; align-items:center; gap: 6px;">
+                  <span style="width: 14px; height: 14px; background: #FEE2E2; border: 1.5px solid #DC2626; border-radius: 4px;"></span> Đã Khóa Bận Ngoại Lệ
+                </span>
+                <span style="display:flex; align-items:center; gap: 6px;">
+                  <span style="width: 14px; height: 14px; background: #FEF3C7; border: 1.5px solid #D97706; border-radius: 4px;"></span> Đang Trong Kỳ Nghỉ Phép
+                </span>
+                <span style="display:flex; align-items:center; gap: 6px;">
+                  <span style="width: 14px; height: 14px; background: #F1F5F9; border: 1.5px solid #CBD5E1; border-radius: 4px;"></span> Ngày Nghỉ Định Kỳ
+                </span>
+              </div>
+              <div style="display:flex; gap: 8px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="clearAllDateExceptions()">
+                  <i class="fa-solid fa-rotate-left"></i> Đặt Lại Ngoại Lệ
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveMonthlyDateExceptions()">
+                  <i class="fa-solid fa-floppy-disk"></i> Lưu Lịch Ngoại Lệ Tháng
+                </button>
+              </div>
             </div>
           </div>
 
@@ -921,20 +1323,20 @@
               <div class="grid-2">
                 <div class="form-group">
                   <label class="form-label">Nghỉ từ ngày</label>
-                  <input type="date" class="form-control" value="2026-09-25">
+                  <input type="date" class="form-control" id="inputVacationFrom">
                 </div>
                 <div class="form-group">
                   <label class="form-label">Đến hết ngày</label>
-                  <input type="date" class="form-control" value="2026-09-28">
+                  <input type="date" class="form-control" id="inputVacationTo">
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="form-label">Lời nhắn tự động gửi khách hàng khi nhắn tin</label>
-                <textarea class="form-control" style="min-height: 80px;">Chào bạn! Hiện tại tôi đang trong kỳ nghỉ phép ngắn từ 25/09 đến 28/09/2026. Tôi sẽ phản hồi tin nhắn của bạn ngay khi quay lại làm việc. Cảm ơn bạn!</textarea>
+                <textarea class="form-control" id="inputVacationMsg" style="min-height: 80px;">Chào bạn! Hiện tại tôi đang trong kỳ nghỉ phép. Tôi sẽ phản hồi tin nhắn của bạn ngay khi quay lại làm việc. Cảm ơn bạn!</textarea>
               </div>
 
-              <button class="btn btn-outline" style="width:100%;" onclick="showToast('Đã lên lịch nghỉ phép thành công!')">
+              <button class="btn btn-outline" style="width:100%;" onclick="saveVacationSchedule()">
                 <i class="fa-solid fa-calendar-check"></i> Lưu Lịch Nghỉ Phép
               </button>
             </div>
@@ -964,17 +1366,56 @@
         </button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Họ và tên hiển thị</label>
-          <input type="text" class="form-control" id="inputName" value="Nguyễn Văn Pro">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Họ và tên hiển thị</label>
+            <input type="text" class="form-control" id="inputName" value="Nguyễn Văn Pro">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Số điện thoại liên hệ</label>
+            <input type="tel" class="form-control" id="inputPhone" placeholder="0987.654.321">
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Chức danh chuyên môn (Headline)</label>
-          <input type="text" class="form-control" id="inputHeadline" value="Senior UI/UX Designer & Fullstack Web Developer • 6+ Năm Kinh Nghiệm">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Chức danh chuyên môn (Headline)</label>
+            <input type="text" class="form-control" id="inputHeadline" value="Senior UI/UX Designer & Fullstack Web Developer • 6+ Năm Kinh Nghiệm">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Lĩnh vực hoạt động</label>
+            <select class="form-control" id="inputCategory">
+              <option value="IT">Lập trình & CNTT (IT)</option>
+              <option value="Design">Thiết kế đồ họa (Design)</option>
+              <option value="Writing">Viết lách & Dịch thuật (Writing)</option>
+              <option value="Marketing">Marketing & Bán hàng</option>
+              <option value="Tutor">Gia sư & Đào tạo</option>
+              <option value="Home">Đời sống & Nhà cửa</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Địa điểm làm việc</label>
           <input type="text" class="form-control" id="inputLocation" value="Cầu Giấy, Hà Nội, Việt Nam">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Link ảnh đại diện (Avatar URL)</label>
+            <div style="display:flex; gap:6px;">
+              <input type="text" class="form-control" id="inputAvatarUrl" placeholder="https://... hoặc tải file">
+              <button type="button" class="btn btn-outline btn-sm" onclick="triggerProviderAvatarUpload(event)" title="Tải ảnh từ máy" style="white-space:nowrap; padding:0 10px;">
+                <i class="fa-solid fa-upload"></i>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Link ảnh bìa (Cover URL)</label>
+            <div style="display:flex; gap:6px;">
+              <input type="text" class="form-control" id="inputCoverUrl" placeholder="https://... hoặc tải file">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('providerCoverFileInput').click()" title="Tải ảnh từ máy" style="white-space:nowrap; padding:0 10px;">
+                <i class="fa-solid fa-upload"></i>
+              </button>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Mô tả bản thân & Kinh nghiệm (Bio)</label>
@@ -1045,25 +1486,37 @@
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">Tên gói dịch vụ</label>
-          <input type="text" class="form-control" value="Website Doanh Nghiệp Chuẩn SEO">
+          <input type="hidden" id="inputPackageId" value="">
+          <input type="text" class="form-control" id="inputPackageTitle" placeholder="Ví dụ: Website Doanh Nghiệp Chuẩn SEO">
         </div>
         <div class="grid-2">
           <div class="form-group">
             <label class="form-label">Giá niêm yết (VNĐ)</label>
-            <input type="text" class="form-control" value="3.500.000đ">
+            <input type="number" class="form-control" id="inputPackagePrice" placeholder="3500000" min="50000" step="50000">
           </div>
           <div class="form-group">
             <label class="form-label">Thời gian bàn giao (Ngày)</label>
-            <input type="number" class="form-control" value="5">
+            <input type="text" class="form-control" id="inputPackageDuration" placeholder="5 Ngày">
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">Lĩnh vực (Category)</label>
+          <select class="form-control" id="inputPackageCategory">
+            <option value="IT">Lập trình & CNTT (IT)</option>
+            <option value="Design">Thiết kế đồ họa (Design)</option>
+            <option value="Writing">Viết lách & Dịch thuật (Writing)</option>
+            <option value="Marketing">Marketing & Bán hàng</option>
+            <option value="Tutor">Gia sư & Đào tạo</option>
+            <option value="Home">Đời sống & Nhà cửa</option>
+          </select>
+        </div>
+        <div style="display:none;" class="form-group">
           <label class="form-label">Số lần chỉnh sửa miễn phí</label>
           <input type="number" class="form-control" value="5">
         </div>
         <div class="form-group">
           <label class="form-label">Danh sách quyền lợi / Deliverables (Mỗi dòng 1 ý)</label>
-          <textarea class="form-control" style="min-height: 100px;">Thiết kế 5 - 7 Trang giao diện hoàn chỉnh
+          <textarea class="form-control" id="inputPackageDesc" style="min-height: 100px;">Thiết kế 5 - 7 Trang giao diện hoàn chỉnh
 Tích hợp Khung Chat, Form Báo Giá & Bản đồ
 Chuẩn SEO On-page & Tốc độ tải trang &lt; 2s
 Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
@@ -1071,7 +1524,7 @@ Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('editPackageModal')">Đóng</button>
-        <button class="btn btn-primary" onclick="closeModal('editPackageModal'); showToast('Đã lưu cập nhật gói dịch vụ thành công!');">
+        <button class="btn btn-primary" onclick="savePackageService()">
           <i class="fa-solid fa-check"></i> Lưu Gói Dịch Vụ
         </button>
       </div>
@@ -1116,257 +1569,6 @@ Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
   <!-- Interactive JavaScript Logic -->
   <script src="js/number-format.js"></script>
   <script src="provider.js"></script>
-  <script>
-    // Tab switching between profile sub-views
-    function switchSection(targetId, tabEl) {
-      document.querySelectorAll('.profile-sub-view').forEach(view => {
-        view.style.display = 'none';
-      });
-      const activeView = document.getElementById(targetId);
-      if (activeView) {
-        activeView.style.display = 'block';
-      }
-
-      document.querySelectorAll('.tab-item').forEach(tab => {
-        tab.classList.remove('active');
-      });
-      if (tabEl) {
-        tabEl.classList.add('active');
-      }
-    }
-
-    // Modal helpers
-    function openModal(id) {
-      const modal = document.getElementById(id);
-      if (modal) modal.classList.add('active');
-    }
-    function closeModal(id) {
-      const modal = document.getElementById(id);
-      if (modal) modal.classList.remove('active');
-    }
-
-    // Toast alert
-    function showToast(msg) {
-      const toast = document.getElementById('toastBox');
-      const toastMsg = document.getElementById('toastMsg');
-      if (toast && toastMsg) {
-        toastMsg.textContent = msg;
-        toast.classList.add('show');
-        setTimeout(() => {
-          toast.classList.remove('show');
-        }, 3000);
-      }
-    }
-
-    // Save profile changes (Backend connected)
-    async function saveProfileChanges() {
-      const name = document.getElementById('inputName').value;
-      const headline = document.getElementById('inputHeadline').value;
-      const location = document.getElementById('inputLocation').value;
-      const bio = document.getElementById('inputBio').value;
-
-      if (name) document.getElementById('viewName').innerText = name;
-      if (headline) document.getElementById('viewHeadline').innerText = headline;
-      if (location) document.getElementById('viewLocation').innerText = location;
-      if (bio) document.getElementById('viewBio').innerHTML = '<p>' + bio.replace(/\n/g, '<br>') + '</p>';
-
-      try {
-        if (window.providerApi) {
-          await window.providerApi.updateProfile({ name, specialty: headline, location, bio });
-        }
-      } catch (e) {
-        console.warn('Backend sync warning:', e);
-      }
-
-      closeModal('editProfileModal');
-      showToast('Đã lưu thông tin hồ sơ Provider thành công!');
-    }
-
-    // Add new skill (Backend connected)
-    async function addNewSkill() {
-      const name = document.getElementById('inputSkillName').value.trim();
-      const group = document.getElementById('inputSkillGroup').value;
-      const level = document.getElementById('inputSkillLevel').value;
-
-      if (!name) {
-        alert('Vui lòng nhập tên kỹ năng!');
-        return;
-      }
-
-      const levelMap = {
-        'expert': { label: 'Chuyên gia (Expert)', cls: 'level-expert' },
-        'intermediate': { label: 'Thành thạo (Intermediate)', cls: 'level-intermediate' },
-        'beginner': { label: 'Cơ bản (Beginner)', cls: 'level-beginner' }
-      };
-
-      const targetList = group === 'primary' 
-        ? document.getElementById('primarySkillsList') 
-        : document.getElementById('secondarySkillsList');
-
-      const item = document.createElement('div');
-      item.className = 'skill-card-item';
-      item.innerHTML = `
-        <div class="skill-info">
-          <div class="skill-name"><i class="fa-solid fa-code" style="color: var(--primary);"></i> ${name}</div>
-          <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
-            <span class="skill-badge-level ${levelMap[level].cls}">${levelMap[level].label}</span>
-            <span class="badge badge-neutral" style="font-size: 10px;">Vừa thêm</span>
-          </div>
-        </div>
-        <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this, '${name}')">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      `;
-
-      targetList.prepend(item);
-      document.getElementById('inputSkillName').value = '';
-
-      try {
-        if (window.providerApi) {
-          await window.providerApi.addSkill(name, level, group);
-        }
-      } catch (e) {
-        console.warn('Backend skill add error:', e);
-      }
-
-      closeModal('addSkillModal');
-      showToast(`Đã thêm thành công kỹ năng "${name}"!`);
-    }
-
-    async function deleteSkill(btn, skillName) {
-      if (confirm('Bạn có chắc chắn muốn xóa kỹ năng này khỏi hồ sơ?')) {
-        const card = btn.closest('.skill-card-item');
-        if (card) card.remove();
-        if (skillName && window.providerApi) {
-          try {
-            await window.providerApi.deleteSkill(skillName);
-          } catch (e) {
-            console.warn('Backend skill delete error:', e);
-          }
-        }
-        showToast('Đã gỡ bỏ kỹ năng thành công!');
-      }
-    }
-
-    // Save hourly rate (Backend connected)
-    async function saveHourlyRate() {
-      const val = readFormattedNumber('inputHourlyRateVal');
-      if (val) {
-        const formatted = Number(val).toLocaleString('vi-VN') + 'đ';
-        document.getElementById('displayHourlyRate').innerHTML = `${formatted} <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;">/ giờ làm việc</span>`;
-        try {
-          if (window.providerApi) {
-            await window.providerApi.updateHourlyRate(val);
-          }
-        } catch (e) {
-          console.warn('Backend hourly rate update error:', e);
-        }
-      }
-      closeModal('editHourlyModal');
-      showToast('Đã cập nhật đơn giá theo giờ mới!');
-    }
-
-    // Availability status switcher (Backend connected)
-    async function setStatusMode(mode) {
-      const btnReady = document.getElementById('statusReady');
-      const btnLimited = document.getElementById('statusLimited');
-      const btnPaused = document.getElementById('statusPaused');
-      const banner = document.getElementById('vacationBanner');
-      const headerBadge = document.getElementById('headerStatusBadge');
-
-      btnReady.className = 'status-pill-option';
-      btnLimited.className = 'status-pill-option';
-      btnPaused.className = 'status-pill-option';
-
-      if (mode === 'ready') {
-        btnReady.classList.add('active');
-        banner.style.display = 'none';
-        headerBadge.className = 'badge badge-success';
-        headerBadge.innerHTML = '<span class="badge-dot"></span> Đang Sẵn Sàng Nhận Việc';
-        showToast('Trạng thái: Đang sẵn sàng nhận việc!');
-      } else if (mode === 'limited') {
-        btnLimited.classList.add('active-limited');
-        banner.style.display = 'none';
-        headerBadge.className = 'badge badge-warning';
-        headerBadge.innerHTML = '<span class="badge-dot"></span> Nhận Việc Có Giới Hạn';
-        showToast('Trạng thái: Nhận việc có giới hạn!');
-      } else if (mode === 'paused') {
-        btnPaused.classList.add('active-paused');
-        banner.style.display = 'flex';
-        headerBadge.className = 'badge badge-danger';
-        headerBadge.innerHTML = '<span class="badge-dot"></span> Đang Tạm Dừng / Nghỉ Phép';
-        showToast('Trạng thái: Tạm dừng nhận đơn!');
-      }
-
-      try {
-        if (window.providerApi) {
-          await window.providerApi.updateAvailability(mode);
-        }
-      } catch (e) {
-        console.warn('Backend availability status error:', e);
-      }
-    }
-
-    // Toggle single slot in schedule matrix
-    function toggleSlot(cell) {
-      if (cell.classList.contains('available')) {
-        cell.classList.remove('available');
-        cell.classList.add('busy');
-        cell.textContent = 'Bận';
-      } else {
-        cell.classList.remove('busy');
-        cell.classList.add('available');
-        cell.textContent = 'Rảnh (Sẵn sàng)';
-      }
-    }
-
-    // Bulk schedule actions
-    function setAllSlots(isAvailable) {
-      document.querySelectorAll('.slot-cell').forEach(cell => {
-        if (isAvailable) {
-          cell.className = 'slot-cell available';
-          cell.textContent = 'Rảnh (Sẵn sàng)';
-        } else {
-          cell.className = 'slot-cell busy';
-          cell.textContent = 'Bận';
-        }
-      });
-      showToast(isAvailable ? 'Đã bật rảnh tất cả các khung giờ!' : 'Đã đặt lại toàn bộ lịch làm việc!');
-    }
-
-    function setBusinessHoursOnly() {
-      const rows = document.querySelectorAll('#scheduleTableBody tr');
-      rows.forEach((row, rIdx) => {
-        const cells = row.querySelectorAll('.slot-cell');
-        cells.forEach((cell, cIdx) => {
-          if (cIdx < 5 && (rIdx === 0 || rIdx === 1)) {
-            cell.className = 'slot-cell available';
-            cell.textContent = 'Rảnh (Sẵn sàng)';
-          } else {
-            cell.className = 'slot-cell busy';
-            cell.textContent = 'Bận';
-          }
-        });
-      });
-      showToast('Đã áp dụng lịch làm việc Giờ Hành Chính (T2 - T6)!');
-    }
-
-    // Auto-activate tab from URL hash if present
-    window.addEventListener('hashchange', () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash && document.getElementById(hash)) {
-        const tabEl = document.querySelector(`.tab-item[onclick*="${hash}"]`);
-        switchSection(hash, tabEl);
-      }
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash && document.getElementById(hash)) {
-        const tabEl = document.querySelector(`.tab-item[onclick*="${hash}"]`);
-        switchSection(hash, tabEl);
-      }
-    });
-  </script>
+  <script src="js/profile-app.js"></script>
 </body>
 </html>

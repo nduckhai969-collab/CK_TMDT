@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancelRequest, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
 const { createNotification, notifyProvider } = require('../services/notificationService');
 const vnpay = require('../services/vnpayService');
 const { startGatewayCheckout, startGatewayRetry, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
@@ -536,19 +536,37 @@ router.put('/:id/release-escrow', requireCustomer, (req, res) => {
   }
 });
 
-// Cancel / Dispute order
+// Customer gửi yêu cầu hủy đơn (hoặc hủy thẳng nếu chưa thanh toán / chưa tiếp nhận)
 router.put('/:id/cancel', requireSignedIn, (req, res) => {
   try {
     const order = processCancelOrder(req.params.id, req.authUser.id, req.authUser.role, req.body.reason);
-    res.json({
-      success: true,
-      message: order.orderStatus === 'disputed'
-        ? 'Đơn hàng đã chuyển sang tranh chấp. Tiền ký quỹ được tạm khóa chờ Admin xử lý.'
-        : order.paymentStatus === 'cancelled'
-          ? 'Đơn hàng chờ thanh toán đã được hủy. Không có khoản tiền nào bị trừ.'
-          : 'Đơn hàng đã được hủy. Tiền ký quỹ đã hoàn vào ví khách hàng.',
-      order
-    });
+    let message;
+    if (order.orderStatus === 'cancel_requested') {
+      message = 'Đã gửi yêu cầu hủy đến Provider. Đơn tạm dừng trong khi chờ phản hồi. Tiền ký quỹ vẫn được giữ an toàn.';
+    } else if (order.paymentStatus === 'cancelled') {
+      message = 'Đơn hàng chờ thanh toán đã được hủy. Không có khoản tiền nào bị trừ.';
+    } else {
+      message = 'Đơn hàng đã được hủy. Tiền ký quỹ đã hoàn vào ví khách hàng.';
+    }
+    res.json({ success: true, message, order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+// Provider phản hồi yêu cầu hủy: chấp thuận (hoàn 100%) hoặc từ chối (→ Admin phân xử)
+// Body: { decision: 'approve' | 'reject', note: string }
+router.put('/:id/cancel-respond', requireRole('Provider'), (req, res) => {
+  const { decision, note } = req.body;
+  if (!decision) {
+    return res.status(400).json({ success: false, message: 'Thiếu trường "decision" (approve | reject).' });
+  }
+  try {
+    const order = processRespondCancelRequest(req.params.id, req.authUser.id, decision, note);
+    const message = decision === 'approve'
+      ? 'Đã chấp thuận yêu cầu hủy. Đơn hàng kết thúc và tiền ký quỹ hoàn 100% cho khách.'
+      : 'Đã từ chối yêu cầu hủy. Đơn hàng chuyển Admin phân xử — tiền ký quỹ vẫn được giữ nguyên.';
+    res.json({ success: true, message, order });
   } catch (err) {
     res.status(err.status || 400).json({ success: false, message: err.message });
   }

@@ -129,6 +129,9 @@
           <div class="tab-item" onclick="switchOrderTab('tab-uc40', this)">
             <i class="fa-solid fa-circle-check"></i> Hoàn Tất &amp; Nghiệm Thu <span class="badge-count" id="completeTabCount" style="margin-left:6px; background-color: var(--secondary); display:none;">0</span>
           </div>
+          <div class="tab-item" onclick="switchOrderTab('tab-uc41', this)">
+            <i class="fa-solid fa-triangle-exclamation"></i> Yêu Cầu Hủy <span class="badge-count" id="cancelTabCount" style="margin-left:6px; background-color: #DC2626; display:none;">0</span>
+          </div>
         </div>
 
         <!-- ===================================================================
@@ -170,6 +173,18 @@
         <div id="tab-uc40" class="screen-tab-content">
           <div id="completeViewContainer">
             <!-- Dynamic complete & delivery view -->
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             5. YÊU CẦU HỦY (CANCEL REQUESTS)
+             =================================================================== -->
+        <div id="tab-uc41" class="screen-tab-content">
+          <div id="cancelRequestsContainer">
+            <div style="text-align:center; padding:48px 24px; color:var(--text-muted);">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px; color:var(--primary); margin-bottom:8px;"></i>
+              <div>Đang tải...</div>
+            </div>
           </div>
         </div>
 
@@ -232,10 +247,11 @@
         }
         allOrders = res.orders || [];
 
-        const pendingOrders = allOrders.filter(o => o.orderStatus === 'pending');
+        const pendingOrders    = allOrders.filter(o => o.orderStatus === 'pending');
         const processingOrders = allOrders.filter(o => o.orderStatus === 'processing');
-        const deliveredOrders = allOrders.filter(o => o.orderStatus === 'delivered');
-        const completedOrders = allOrders.filter(o => o.orderStatus === 'completed');
+        const deliveredOrders  = allOrders.filter(o => o.orderStatus === 'delivered');
+        const completedOrders  = allOrders.filter(o => o.orderStatus === 'completed');
+        const cancelOrders     = allOrders.filter(o => o.orderStatus === 'cancel_requested' || o.orderStatus === 'cancel_rejected');
 
         // Update Header & Tab counts
         const headerCountEl = document.getElementById('headerActiveOrdersCount');
@@ -260,11 +276,19 @@
           compCountEl.style.display = count ? 'inline-block' : 'none';
         }
 
+        const cancelCountEl = document.getElementById('cancelTabCount');
+        if (cancelCountEl) {
+          cancelCountEl.textContent = cancelOrders.length;
+          cancelCountEl.style.display = cancelOrders.length ? 'inline-block' : 'none';
+        }
+
         // Render each tab
         renderPendingTab(pendingOrders);
         renderProcessingTab(processingOrders);
         renderProgressTab(processingOrders);
         renderCompleteTab(processingOrders, deliveredOrders, completedOrders);
+        renderCancelRequestsTab(cancelOrders);
+
 
       } catch (err) {
         console.error('Error loading provider orders:', err);
@@ -764,6 +788,130 @@
       container.innerHTML = deliveryFormHtml + deliveredSectionHtml;
     }
 
+    function renderCancelRequestsTab(orders) {
+      const container = document.getElementById('cancelRequestsContainer');
+      if (!container) return;
+
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center; padding:48px 24px;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#F1F5F9; color:#94A3B8; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:28px;">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 style="font-size:16px; font-weight:700; color:var(--secondary); margin-bottom:6px;">Không có yêu cầu hủy nào đang chờ</h3>
+            <p style="font-size:13px; color:var(--text-muted); max-width:480px; margin:0 auto;">Khi khách hàng gửi yêu cầu hủy đơn đang thực hiện, chúng sẽ xuất hiện tại đây để bạn xem xét và phản hồi.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = orders.map(order => {
+        const price = Number(order.price) || 0;
+        const escrow = order.escrowDeposit || price;
+        const req = order.cancelRequest || {};
+        const isPending = order.orderStatus === 'cancel_requested';
+        const isRejected = order.orderStatus === 'cancel_rejected';
+
+        const statusBadge = isPending
+          ? `<span style="background:#FEF3C7;color:#B45309;font-weight:700;font-size:12px;padding:5px 12px;border-radius:9999px;display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-clock"></i> Chờ bạn phản hồi</span>`
+          : `<span style="background:#FEE2E2;color:#DC2626;font-weight:700;font-size:12px;padding:5px 12px;border-radius:9999px;display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-scale-balanced"></i> Chờ Admin phân xử</span>`;
+
+        const requestedAt = req.requestedAt ? new Date(req.requestedAt).toLocaleString('vi-VN') : 'Vừa gửi';
+
+        return `
+          <div class="card" style="margin-bottom:20px; border-left:4px solid ${isPending ? '#F59E0B' : '#DC2626'};">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                ${statusBadge}
+                <h2 style="font-size:17px; font-weight:800; color:var(--secondary); margin:8px 0 3px;">#${order.id}: ${escapeHtml(order.serviceTitle || 'Dịch vụ hợp đồng')}</h2>
+                <div style="font-size:12px; color:var(--text-muted);">Khách hàng: <strong>${escapeHtml(order.customerName || 'Khách hàng')}</strong> • Tạo: ${order.date || ''}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px; color:var(--text-muted);">Tiền ký quỹ đang giữ</div>
+                <div style="font-size:22px; font-weight:800; color:#15803D;">${formatVND(escrow)}</div>
+              </div>
+            </div>
+
+            <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; padding:14px; margin-bottom:16px;">
+              <div style="font-size:12px; font-weight:700; color:#92400E; margin-bottom:6px;"><i class="fa-solid fa-comment-dots"></i> Lý do khách hàng yêu cầu hủy</div>
+              <div style="font-size:13px; color:#78350F; line-height:1.6;">"${escapeHtml(req.reason || 'Không có lý do cụ thể')}"</div>
+              <div style="font-size:11px; color:#B45309; margin-top:6px;"><i class="fa-regular fa-clock"></i> Gửi lúc: ${requestedAt}</div>
+            </div>
+
+            ${isRejected ? `
+            <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:8px; padding:12px; margin-bottom:16px;">
+              <div style="font-size:12px; font-weight:700; color:#991B1B;"><i class="fa-solid fa-scale-balanced"></i> Bạn đã từ chối — Đơn đang chờ Admin phân xử</div>
+              <div style="font-size:12px; color:#7F1D1D; margin-top:4px; line-height:1.5;">Tiền ký quỹ vẫn được giữ nguyên trong Escrow. Khách hàng có thể gửi thêm bằng chứng khiếu nại. Admin sẽ xem xét và ra phán quyết cuối cùng.</div>
+              ${req.providerNote ? `<div style="font-size:12px; color:#7F1D1D; margin-top:4px;">Ghi chú của bạn: "${escapeHtml(req.providerNote)}"</div>` : ''}
+            </div>
+            ` : ''}
+
+            <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:12px; margin-bottom:16px; font-size:12px; color:#166534; line-height:1.6;">
+              <strong><i class="fa-solid fa-shield-halved"></i> Tiền ký quỹ đang được giữ an toàn.</strong>
+              ${isPending
+                ? ' Trong khi chờ bạn phản hồi, đơn tạm dừng. Tiền sẽ chỉ hoàn khi bạn đồng ý hoặc Admin quyết định.'
+                : ' Tiền tiếp tục được giữ cho đến khi Admin phân xử xong.'}
+            </div>
+
+            ${isPending ? `
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button onclick="respondCancelRequest('${order.id}', 'reject')"
+                class="btn btn-outline" style="flex:1; border-color:#FECACA; color:#DC2626; font-weight:700;">
+                <i class="fa-solid fa-ban"></i> Từ chối — Tiếp tục thực hiện
+              </button>
+              <button onclick="respondCancelRequest('${order.id}', 'approve')"
+                class="btn btn-primary" style="flex:1; background:#D97706; border-color:#D97706; font-weight:700;">
+                <i class="fa-solid fa-circle-check"></i> Chấp thuận — Hoàn 100% cho khách
+              </button>
+            </div>
+            ` : `
+            <div style="display:flex; gap:10px;">
+              <a href="chat.html?with=${order.customerId || ''}" class="btn btn-outline btn-sm" style="font-weight:700;">
+                <i class="fa-solid fa-comments"></i> Nhắn tin khách hàng
+              </a>
+            </div>
+            `}
+          </div>`;
+      }).join('');
+    }
+
+    async function respondCancelRequest(orderId, decision) {
+      const isApprove = decision === 'approve';
+
+      const confirmMsg = isApprove
+        ? `Bạn chắc chắn muốn CHẤP THUẬN yêu cầu hủy đơn ${orderId}?\n\nĐơn sẽ kết thúc và 100% tiền ký quỹ được hoàn về ví khách hàng.`
+        : `Bạn muốn TỪ CHỐI yêu cầu hủy đơn ${orderId}?\n\nĐơn sẽ chuyển Admin phân xử. Nhập lý do từ chối (có thể để trống):`;
+
+      if (isApprove) {
+        if (!confirm(confirmMsg)) return;
+      }
+
+      let note = '';
+      if (!isApprove) {
+        note = window.prompt(confirmMsg, 'Công việc đang trong tiến độ cam kết, đề nghị khách hàng tiếp tục hợp đồng');
+        if (note === null) return;
+      }
+
+      try {
+        showToast(isApprove ? 'Đang xử lý chấp thuận...' : 'Đang từ chối yêu cầu hủy...');
+        const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}/cancel-respond`, {
+          method: 'PUT',
+          headers: getAuthHeader(),
+          body: JSON.stringify({ decision, note })
+        });
+        const data = await res.json();
+
+        if (data && data.success) {
+          showToast(data.message || (isApprove ? 'Đã chấp thuận hủy đơn.' : 'Đã từ chối, đơn chờ Admin phân xử.'));
+          await loadProviderOrders();
+        } else {
+          showToast(data?.message || 'Không thể xử lý yêu cầu.');
+        }
+      } catch (e) {
+        console.error('respondCancelRequest error:', e);
+        showToast('Lỗi kết nối máy chủ.');
+      }
+    }
+
     async function confirmAcceptOrder(orderId) {
       try {
         showToast('Đang tiếp nhận đơn hàng...');
@@ -922,6 +1070,8 @@
         switchOrderTab('tab-uc39', document.querySelectorAll('.tab-item')[2]);
       } else if (tabParam === 'complete' || tabParam === 'tab-uc40') {
         switchOrderTab('tab-uc40', document.querySelectorAll('.tab-item')[3]);
+      } else if (tabParam === 'cancel' || tabParam === 'tab-uc41') {
+        switchOrderTab('tab-uc41', document.querySelectorAll('.tab-item')[4]);
       }
     });
   </script>

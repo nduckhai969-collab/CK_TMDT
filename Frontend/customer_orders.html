@@ -461,11 +461,13 @@
       }
 
       container.innerHTML = filtered.map(o => {
-        const isEscrowHeld = o.escrowStatus === 'escrow_held';
-        const isCompleted = o.orderStatus === 'completed';
-        const isDelivered = o.orderStatus === 'delivered';
-        const isDisputed = o.orderStatus === 'disputed';
-        const isCancelled = o.orderStatus === 'cancelled';
+        const isEscrowHeld       = o.escrowStatus === 'escrow_held';
+        const isCompleted         = o.orderStatus === 'completed';
+        const isDelivered         = o.orderStatus === 'delivered';
+        const isDisputed          = o.orderStatus === 'disputed';
+        const isCancelled         = o.orderStatus === 'cancelled';
+        const isCancelRequested   = o.orderStatus === 'cancel_requested';
+        const isCancelRejected    = o.orderStatus === 'cancel_rejected';
         const canUndoCancellation = isCancelled && o.cancelledBy === 'Customer' && Number.isFinite(Date.parse(o.cancellationUndoUntil || '')) && Date.parse(o.cancellationUndoUntil) > Date.now();
 
         let badgeStatus = '';
@@ -475,6 +477,10 @@
           badgeStatus = `<span style="background:#DCFCE7; color:#15803D; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-circle-check"></i> Hoàn tất</span>`;
         } else if (isDelivered) {
           badgeStatus = `<span style="background:#FEF3C7; color:#B45309; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-bell"></i> Chờ nghiệm thu</span>`;
+        } else if (isCancelRequested) {
+          badgeStatus = `<span style="background:#FEF3C7; color:#92400E; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-clock-rotate-left"></i> Chờ Provider phản hồi hủy</span>`;
+        } else if (isCancelRejected) {
+          badgeStatus = `<span style="background:#FEE2E2; color:#DC2626; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-scale-balanced"></i> Chờ Admin phân xử</span>`;
         } else if (isDisputed) {
           badgeStatus = `<span style="background:#FEE2E2; color:#B91C1C; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-scale-balanced"></i> Đang tranh chấp</span>`;
         } else if (isCancelled) {
@@ -547,20 +553,35 @@
                     <i class="fa-solid fa-credit-card"></i> Thanh toán ký quỹ ngay
                   </button>
                 ` : ''}
-                ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') ? `
+
+                ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') && !isCancelRequested && !isCancelRejected ? `
                   <button onclick="cancelCustomerOrder('${o.id}', ${o.paymentStatus === 'pending'})" class="btn btn-outline btn-sm" style="border-color:#94a3b8;color:#475569;font-weight:700">
                     <i class="fa-solid fa-xmark"></i> Hủy đơn
                   </button>
                 ` : ''}
+
+                ${isCancelRequested ? `
+                  <span style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;padding:6px 12px;border-radius:8px;font-weight:600;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Đang chờ Provider phản hồi yêu cầu hủy...
+                  </span>
+                  <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fca5a5;color:#b91c1c;font-weight:700;">
+                    <i class="fa-solid fa-shield-halved"></i> Gửi khiếu nại cho Admin
+                  </a>
+                ` : ''}
+
+                ${isCancelRejected ? `
+                  <span style="font-size:12px;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;padding:6px 12px;border-radius:8px;font-weight:600;">
+                    <i class="fa-solid fa-scale-balanced"></i> Provider từ chối — Đang chờ Admin phân xử
+                  </span>
+                  <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fca5a5;color:#b91c1c;font-weight:700;">
+                    <i class="fa-solid fa-shield-halved"></i> Gửi thêm bằng chứng / khiếu nại
+                  </a>
+                ` : ''}
+
                 ${isDelivered ? `
                   <button onclick="cancelCustomerOrder('${o.id}', false, true)" class="btn btn-outline btn-sm" style="border-color:#fca5a5;color:#b91c1c;font-weight:700">
                     <i class="fa-solid fa-scale-balanced"></i> Khiếu nại đơn
                   </button>
-                ` : ''}
-                ${!isCompleted && !isDisputed && !isCancelled && o.paymentStatus !== 'pending' ? `
-                  <a href="customer_complaint.html?orderId=${o.id}" class="btn btn-outline btn-sm" style="border-color:#fecaca;color:#b91c1c;font-weight:700">
-                    <i class="fa-solid fa-shield-halved"></i> Khiếu nại
-                  </a>
                 ` : ''}
 
                 ${canUndoCancellation ? `
@@ -569,7 +590,7 @@
                   </button>
                 ` : ''}
 
-                ${isDelivered || (isEscrowHeld && !isCompleted && !isDisputed) ? `
+                ${isDelivered ? `
                   <button onclick="openReleaseModal('${o.id}', ${o.price})" class="btn btn-primary" style="font-weight:700">
                     <i class="fa-solid fa-circle-check"></i> Nghiệm thu &amp; giải ngân
                   </button>

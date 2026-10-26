@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
-const { processReleaseEscrow, processForceRefund } = require('../services/orderService');
+const { processReleaseEscrow, processForceRefund, processArbitrateCancel } = require('../services/orderService');
 
 // ============================================================================
 // 1. DASHBOARD & SYSTEM OVERVIEW (UC-51)
@@ -550,6 +550,30 @@ router.post('/orders/:id/force-refund', (req, res) => {
   try {
     const order = processForceRefund(req.params.id);
     res.json({ success: true, message: 'Admin đã hoàn trả 100% tiền ký quỹ Escrow cho khách hàng!', order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+// Admin phân xử yêu cầu hủy đơn (cancel_requested / cancel_rejected / disputed)
+// Body: {
+//   action: 'continue' | 'cancel',
+//   adminNote: string (bắt buộc — căn cứ phán quyết),
+//   refundPercentage: number 0–100 (chỉ khi action === 'cancel', mặc định 100)
+// }
+// - continue: đơn tiếp tục theo trạng thái trước yêu cầu hủy, tiền vẫn giữ
+// - cancel  : hủy đơn, hoàn refundPercentage% cho khách, (100-pct)% trả Provider
+router.post('/orders/:id/arbitrate-cancel', (req, res) => {
+  const { action, adminNote, refundPercentage } = req.body;
+  if (!action) {
+    return res.status(400).json({ success: false, message: 'Thiếu trường "action" (continue | cancel).' });
+  }
+  try {
+    const order = processArbitrateCancel(req.params.id, action, adminNote, refundPercentage);
+    const message = action === 'continue'
+      ? `Đã phán quyết: Đơn hàng ${order.id} tiếp tục thực hiện.`
+      : `Đã phán quyết: Hủy đơn ${order.id}, hoàn ${refundPercentage ?? 100}% cho khách.`;
+    res.json({ success: true, message, order });
   } catch (err) {
     res.status(err.status || 400).json({ success: false, message: err.message });
   }

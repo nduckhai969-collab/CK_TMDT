@@ -458,32 +458,109 @@
     }
 
     async function loadMyApplications() {
-      const body=document.getElementById('proposalsTableBody');
-      if(!window.providerApi)return;
+      const body = document.getElementById('proposalsTableBody');
+      if (!window.providerApi) return;
       try {
-        const result=await window.providerApi.getMyJobApplications();
-        if(!result.success)throw new Error(result.message||'Không tải được báo giá.');
+        const result = await window.providerApi.getMyJobApplications();
+        if (!result.success) throw new Error(result.message || 'Không tải được báo giá.');
         body.replaceChildren();
-        const applications=result.applications||[];document.getElementById('applicationCount').textContent=applications.length;
-        const acceptedCount=applications.filter(item=>['selected','accepted'].includes(item.status)).length;
-        const rejectedCount=applications.filter(item=>['rejected','declined'].includes(item.status)).length;
-        const pendingCount=applications.length-acceptedCount-rejectedCount;
-        document.getElementById('proposalFilterAll').textContent=`Tất cả (${applications.length})`;
-        document.getElementById('proposalFilterPending').textContent=`Đang chờ (${pendingCount})`;
-        document.getElementById('proposalFilterAccepted').textContent=`Đã chọn (${acceptedCount})`;
-        document.getElementById('proposalFilterRejected').textContent=`Từ chối (${rejectedCount})`;
-        if(!applications.length){const row=body.insertRow();const cell=row.insertCell();cell.colSpan=6;cell.style.textAlign='center';cell.style.color='var(--text-muted)';cell.textContent='Bạn chưa gửi báo giá nào.';return;}
-        applications.forEach(item=>{
-          const row=body.insertRow();
-          const status=['selected','accepted'].includes(item.status)?'accepted':(['rejected','declined'].includes(item.status)?'rejected':'pending');row.dataset.status=status;
-          const jobCell=row.insertCell();const title=document.createElement('div');title.style.cssText='font-weight:700;color:var(--secondary);';title.textContent=item.title||'Yêu cầu tuyển dụng';const client=document.createElement('div');client.style.cssText='font-size:12px;color:var(--text-muted);';client.textContent=`Khách hàng: ${item.customerName||'Khách hàng'}`;jobCell.append(title,client);
-          const price=row.insertCell();price.textContent=item.proposedPrice||'—';
-          const days=row.insertCell();days.textContent=item.estimatedDays?`${item.estimatedDays} ngày`:'—';
-          const date=row.insertCell();date.textContent=item.appliedAt||item.createdAt||'—';
-          const statusCell=row.insertCell();const badge=document.createElement('span');badge.className=`badge ${status==='accepted'?'badge-success':status==='rejected'?'badge-error':'badge-warning'}`;badge.textContent=status==='accepted'?'Được khách chọn':status==='rejected'?'Không được chọn':'Đang chờ khách xem';statusCell.appendChild(badge);
-          const action=row.insertCell();action.style.textAlign='right';const view=document.createElement('button');view.type='button';view.className='btn btn-outline btn-sm';view.textContent='Xem thư';view.addEventListener('click',()=>{document.getElementById('proposalModalText').textContent=item.proposalText||'Không có nội dung báo giá.';openModal('viewProposalModal');});action.appendChild(view);
+        const applications = result.applications || [];
+        document.getElementById('applicationCount').textContent = applications.length;
+        const acceptedCount = applications.filter(item => item.status === 'accepted').length;
+        const awaitingEscrowCount = applications.filter(item => item.status === 'awaiting_escrow' || item.status === 'selected').length;
+        const rejectedCount = applications.filter(item => ['rejected', 'declined'].includes(item.status)).length;
+        const pendingCount = applications.filter(item => item.status === 'pending').length;
+        document.getElementById('proposalFilterAll').textContent = `Tất cả (${applications.length})`;
+        document.getElementById('proposalFilterPending').textContent = `Đang chờ (${pendingCount + awaitingEscrowCount})`;
+        document.getElementById('proposalFilterAccepted').textContent = `Đã chốt & Làm (${acceptedCount})`;
+        document.getElementById('proposalFilterRejected').textContent = `Từ chối (${rejectedCount})`;
+        if (!applications.length) {
+          const row = body.insertRow();
+          const cell = row.insertCell();
+          cell.colSpan = 6;
+          cell.style.textAlign = 'center';
+          cell.style.color = 'var(--text-muted)';
+          cell.textContent = 'Bạn chưa gửi báo giá nào.';
+          return;
+        }
+        applications.forEach(item => {
+          const row = body.insertRow();
+          const status = item.status || 'pending';
+          row.dataset.status = (status === 'awaiting_escrow' || status === 'selected') ? 'pending' : status;
+          const jobCell = row.insertCell();
+          const title = document.createElement('div');
+          title.style.cssText = 'font-weight:700;color:var(--secondary);';
+          title.textContent = item.title || 'Yêu cầu tuyển dụng';
+          const client = document.createElement('div');
+          client.style.cssText = 'font-size:12px;color:var(--text-muted);';
+          client.textContent = `Khách hàng: ${item.customerName || 'Khách hàng'}`;
+          jobCell.append(title, client);
+          const price = row.insertCell();
+          price.textContent = item.proposedPrice || '—';
+          const days = row.insertCell();
+          days.textContent = item.estimatedDays ? `${item.estimatedDays} ngày` : '—';
+          const date = row.insertCell();
+          date.textContent = item.appliedAt || item.createdAt || '—';
+          const statusCell = row.insertCell();
+          const badge = document.createElement('span');
+          if (status === 'accepted') {
+            badge.className = 'badge badge-success';
+            badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đã ký quỹ · Đang thực hiện';
+          } else if (status === 'awaiting_escrow' || status === 'selected') {
+            badge.className = 'badge badge-warning';
+            badge.style.cssText = 'background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;';
+            badge.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Khách đã chọn · Chờ ký quỹ (24h)';
+          } else if (status === 'rejected') {
+            badge.className = 'badge badge-error';
+            badge.innerHTML = '<i class="fa-solid fa-xmark"></i> Dự án đã giao cho người khác';
+          } else {
+            badge.className = 'badge badge-warning';
+            badge.innerHTML = '<i class="fa-solid fa-clock"></i> Đang chờ khách xem';
+          }
+          statusCell.appendChild(badge);
+          const action = row.insertCell();
+          action.style.textAlign = 'right';
+          action.style.whiteSpace = 'nowrap';
+          const view = document.createElement('button');
+          view.type = 'button';
+          view.className = 'btn btn-outline btn-sm';
+          view.style.marginRight = '6px';
+          view.textContent = 'Xem thư';
+          view.addEventListener('click', () => {
+            document.getElementById('proposalModalText').textContent = item.proposalText || 'Không có nội dung báo giá.';
+            openModal('viewProposalModal');
+          });
+          action.appendChild(view);
+          if (status === 'accepted') {
+            const btnProgress = document.createElement('a');
+            btnProgress.className = 'btn btn-primary btn-sm';
+            btnProgress.style.fontWeight = '700';
+            btnProgress.innerHTML = '<i class="fa-solid fa-bars-progress"></i> Tiến độ →';
+            btnProgress.href = item.orderId ? `bookings.html?tab=tab-uc39&orderId=${encodeURIComponent(item.orderId)}` : `bookings.html?tab=tab-uc39`;
+            action.appendChild(btnProgress);
+          } else if (status === 'awaiting_escrow' || status === 'selected') {
+            const spanWait = document.createElement('span');
+            spanWait.style.cssText = 'font-size:12px;color:#d97706;font-weight:600;display:inline-flex;align-items:center;gap:4px;';
+            spanWait.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Chờ ký quỹ (24h)';
+            action.appendChild(spanWait);
+          } else if (status === 'rejected') {
+            const btnOther = document.createElement('button');
+            btnOther.type = 'button';
+            btnOther.className = 'btn btn-outline btn-sm';
+            btnOther.textContent = 'Việc khác';
+            btnOther.addEventListener('click', () => {
+              switchJobTab('tab-uc33', document.querySelectorAll('.tab-item')[0]);
+            });
+            action.appendChild(btnOther);
+          }
         });
-      } catch(error) { body.replaceChildren();const row=body.insertRow();const cell=row.insertCell();cell.colSpan=6;cell.textContent=error.message||'Không tải được báo giá.'; }
+      } catch (error) {
+        body.replaceChildren();
+        const row = body.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 6;
+        cell.textContent = error.message || 'Không tải được báo giá.';
+      }
     }
     function switchJobTab(tabId, el) {
       document.querySelectorAll('.screen-tab-content').forEach(c => c.classList.remove('active'));
@@ -507,75 +584,90 @@
     });
 
     function formatMoney(value) {
-      const amount=Number(value);
-      return Number.isFinite(amount) && amount>0 ? `${amount.toLocaleString('vi-VN')}đ` : (value || 'Thỏa thuận');
+      const amount = Number(value);
+      return Number.isFinite(amount) && amount > 0 ? `${amount.toLocaleString('vi-VN')}đ` : (value || 'Thỏa thuận');
     }
     function renderMarketJobs(jobs) {
-      const list=document.getElementById('marketJobsList'); list.replaceChildren();
-      if(!jobs.length){const empty=document.createElement('div');empty.className='card';empty.style.textAlign='center';empty.textContent='Chưa có yêu cầu nào đang mở.';list.appendChild(empty);return;}
-      jobs.forEach(job=>{
-        const card=document.createElement('article');card.className='job-card';
-        const title=document.createElement('div');title.style.cssText='font-weight:700;font-size:16px;color:var(--secondary);';title.textContent=job.title||'Yêu cầu tuyển dụng';
-        const meta=document.createElement('div');meta.style.cssText='font-size:12px;color:var(--text-muted);margin-top:5px;';meta.textContent=`Khách hàng: ${job.customerName||'Khách hàng'} · ${job.location||'Toàn quốc / Online'} · ${job.createdAt||''}`;
-        const chips=document.createElement('div');chips.style.cssText='display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;';
-        [job.category||'Chưa phân loại',formatMoney(job.budgetNum||job.budget),`Hạn: ${job.deadline||'Thỏa thuận'}`].forEach(label=>{const chip=document.createElement('span');chip.className='chip';chip.textContent=label;chips.appendChild(chip);});
-        const desc=document.createElement('p');desc.style.cssText='font-size:13px;color:var(--text-main);line-height:1.6;margin-bottom:12px;';desc.textContent=job.desc||'Khách hàng chưa thêm mô tả.';
-        const footer=document.createElement('div');footer.style.cssText='display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-color);padding-top:12px;gap:10px;';
-        const count=document.createElement('span');count.style.cssText='font-size:12px;color:var(--text-muted);';count.textContent=`${(job.applicants||[]).length} báo giá`;
-        const button=document.createElement('button');button.type='button';button.className='btn btn-primary btn-sm';button.textContent='Xem chi tiết →';button.addEventListener('click',()=>openJobDetail(job.id));
-        footer.append(count,button);card.append(title,meta,chips,desc,footer);list.appendChild(card);
+      const list = document.getElementById('marketJobsList'); list.replaceChildren();
+      if (!jobs.length) {
+        const empty = document.createElement('div');
+        empty.className = 'card';
+        empty.style.textAlign = 'center';
+        empty.textContent = 'Chưa có yêu cầu nào đang mở.';
+        list.appendChild(empty);
+        return;
+      }
+      jobs.forEach(job => {
+        const card = document.createElement('article'); card.className = 'job-card';
+        const title = document.createElement('div'); title.style.cssText = 'font-weight:700;font-size:16px;color:var(--secondary);'; title.textContent = job.title || 'Yêu cầu tuyển dụng';
+        const meta = document.createElement('div'); meta.style.cssText = 'font-size:12px;color:var(--text-muted);margin-top:5px;'; meta.textContent = `Khách hàng: ${job.customerName || 'Khách hàng'} · ${job.location || 'Toàn quốc / Online'} · ${job.createdAt || ''}`;
+        const chips = document.createElement('div'); chips.style.cssText = 'display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;';
+        [job.category || 'Chưa phân loại', formatMoney(job.budgetNum || job.budget), `Hạn: ${job.deadline || 'Thỏa thuận'}`].forEach(label => {
+          const chip = document.createElement('span'); chip.className = 'chip'; chip.textContent = label; chips.appendChild(chip);
+        });
+        const desc = document.createElement('p'); desc.style.cssText = 'font-size:13px;color:var(--text-main);line-height:1.6;margin-bottom:12px;'; desc.textContent = job.desc || 'Khách hàng chưa thêm mô tả.';
+        const footer = document.createElement('div'); footer.style.cssText = 'display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-color);padding-top:12px;gap:10px;';
+        const count = document.createElement('span'); count.style.cssText = 'font-size:12px;color:var(--text-muted);'; count.textContent = `${(job.applicants || []).length} báo giá`;
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-primary btn-sm'; button.textContent = 'Xem chi tiết →'; button.addEventListener('click', () => openJobDetail(job.id));
+        footer.append(count, button); card.append(title, meta, chips, desc, footer); list.appendChild(card);
       });
     }
     async function loadMarketJobs({ silent = false } = {}) {
-      const list=document.getElementById('marketJobsList');
-      if(!window.providerApi){list.textContent='Không thể kết nối API.';return;}
-      if(!silent)list.innerHTML='<div class="card" style="text-align:center;color:var(--text-muted);">Đang tải yêu cầu từ hệ thống...</div>';
-      try{
-        const result=await window.providerApi.getMarketJobs();
-        if(!result.success)throw new Error(result.message||'Không tải được danh sách yêu cầu.');
-        marketJobs=Array.isArray(result.jobs)?result.jobs:[];
-        document.getElementById('marketJobCount').textContent=marketJobs.length;
-        document.getElementById('marketTabCount').textContent=marketJobs.length;
-        const categorySelect=document.getElementById('marketCategory');
-        const selectedCategory=categorySelect.value;
-        const categories=[...new Set(marketJobs.map(job=>job.category).filter(Boolean))];
-        categorySelect.replaceChildren(new Option('Tất cả danh mục','all'),...categories.map(category=>new Option(category,category)));
-        if(categories.includes(selectedCategory))categorySelect.value=selectedCategory;
+      const list = document.getElementById('marketJobsList');
+      if (!window.providerApi) { list.textContent = 'Không thể kết nối API.'; return; }
+      if (!silent) list.innerHTML = '<div class="card" style="text-align:center;color:var(--text-muted);">Đang tải yêu cầu từ hệ thống...</div>';
+      try {
+        const result = await window.providerApi.getMarketJobs();
+        if (!result.success) throw new Error(result.message || 'Không tải được danh sách yêu cầu.');
+        marketJobs = Array.isArray(result.jobs) ? result.jobs : [];
+        document.getElementById('marketJobCount').textContent = marketJobs.length;
+        document.getElementById('marketTabCount').textContent = marketJobs.length;
+        const categorySelect = document.getElementById('marketCategory');
+        const selectedCategory = categorySelect.value;
+        const categories = [...new Set(marketJobs.map(job => job.category).filter(Boolean))];
+        categorySelect.replaceChildren(new Option('Tất cả danh mục', 'all'), ...categories.map(category => new Option(category, category)));
+        if (categories.includes(selectedCategory)) categorySelect.value = selectedCategory;
         filterMarketJobs();
+      } catch (error) {
+        if (silent) { console.warn('Không thể tự làm mới danh sách yêu cầu:', error); return; }
+        list.replaceChildren();
+        const message = document.createElement('div'); message.className = 'card'; message.style.color = 'var(--error)'; message.textContent = error.message || 'Không tải được dữ liệu. Hãy thử làm mới.'; list.appendChild(message);
       }
-      catch(error){if(silent){console.warn('Không thể tự làm mới danh sách yêu cầu:',error);return;}list.replaceChildren();const message=document.createElement('div');message.className='card';message.style.color='var(--error)';message.textContent=error.message||'Không tải được dữ liệu. Hãy thử làm mới.';list.appendChild(message);}
     }
     function filterMarketJobs() {
-      const query=(document.getElementById('marketSearch')?.value||'').trim().toLocaleLowerCase('vi');
-      const category=document.getElementById('marketCategory')?.value||'all';
-      const minBudget=readFormattedNumber(document.getElementById('marketMinBudget'));
-      renderMarketJobs(marketJobs.filter(job=>{
-        const text=`${job.title||''} ${job.desc||''} ${job.customerName||''}`.toLocaleLowerCase('vi');
-        return (!query||text.includes(query))&&(category==='all'||job.category===category)&&(Number(job.budgetNum)||0)>=minBudget;
+      const query = (document.getElementById('marketSearch')?.value || '').trim().toLocaleLowerCase('vi');
+      const category = document.getElementById('marketCategory')?.value || 'all';
+      const minBudget = readFormattedNumber(document.getElementById('marketMinBudget'));
+      renderMarketJobs(marketJobs.filter(job => {
+        const text = `${job.title || ''} ${job.desc || ''} ${job.customerName || ''}`.toLocaleLowerCase('vi');
+        return (!query || text.includes(query)) && (category === 'all' || job.category === category) && (Number(job.budgetNum) || 0) >= minBudget;
       }));
     }
     function openJobDetail(id) {
-      const job=marketJobs.find(item=>item.id===id);if(!job){showToast('Yêu cầu không còn trong danh sách. Hãy tải lại dữ liệu.');return;}
-      currentJobId=job.id;
-      document.getElementById('reqDetailTitle').textContent=job.title||'Yêu cầu tuyển dụng';
-      document.getElementById('reqDetailId').textContent='#'+job.id;
-      document.getElementById('reqDetailBudget').textContent=formatMoney(job.budgetNum||job.budget);
-      document.getElementById('reqDetailClient').textContent=job.customerName||'Khách hàng';
-      document.getElementById('reqDetailCreatedAt').textContent=job.createdAt||'—';
-      document.getElementById('reqDetailApplicants').textContent=(job.applicants||[]).length;
-      document.getElementById('reqDetailDescription').textContent=job.desc||'Khách hàng chưa thêm mô tả.';
-      document.getElementById('reqDetailDeadline').textContent=job.deadline||'Thỏa thuận';
-      document.getElementById('reqDetailLocation').textContent=job.location||'Toàn quốc / Online';
-      document.getElementById('reqDetailCategory').textContent=job.category||'—';
-      document.getElementById('applyJobTitle').value=job.title||'';
-      document.getElementById('proposalBudgetHint').textContent=formatMoney(job.budgetNum||job.budget);
-      setFormattedNumber('proposalPrice',job.budgetNum||'');
-      document.getElementById('proposalDays').value='';document.getElementById('proposalLetter').value='';calculateEarning();
-      switchJobTab('tab-uc34',document.querySelectorAll('.tab-item')[1]);
+      const job = marketJobs.find(item => item.id === id);
+      if (!job) { showToast('Yêu cầu không còn trong danh sách. Hãy tải lại dữ liệu.'); return; }
+      currentJobId = job.id;
+      document.getElementById('reqDetailTitle').textContent = job.title || 'Yêu cầu tuyển dụng';
+      document.getElementById('reqDetailId').textContent = '#' + job.id;
+      document.getElementById('reqDetailBudget').textContent = formatMoney(job.budgetNum || job.budget);
+      document.getElementById('reqDetailClient').textContent = job.customerName || 'Khách hàng';
+      document.getElementById('reqDetailCreatedAt').textContent = job.createdAt || '—';
+      document.getElementById('reqDetailApplicants').textContent = (job.applicants || []).length;
+      document.getElementById('reqDetailDescription').textContent = job.desc || 'Khách hàng chưa thêm mô tả.';
+      document.getElementById('reqDetailDeadline').textContent = job.deadline || 'Thỏa thuận';
+      document.getElementById('reqDetailLocation').textContent = job.location || 'Toàn quốc / Online';
+      document.getElementById('reqDetailCategory').textContent = job.category || '—';
+      document.getElementById('applyJobTitle').value = job.title || '';
+      document.getElementById('proposalBudgetHint').textContent = formatMoney(job.budgetNum || job.budget);
+      setFormattedNumber('proposalPrice', job.budgetNum || '');
+      document.getElementById('proposalDays').value = '';
+      document.getElementById('proposalLetter').value = '';
+      calculateEarning();
+      switchJobTab('tab-uc34', document.querySelectorAll('.tab-item')[1]);
     }
     function goToApplyTab() {
-      if(!currentJobId){showToast('Vui lòng chọn một yêu cầu trước.');return;}
-      switchJobTab('tab-uc35',document.querySelectorAll('.tab-item')[2]);
+      if (!currentJobId) { showToast('Vui lòng chọn một yêu cầu trước.'); return; }
+      switchJobTab('tab-uc35', document.querySelectorAll('.tab-item')[2]);
     }
     function calculateEarning() {
       const price = readFormattedNumber('proposalPrice');

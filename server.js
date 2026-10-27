@@ -31,12 +31,12 @@ app.use(cors({
   // Không cấu hình CORS_ORIGINS => cho phép tất cả (chỉ nên dùng khi dev)
   origin: allowedOrigins.length ? allowedOrigins : '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id']
 }));
 
 // 2. Body Parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // 3. Avatar là file riêng trên backend; Firestore chỉ lưu URL của file.
 const avatarStorageDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'));

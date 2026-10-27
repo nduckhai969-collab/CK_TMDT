@@ -755,6 +755,20 @@ class Database {
     });
     this.cache[name] = next;
 
+    // Lưu đồng bộ xuống file database.json cục bộ để dữ liệu không bao giờ bị mất khi restart server
+    try {
+      if (fs.existsSync(DB_FILE)) {
+        let currentDb = {};
+        try {
+          currentDb = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        } catch (_) {}
+        currentDb[name] = next;
+        fs.writeFileSync(DB_FILE, JSON.stringify(currentDb, null, 2), 'utf8');
+      }
+    } catch (fsErr) {
+      console.warn(`[db] Lưu file cục bộ database.json thất bại (${name}):`, fsErr.message);
+    }
+
     const old = this.snapshot[name] || new Map();
     const fresh = new Map();
     const upserts = [];

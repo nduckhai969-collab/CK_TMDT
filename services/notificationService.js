@@ -25,9 +25,9 @@ function createNotification(userId, title, message, type = 'info', detailsUrl = 
 // Thông báo được lưu theo id TÀI KHOẢN (USRxxx). Đơn hàng chỉ lưu id hồ sơ người bán (PRVxxx)
 // nên phải đổi sang userId trước khi gửi.
 function notifyProvider(providerId, title, message, type = 'info', detailsUrl = '') {
-  const provider = (db.getCollection('providers') || []).find(p => p.id === providerId);
-  if (!provider || !provider.userId) return null;
-  return createNotification(provider.userId, title, message, type, detailsUrl);
+  const provider = (db.getCollection('providers') || []).find(p => p.id === providerId || p.userId === providerId || (p.email && p.email.toLowerCase() === String(providerId).toLowerCase()));
+  let targetUserId = provider?.userId; if (!targetUserId && provider?.email) { const u = (db.getCollection('users') || []).find(x => x.email && x.email.toLowerCase() === provider.email.toLowerCase()); if (u) targetUserId = u.id; } if (!targetUserId) targetUserId = provider?.id || providerId; return createNotification(targetUserId, title, message, type, detailsUrl);
+
 }
 
 function getNotifications(userId) {

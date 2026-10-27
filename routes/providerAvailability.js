@@ -42,22 +42,46 @@ function activeBookedSlots(orders, providerId, date) {
 }
 
 function slotsForDate(provider, date, orders = [], now = new Date()) {
-  if (!provider || ['busy', 'unavailable', 'offline', 'inactive'].includes(String(provider.availabilityStatus || '').toLowerCase())) return [];
+  if (!provider || ['busy', 'unavailable', 'offline', 'inactive', 'paused'].includes(String(provider.availabilityStatus || '').toLowerCase())) return [];
+
+  const curKey = dateKey(date);
+
+  // 1. Kiểm tra chế độ nghỉ phép (Vacation Mode)
+  if (provider.vacation && provider.vacation.active && provider.vacation.from && provider.vacation.to) {
+    if (curKey >= provider.vacation.from && curKey <= provider.vacation.to) {
+      return [];
+    }
+  }
+
+  // 2. Kiểm tra ngày ngoại lệ theo tháng (Date Exceptions / Specific Date Overrides)
+  const exceptions = provider.dateExceptions || (provider.schedule && provider.schedule.dateExceptions);
+  let forceAvailable = false;
+  if (exceptions && exceptions[curKey]) {
+    const ex = exceptions[curKey];
+    if (ex === 'off' || ex.status === 'off' || ex.closed === true) {
+      return []; // Khóa bận ngày cụ thể này
+    }
+    if (ex === 'available' || ex.status === 'available') {
+      forceAvailable = true; // Mở rảnh ngày cụ thể này
+    }
+  }
+
   const weekday = dayKey(date);
   const scheduleRows = provider.schedule && Array.isArray(provider.schedule.slots) ? provider.schedule.slots : null;
   const row = scheduleRows && scheduleRows.find(slot => slot.day === weekday);
-  const dayIsAvailable = row
-    ? row.morning || row.afternoon || row.evening
-    : allowedDayKeys(provider.workingHours).includes(weekday);
+
+  const dayIsAvailable = forceAvailable || (row
+    ? (row.morning || row.afternoon || row.evening)
+    : (provider.workingHours ? allowedDayKeys(provider.workingHours).includes(weekday) : true));
   if (!dayIsAvailable) return [];
 
-  const range = row ? null : workingTimeRange(provider.workingHours);
+  const range = (row || forceAvailable) ? null : workingTimeRange(provider.workingHours);
   const booked = activeBookedSlots(orders, provider.id, date);
   const isToday = dateKey(date) === dateKey(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   return TIME_SLOTS.filter(slot => {
-    if (row && !row[slot.period]) return false;
+    if (!forceAvailable && row && !row[slot.period]) return false;
     if (range && (slot.start < range.start || slot.end > range.end)) return false;
     if (isToday && slot.start <= nowMinutes) return false;
     if (booked.has(slot.label)) return false;

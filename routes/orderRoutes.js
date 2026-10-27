@@ -6,23 +6,122 @@ const { requireCustomer, requireRole, requireSignedIn } = require('./customerAut
 const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
 const { createNotification, notifyProvider } = require('../services/notificationService');
 const vnpay = require('../services/vnpayService');
-const { startGatewayCheckout, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
+const { startGatewayCheckout, startGatewayRetry, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
+
+// Tự động đồng bộ và sinh đơn chờ thanh toán cho các Yêu cầu (Job Request) đã chốt chuyên gia nhưng chưa có đơn hàng
+function syncPendingJobOrders(customerId, customerUid = null) {
+  if (!customerId) return;
+  const jobs = db.getCollection('jobRequests') || [];
+  const orders = db.getCollection('orders') || [];
+  const providers = db.getCollection('providers') || [];
+  const users = db.getCollection('users') || [];
+  const customer = users.find(u => u.id === customerId || (u.uid && (u.uid === customerId || u.uid === customerUid)));
+  const uid = customerUid || customer?.uid;
+  let updatedOrders = false;
+  let updatedJobs = false;
+
+  const isCustomerMatch = (cid) => cid === customerId || (uid && cid === uid) || (customer && (cid === customer.id || cid === customer.uid));
+
+  const awaitingJobs = jobs.filter(j => 
+    isCustomerMatch(j.customerId) && 
+    (j.status === 'awaiting_payment' || (j.status === 'open' && j.selectedProviderId))
+  );
+
+  for (const job of awaitingJobs) {
+    const existingOrder = orders.find(o => o.jobId === job.id && o.orderStatus !== 'cancelled');
+    if (existingOrder) {
+      if (existingOrder.paymentStatus === 'pending' && (!existingOrder.paymentExpiresAt || !Number.isFinite(Date.parse(existingOrder.paymentExpiresAt)))) {
+        existingOrder.paymentExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        updatedOrders = true;
+      }
+      continue;
+    }
+
+    const applicant = (job.applicants || []).find(a => 
+      (job.selectedProviderId && (a.providerId === job.selectedProviderId || a.providerUserId === job.selectedProviderId)) || a.status === 'accepted'
+    ) || job.applicants?.[0];
+
+    if (!applicant) continue;
+
+    const provider = providers.find(p => p.id === applicant.providerId || p.userId === applicant.providerId || p.id === applicant.providerUserId) || {};
+    const priceNum = Number(String(applicant.proposedPriceNum || applicant.proposedPrice || '').replace(/[^0-9]/g, '')) || 0;
+    if (priceNum <= 0) continue;
+
+    const platformFee = Math.round(priceNum * 0.05);
+    const escrowDeposit = priceNum + platformFee;
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let newId;
+    do {
+      newId = `DH00${Math.floor(1000 + Math.random() * 9000)}`;
+    } while (orders.some(o => o.id === newId));
+
+    const newOrder = {
+      id: newId,
+      customerId: (customer ? customer.id : (job.customerId || customerId)),
+      customerName: job.customerName || customer?.name || 'Khách hàng',
+      customerPhone: customer?.phone || '',
+      customerAddress: job.location || customer?.address || '',
+      providerId: applicant.providerId,
+      providerName: applicant.providerName || provider.name || 'Provider',
+      providerPhone: provider.phone || '',
+      serviceId: null,
+      serviceTitle: job.title || 'Hợp đồng dịch vụ theo yêu cầu',
+      jobId: job.id,
+      price: priceNum,
+      priceFormatted: priceNum.toLocaleString('vi-VN') + 'đ',
+      platformFee: platformFee,
+      escrowDeposit: escrowDeposit,
+      escrowStatus: 'payment_pending',
+      paymentStatus: 'pending',
+      orderStatus: 'pending',
+      paymentMethod: 'Chưa thanh toán (Chờ ký quỹ)',
+      paymentExpiresAt: new Date(now.getTime() + (24 * 60 * 60 * 1000)).toISOString(),
+      date: dateStr,
+      deadline: job.deadline || 'Thỏa thuận theo tiến độ',
+      notes: `Tuyển từ yêu cầu: ${job.id}`,
+      milestones: [
+        { title: 'Chờ khách hàng ký quỹ Escrow (Thời hạn 24h)', done: false, time: 'Chờ thanh toán' },
+        { title: 'Provider tiếp nhận yêu cầu & triển khai công việc', done: false, time: 'Chờ tiếp nhận' },
+        { title: 'Bàn giao sản phẩm / hoàn thành dịch vụ', done: false, time: 'Chờ bàn giao' },
+        { title: 'Khách hàng nghiệm thu & Giải ngân Escrow', done: false, time: 'Chờ nghiệm thu' }
+      ]
+    };
+
+    orders.unshift(newOrder);
+    job.paymentOrderId = newId;
+    job.status = 'awaiting_payment';
+    job.selectedProviderId = applicant.providerId;
+    applicant.status = 'accepted';
+    updatedOrders = true;
+    updatedJobs = true;
+  }
+
+  if (updatedOrders) db.saveCollection('orders', orders);
+  if (updatedJobs) db.saveCollection('jobRequests', jobs);
+}
 
 // List orders
 router.get('/', requireCustomer, (req, res) => {
   expireUnpaidOrders();
   checkAutoReleaseOrders();
+  syncPendingJobOrders(req.authUser.id, req.authUser.uid);
   const { customerId, providerId, status, escrowStatus } = req.query;
   let orders = db.getCollection('orders');
 
-  if (customerId && customerId !== req.authUser.id) {
+  const authId = req.authUser.id;
+  const authUid = req.authUser.uid;
+  const isOwner = (cid) => cid === authId || (authUid && cid === authUid);
+
+  if (customerId && !isOwner(customerId)) {
     return res.status(403).json({ success: false, message: 'Bạn không có quyền xem đơn hàng của tài khoản khác.' });
   }
-  orders = orders.filter(o => o.customerId === req.authUser.id);
+  orders = orders.filter(o => isOwner(o.customerId));
 
   if (customerId) {
-    orders = orders.filter(o => o.customerId === customerId);
+    orders = orders.filter(o => isOwner(o.customerId));
   }
   if (providerId) {
     orders = orders.filter(o => o.providerId === providerId);
@@ -50,7 +149,8 @@ router.get('/:id', requireCustomer, (req, res) => {
     return res.status(404).json({ success: false, message: 'Đơn hàng không tồn tại!' });
   }
 
-  if (order.customerId !== req.authUser.id) {
+  const isOwner = order.customerId === req.authUser.id || (req.authUser.uid && order.customerId === req.authUser.uid);
+  if (!isOwner) {
     return res.status(403).json({ success: false, message: 'Bạn không có quyền xem đơn hàng này.' });
   }
 
@@ -103,7 +203,7 @@ router.post('/', requireCustomer, (req, res) => {
   // Calculate price securely from backend
   const services = db.getCollection('services') || [];
   const providers = db.getCollection('providers') || [];
-  const provider = providers.find(item => item.id === providerId);
+  const provider = providers.find(item => item.id === providerId || item.userId === providerId);
   if (!provider) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy Provider của đơn hàng.' });
   }
@@ -114,17 +214,64 @@ router.post('/', requireCustomer, (req, res) => {
   let jobRequest = null;
   if (jobId) {
     jobRequest = (db.getCollection('jobRequests') || []).find(j => j.id === jobId);
-    if (!jobRequest || jobRequest.customerId !== req.authUser.id || jobRequest.status !== 'awaiting_payment' || jobRequest.selectedProviderId !== providerId) {
-      return res.status(409).json({ success: false, message: 'Yêu cầu chưa được Provider xác nhận hoặc không còn chờ thanh toán.' });
+    const isJobOwner = jobRequest && (jobRequest.customerId === req.authUser.id || (req.authUser.uid && jobRequest.customerId === req.authUser.uid));
+    if (!jobRequest || !isJobOwner) {
+      return res.status(403).json({ success: false, message: 'Yêu cầu không tồn tại hoặc bạn không có quyền thao tác.' });
     }
-    const selectedApplicant = (jobRequest.applicants || []).find(a => a.providerId === providerId && a.status === 'accepted');
-    const quotedPrice = Number(selectedApplicant?.proposedPriceNum || String(selectedApplicant?.proposedPrice || '').replace(/[^0-9]/g, ''));
-    if (!selectedApplicant || !Number.isFinite(quotedPrice) || quotedPrice <= 0) {
-      return res.status(400).json({ success: false, message: 'Báo giá của Provider không hợp lệ.' });
-    }
+
     const existingJobOrder = orders.find(o => o.jobId === jobId && o.paymentStatus !== 'cancelled' && o.orderStatus !== 'cancelled');
     if (existingJobOrder) {
+      if (existingJobOrder.paymentStatus === 'pending') {
+        if (vnpay.isGatewayMethod(paymentMethod)) {
+          const { txn, paymentUrl } = startGatewayRetry({
+            orderId: existingJobOrder.id,
+            customerId: req.authUser.id,
+            ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+            bankCode: vnpay.bankCodeForMethod(paymentMethod),
+            returnOrigin: allowedFrontendOrigin(req.headers.origin)
+          });
+          return res.status(200).json({
+            success: true,
+            requiresPayment: true,
+            isExistingOrder: true,
+            message: 'Đang tiếp tục thanh toán đơn hàng chờ...',
+            paymentUrl,
+            txnRef: txn.id,
+            order: existingJobOrder
+          });
+        }
+        // Nếu là ví balance: thực hiện thanh toán ký quỹ trừ ví!
+        try {
+          const result = payOrderWithBalance({
+            orderId: existingJobOrder.id,
+            customerId: req.authUser.id
+          });
+          return res.status(200).json({
+            success: true,
+            message: 'Ký quỹ Escrow thành công! Tiền được bảo vệ an toàn 100% tại sàn.',
+            order: result.order,
+            newBalance: result.newBalance
+          });
+        } catch (err) {
+          return res.status(err.status || 400).json({ success: false, message: err.message });
+        }
+      }
+      if (existingJobOrder.paymentStatus === 'paid') {
+        return res.status(200).json({
+          success: true,
+          message: 'Đơn hàng này đã được ký quỹ an toàn!',
+          order: existingJobOrder
+        });
+      }
       return res.status(409).json({ success: false, message: 'Yêu cầu này đã có đơn thanh toán. Vui lòng kiểm tra mục Đơn hàng để tiếp tục.' });
+    }
+    const selectedApplicant = (jobRequest.applicants || []).find(a => 
+      a.providerId === providerId || a.providerUserId === providerId ||
+      (jobRequest.selectedProviderId && (a.providerId === jobRequest.selectedProviderId || a.providerUserId === jobRequest.selectedProviderId))
+    );
+    const quotedPrice = Number(selectedApplicant?.proposedPriceNum || String(selectedApplicant?.proposedPrice || '').replace(/[^0-9]/g, '')) || Number(price);
+    if (!Number.isFinite(quotedPrice) || quotedPrice <= 0) {
+      return res.status(400).json({ success: false, message: 'Báo giá của Provider không hợp lệ.' });
     }
     priceNum = quotedPrice;
   }
@@ -138,7 +285,7 @@ router.post('/', requireCustomer, (req, res) => {
   const escrowDeposit = priceNum + platformFee;
 
   const users = db.getCollection('users');
-  const customer = users.find(u => u.id === req.authUser.id);
+  const customer = users.find(u => u.id === req.authUser.id || (u.uid && u.uid === req.authUser.uid));
 
   // Thanh toán qua cổng VNPay (ví VNPay / VietQR / thẻ quốc tế): tạo đơn chờ thanh toán, trả về paymentUrl
   if (vnpay.isGatewayMethod(paymentMethod)) {
@@ -182,10 +329,30 @@ router.post('/', requireCustomer, (req, res) => {
     }
   }
 
-  if (!customer || customer.balance < escrowDeposit) {
+  if (!customer) {
+    return res.status(401).json({ success: false, message: 'Không tìm thấy thông tin khách hàng.' });
+  }
+
+  // Đối soát số dư thực tế từ lịch sử ví (Real Balance)
+  const txns = db.getCollection('walletTransactions') || [];
+  const userTxns = txns.filter(t => 
+    (t.userId === customer.id || (customer.uid && t.userId === customer.uid)) &&
+    (t.status === 'success' || t.status === 'completed')
+  );
+  const userBalance = Number(customer.balance) || 0;
+  const totalDeposits = userTxns
+    .filter(t => t.type === 'deposit' || t.type === 'refund')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  const totalDeductions = userTxns
+    .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+    .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
+  const ledgerBalance = Math.max(0, totalDeposits - totalDeductions);
+  const realBalance = Math.max(userBalance, ledgerBalance);
+
+  if (realBalance < escrowDeposit) {
     return res.status(400).json({ 
       success: false, 
-      message: `Số dư không đủ. Cần ${escrowDeposit.toLocaleString('vi-VN')}đ (bao gồm phí sàn), nhưng số dư là ${(customer?.balance || 0).toLocaleString('vi-VN')}đ.`
+      message: `Số dư ví không đủ. Cần ${escrowDeposit.toLocaleString('vi-VN')}đ (bao gồm phí sàn), nhưng số dư khả dụng hiện tại là ${realBalance.toLocaleString('vi-VN')}đ. Vui lòng nạp thêm tiền hoặc chọn VietQR.`
     });
   }
 
@@ -195,6 +362,12 @@ router.post('/', requireCustomer, (req, res) => {
   do {
     newId = `DH00${Math.floor(1000 + Math.random() * 9000)}`;
   } while (orders.some(o => o.id === newId));
+
+  const newBalance = realBalance - escrowDeposit;
+  customer.balance = newBalance;
+  db.saveCollection('users', users);
+
+  const txnId = `TXN_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
   const newOrder = {
     id: newId,
@@ -213,8 +386,11 @@ router.post('/', requireCustomer, (req, res) => {
     platformFee: platformFee,
     escrowDeposit: escrowDeposit,
     escrowStatus: 'escrow_held', // Funds securely locked in Escrow vault
+    paymentStatus: 'paid',        // Paid via wallet balance
+    paidAt: now.toISOString(),
+    paymentRef: txnId,
     orderStatus: jobRequest ? 'processing' : 'pending', // Provider already confirmed job requests before escrow.
-    paymentMethod: paymentMethod || 'Ví điện tử VNPay (Escrow 100%)',
+    paymentMethod: paymentMethod || 'Số dư ví SkillRental (Escrow)',
     date: dateStr,
     deadline: deadline || '7 ngày sau đặt cọc',
     scheduledDate: scheduledDate || '',
@@ -232,8 +408,18 @@ router.post('/', requireCustomer, (req, res) => {
   db.saveCollection('orders', orders);
 
   if (jobRequest) {
+    jobRequest.selectedProviderId = providerId;
     (jobRequest.applicants || []).forEach(applicant => {
-      if (applicant.providerId !== providerId && applicant.status === 'pending') applicant.status = 'rejected';
+      if (applicant.providerId !== providerId) {
+        if (applicant.status === 'pending' || applicant.status === 'selected') {
+          applicant.status = 'rejected';
+          notifyProvider(applicant.providerId, 'Yêu cầu tuyển dụng đã có chuyên gia',
+            `Yêu cầu “${jobRequest.title}” đã được khách hàng giao cho một chuyên gia khác. Cảm ơn bạn đã quan tâm và gửi báo giá.`,
+            'info', '/jobs.html?tab=tab-uc36');
+        }
+      } else {
+        applicant.status = 'accepted';
+      }
     });
     jobRequest.status = 'closed';
     jobRequest.closeReason = 'provider_selected';
@@ -242,20 +428,20 @@ router.post('/', requireCustomer, (req, res) => {
     db.saveCollection('jobRequests', db.getCollection('jobRequests').map(j => j.id === jobRequest.id ? jobRequest : j));
   }
 
-  // Deduct balance
-  customer.balance -= escrowDeposit;
-  db.saveCollection('users', users);
-
   // Add Wallet Transaction for Escrow
   const transactions = db.getCollection('walletTransactions') || [];
   transactions.unshift({
-    id: `TXN_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+    id: txnId,
     userId: req.authUser.id,
+    userName: customer.name || req.authUser.name || 'Khách hàng',
     type: 'escrow',
     amount: -escrowDeposit,
     status: 'completed',
     createdAt: dateStr,
-    description: `Ký quỹ Escrow cho đơn hàng ${newId}`
+    createdAtISO: now.toISOString(),
+    description: `Ký quỹ Escrow cho đơn hàng ${newId} (Trừ từ số dư ví)`,
+    orderIds: [newId],
+    balanceAfter: newBalance
   });
   db.saveCollection('walletTransactions', transactions);
 
@@ -268,11 +454,12 @@ router.post('/', requireCustomer, (req, res) => {
   // Notify Provider
   notifyProvider(
     providerId,
-    jobRequest ? 'Ký quỹ hoàn tất - bắt đầu công việc' : 'Đơn hàng mới',
+    jobRequest ? 'Ký quỹ hoàn tất - Bắt đầu dự án' : 'Đơn hàng mới',
     jobRequest
-      ? `Khách hàng đã ký quỹ ${newOrder.priceFormatted} cho yêu cầu “${jobRequest.title}”. Bạn có thể bắt đầu thực hiện.`
-      : `Bạn có một yêu cầu dịch vụ mới từ ${req.authUser.name} với giá trị ${newOrder.priceFormatted}.`,
-    'info'
+      ? `Khách hàng ${req.authUser.name} đã ký quỹ ${newOrder.priceFormatted} cho yêu cầu “${jobRequest.title}”. Dự án đã chuyển sang mục Đặt lịch & Tiến độ để bạn bắt đầu thực hiện.`
+      : `Bạn có một yêu cầu dịch vụ mới từ ${req.authUser.name} với giá trị ${newOrder.priceFormatted}. Đã ký quỹ Escrow an toàn.`,
+    'success',
+    jobRequest ? `/bookings.html?tab=tab-uc39&orderId=${encodeURIComponent(newId)}` : `/bookings.html?orderId=${encodeURIComponent(newId)}`
   );
 
   res.status(201).json({

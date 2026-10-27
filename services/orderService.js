@@ -187,6 +187,20 @@ function processCancelOrder(orderId, userId, userRole, reason) {
   const refundedAmount = paymentPending ? 0 : refundCustomer(order);
   order.refundAmount = refundedAmount;
   order.refundedAt = refundedAmount > 0 ? formatDateTime(new Date()) : null;
+  if (paymentPending && order.jobId) {
+    const jobs = db.getCollection('jobRequests') || [];
+    const job = jobs.find(j => j.id === order.jobId);
+    if (job && job.status === 'awaiting_payment') {
+      job.status = 'open';
+      job.selectedProviderId = null;
+      (job.applicants || []).forEach(a => {
+        if (a.providerId === order.providerId && a.status === 'accepted') {
+          a.status = 'pending';
+        }
+      });
+      db.saveCollection('jobRequests', jobs);
+    }
+  }
   db.saveCollection('orders', orders);
 
   const cancellerName = userRole === 'Customer' ? 'Khách hàng' : (userRole === 'Admin' ? 'Quản trị viên' : 'Chuyên gia');

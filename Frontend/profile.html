@@ -352,7 +352,7 @@
         <a href="jobs.html" class="nav-link">
           <i class="fa-solid fa-briefcase"></i>
           <span>Đề xuất & Ứng tuyển</span>
-          <span class="badge-count" style="background-color: var(--primary);">6</span>
+          <span class="badge-count" style="background-color: var(--primary);" hidden></span>
         </a>
         <a href="bookings.html" class="nav-link">
           <i class="fa-solid fa-calendar-check"></i>
@@ -363,7 +363,7 @@
         <a href="chat.html" class="nav-link">
           <i class="fa-solid fa-comments"></i>
           <span>Tin nhắn Khách hàng</span>
-          <span class="badge-count">3</span>
+          <span class="badge-count" hidden></span>
         </a>
         
         <a href="payment.html" class="nav-link">
@@ -384,7 +384,7 @@
         <a href="complaint.html" class="nav-link">
           <i class="fa-solid fa-shield-halved"></i>
           <span>Khiếu nại & Tranh chấp</span>
-          <span class="badge-count" style="background-color: var(--warning);">1</span>
+          <span class="badge-count" style="background-color: var(--warning);" hidden></span>
         </a>
 
         <div class="nav-section-title">Dịch vụ hệ thống</div>
@@ -927,140 +927,16 @@
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
             <div>
               <h2 style="font-weight:700; font-size: 18px; color: var(--secondary);">Gói Dịch Vụ Niêm Yết Cố Định (Fixed Price Packages)</h2>
-              <div style="color: var(--text-muted); font-size: 13px;">Gói định giá chuẩn hóa giúp khách hàng dễ dàng lựa chọn và đặt hàng ngay lập tức</div>
+              <div style="color: var(--text-muted); font-size: 13px;">Danh sách lấy trực tiếp từ các gói dịch vụ đã lưu của hồ sơ này.</div>
             </div>
+            <span class="badge badge-neutral" id="serviceCountSummary">Đang tải...</span>
             <button class="btn btn-primary btn-sm" onclick="openCreateServiceModal()">
               <i class="fa-solid fa-plus"></i> Tạo Gói Dịch Vụ Mới
             </button>
           </div>
 
-          <!-- 3 Package Cards -->
-          <div id="packagesContainer" class="grid-3" style="margin-bottom: 24px;">
-            
-            <!-- Basic Package -->
-            <div class="package-card">
-              <span class="badge badge-neutral" style="width: fit-content;">TIẾT KIỆM - CƠ BẢN</span>
-              <div style="font-weight: 700; font-size: 18px; margin-top: 10px; color: var(--secondary);">Landing Page Giới Thiệu</div>
-              <div class="package-price" style="color: var(--secondary);">1.500.000đ</div>
-              <div style="font-size: 12px; color: var(--text-muted);">Phù hợp cho cá nhân kinh doanh, dịch vụ đơn lẻ hoặc sự kiện</div>
-
-              <ul class="package-feature-list">
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thiết kế 1 Trang Landing Page UI/UX</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Tối ưu hiển thị Responsive chuẩn Mobile</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thời gian bàn giao: <strong>3 Ngày</strong></li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> 2 Lần chỉnh sửa miễn phí theo ý khách</li>
-                <li style="color: #94A3B8;"><i class="fa-solid fa-xmark" style="color: #CBD5E1;"></i> Không bao gồm Lập trình Backend API</li>
-              </ul>
-
-              <div style="display:flex; gap:8px;">
-                <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openModal('editPackageModal')"><i class="fa-solid fa-pen"></i> Chỉnh Sửa</button>
-                <button class="btn btn-secondary btn-sm" onclick="showToast('Đã tạm ẩn gói Cơ bản khỏi danh sách!')"><i class="fa-solid fa-eye-slash"></i> Ẩn</button>
-              </div>
-            </div>
-
-            <!-- Standard Package (Best Seller) -->
-            <div class="package-card highlight">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="badge badge-success">NỔI BẬT - BÁN CHẠY NHẤT</span>
-                <span style="font-size: 11px; font-weight:700; color: var(--primary);">★ KHUYÊN DÙNG</span>
-              </div>
-              <div style="font-weight: 700; font-size: 18px; margin-top: 10px; color: var(--secondary);">Website Doanh Nghiệp Chuẩn SEO</div>
-              <div class="package-price" style="color: var(--primary);">3.500.000đ</div>
-              <div style="font-size: 12px; color: var(--text-muted);">Giải pháp toàn diện cho doanh nghiệp nhỏ & startup xây dựng thương hiệu</div>
-
-              <ul class="package-feature-list">
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thiết kế 5 - 7 Trang giao diện hoàn chỉnh</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Tích hợp Khung Chat, Form Báo Giá & Bản đồ</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Chuẩn SEO On-page & Tốc độ tải trang &lt; 2s</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Bàn giao toàn bộ File gốc Figma bản quyền</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thời gian bàn giao: <strong>5 Ngày</strong></li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> 5 Lần chỉnh sửa miễn phí</li>
-              </ul>
-
-              <div style="display:flex; gap:8px;">
-                <button class="btn btn-primary btn-sm" style="flex:1;" onclick="openModal('editPackageModal')"><i class="fa-solid fa-pen"></i> Chỉnh Sửa Gói</button>
-                <button class="btn btn-secondary btn-sm" onclick="showToast('Đã sao chép liên kết gói tiêu chuẩn!')"><i class="fa-solid fa-link"></i></button>
-              </div>
-            </div>
-
-            <!-- Premium Package -->
-            <div class="package-card">
-              <span class="badge badge-info" style="width: fit-content;">CAO CẤP - FULLSTACK</span>
-              <div style="font-weight: 700; font-size: 18px; margin-top: 10px; color: var(--secondary);">Web/App Nâng Cao & Backend</div>
-              <div class="package-price" style="color: var(--secondary);">7.500.000đ+</div>
-              <div style="font-size: 12px; color: var(--text-muted);">Dành cho dự án có quy trình Backend tùy chỉnh, Quản trị Admin & Thanh toán</div>
-
-              <ul class="package-feature-list">
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Fullstack Frontend ReactJS + NodeJS/Python Backend</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Tích hợp Cổng thanh toán (VNPay / MoMo)</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Trang Quản trị Admin phân quyền người dùng</li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Thời gian bàn giao: <strong>12 - 14 Ngày</strong></li>
-                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> Hỗ trợ kỹ thuật & Bảo hành <strong>3 Tháng</strong></li>
-              </ul>
-
-              <div style="display:flex; gap:8px;">
-                <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openModal('editPackageModal')"><i class="fa-solid fa-pen"></i> Chỉnh Sửa</button>
-                <button class="btn btn-secondary btn-sm" onclick="showToast('Đã tạm ẩn gói Nâng cao!')"><i class="fa-solid fa-eye-slash"></i> Ẩn</button>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Add-ons Services Card -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">
-                <i class="fa-solid fa-puzzle-piece" style="color: var(--primary);"></i> Dịch Vụ Gia Tăng Bổ Trợ (Add-ons & Extras)
-              </div>
-              <button class="btn btn-outline btn-sm" onclick="showToast('Đang mở form thêm dịch vụ cộng thêm!')">
-                <i class="fa-solid fa-plus"></i> Thêm Dịch Vụ Phụ
-              </button>
-            </div>
-
-            <div>
-              <div class="addon-row">
-                <div style="display:flex; align-items:center; gap: 14px;">
-                  <i class="fa-solid fa-bolt" style="color: var(--warning); font-size: 20px;"></i>
-                  <div>
-                    <div style="font-weight: 600; font-size: 14px;">Giao Hàng Hỏa Tốc Trong 24 Giờ</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">Ưu tiên xử lý đơn hàng gấp và bàn giao nguyên bản trong vòng 24h</div>
-                  </div>
-                </div>
-                <div style="display:flex; align-items:center; gap: 16px;">
-                  <span style="font-weight: 700; font-size: 15px; color: var(--primary);">+500.000đ</span>
-                  <button class="btn btn-outline btn-sm" onclick="showToast('Đã cập nhật dịch vụ cộng thêm!')"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </div>
-
-              <div class="addon-row">
-                <div style="display:flex; align-items:center; gap: 14px;">
-                  <i class="fa-solid fa-file-circle-plus" style="color: var(--info); font-size: 20px;"></i>
-                  <div>
-                    <div style="font-weight: 600; font-size: 14px;">Thêm 1 Trang Giao Diện Tùy Biến</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">Thiết kế thêm trang phụ, landing page con hoặc form khảo sát</div>
-                  </div>
-                </div>
-                <div style="display:flex; align-items:center; gap: 16px;">
-                  <span style="font-weight: 700; font-size: 15px; color: var(--primary);">+300.000đ / trang</span>
-                  <button class="btn btn-outline btn-sm" onclick="showToast('Đã cập nhật dịch vụ cộng thêm!')"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </div>
-
-              <div class="addon-row">
-                <div style="display:flex; align-items:center; gap: 14px;">
-                  <i class="fa-solid fa-server" style="color: var(--primary); font-size: 20px;"></i>
-                  <div>
-                    <div style="font-weight: 600; font-size: 14px;">Triển Khai Lên Server & Cấu Hình Tên Miền (DNS/SSL)</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">Cài đặt hosting, VPS, trỏ domain, cài chứng chỉ bảo mật HTTPS SSL miễn phí trọn đời</div>
-                  </div>
-                </div>
-                <div style="display:flex; align-items:center; gap: 16px;">
-                  <span style="font-weight: 700; font-size: 15px; color: var(--primary);">+400.000đ</span>
-                  <button class="btn btn-outline btn-sm" onclick="showToast('Đã cập nhật dịch vụ cộng thêm!')"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- Rendered from the provider services API -->
+          <div id="packagesContainer" class="grid-3" style="margin-bottom: 24px;"><div style="grid-column:1/-1;text-align:center;padding:36px;color:var(--text-muted);">Đang tải gói dịch vụ...</div></div>
 
         </div>
 

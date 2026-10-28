@@ -131,7 +131,7 @@ function detectImageType(buffer) {
    PROVIDER DASHBOARD APIs
 ========================================================== */
 
-router.get('/me', requireProvider, (req, res) => {
+router.get('/me', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
   const providers = db.getCollection('providers') || [];
   const pIdx = providers.findIndex(p => p.id === provider.id);
@@ -154,7 +154,7 @@ router.get('/me', requireProvider, (req, res) => {
       db.saveCollection('providers', providers);
     }
   }
-  const services = (db.getCollection('services') || []).filter(s => s.providerId === provider.id);
+  const services = ((await db.getCollectionFresh('services')) || []).filter(s => s.providerId === provider.id);
   return res.json({ success: true, provider, services });
 });
 
@@ -404,37 +404,44 @@ const handleProviderCoverUpload = async (req, res) => {
 router.put(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
 router.post(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
 
-router.get('/dashboard/stats', requireProvider, (req, res) => {
+router.get('/dashboard/stats', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
   const orders = db.getCollection('orders') || [];
-  
   const myOrders = orders.filter(o => o.providerId === provider.id && isVisibleToProvider(o));
-  
+  const jobRequests = (await db.getCollectionFresh('jobRequests')) || [];
+  const myApplications = jobRequests.flatMap(job => (job.applicants || []).filter(applicant =>
+    applicant.providerId === provider.id || applicant.providerUserId === req.authUser.id
+  ));
+  const complaints = (db.getCollection('complaints') || []).filter(complaint => complaint.defendantId === provider.id);
+
   const pending = myOrders.filter(o => o.orderStatus === 'pending').length;
   const processing = myOrders.filter(o => o.orderStatus === 'processing').length;
   const completed = myOrders.filter(o => o.orderStatus === 'completed').length;
-  
-  // Tổng doanh thu từ các đơn completed
   const totalRevenue = myOrders
     .filter(o => o.orderStatus === 'completed')
     .reduce((sum, o) => sum + Number(o.price || 0), 0);
-    
+
   res.json({
     success: true,
     stats: {
       pendingOrders: pending,
       processingOrders: processing,
       completedOrders: completed,
+      activeProjectsCount: processing,
+      submittedProposalsCount: myApplications.length,
+      unresolvedComplaintsCount: complaints.filter(complaint => complaint.status !== 'resolved').length,
       totalRevenue,
+      totalRevenueFormatted: `${totalRevenue.toLocaleString('vi-VN')}đ`,
       rating: provider.rating || 5.0,
+      averageRating: provider.rating || 5.0,
       balance: req.authUser.balance || 0
     }
   });
 });
 
-router.get('/me/services', requireProvider, (req, res) => {
+router.get('/me/services', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
-  const services = (db.getCollection('services') || []).filter(s => s.providerId === provider.id);
+  const services = ((await db.getCollectionFresh('services')) || []).filter(s => s.providerId === provider.id);
   res.json({ success: true, services });
 });
 
@@ -888,7 +895,7 @@ router.get('/me/posts', requireProvider, async (req, res) => {
     const provider = await getMyProviderFresh(req);
     if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
     const snapshot = await firestore.collection('posts').where('providerId', '==', provider.id).get();
-    const posts = snapshot.docs.map(doc => doc.data())
+    const posts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     res.json({ success: true, posts });
   } catch (err) {
@@ -900,7 +907,8 @@ router.get('/me/posts', requireProvider, async (req, res) => {
 router.get('/:id/posts', async (req, res) => {
   try {
     const snapshot = await firestore.collection('posts').where('providerId', '==', req.params.id).get();
-    const posts = snapshot.docs.map(doc => doc.data())
+    const posts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }))
+      .filter(post => post.status !== 'draft')
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     res.json({ success: true, posts });
   } catch (err) {
@@ -931,6 +939,7 @@ router.post('/posts', requireProvider, async (req, res) => {
     category: String(postData.category || '').trim(),
     summary: String(postData.summary || content.slice(0, 150)).trim(),
     content,
+    status: postData.status === 'draft' ? 'draft' : 'published',
     id,
     providerId: provider.id,
     providerName: provider.name,
@@ -944,6 +953,57 @@ router.post('/posts', requireProvider, async (req, res) => {
   } catch (err) {
     console.error('[providers] Không lưu được bài đăng:', err.message);
     res.status(503).json({ success: false, message: 'Chưa lưu được bài đăng lên hệ thống. Vui lòng thử lại.' });
+  }
+});
+
+router.put('/posts/:id', requireProvider, async (req, res) => {
+  const postData = req.body || {};
+  const title = String(postData.title || '').trim();
+  const content = String(postData.content || '').trim();
+  if (!title || !content) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập tiêu đề và nội dung bài viết.' });
+  }
+
+  try {
+    const provider = await getMyProviderFresh(req);
+    if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+    const ref = firestore.collection('posts').doc(req.params.id);
+    const snapshot = await ref.get();
+    if (!snapshot.exists || snapshot.data().providerId !== provider.id) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết của bạn.' });
+    }
+
+    const post = {
+      ...snapshot.data(),
+      title,
+      category: String(postData.category || '').trim(),
+      summary: String(postData.summary || content.slice(0, 150)).trim(),
+      content,
+      status: postData.status === 'draft' ? 'draft' : 'published',
+      updatedAt: new Date().toISOString()
+    };
+    await ref.update(post);
+    res.json({ success: true, message: 'Đã cập nhật bài viết.', post });
+  } catch (err) {
+    console.error('[providers] Không cập nhật được bài đăng:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa cập nhật được bài viết. Vui lòng thử lại.' });
+  }
+});
+
+router.delete('/posts/:id', requireProvider, async (req, res) => {
+  try {
+    const provider = await getMyProviderFresh(req);
+    if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+    const ref = firestore.collection('posts').doc(req.params.id);
+    const snapshot = await ref.get();
+    if (!snapshot.exists || snapshot.data().providerId !== provider.id) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết của bạn.' });
+    }
+    await ref.delete();
+    res.json({ success: true, message: 'Đã xóa bài viết.' });
+  } catch (err) {
+    console.error('[providers] Không xóa được bài đăng:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa xóa được bài viết. Vui lòng thử lại.' });
   }
 });
 

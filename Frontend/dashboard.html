@@ -7,6 +7,25 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .dashboard-chart-card{margin-bottom:24px;padding:22px 24px}
+    .dashboard-chart-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
+    .dashboard-chart-heading .card-title{display:flex;align-items:center;gap:9px}
+    .dashboard-chart-heading .card-title i{color:var(--primary-accent)}
+    .dashboard-chart-heading .card-subtitle{margin-top:5px}
+    .order-chart-layout{display:grid;grid-template-columns:minmax(210px,.85fr) minmax(250px,1.15fr);align-items:center;gap:26px;min-height:210px}
+    .order-status-donut{width:190px;height:190px;margin:auto;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#e8edf1 0 100%);position:relative}
+    .order-status-donut::before{content:"";position:absolute;inset:17px;border-radius:50%;background:#fff;box-shadow:0 2px 12px rgba(15,23,42,.05)}
+    .order-status-center{position:relative;z-index:1;display:grid;text-align:center;gap:3px}
+    .order-status-center strong{font-size:30px;line-height:1;color:#172033;letter-spacing:-.04em}
+    .order-status-center span{font-size:12px;color:#718096}
+    .order-chart-legend{display:grid;gap:12px}
+    .order-chart-item{display:grid;grid-template-columns:11px 1fr auto;align-items:center;gap:10px;padding:11px 13px;border:1px solid #edf0f2;border-radius:10px;background:#fbfcfd}
+    .order-chart-dot{width:9px;height:9px;border-radius:50%}
+    .order-chart-name{font-size:13px;color:#526071}
+    .order-chart-value{font-size:14px;font-weight:750;color:#172033;font-variant-numeric:tabular-nums}
+    @media(max-width:680px){.dashboard-chart-card{padding:18px}.order-chart-layout{grid-template-columns:1fr;gap:18px}.order-status-donut{width:165px;height:165px}.order-chart-legend{gap:8px}}
+  </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
@@ -29,16 +48,15 @@
         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-card-clip"></i><span>Hồ Sơ & Dịch Vụ</span></a>
 
         <div class="nav-section-title">Công việc & Đơn hàng</div>
-        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);">6</span></a>
-        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);">2</span></a>
+        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);" hidden></span></a>
+        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);" hidden></span></a>
 
         <div class="nav-section-title">Kinh doanh & Khách hàng</div>
-        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count">3</span></a>
+        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count" hidden></span></a>
         <a href="payment.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Thanh toán & Phí sàn</span></a>
         <a href="income.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Ví & Thu nhập</span></a>
         <a href="review.html" class="nav-link"><i class="fa-solid fa-star"></i><span>Đánh giá & Uy tín</span></a>
-        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);">1</span></a>
-
+        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);" hidden></span></a>
         <div class="nav-section-title">Dịch vụ hệ thống</div>
         <a href="package.html" class="nav-link"><i class="fa-solid fa-box-archive"></i><span>Mua dịch vụ</span></a>
         <a href="post.html" class="nav-link"><i class="fa-solid fa-newspaper"></i><span>Bài viết & Portfolio</span></a>
@@ -72,7 +90,7 @@
           <div class="stat-card">
             <div>
               <div class="stat-label">Doanh Thu Tích Lũy</div>
-              <div class="stat-value" id="stat-revenue">35.500.000đ</div>
+              <div class="stat-value" id="stat-revenue">—</div>
             </div>
             <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary-accent);">
               <i class="fa-solid fa-money-bill-wave"></i>
@@ -82,7 +100,7 @@
           <div class="stat-card">
             <div>
               <div class="stat-label">Dự Án Đang Thực Hiện</div>
-              <div class="stat-value" id="stat-projects">12 Dự án</div>
+              <div class="stat-value" id="stat-projects">—</div>
             </div>
             <div class="stat-icon" style="background-color: var(--info-light); color: var(--info);">
               <i class="fa-solid fa-briefcase"></i>
@@ -92,7 +110,7 @@
           <div class="stat-card">
             <div>
               <div class="stat-label">Đánh Giá Trung Bình</div>
-              <div class="stat-value" id="stat-rating">4.9 ⭐</div>
+              <div class="stat-value" id="stat-rating">—</div>
             </div>
             <div class="stat-icon" style="background-color: var(--warning-light); color: #B45309;">
               <i class="fa-solid fa-star"></i>
@@ -102,13 +120,33 @@
           <div class="stat-card">
             <div>
               <div class="stat-label">Khiếu Nại Cần Xử Lý</div>
-              <div class="stat-value" id="stat-complaints">1 Yêu cầu</div>
+              <div class="stat-value" id="stat-complaints">—</div>
             </div>
             <div class="stat-icon" style="background-color: var(--danger-light); color: var(--danger);">
               <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
           </div>
         </div>
+
+        <section class="card dashboard-chart-card" aria-labelledby="orderChartTitle">
+          <div class="dashboard-chart-heading">
+            <div>
+              <div class="card-title" id="orderChartTitle"><i class="fa-solid fa-chart-pie"></i> Tình hình đơn hàng</div>
+              <div class="card-subtitle">Phân bổ đơn hàng theo trạng thái hiện tại</div>
+            </div>
+            <span class="badge badge-neutral" style="font-size:11px;"><i class="fa-regular fa-circle-check"></i> Cập nhật trực tiếp</span>
+          </div>
+          <div class="order-chart-layout">
+            <div class="order-status-donut" id="orderStatusDonut" role="img" aria-label="Biểu đồ trạng thái đơn hàng">
+              <div class="order-status-center"><strong id="orderStatusTotal">0</strong><span>đơn hàng</span></div>
+            </div>
+            <div class="order-chart-legend">
+              <div class="order-chart-item"><span class="order-chart-dot" style="background:var(--warning);"></span><span class="order-chart-name">Chờ xác nhận</span><strong class="order-chart-value" id="orderStatusPending">0</strong></div>
+              <div class="order-chart-item"><span class="order-chart-dot" style="background:var(--info);"></span><span class="order-chart-name">Đang thực hiện</span><strong class="order-chart-value" id="orderStatusProcessing">0</strong></div>
+              <div class="order-chart-item"><span class="order-chart-dot" style="background:var(--primary);"></span><span class="order-chart-name">Đã hoàn tất</span><strong class="order-chart-value" id="orderStatusCompleted">0</strong></div>
+            </div>
+          </div>
+        </section>
 
         <div class="card">
           <div class="card-header">
@@ -189,14 +227,34 @@
 
   <script src="provider.js"></script>
   <script>
+    function renderOrderStatusChart(stats) {
+      const pending = Math.max(0, Number(stats.pendingOrders) || 0);
+      const processing = Math.max(0, Number(stats.processingOrders) || 0);
+      const completed = Math.max(0, Number(stats.completedOrders) || 0);
+      const total = pending + processing + completed;
+      const pendingEnd = total ? (pending / total) * 100 : 0;
+      const processingEnd = total ? pendingEnd + (processing / total) * 100 : 0;
+      const donut = document.getElementById('orderStatusDonut');
+      donut.style.background = total
+        ? `conic-gradient(var(--warning) 0% ${pendingEnd}%, var(--info) ${pendingEnd}% ${processingEnd}%, var(--primary) ${processingEnd}% 100%)`
+        : 'conic-gradient(#e8edf1 0 100%)';
+      document.getElementById('orderStatusTotal').textContent = total.toLocaleString('vi-VN');
+      document.getElementById('orderStatusPending').textContent = pending.toLocaleString('vi-VN');
+      document.getElementById('orderStatusProcessing').textContent = processing.toLocaleString('vi-VN');
+      document.getElementById('orderStatusCompleted').textContent = completed.toLocaleString('vi-VN');
+      donut.setAttribute('aria-label', `Tổng ${total} đơn: ${pending} chờ xác nhận, ${processing} đang thực hiện, ${completed} đã hoàn tất`);
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         const res = await window.providerApi.getDashboardStats();
         if (res && res.success && res.stats) {
           const s = res.stats;
-          if (s.monthlyEarningsFormatted) document.getElementById('stat-revenue').textContent = s.monthlyEarningsFormatted;
+          if (s.totalRevenueFormatted) document.getElementById('stat-revenue').textContent = s.totalRevenueFormatted;
           if (s.activeProjectsCount !== undefined) document.getElementById('stat-projects').textContent = s.activeProjectsCount + ' Dự án';
           if (s.averageRating) document.getElementById('stat-rating').textContent = s.averageRating + ' ⭐';
+          if (s.unresolvedComplaintsCount !== undefined) document.getElementById('stat-complaints').textContent = s.unresolvedComplaintsCount + ' Yêu cầu';
+          renderOrderStatusChart(s);
         }
       } catch (err) {
         console.log('Dashboard live stats: Cached mode');

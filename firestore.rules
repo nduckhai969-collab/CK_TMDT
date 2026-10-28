@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Hàm tiện ích: kiểm tra đăng nhập
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Hàm tiện ích: kiểm tra quyền Admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.role == 'Admin' || request.auth.token.email == 'admin@skillrental.com');
+    }
+
+    // 1. Providers collection:
+    // Người dùng thông thường KHÔNG được tự ghi hoặc sửa:
+    // aspectScores, verified, completedOrders, cancelRate
+    match /providers/{providerId} {
+      allow read: if true;
+      allow create: if isAdmin() || (
+        isAuthenticated() &&
+        !request.resource.data.keys().hasAny(['aspectScores', 'verified', 'completedOrders', 'cancelRate'])
+      );
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['aspectScores', 'verified', 'completedOrders', 'cancelRate'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 2. Services collection:
+    // Người dùng thông thường KHÔNG được tự ghi aspectScores
+    match /services/{serviceId} {
+      allow read: if true;
+      allow create: if isAdmin() || (
+        isAuthenticated() &&
+        !request.resource.data.keys().hasAny(['aspectScores'])
+      );
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['aspectScores'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 3. Reviews collection:
+    // Người dùng thông thường KHÔNG được tự ghi nhãn groundTruth
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAdmin() || (
+        isAuthenticated() &&
+        !request.resource.data.keys().hasAny(['groundTruth'])
+      );
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['groundTruth'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 4. Users collection:
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      // Người dùng được cập nhật trọng số cá nhân aspectWeights nhưng không được tự sửa balance / role
+      allow update: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == resource.data.uid &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'balance', 'spentOrEarned', 'status'])
+      );
+      allow write: if isAdmin();
+    }
+
+    // 5. Mặc định chặn tất cả các ghi trực tiếp khác từ client
+    // (Toàn bộ nghiệp vụ chính đi qua Backend Express với Firebase Admin SDK)
+    match /{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "seed": "node scripts/seedFirebase.js",
+    "seed:reco": "node scripts/seedRecommendationData.js",
     "test:payment": "node scripts/testPayment.js",
     "check": "node scripts/checkFrontend.js"
   },

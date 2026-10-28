@@ -1,0 +1,21 @@
+id,writer,text,quality,price,speed,attitude,warranty
+EXAMPLE_01,Writer_Alice,"Thiết kế logo rất đẹp mắt và sáng tạo, bạn giao đúng hẹn nhưng giá hơi chát.",pos,neg,pos,-,-
+EXAMPLE_02,Writer_Bob,"Sửa điện thoại xong dùng mượt mà, anh chủ còn bảo hành tận tình 6 tháng.",pos,-,-,pos,pos
+EXAMPLE_03,Writer_Charlie,"Tuyệt vời 5 sao, nhất định sẽ tiếp tục ủng hộ dịch vụ!",-,-,-,-,-
+DEMO_004,Writer_Ian,"Code web giao đúng hẹn, giao diện đẹp mắt nhưng báo giá hơi cao so với mặt bằng chung.",pos,neg,pos,-,-
+DEMO_005,Writer_Julia,"Lần đầu hợp tác thấy bạn hỗ trợ rất chu đáo, giải đáp thắc mắc nhiệt tình từ A đến Z.",-,-,-,pos,-
+DEMO_006,Writer_Laura,"File thiết kế chất lượng cực tốt, vừa đúng ý mình mà không cần chỉnh sửa gì thêm.",pos,-,-,-,-
+DEMO_007,Writer_Mike,"Giao bài muộn cả tuần lễ làm ảnh hưởng tiến độ dự án, bài viết thì dán Google Translate sơ sài.",neg,-,neg,-,-
+DEMO_008,Writer_Nina,"Thiết kế bao bì độc đáo, lấy file nhanh mà chi phí lại vô cùng hợp lý.",pos,pos,pos,-,-
+DEMO_009,Writer_Oscar,"Sửa đi sửa lại 4-5 lần bạn vẫn nhẹ nhàng vui vẻ lắng nghe, dịch vụ CSKH xuất sắc.",-,-,-,pos,pos
+DEMO_010,Writer_Paul,"File thu âm bị nhiễu tiếng ồn nặng, chất lượng quá kém so với chi phí bỏ ra.",neg,neg,-,-,-
+DEMO_011,Writer_Queen,"Hỗ trợ bảo hành website tận tâm, sau bàn giao nửa tháng bị lỗi bạn vẫn vào fix lại hoàn toàn miễn phí.",-,-,-,pos,pos
+DEMO_012,Writer_Ryan,"Giá rẻ nhưng làm ăn cẩu thả, giao hàng trễ hẹn mà hỏi tới thì viện đủ lý do bao biện.",neg,pos,neg,neg,-
+DEMO_013,Writer_Sophia,"Hình ảnh 3D dựng siêu thực, render nét căng đúng chuẩn yêu cầu luôn nha.",pos,-,-,-,-
+DEMO_014,Writer_Tom,"Giao việc gấp buổi đêm mà bạn vẫn nhận và hoàn thành trước 6h sáng, làm việc cực kỳ có trách nhiệm.",-,-,pos,pos,-
+DEMO_015,Writer_Uma,"Chất lượng dịch thuật tạm ổn, đúng hạn nhưng tính phí phát sinh thêm khá vô lý.",neu,neg,pos,-,-
+DEMO_016,Writer_Wendy,"Ảnh retouch tự nhiên không bị ảo quá, bạn còn chủ động gửi trước 2 option để mình lựa chọn, dịch vụ rất chu đáo.",pos,-,-,pos,-
+DEMO_017,Writer_Xavier,"Viết bài PR thu hút, chuẩn SEO nhưng làm việc hơi cọc, nhắc nhở trả bài thì hay gắt gỏng.",pos,-,-,neg,-
+DEMO_018,Writer_Yara,"Báo giá ban đầu một đường, làm xong thu tiền một nẻo, sản phẩm lại trùng lặp ý tưởng trên mạng.",neg,neg,-,-,-
+DEMO_019,Writer_Adam,"Chất lượng voice-off chuẩn giọng vùng miền, truyền cảm, mỗi tội deadline bị trễ mất vài giờ do bận việc gia đình.",pos,-,neg,-,-
+DEMO_020,Writer_Bella,"Chi phí rẻ hơn nhiều nơi khác mà chất lượng làm clip TikTok triệu view đỉnh thực sự, sang tháng sẽ book tiếp!",pos,pos,-,-,-

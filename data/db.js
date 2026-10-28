@@ -701,6 +701,30 @@ function stable(value) {
 const docKey = id => String(id).replace(/\//g, '_');
 const clone = x => JSON.parse(JSON.stringify(x));
 
+// Tự động bổ sung giá trị mặc định cho các trường mới (Aspect Recommendation System)
+// mà không làm thay đổi hành vi của các luồng nghiệp vụ hiện tại.
+function applyDefaults(name, item) {
+  if (!item || typeof item !== 'object') return item;
+  const row = { ...item };
+  if (name === 'providers') {
+    if (row.aspectScores === undefined) row.aspectScores = null;
+    if (row.cancelRate === undefined) row.cancelRate = 0;
+    if (row.completedOrders === undefined) row.completedOrders = 0;
+    if (row.reviewCount === undefined) row.reviewCount = 0;
+    if (row.verified === undefined) row.verified = false;
+  } else if (name === 'services') {
+    if (row.aspectScores === undefined) row.aspectScores = null;
+    if (row.reviewCount === undefined) row.reviewCount = 0;
+  } else if (name === 'users') {
+    if (row.aspectWeights === undefined) {
+      row.aspectWeights = { quality: 0.2, price: 0.2, speed: 0.2, attitude: 0.2, warranty: 0.2 };
+    }
+  } else if (name === 'reviews') {
+    if (row.groundTruth === undefined) row.groundTruth = null;
+  }
+  return row;
+}
+
 class Database {
   constructor() {
     this.cache = {};
@@ -715,9 +739,9 @@ class Database {
       const snap = await firestore.collection(name).get();
       const rows = snap.docs.map(d => d.data());
       rows.sort((a, b) => (a._idx ?? 0) - (b._idx ?? 0));
-      this.cache[name] = rows.map(({ _idx, ...rest }) => rest);
+      this.cache[name] = rows.map(({ _idx, ...rest }) => applyDefaults(name, rest));
       const sigs = new Map();
-      rows.forEach(r => sigs.set(docKey(r.id), stable(r)));
+      rows.forEach(r => sigs.set(docKey(r.id), stable(applyDefaults(name, r))));
       this.snapshot[name] = sigs;
     }));
     this.ready = true;
@@ -730,7 +754,7 @@ class Database {
 
   getCollection(name) {
     if (!this.ready) console.warn(`[db] getCollection("${name}") được gọi trước db.init()`);
-    return clone(this.cache[name] || []);
+    return clone((this.cache[name] || []).map(item => applyDefaults(name, item)));
   }
 
   // Read the latest committed collection from Firestore. Use this for public
@@ -740,14 +764,14 @@ class Database {
     const snap = await firestore.collection(name).get();
     const rows = snap.docs.map(d => d.data());
     rows.sort((a, b) => (a._idx ?? 0) - (b._idx ?? 0));
-    this.cache[name] = rows.map(({ _idx, ...rest }) => rest);
-    this.snapshot[name] = new Map(rows.map(row => [docKey(row.id), stable(row)]));
-    return clone(this.cache[name]);
+    this.cache[name] = rows.map(({ _idx, ...rest }) => applyDefaults(name, rest));
+    this.snapshot[name] = new Map(rows.map(row => [docKey(row.id), stable(applyDefaults(name, row))]));
+    return clone((this.cache[name] || []).map(item => applyDefaults(name, item)));
   }
 
   saveCollection(name, items) {
     if (!Array.isArray(items)) return false;
-    const next = clone(items);
+    const next = clone(items).map(item => applyDefaults(name, item));
     next.forEach((item) => {
       if (item.id === undefined || item.id === null || item.id === '') {
         item.id = firestore.collection(name).doc().id;

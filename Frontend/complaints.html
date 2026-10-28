@@ -215,6 +215,7 @@
     let activeCompId = null;
     let activeCancellationCase = null;
     let liveDisputeCases = null;
+    let disputeLoadError = '';
 
     document.addEventListener('DOMContentLoaded', async () => {
       await loadDisputeCases();
@@ -228,6 +229,7 @@
           window.adminApi.getComplaints(), window.adminApi.getOrders()
         ]);
         if (!complaintResult.success || !orderResult.success) throw new Error('Không tải được dữ liệu tranh chấp từ máy chủ.');
+        disputeLoadError = '';
         const complaints = Array.isArray(complaintResult.complaints) ? complaintResult.complaints : [];
         const rejectedCancellations = (orderResult.orders || [])
           .filter(order => ['cancel_requested', 'cancel_rejected'].includes(order.orderStatus))
@@ -243,7 +245,8 @@
         liveDisputeCases = [...complaints, ...rejectedCancellations];
       } catch (error) {
         console.error('Không tải được danh sách tranh chấp:', error);
-        liveDisputeCases = null;
+        liveDisputeCases = [];
+        disputeLoadError = error.message || 'Không tải được dữ liệu tranh chấp từ máy chủ.';
       }
     }
 
@@ -268,7 +271,7 @@
       if (!tbody) return;
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-secondary);">Không có vụ khiếu nại nào phù hợp.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:${disputeLoadError ? '#b91c1c' : 'var(--text-secondary)'};">${disputeLoadError || 'Không có vụ khiếu nại nào phù hợp.'}</td></tr>`;
         return;
       }
 
@@ -311,25 +314,57 @@
       if (st) st.addEventListener('change', renderComplaintsTable);
 
       document.getElementById('btn-verdict-refund').addEventListener('click', () => {
-        executeVerdict('Hoàn tiền 100% cho Khách hàng', 'success');
+        executeVerdict(activeCancellationCase ? 'Hủy đơn và hoàn 100% cho khách' : 'Hoàn tiền 100% cho Khách hàng', 'success');
       });
       document.getElementById('btn-verdict-split').addEventListener('click', () => {
-        executeVerdict('Chia bồi thường 50 / 50 giữa hai bên', 'warning');
+        executeVerdict(activeCancellationCase ? 'Hủy đơn và hoàn 50% cho khách' : 'Chia bồi thường 50 / 50 giữa hai bên', 'warning');
       });
       document.getElementById('btn-verdict-provider').addEventListener('click', () => {
-        executeVerdict('Bác bỏ khiếu nại & Giải ngân tiền cho Provider', 'info');
+        executeVerdict(activeCancellationCase ? 'Cho đơn tiếp tục' : 'Bác bỏ khiếu nại & Giải ngân tiền cho Provider', 'info');
       });
     }
 
     function openVerdictModal(id) {
-      const state = getAppState();
-      const comp = state.complaints.find(c => c.id === id);
+      const comp = getDisputeCases().find(c => c.id === id);
       if (!comp) return;
 
       activeCompId = id;
+      activeCancellationCase = comp.type === 'cancellation' ? comp : null;
       const isResolved = comp.status === 'resolved';
 
       const body = document.getElementById('modal-complaint-body');
+      if (activeCancellationCase) {
+        body.innerHTML = `
+          <div style="margin-bottom:14px;">
+            <h4>Yêu cầu hủy đơn ${comp.orderId}</h4>
+            <p><b>Khách hàng:</b> ${comp.complainant}</p>
+            <p><b>Provider:</b> ${comp.defendant}</p>
+            <p style="color:var(--error);font-weight:600"><b>Lý do khách yêu cầu hủy:</b> ${comp.reason}</p>
+            <p><b>Phản hồi Provider:</b> ${comp.providerNote || 'Chưa ghi phản hồi.'}</p>
+            <p><b>Tiền ký quỹ đang tranh chấp:</b> ${comp.amount}</p>
+            <p><b>Trạng thái:</b> ${comp.orderStatus === 'cancel_rejected' ? 'Provider đã từ chối — chờ Admin phân xử' : 'Chờ Provider phản hồi yêu cầu hủy'}</p>
+          </div>
+          <label class="form-label" for="cancellation-admin-note">Căn cứ phán quyết (bắt buộc)</label>
+          <textarea id="cancellation-admin-note" class="form-control" rows="4" minlength="10" placeholder="Ghi rõ căn cứ xem xét của Admin"></textarea>
+        `;
+        document.querySelector('#modal-complaint-detail .modal-header h3').textContent = 'Phân xử yêu cầu hủy đơn';
+        document.getElementById('btn-verdict-refund').textContent = 'Hủy đơn & hoàn 100%';
+        document.getElementById('btn-verdict-split').textContent = 'Hủy đơn & hoàn 50%';
+        document.getElementById('btn-verdict-provider').textContent = 'Cho đơn tiếp tục';
+        const splitBtn = document.getElementById('btn-verdict-split');
+        const refundBtn = document.getElementById('btn-verdict-refund');
+        const providerBtn = document.getElementById('btn-verdict-provider');
+        if (splitBtn) splitBtn.style.display = isResolved ? 'none' : 'inline-block';
+        if (refundBtn) refundBtn.style.display = isResolved ? 'none' : 'inline-block';
+        if (providerBtn) providerBtn.style.display = isResolved ? 'none' : 'inline-block';
+        openModal('modal-complaint-detail');
+        return;
+      }
+
+      document.querySelector('#modal-complaint-detail .modal-header h3').textContent = 'Phán quyết Xử lý Khiếu nại Tranh chấp';
+      document.getElementById('btn-verdict-refund').textContent = 'Hoàn tiền 100% cho Khách';
+      document.getElementById('btn-verdict-split').textContent = 'Chia bồi thường 50 / 50';
+      document.getElementById('btn-verdict-provider').textContent = 'Bác bỏ & Trả tiền Provider';
       body.innerHTML = `
         <div style="margin-bottom:14px;">
           <h4>Khiếu nại: ${comp.id} (Đơn hàng ${comp.orderId})</h4>
@@ -375,10 +410,32 @@
       openModal('modal-complaint-detail');
     }
 
-    function executeVerdict(decisionText, toastType) {
+    async function executeVerdict(decisionText, toastType) {
       if (!activeCompId) return;
-      const state = getAppState();
-      const comp = state.complaints.find(c => c.id === activeCompId);
+      if (activeCancellationCase) {
+        const adminNote = document.getElementById('cancellation-admin-note')?.value?.trim() || '';
+        if (adminNote.length < 10) {
+          showToast('Thiếu căn cứ', 'Vui lòng ghi căn cứ phán quyết, tối thiểu 10 ký tự.', 'error');
+          return;
+        }
+        const action = decisionText.includes('Cho đơn tiếp tục') ? 'continue' : 'cancel';
+        const refundPercentage = decisionText.includes('hoàn 50%') ? 50 : 100;
+        try {
+          const result = await window.adminApi.arbitrateCancellation(activeCancellationCase.orderId, action, adminNote, refundPercentage);
+          if (!result.success) {
+            showToast('Không thể lưu phán quyết', result.message || 'Vui lòng thử lại.', 'error');
+            return;
+          }
+          await loadDisputeCases();
+          closeModal('modal-complaint-detail');
+          renderComplaintsTable();
+          showToast('Đã phân xử yêu cầu hủy', result.message || decisionText, toastType);
+        } catch (error) {
+          showToast('Lỗi kết nối', error.message || 'Không thể lưu phán quyết.', 'error');
+        }
+        return;
+      }
+      const comp = getDisputeCases().find(c => c.id === activeCompId);
       if (!comp) return;
 
       // Chặn nếu khiếu nại đã được giải quyết từ trước
@@ -388,35 +445,17 @@
         return;
       }
 
-      comp.status = 'resolved';
-      comp.verdict = decisionText;
-      comp.resolutionText = decisionText;
-      const now = new Date();
-      comp.resolvedAt = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-      const order = state.orders.find(o => o.id === comp.orderId);
-      if (order) {
-        if (decisionText.includes('Hoàn tiền 100%')) {
-          order.escrowStatus = 'Đã hoàn tiền';
-          order.orderStatus = 'cancelled';
-        } else if (decisionText.includes('Giải ngân')) {
-          order.escrowStatus = 'Đã giải ngân';
-          order.orderStatus = 'completed';
-        } else {
-          // Bồi thường 50/50: Giữ nguyên tranh chấp hoặc hoàn tất một phần, không tự động cộng đơn hoàn thành nếu chưa nghiệm thu
-          order.escrowStatus = 'Đã hoàn tất bồi thường (50/50)';
-          order.orderStatus = 'cancelled';
-        }
+      const resolution = decisionText.includes('Hoàn tiền 100%') ? 'refund_customer' : (decisionText.includes('Giải ngân') ? 'pay_provider' : 'partial_refund');
+      try {
+        const result = await window.adminApi.resolveComplaint(activeCompId, resolution, 50, decisionText);
+        if (!result.success) return showToast('Không thể lưu phán quyết', result.message || 'Vui lòng thử lại.', 'error');
+        await loadDisputeCases();
+        closeModal('modal-complaint-detail');
+        renderComplaintsTable();
+        showToast('Phán quyết giải quyết khiếu nại', result.message || decisionText, toastType);
+      } catch (error) {
+        showToast('Lỗi kết nối', error.message || 'Không thể lưu phán quyết.', 'error');
       }
-      if (window.adminApi) {
-        const resolution = decisionText.includes('Hoàn tiền 100%') ? 'refund_customer' : (decisionText.includes('Giải ngân') ? 'pay_provider' : 'partial_refund');
-        window.adminApi.resolveComplaint(activeCompId, resolution, 50, decisionText).catch(console.warn);
-      }
-      saveAppState(state);
-      closeModal('modal-complaint-detail');
-      renderComplaintsTable();
-      updateSidebarBadges();
-      showToast('Phán quyết giải quyết khiếu nại', `Kết quả: ${decisionText}. Đã gửi biên bản cho các bên.`, toastType);
     }
   </script>
 </body>

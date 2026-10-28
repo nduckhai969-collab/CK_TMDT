@@ -2715,20 +2715,48 @@ window.getCategoryBadge =
 // ============================================================
 let favoriteProviderIds = new Set();
 let favoriteProviderIdsLoaded = false;
+let favoriteProviderUserId = null;
 
 async function loadFavoriteProviderIds() {
-  const user = getCurrentCustomer();
+  let user = getCurrentCustomer();
   if (!user || user.role !== 'Customer') {
     favoriteProviderIds = new Set();
-    favoriteProviderIdsLoaded = true;
+    favoriteProviderIdsLoaded = false;
+    favoriteProviderUserId = null;
     syncFavoriteButtons();
     return favoriteProviderIds;
   }
-  const result = await apiRequest('/api/providers/favorites');
-  if (result.success) {
+  try {
+    // Local storage can retain a stale role or account ID. Ask the authenticated
+    // API which profile the Firebase token actually belongs to before loading
+    // customer-only data.
+    const session = await apiRequest('/api/auth/me');
+    if (!session.success || !session.user) {
+      throw new Error(session.message || 'Không xác minh được tài khoản hiện tại.');
+    }
+    user = { ...user, ...session.user };
+    setCurrentCustomer(user);
+    if (user.role !== 'Customer') {
+      favoriteProviderIds = new Set();
+      favoriteProviderIdsLoaded = false;
+      favoriteProviderUserId = null;
+      syncFavoriteButtons();
+      showToast('Không thể thêm yêu thích', 'Phiên đăng nhập hiện tại không phải tài khoản khách hàng.', 'error');
+      return favoriteProviderIds;
+    }
+
+    const result = await apiRequest('/api/providers/favorites');
+    if (!result.success) {
+      favoriteProviderIdsLoaded = false;
+      throw new Error(result.message || 'Không tải được danh sách yêu thích.');
+    }
     favoriteProviderIds = new Set(result.providerIds || []);
     favoriteProviderIdsLoaded = true;
+    favoriteProviderUserId = user.id;
     syncFavoriteButtons();
+  } catch (error) {
+    console.error('Không tải được danh sách Provider yêu thích:', error);
+    showToast('Không tải được yêu thích', error.message || 'Vui lòng thử lại.', 'error');
   }
   return favoriteProviderIds;
 }
@@ -2748,7 +2776,11 @@ function syncFavoriteButtons() {
 
 async function toggleFavoriteProvider(providerId, button = null) {
   if (!requireCustomerLogin()) return;
-  if (!favoriteProviderIdsLoaded) await loadFavoriteProviderIds();
+  const user = getCurrentCustomer();
+  if (!favoriteProviderIdsLoaded || favoriteProviderUserId !== user?.id) {
+    await loadFavoriteProviderIds();
+  }
+  if (!favoriteProviderIdsLoaded || favoriteProviderUserId !== user?.id) return;
   const isFavorite = favoriteProviderIds.has(providerId);
   if (button) button.disabled = true;
   try {

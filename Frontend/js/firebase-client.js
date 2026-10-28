@@ -167,7 +167,13 @@
       // ĐÃ TỒN TẠI: Không tạo mới, không sinh ID mới, giữ nguyên role & status & balance
       const existing = state.users[existingIndex];
       if (typeof userData.balance === 'number') existing.balance = userData.balance;
-      if (userData.id && !existing.id) existing.id = userData.id;
+      // The server profile is authoritative after sign-in. Keep the local Admin
+      // mirror aligned so a stale cached role cannot make the UI send requests
+      // under a different role than the API recognizes.
+      if (['Admin', 'Customer', 'Provider'].includes(userData.role)) {
+        existing.role = userData.role;
+      }
+      if (userData.id) existing.id = userData.id;
       if (uid && (!existing.uid || existing.uid !== uid)) {
         existing.uid = uid;
       }

@@ -255,8 +255,47 @@ async function loadProviderPosts(id){
       const title=document.createElement('h3');title.textContent=post.title||'Bài viết Provider';title.style.cssText='font-size:14px;margin:0 0 6px;color:#182230';
       const meta=document.createElement('small');meta.textContent=[post.category,post.date].filter(Boolean).join(' · ');meta.style.color='#8792a0';
       const content=document.createElement('p');content.textContent=post.content||post.summary||'';content.style.margin='8px 0 0';
-      card.append(title,meta,content);container.appendChild(card);
+      const comments=document.createElement('div');comments.style.cssText='margin-top:12px;padding-top:10px;border-top:1px solid #edf0f2';
+      card.append(title,meta,content,comments);container.appendChild(card);
+      renderPostComments(post,comments);
     });
   }catch(error){container.textContent=error.message||'Chưa tải được bài viết.'}
+}
+
+async function renderPostComments(post,container){
+  container.replaceChildren();
+  const heading=document.createElement('strong');heading.textContent='Bình luận';heading.style.cssText='display:block;font-size:12px;margin-bottom:8px;color:#344054';
+  const list=document.createElement('div');list.style.cssText='display:grid;gap:8px;margin-bottom:10px';
+  const form=document.createElement('form');form.style.cssText='display:grid;grid-template-columns:1fr auto;gap:8px';
+  const input=document.createElement('textarea');input.maxLength=1500;input.required=true;input.rows=2;input.placeholder='Viết bình luận về bài viết...';input.setAttribute('aria-label','Bình luận về bài viết');input.style.cssText='width:100%;box-sizing:border-box;padding:9px;border:1px solid #d0d5dd;border-radius:8px;font:12px Inter,sans-serif;resize:vertical';
+  const button=document.createElement('button');button.type='submit';button.innerHTML='<i class="fa-solid fa-paper-plane"></i> Gửi';button.style.cssText='align-self:end;border:0;border-radius:8px;background:#16a34a;color:#fff;padding:9px 12px;font-weight:700;cursor:pointer';
+  form.append(input,button);container.append(heading,list,form);
+
+  async function refresh(){
+    list.replaceChildren();
+    try{
+      const result=await apiRequest(`/api/comments?targetType=post&targetId=${encodeURIComponent(post.id)}`);
+      if(!result.success)throw new Error(result.message||'Không tải được bình luận.');
+      const comments=result.comments||[];
+      if(!comments.length){const empty=document.createElement('small');empty.textContent='Chưa có bình luận. Hãy chia sẻ ý kiến đầu tiên.';empty.style.color='#8792a0';list.append(empty);return}
+      comments.forEach(comment=>{
+        const item=document.createElement('div');item.style.cssText=`padding:8px 10px;background:#f8fafc;border-radius:8px;${comment.parentId?'margin-left:18px;border-left:2px solid #bbf7d0':''}`;
+        const author=document.createElement('strong');author.textContent=comment.userName||'Người dùng';author.style.cssText='font-size:11px;color:#344054';
+        const date=document.createElement('small');date.textContent=comment.createdAt?new Date(comment.createdAt).toLocaleString('vi-VN'):'';date.style.cssText='float:right;font-size:10px;color:#98a2b3';
+        const body=document.createElement('p');body.textContent=comment.content||'';body.style.cssText='font-size:12px;line-height:1.5;margin:5px 0 0;color:#475467;white-space:pre-wrap';
+        item.append(author,date,body);list.append(item);
+      });
+    }catch(error){const message=document.createElement('small');message.textContent=error.message||'Không tải được bình luận.';message.style.color='#b42318';list.append(message)}
+  }
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const content=input.value.trim();if(!content)return;
+    button.disabled=true;
+    const result=await apiRequest('/api/comments',{method:'POST',body:JSON.stringify({targetType:'post',targetId:post.id,content})});
+    button.disabled=false;
+    if(!result.success){showToast('Không gửi được bình luận',result.message||'Vui lòng thử lại.','error');return}
+    input.value='';showToast('Đã gửi bình luận','Bình luận của bạn đã được đăng.','success');await refresh();
+  });
+  await refresh();
 }
 </script></body></html>

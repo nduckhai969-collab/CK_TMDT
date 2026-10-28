@@ -10,10 +10,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Design System CSS -->
   <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
   <style>
     /* Top Header & Navigation Redesign */
     .top-header {
@@ -402,8 +399,8 @@
       <div class="sidebar-profile">
         <div class="avatar">--</div>
         <div class="profile-info">
-          <div class="profile-name">Nguyễn Văn Pro</div>
-          <div class="profile-role">Senior UI/UX & Web Dev</div>
+          <div class="profile-name">Đang tải hồ sơ...</div>
+          <div class="profile-role"></div>
         </div>
       </div>
     </aside>
@@ -444,7 +441,7 @@
           <button class="btn btn-outline btn-sm" id="btnPreviewPublic" onclick="previewPublicProfile()">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Xem Trước
           </button>
-          <button class="btn btn-primary btn-sm" onclick="showToast('Đã lưu tất cả thay đổi cấu hình thành công!')">
+            <button class="btn btn-primary btn-sm" onclick="saveProfileChanges()">
             <i class="fa-solid fa-check"></i> Lưu Cấu Hình
           </button>
         </div>
@@ -508,25 +505,23 @@
 
               <div>
                 <div class="profile-title-row">
-                  <span class="profile-name-lg" id="viewName">Nguyễn Văn Pro</span>
+                  <span class="profile-name-lg" id="viewName">Đang tải hồ sơ...</span>
                   <span class="badge badge-success">
-                    <i class="fa-solid fa-shield-halved"></i> Đã Xác Thực Danh Tính
+                    <i class="fa-solid fa-shield-halved"></i> <span id="profileIdentityBadge">Chưa xác minh</span>
                   </span>
                   <span class="badge badge-warning">
                     <i class="fa-solid fa-crown"></i> VIP Partner 5⭐
                   </span>
                 </div>
 
-                <div class="profile-headline" id="viewHeadline">
-                  Senior UI/UX Designer & Fullstack Web Developer • 6+ Năm Kinh Nghiệm
-                </div>
+                <div class="profile-headline" id="viewHeadline">Chưa cập nhật chức danh</div>
 
                 <div class="profile-meta-tags">
-                  <span><i class="fa-solid fa-location-dot"></i> <span id="viewLocation">Cầu Giấy, Hà Nội</span></span>
-                  <span><i class="fa-solid fa-language"></i> Tiếng Việt (Bản ngữ), Tiếng Anh (IELTS 7.0)</span>
-                  <span><i class="fa-solid fa-envelope"></i> <span id="viewEmail">pro.nguyen@skillrental.vn</span></span>
-                  <span><i class="fa-solid fa-phone"></i> <span id="viewPhone">0987.654.321</span></span>
-                  <span><i class="fa-solid fa-clock"></i> <span id="viewJoinDate">Tham gia: Tháng 03/2024</span></span>
+                  <span><i class="fa-solid fa-location-dot"></i> <span id="viewLocation">Chưa cập nhật địa điểm</span></span>
+                  <span id="viewLanguagesWrap" style="display:none;"><i class="fa-solid fa-language"></i> <span id="viewLanguages"></span></span>
+                  <span><i class="fa-solid fa-envelope"></i> <span id="viewEmail">Đang tải...</span></span>
+                  <span><i class="fa-solid fa-phone"></i> <span id="viewPhone">Chưa cập nhật số điện thoại</span></span>
+                  <span><i class="fa-solid fa-clock"></i> <span id="viewJoinDate">Chưa có thông tin ngày tham gia</span></span>
                 </div>
 
                 <!-- Completeness Progress -->
@@ -534,11 +529,11 @@
                   <div style="display:flex; align-items:center; gap: 12px; flex:1;">
                     <div style="font-weight: 700; font-size: 13px; color: var(--secondary);">Mức độ hoàn thiện hồ sơ:</div>
                     <div class="progress-bar">
-                      <div class="progress-bar-fill" style="width: 95%;"></div>
+                    <div class="progress-bar-fill" id="profileCompletenessBar" style="width: 0%;"></div>
                     </div>
-                    <span style="font-weight: 800; color: var(--primary); font-size: 14px;">95%</span>
+                    <span id="profileCompletenessValue" style="font-weight: 800; color: var(--primary); font-size: 14px;">0%</span>
                   </div>
-                  <span style="font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-circle-check" style="color: var(--primary);"></i> Đủ điều kiện nhận huy hiệu Top Provider</span>
+                  <span id="profileCompletenessHint" style="font-size: 12px; color: var(--text-muted);">Hoàn thiện hồ sơ để khách hàng hiểu rõ hơn về bạn.</span>
                 </div>
               </div>
             </div>
@@ -549,7 +544,7 @@
             <div class="stat-card">
               <div>
                 <div class="stat-label">Đánh Giá Uy Tín</div>
-                <div class="stat-value" id="statRatingDisplay">4.9 ⭐ <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">(128)</span></div>
+                <div class="stat-value" id="statRatingDisplay">Chưa có đánh giá</div>
               </div>
               <div class="stat-icon" style="background-color: var(--warning-light); color: #B45309;">
                 <i class="fa-solid fa-star"></i>
@@ -559,7 +554,7 @@
             <div class="stat-card">
               <div>
                 <div class="stat-label">Tỷ Lệ Phản Hồi</div>
-                <div class="stat-value">99% <span style="font-size: 12px; font-weight: 500; color: var(--primary);">&lt; 15 phút</span></div>
+                <div class="stat-value" id="statResponseRateDisplay">—</div>
               </div>
               <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);">
                 <i class="fa-solid fa-reply-all"></i>
@@ -569,7 +564,7 @@
             <div class="stat-card">
               <div>
                 <div class="stat-label">Đơn Hàng Hoàn Tất</div>
-                <div class="stat-value" id="statOrdersDisplay">142 <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">dự án</span></div>
+                <div class="stat-value" id="statOrdersDisplay">0 dự án</div>
               </div>
               <div class="stat-icon" style="background-color: var(--info-light); color: var(--info);">
                 <i class="fa-solid fa-circle-check"></i>
@@ -579,7 +574,7 @@
             <div class="stat-card">
               <div>
                 <div class="stat-label">Đúng Hạn Cam Kết</div>
-                <div class="stat-value">98.6%</div>
+                <div class="stat-value" id="statOnTimeRateDisplay">—</div>
               </div>
               <div class="stat-icon" style="background-color: var(--primary-light); color: var(--primary);">
                 <i class="fa-solid fa-calendar-check"></i>
@@ -596,42 +591,15 @@
                 <button class="btn btn-outline btn-sm" onclick="openModal('editProfileModal')"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>
               </div>
               
-              <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);" id="viewBio">
-                <p style="margin-bottom: 12px;">
-                  Xin chào! Tôi là <strong>Nguyễn Văn Pro</strong>, một Chuyên gia Thiết kế UI/UX và Lập trình viên Frontend với hơn 6 năm kinh nghiệm thực chiến trong việc xây dựng các ứng dụng web và mobile chất lượng cao.
-                </p>
-                <p style="margin-bottom: 12px;">
-                  Thế mạnh lớn nhất của tôi là khả năng chuyển hóa ý tưởng kinh doanh thành các giao diện số trực quan, chuẩn UX người dùng và triển khai mã nguồn sạch (Clean Code), tối ưu hiệu năng và chuẩn SEO trên các nền tảng React, Next.js và Tailwind CSS.
-                </p>
-                <p>
-                  Tôi luôn cam kết đúng tiến độ 100%, đồng hành hỗ trợ kỹ thuật tận tâm và mang lại giá trị cao nhất cho khách hàng của mình trên nền tảng SkillRental.
-                </p>
-              </div>
+              <div style="font-size: 14px; line-height: 1.6; color: var(--text-main);" id="viewBio">Chưa có phần giới thiệu.</div>
 
               <!-- Education & Experience -->
-              <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+              <div id="experienceSection" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color); display:none;">
                 <div style="font-weight: 700; font-size: 15px; margin-bottom: 14px; color: var(--secondary);">
                   <i class="fa-solid fa-briefcase" style="color: var(--primary);"></i> Kinh Nghiệm Làm Việc & Học Vấn
                 </div>
                 
-                <div style="display: flex; flex-direction: column; gap: 14px;">
-                  <div style="display:flex; gap: 12px;">
-                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px;"></div>
-                    <div>
-                      <div style="font-weight: 600; font-size: 14px;">Lead Product Designer & Frontend Architect • Freelance / Agency</div>
-                      <div style="font-size: 12px; color: var(--text-muted);">2021 - Hiện tại (3+ năm)</div>
-                      <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Chủ trì thiết kế và triển khai hơn 40 dự án SaaS, sàn thương mại điện tử và cổng thông tin doanh nghiệp.</div>
-                    </div>
-                  </div>
-
-                  <div style="display:flex; gap: 12px;">
-                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px;"></div>
-                    <div>
-                      <div style="font-weight: 600; font-size: 14px;">Kỹ sư Công Nghệ Thông Tin • Đại học Bách Khoa Hà Nội</div>
-                      <div style="font-size: 12px; color: var(--text-muted);">2015 - 2020 • Tốt nghiệp loại Giỏi</div>
-                    </div>
-                  </div>
-                </div>
+                <div id="experienceList" style="display: flex; flex-direction: column; gap: 14px;"></div>
               </div>
             </div>
 
@@ -644,19 +612,19 @@
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size: 13px;"><i class="fa-solid fa-id-badge" style="color: var(--primary); margin-right: 8px;"></i> CCCD / Hộ chiếu:</span>
-                    <span class="badge badge-success"><span class="badge-dot"></span> Đã xác thực</span>
+                    <span class="badge badge-neutral" id="identityVerificationBadge">Chưa xác minh</span>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size: 13px;"><i class="fa-solid fa-phone" style="color: var(--primary); margin-right: 8px;"></i> Số điện thoại:</span>
-                    <span class="badge badge-success"><span class="badge-dot"></span> 0987***321</span>
+                    <span class="badge badge-neutral" id="verifiedPhoneValue">Chưa cập nhật</span>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size: 13px;"><i class="fa-solid fa-envelope" style="color: var(--primary); margin-right: 8px;"></i> Email chính chủ:</span>
-                    <span class="badge badge-success"><span class="badge-dot"></span> Đã xác thực</span>
+                    <span class="badge badge-neutral" id="verifiedEmailBadge">Chưa xác minh</span>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size: 13px;"><i class="fa-solid fa-building-columns" style="color: var(--primary); margin-right: 8px;"></i> Tài khoản ngân hàng:</span>
-                    <span class="badge badge-success"><span class="badge-dot"></span> MB Bank</span>
+                    <span class="badge badge-neutral" id="bankAccountBadge">Chưa cập nhật</span>
                   </div>
                 </div>
               </div>
@@ -665,20 +633,7 @@
                 <div class="card-header">
                   <div class="card-title"><i class="fa-solid fa-share-nodes" style="color: var(--primary);"></i> Liên Kết Portfolio</div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                  <a href="https://github.com" target="_blank" class="btn btn-outline btn-sm" style="justify-content: flex-start; gap: 10px;">
-                    <i class="fa-brands fa-github" style="font-size: 16px; width: 18px;"></i> github.com/nguyenvanpro
-                  </a>
-                  <a href="https://behance.net" target="_blank" class="btn btn-outline btn-sm" style="justify-content: flex-start; gap: 10px;">
-                    <i class="fa-brands fa-behance" style="font-size: 16px; width: 18px; color: #0057ff;"></i> behance.net/prodesigner
-                  </a>
-                  <a href="https://linkedin.com" target="_blank" class="btn btn-outline btn-sm" style="justify-content: flex-start; gap: 10px;">
-                    <i class="fa-brands fa-linkedin" style="font-size: 16px; width: 18px; color: #0a66c2;"></i> linkedin.com/in/pro-nguyen
-                  </a>
-                  <a href="https://myportfolio.vn" target="_blank" class="btn btn-outline btn-sm" style="justify-content: flex-start; gap: 10px;">
-                    <i class="fa-solid fa-globe" style="font-size: 16px; width: 18px; color: var(--primary);"></i> https://nguyenvanpro.dev
-                  </a>
-                </div>
+                <div id="portfolioLinks" style="display: flex; flex-direction: column; gap: 10px;"><span style="color:var(--text-muted);font-size:13px;">Chưa có liên kết portfolio.</span></div>
               </div>
             </div>
           </div>
@@ -712,183 +667,29 @@
               <div class="card-title">
                 <i class="fa-solid fa-star" style="color: var(--primary);"></i> Kỹ Năng Chuyên Môn Cốt Lõi (Primary Skills)
               </div>
-              <span class="badge badge-success">4 Kỹ năng đã xác thực</span>
+              <span class="badge badge-neutral" id="primarySkillsCount">0 kỹ năng</span>
             </div>
 
-            <div class="grid-2" id="primarySkillsList">
-              
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name">
-                    <i class="fa-brands fa-figma" style="color: #F24E1E; font-size: 18px;"></i>
-                    UI/UX Design & Prototyping (Figma)
-                  </div>
-                  <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
-                    <span class="skill-badge-level level-expert">Chuyên gia (Expert)</span>
-                    <span class="skill-test-score"><i class="fa-solid fa-circle-check"></i> Sàn xác thực 96/100</span>
-                  </div>
-                </div>
-                <div style="display:flex; gap: 6px;">
-                  <button class="btn btn-outline btn-sm" style="padding: 0 10px;" onclick="showToast('Đã mở chỉnh sửa kỹ năng Figma!')"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn btn-outline btn-sm" style="padding: 0 10px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </div>
-
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name">
-                    <i class="fa-brands fa-react" style="color: #61DAFB; font-size: 18px;"></i>
-                    ReactJS & Next.js Framework
-                  </div>
-                  <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
-                    <span class="skill-badge-level level-expert">Chuyên gia (Expert)</span>
-                    <span class="skill-test-score"><i class="fa-solid fa-circle-check"></i> Sàn xác thực 92/100</span>
-                  </div>
-                </div>
-                <div style="display:flex; gap: 6px;">
-                  <button class="btn btn-outline btn-sm" style="padding: 0 10px;" onclick="showToast('Đang cập nhật kỹ năng!')"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn btn-outline btn-sm" style="padding: 0 10px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </div>
-
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name">
-                    <i class="fa-brands fa-html5" style="color: #E34F26; font-size: 18px;"></i>
-                    HTML5, CSS3, Tailwind CSS & SCSS
-                  </div>
-                  <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
-                    <span class="skill-badge-level level-expert">Chuyên gia (Expert)</span>
-                    <span class="skill-test-score"><i class="fa-solid fa-circle-check"></i> Sàn xác thực 98/100</span>
-                  </div>
-                </div>
-                <div style="display:flex; gap: 6px;">
-                  <button class="btn btn-outline btn-sm" style="padding: 0 10px;"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn btn-outline btn-sm" style="padding: 0 10px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </div>
-
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name">
-                    <i class="fa-brands fa-js" style="color: #F7DF1E; font-size: 18px;"></i>
-                    TypeScript & Modern JavaScript (ES6+)
-                  </div>
-                  <div style="display:flex; gap: 8px; align-items:center; margin-top: 4px;">
-                    <span class="skill-badge-level level-intermediate">Thành thạo (Intermediate)</span>
-                    <span class="skill-test-score"><i class="fa-solid fa-circle-check"></i> Sàn xác thực 88/100</span>
-                  </div>
-                </div>
-                <div style="display:flex; gap: 6px;">
-                  <button class="btn btn-outline btn-sm" style="padding: 0 10px;"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn btn-outline btn-sm" style="padding: 0 10px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </div>
-
-            </div>
+            <div class="grid-2" id="primarySkillsList"></div>
           </div>
 
           <!-- Secondary & Complementary Skills -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">
-                <i class="fa-solid fa-layer-group" style="color: var(--primary);"></i> Kỹ Năng Bổ Trợ (Secondary Skills)
-              </div>
+              <div class="card-title"><i class="fa-solid fa-layer-group" style="color: var(--primary);"></i> Kỹ Năng Bổ Trợ (Secondary Skills)</div>
             </div>
-
-            <div class="grid-3" id="secondarySkillsList">
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name"><i class="fa-solid fa-mobile-screen"></i> Responsive Mobile App</div>
-                  <span class="skill-badge-level level-expert" style="margin-top: 4px; width: fit-content;">Chuyên gia</span>
-                </div>
-                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-              </div>
-
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name"><i class="fa-solid fa-users-viewfinder"></i> User Research & Usability</div>
-                  <span class="skill-badge-level level-intermediate" style="margin-top: 4px; width: fit-content;">Thành thạo</span>
-                </div>
-                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-              </div>
-
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name"><i class="fa-solid fa-gauge-high"></i> SEO & Web Performance</div>
-                  <span class="skill-badge-level level-intermediate" style="margin-top: 4px; width: fit-content;">Thành thạo</span>
-                </div>
-                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-              </div>
-
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name"><i class="fa-brands fa-git-alt"></i> Git, GitHub & CI/CD</div>
-                  <span class="skill-badge-level level-expert" style="margin-top: 4px; width: fit-content;">Chuyên gia</span>
-                </div>
-                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-              </div>
-
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name"><i class="fa-solid fa-network-wired"></i> RESTful API & GraphQL</div>
-                  <span class="skill-badge-level level-intermediate" style="margin-top: 4px; width: fit-content;">Thành thạo</span>
-                </div>
-                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-              </div>
-
-              <div class="skill-card-item">
-                <div class="skill-info">
-                  <div class="skill-name"><i class="fa-solid fa-palette"></i> Design System Architecture</div>
-                  <span class="skill-badge-level level-expert" style="margin-top: 4px; width: fit-content;">Chuyên gia</span>
-                </div>
-                <button class="btn btn-outline btn-sm" style="padding: 0 8px; color: var(--danger);" onclick="deleteSkill(this)"><i class="fa-solid fa-trash"></i></button>
-              </div>
-            </div>
+            <div class="grid-3" id="secondarySkillsList"></div>
           </div>
 
           <!-- Professional Certifications -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">
-                <i class="fa-solid fa-certificate" style="color: var(--primary);"></i> Chứng Chỉ Nghề Nghiệp Quốc Tế (Certifications)
-              </div>
-              <button class="btn btn-outline btn-sm" onclick="showToast('Đang mở form tải lên chứng chỉ mới!')">
-                <i class="fa-solid fa-file-arrow-up"></i> Tải Lên Chứng Chỉ Mới
-              </button>
+              <div class="card-title"><i class="fa-solid fa-certificate" style="color: var(--primary);"></i> Chứng Chỉ Nghề Nghiệp Quốc Tế (Certifications)</div>
             </div>
-
-            <div class="grid-2">
-              <div class="cert-item-card">
-                <div class="cert-icon-box"><i class="fa-brands fa-google"></i></div>
-                <div class="cert-content">
-                  <div class="cert-name">Google UX Design Professional Certificate</div>
-                  <div class="cert-org">Cấp bởi Coursera & Google Career Certificates</div>
-                  <div class="cert-meta">
-                    <span><i class="fa-regular fa-calendar"></i> Cấp: 10/2023</span>
-                    <span><i class="fa-solid fa-hashtag"></i> ID: GOOG-UX-88421</span>
-                  </div>
-                </div>
-                <span class="badge badge-success"><span class="badge-dot"></span> Đã xác thực</span>
-              </div>
-
-              <div class="cert-item-card">
-                <div class="cert-icon-box"><i class="fa-brands fa-meta"></i></div>
-                <div class="cert-content">
-                  <div class="cert-name">Meta Front-End Developer Professional Certificate</div>
-                  <div class="cert-org">Cấp bởi Meta & Coursera Authorized</div>
-                  <div class="cert-meta">
-                    <span><i class="fa-regular fa-calendar"></i> Cấp: 04/2024</span>
-                    <span><i class="fa-solid fa-hashtag"></i> ID: META-FE-99302</span>
-                  </div>
-                </div>
-                <span class="badge badge-success"><span class="badge-dot"></span> Đã xác thực</span>
-              </div>
-            </div>
+            <div class="grid-2" id="certificationsList"><div style="color:var(--text-muted);font-size:13px;">Chưa có chứng chỉ được cập nhật.</div></div>
           </div>
 
-        </div>
-
+                  </div>
 
         <!-- ===================================================================
              3. DỊCH VỤ & BẢNG GIÁ (SERVICE & PRICE)
@@ -900,11 +701,11 @@
             <div>
               <div style="display:flex; align-items:center; gap: 10px; margin-bottom: 6px;">
                 <span class="badge badge-neutral">HÌNH THỨC THUÊ THEO GIỜ</span>
-                <span class="badge badge-success"><span class="badge-dot"></span> Đang bật nhận việc theo giờ</span>
+                <span class="badge badge-neutral" id="hourlyStatusBadge">Chưa bật nhận việc theo giờ</span>
               </div>
-              <div class="hourly-rate-val" id="displayHourlyRate">350.000đ <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;">/ giờ làm việc</span></div>
+              <div class="hourly-rate-val" id="displayHourlyRate">Chưa cập nhật đơn giá</div>
               <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-                Cam kết tối thiểu 5 giờ/tuần • Tính công qua công cụ Timer & Báo cáo kết quả sàn SkillRental
+                <span id="weeklyHoursSummary">Chưa thiết lập số giờ tối thiểu mỗi tuần.</span>
               </div>
             </div>
 
@@ -914,7 +715,7 @@
                 <div style="font-size: 11px; color: var(--text-muted);">Bật để hiển thị giá theo giờ</div>
               </div>
               <label class="toggle-switch">
-                <input type="checkbox" checked onchange="showToast('Đã cập nhật trạng thái nhận việc theo giờ!')">
+                <input type="checkbox" id="hourlyAvailabilityToggle" onchange="toggleHourlyAvailability(this)">
                 <span class="slider"></span>
               </label>
               <button class="btn btn-outline btn-sm" onclick="openModal('editHourlyModal')">
@@ -1027,52 +828,7 @@
                     <th>Chủ Nhật</th>
                   </tr>
                 </thead>
-                <tbody id="scheduleTableBody">
-                  <!-- Row 1: Sáng -->
-                  <tr>
-                    <td class="schedule-time-col">
-                      <div style="font-weight: 700; color: var(--secondary);"><i class="fa-solid fa-sun" style="color: #F59E0B; margin-right: 4px;"></i> Ca Sáng</div>
-                      <div style="font-size: 11px; color: var(--text-muted);">08:00 - 12:00</div>
-                    </td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                  </tr>
-
-                  <!-- Row 2: Chiều -->
-                  <tr>
-                    <td class="schedule-time-col">
-                      <div style="font-weight: 700; color: var(--secondary);"><i class="fa-solid fa-cloud-sun" style="color: #3B82F6; margin-right: 4px;"></i> Ca Chiều</div>
-                      <div style="font-size: 11px; color: var(--text-muted);">13:30 - 17:30</div>
-                    </td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                  </tr>
-
-                  <!-- Row 3: Tối -->
-                  <tr>
-                    <td class="schedule-time-col">
-                      <div style="font-weight: 700; color: var(--secondary);"><i class="fa-solid fa-moon" style="color: #6366F1; margin-right: 4px;"></i> Ca Tối</div>
-                      <div style="font-size: 11px; color: var(--text-muted);">19:00 - 22:00</div>
-                    </td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                    <td><div class="slot-cell available" onclick="toggleSlot(this)">Rảnh (Sẵn sàng)</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                    <td><div class="slot-cell busy" onclick="toggleSlot(this)">Bận</div></td>
-                  </tr>
-                </tbody>
+                <tbody id="scheduleTableBody"></tbody>
               </table>
             </div>
 
@@ -1108,7 +864,7 @@
                 <button type="button" class="btn btn-outline btn-sm" onclick="changeProviderMonth(-1)" title="Tháng trước">
                   <i class="fa-solid fa-chevron-left"></i>
                 </button>
-                <span id="providerMonthTitle" style="font-weight: 800; font-size: 15px; color: var(--secondary); min-width: 140px; text-align: center;">Tháng 10, 2026</span>
+                <span id="providerMonthTitle" style="font-weight: 800; font-size: 15px; color: var(--secondary); min-width: 140px; text-align: center;"></span>
                 <button type="button" class="btn btn-outline btn-sm" onclick="changeProviderMonth(1)" title="Tháng sau">
                   <i class="fa-solid fa-chevron-right"></i>
                 </button>
@@ -1165,9 +921,10 @@
 
               <div class="form-group">
                 <label class="form-label">Thời gian báo trước tối thiểu (Minimum Lead Time)</label>
-                <select class="form-control" onchange="showToast('Đã cập nhật thời gian báo trước!')">
+                <select class="form-control" id="inputLeadTime" onchange="saveBookingRules()">
+                  <option value="">Chọn thời gian báo trước</option>
                   <option value="12">12 Giờ (Chỉ áp dụng với đơn khẩn cấp)</option>
-                  <option value="24" selected>24 Giờ (Khuyên dùng để chuẩn bị trao đổi)</option>
+                  <option value="24">24 Giờ</option>
                   <option value="48">48 Giờ (2 Ngày làm việc)</option>
                   <option value="72">3 Ngày làm việc</option>
                 </select>
@@ -1179,11 +936,11 @@
               <div class="form-group">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
                   <label class="form-label" style="margin-bottom:0;">Số lượng dự án nhận đồng thời tối đa</label>
-                  <span id="maxProjectValue" style="font-weight: 800; color: var(--primary); font-size: 16px;">3 Dự án</span>
+                  <span id="maxProjectValue" style="font-weight: 800; color: var(--primary); font-size: 16px;">Chưa thiết lập</span>
                 </div>
-                <input type="range" min="1" max="10" value="3" class="form-control" style="padding: 0; cursor: pointer;" oninput="document.getElementById('maxProjectValue').innerText = this.value + ' Dự án';">
+                <input type="range" id="inputMaxProjects" min="1" max="10" value="1" class="form-control" style="padding: 0; cursor: pointer;" oninput="this.dataset.touched='true'; document.getElementById('maxProjectValue').innerText = this.value + ' Dự án';" onchange="saveBookingRules()">
                 <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                  Khi đạt ngưỡng 3 dự án đang thực hiện, hệ thống tự động chuyển trạng thái sang "Nhận việc có giới hạn".
+                  Khi đạt ngưỡng dự án đã thiết lập, hệ thống có thể chuyển trạng thái sang "Nhận việc có giới hạn".
                 </div>
               </div>
             </div>
@@ -1209,7 +966,7 @@
 
               <div class="form-group">
                 <label class="form-label">Lời nhắn tự động gửi khách hàng khi nhắn tin</label>
-                <textarea class="form-control" id="inputVacationMsg" style="min-height: 80px;">Chào bạn! Hiện tại tôi đang trong kỳ nghỉ phép. Tôi sẽ phản hồi tin nhắn của bạn ngay khi quay lại làm việc. Cảm ơn bạn!</textarea>
+                <textarea class="form-control" id="inputVacationMsg" style="min-height: 80px;" placeholder="Nhập lời nhắn tự động"></textarea>
               </div>
 
               <button class="btn btn-outline" style="width:100%;" onclick="saveVacationSchedule()">
@@ -1245,22 +1002,22 @@
         <div class="grid-2">
           <div class="form-group">
             <label class="form-label">Họ và tên hiển thị</label>
-            <input type="text" class="form-control" id="inputName" value="Nguyễn Văn Pro">
+            <input type="text" class="form-control" id="inputName" value="" placeholder="Nhập họ và tên">
           </div>
           <div class="form-group">
             <label class="form-label">Số điện thoại liên hệ</label>
-            <input type="tel" class="form-control" id="inputPhone" placeholder="0987.654.321">
+            <input type="tel" class="form-control" id="inputPhone" placeholder="Nhập số điện thoại">
           </div>
         </div>
         <div class="grid-2">
           <div class="form-group">
             <label class="form-label">Chức danh chuyên môn (Headline)</label>
-            <input type="text" class="form-control" id="inputHeadline" value="Senior UI/UX Designer & Fullstack Web Developer • 6+ Năm Kinh Nghiệm">
+            <input type="text" class="form-control" id="inputHeadline" placeholder="Nhập chức danh chuyên môn">
           </div>
           <div class="form-group">
             <label class="form-label">Lĩnh vực hoạt động</label>
             <select class="form-control" id="inputCategory">
-              <option value="IT">Lập trình & CNTT (IT)</option>
+              <option value="">Chọn lĩnh vực hoạt động</option><option value="IT">Lập trình & CNTT (IT)</option>
               <option value="Design">Thiết kế đồ họa (Design)</option>
               <option value="Writing">Viết lách & Dịch thuật (Writing)</option>
               <option value="Marketing">Marketing & Bán hàng</option>
@@ -1271,7 +1028,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Địa điểm làm việc</label>
-          <input type="text" class="form-control" id="inputLocation" value="Cầu Giấy, Hà Nội, Việt Nam">
+          <input type="text" class="form-control" id="inputLocation" placeholder="Nhập địa điểm làm việc">
         </div>
         <div class="grid-2">
           <div class="form-group">
@@ -1295,7 +1052,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Mô tả bản thân & Kinh nghiệm (Bio)</label>
-          <textarea class="form-control" id="inputBio" style="min-height: 120px;">Tôi là Nguyễn Văn Pro, chuyên gia Thiết kế UI/UX và Lập trình viên Frontend với hơn 6 năm kinh nghiệm thực chiến. Thế mạnh lớn nhất của tôi là chuyển hóa ý tưởng thành giao diện trực quan và triển khai Clean Code chuẩn SEO.</textarea>
+          <textarea class="form-control" id="inputBio" style="min-height: 120px;" placeholder="Giới thiệu về bản thân và kinh nghiệm của bạn"></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -1331,14 +1088,15 @@
         <div class="form-group">
           <label class="form-label">Mức độ thành thạo</label>
           <select class="form-control" id="inputSkillLevel">
+            <option value="" selected>Chọn mức độ thành thạo</option>
             <option value="expert">Chuyên gia (Expert - 4+ năm)</option>
-            <option value="intermediate" selected>Thành thạo (Intermediate - 2-4 năm)</option>
+            <option value="intermediate">Thành thạo (Intermediate - 2-4 năm)</option>
             <option value="beginner">Cơ bản (Beginner - &lt; 2 năm)</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Số năm kinh nghiệm với kỹ năng này</label>
-          <input type="number" class="form-control" value="3" min="1" max="20">
+          <input type="number" class="form-control" placeholder="Số năm kinh nghiệm" min="1" max="20">
         </div>
       </div>
       <div class="modal-footer">
@@ -1378,7 +1136,7 @@
         <div class="form-group">
           <label class="form-label">Lĩnh vực (Category)</label>
           <select class="form-control" id="inputPackageCategory">
-            <option value="IT">Lập trình & CNTT (IT)</option>
+            <option value="">Chọn lĩnh vực hoạt động</option><option value="IT">Lập trình & CNTT (IT)</option>
             <option value="Design">Thiết kế đồ họa (Design)</option>
             <option value="Writing">Viết lách & Dịch thuật (Writing)</option>
             <option value="Marketing">Marketing & Bán hàng</option>
@@ -1388,14 +1146,11 @@
         </div>
         <div style="display:none;" class="form-group">
           <label class="form-label">Số lần chỉnh sửa miễn phí</label>
-          <input type="number" class="form-control" value="5">
+          <input type="number" class="form-control" placeholder="Số lần chỉnh sửa miễn phí">
         </div>
         <div class="form-group">
           <label class="form-label">Danh sách quyền lợi / Deliverables (Mỗi dòng 1 ý)</label>
-          <textarea class="form-control" id="inputPackageDesc" style="min-height: 100px;">Thiết kế 5 - 7 Trang giao diện hoàn chỉnh
-Tích hợp Khung Chat, Form Báo Giá & Bản đồ
-Chuẩn SEO On-page & Tốc độ tải trang &lt; 2s
-Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
+          <textarea class="form-control" id="inputPackageDesc" style="min-height: 100px;" placeholder="Mô tả các hạng mục sẽ bàn giao"></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -1421,12 +1176,12 @@ Bàn giao toàn bộ File gốc Figma bản quyền</textarea>
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">Đơn giá làm việc mỗi giờ (VNĐ)</label>
-          <input type="text" class="form-control" id="inputHourlyRateVal" data-thousands inputmode="numeric" value="350.000" autocomplete="off">
+          <input type="text" class="form-control" id="inputHourlyRateVal" data-thousands inputmode="numeric" value="" placeholder="Nhập đơn giá" autocomplete="off">
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Mức giá đề xuất sàn SkillRental: 250.000đ - 500.000đ/giờ</div>
         </div>
         <div class="form-group">
           <label class="form-label">Số giờ cam kết tối thiểu mỗi tuần</label>
-          <input type="number" class="form-control" value="5" min="1">
+          <input type="number" class="form-control" id="inputMinWeeklyHours" placeholder="Số giờ mỗi tuần" min="1">
         </div>
       </div>
       <div class="modal-footer">

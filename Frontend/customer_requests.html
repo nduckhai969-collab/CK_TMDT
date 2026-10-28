@@ -257,11 +257,7 @@
   </div>
 
   <div id="footer-placeholder"></div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
   <script src="js/number-format.js"></script>
   <script src="customer.js"></script>
   <script>
@@ -462,7 +458,7 @@
         const applicantsModalWasOpen = document.getElementById('applicantsModal').style.display === 'flex';
         const detailJobId = detailModalWasOpen ? currentDetailJob?.id : null;
         const applicantsJobId = applicantsModalWasOpen ? currentModalJob?.id : null;
-        // Lấy ID hồ sơ từ backend theo Firebase token, tránh dùng ID cũ trong localStorage.
+        // Lấy ID hồ sơ từ backend theo MySQL access token, tránh dùng ID cũ trong localStorage.
         const profileRes = await apiRequest('/api/auth/me');
         if (!profileRes.success || !profileRes.user || profileRes.user.role !== 'Customer') {
           throw new Error(profileRes.message || 'Không xác định được tài khoản khách hàng hiện tại.');

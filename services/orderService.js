@@ -114,30 +114,32 @@ function processProgressOrder(orderId, userId, payload) {
 // ─── REFUND HELPER ────────────────────────────────────────────────────────────
 
 function refundCustomer(order, amountOverride = null) {
-  const users = db.getCollection('users');
-  const customer = users.find(u => u.id === order.customerId);
+  const users = db.getCollection('users') || [];
+  const customer = users.find(u => u.id === order.customerId || u.uid === order.customerId);
   const amount = amountOverride !== null
     ? Number(amountOverride)
     : (Number(order.escrowDeposit) || Number(order.price) || 0);
 
-  if (customer && Number.isFinite(amount) && amount > 0) {
-    customer.balance = (Number(customer.balance) || 0) + amount;
-    db.saveCollection('users', users);
-
-    const transactions = db.getCollection('walletTransactions') || [];
-    transactions.unshift({
-      id: `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      userId: customer.id,
-      type: 'refund',
-      amount,
-      status: 'completed',
-      createdAt: formatDateTime(new Date()),
-      description: `Hoàn tiền ký quỹ từ đơn hàng ${order.id}`
-    });
-    db.saveCollection('walletTransactions', transactions);
-    return amount;
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (!customer) {
+    throw httpError(404, `Không tìm thấy tài khoản khách hàng của đơn ${order.id}; chưa thể hoàn tiền.`);
   }
-  return 0;
+
+  customer.balance = (Number(customer.balance) || 0) + amount;
+  db.saveCollection('users', users);
+
+  const transactions = db.getCollection('walletTransactions') || [];
+  transactions.unshift({
+    id: `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    userId: customer.id,
+    type: 'refund',
+    amount,
+    status: 'completed',
+    createdAt: formatDateTime(new Date()),
+    description: `Hoàn tiền ký quỹ từ đơn hàng ${order.id}`
+  });
+  db.saveCollection('walletTransactions', transactions);
+  return amount;
 }
 
 function payProvider(order, amount) {
@@ -223,7 +225,7 @@ function _cancelOrderDirect(orders, order, cancelledBy, reason, doRefund) {
   } else {
     // Customer chủ động hủy (đơn pending, chưa provider tiếp nhận)
     notifyProvider(order.providerId, 'Khách hàng hủy đơn',
-      `Khách hàng đã hủy đơn ${order.id} trước khi bạn tiếp nhận.`,
+      `Khách hàng đã hủy đơn ${order.id} trước khi bạn tiếp nhận. Lý do: "${order.cancelReason || 'Không có lý do'}".`,
       'info', `/bookings.html?orderId=${encodeURIComponent(order.id)}`);
     createNotification(order.customerId, 'Đã hoàn tiền',
       `Đơn hàng ${order.id} đã hủy. Tiền ký quỹ đã hoàn vào ví của bạn.`,
@@ -262,6 +264,18 @@ function processCancelOrder(orderId, userId, userRole, reason) {
     throw httpError(403, 'Bạn không có quyền hủy đơn hàng này');
   }
   if (userRole === 'Provider') assertProviderOwnsOrder(order, userId);
+
+  // Lý do do khách hàng nhập phải được lưu rõ ràng cho cả hủy trực tiếp
+  // lẫn yêu cầu hủy chờ Provider phản hồi.
+  if (userRole === 'Customer') {
+    reason = typeof reason === 'string' ? reason.trim() : '';
+    if (reason.length < 20) {
+      throw httpError(400, 'Vui lòng nêu rõ lý do hủy đơn (ít nhất 20 ký tự).');
+    }
+    if (reason.length > 1000) {
+      throw httpError(400, 'Lý do hủy đơn không được vượt quá 1.000 ký tự.');
+    }
+  }
 
   // Không thể hủy đơn đã kết thúc
   if (['completed', 'cancelled'].includes(order.orderStatus)) {
@@ -487,7 +501,7 @@ function processUndoCancelOrder(orderId, customerId) {
   }
 
   const users = db.getCollection('users') || [];
-  const customer = users.find(user => user.id === customerId);
+  const customer = users.find(user => user.id === customerId || user.uid === customerId);
   if (!customer) throw httpError(404, 'Không tìm thấy tài khoản khách hàng.');
   const refundAmount = Number(order.refundAmount) || 0;
   if (refundAmount > 0) {
@@ -497,7 +511,7 @@ function processUndoCancelOrder(orderId, customerId) {
     const transactions = db.getCollection('walletTransactions') || [];
     transactions.unshift({
       id: `TXN_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      userId: customerId, type: 'refund_reversal', amount: -refundAmount,
+      userId: customer.id, type: 'refund_reversal', amount: -refundAmount,
       status: 'completed', createdAt: formatDateTime(new Date()),
       description: `Thu hồi khoản hoàn tiền khi khôi phục đơn ${order.id}`
     });

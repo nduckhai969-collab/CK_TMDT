@@ -7,7 +7,7 @@ uploads/
 .idea_backup/
 .idea_old/
 
-# Database local cache — không track, dùng Firestore làm nguồn chính
+# Database local cache and backups
 data/database.json
 data/database.json.backup_*
 

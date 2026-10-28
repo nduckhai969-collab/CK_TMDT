@@ -495,6 +495,10 @@ async function syncStateWithServer() {
 // Admin API client methods
 window.adminApi = {
   getDashboard: () => fetch(`${API_BASE}/api/admin/dashboard`).then(r => r.json()),
+  getOrders: () => fetch(`${API_BASE}/api/admin/orders`).then(r => r.json()),
+  getComplaints: () => fetch(`${API_BASE}/api/admin/complaints`).then(r => r.json()),
+  arbitrateCancellation: (id, action, adminNote, refundPercentage) => fetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(id)}/arbitrate-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, adminNote, refundPercentage }) }).then(r => r.json()),
+  getPendingProviders: () => fetch(`${API_BASE}/api/admin/providers/pending`).then(r => r.json()),
   getStatistics: (from, to) => fetch(`${API_BASE}/api/admin/statistics` + (from && to ? `?startDate=${encodeURIComponent(from)}&endDate=${encodeURIComponent(to)}` : '')).then(r => r.json()),
   lockUser: (id, reason, duration) => fetch(`${API_BASE}/api/admin/users/${id}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, duration }) }).then(r => r.json()),
   unlockUser: (id) => fetch(`${API_BASE}/api/admin/users/${id}/unlock`, { method: 'POST' }).then(r => r.json()),
@@ -671,7 +675,7 @@ function showToast(title, message, type = 'success') {
 /**
  * exportDataSimulation — Xuất dữ liệu thực tế từ localStorage ra file CSV
  * Hỗ trợ 3 loại báo cáo: đơn hàng, người dùng, và doanh thu.
- * Không dùng Firebase hay dịch vụ nào bên ngoài.
+ * Không phụ thuộc vào dịch vụ bên ngoài.
  */
 function exportDataSimulation(filename) {
   showToast('Xuất báo cáo (UC-67)', `Đang tạo tệp [${filename}.csv] từ dữ liệu hệ thống...`, 'info');

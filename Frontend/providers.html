@@ -8,10 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
 </head>
 <body>
   <div class="app">
@@ -281,6 +278,7 @@
   <script src="common.js"></script>
   <script>
     let activeApprovalId = null;
+    let pendingProviderApplications = [];
 
     document.addEventListener('DOMContentLoaded', () => {
       renderPendingProviders();
@@ -289,14 +287,24 @@
       setupApprovalEvents();
     });
 
-    function renderPendingProviders() {
-      const state = getAppState();
-      const pending = state.pendingProviders.filter(p => p.status === 'pending');
-      const badge = document.getElementById('tab-badge-pending-prov');
-      if (badge) badge.textContent = pending.length;
-
+    async function renderPendingProviders() {
       const tbody = document.getElementById('pending-prov-tbody');
       if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-secondary)">Đang tải hồ sơ chờ duyệt...</td></tr>`;
+      let pending = [];
+      try {
+        const response = await window.adminApi.getPendingProviders();
+        if (!response.success) throw new Error(response.message || 'Không tải được hồ sơ chờ duyệt.');
+        pending = Array.isArray(response.pendingProviders) ? response.pendingProviders : [];
+        pendingProviderApplications = pending;
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#b91c1c">${error.message || 'Không tải được hồ sơ chờ duyệt.'}</td></tr>`;
+        return;
+      }
+      const badge = document.getElementById('tab-badge-pending-prov');
+      if (badge) badge.textContent = pending.length;
+      const sidebarBadge = document.getElementById('badge-provider-pending');
+      if (sidebarBadge) sidebarBadge.textContent = pending.length;
 
       if (pending.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-secondary);">Tất cả hồ sơ đăng ký đã được duyệt!</td></tr>`;
@@ -314,14 +322,14 @@
               </div>
             </div>
           </td>
-          <td>${p.specialty}</td>
-          <td><strong>${p.cccd}</strong></td>
-          <td>${p.experience}</td>
+          <td>${p.specialty || p.category || 'Chưa khai báo'}</td>
+          <td><strong>${p.cccd || '—'}</strong></td>
+          <td>${p.experience || (Array.isArray(p.skills) ? p.skills.join(', ') : '—')}</td>
           <td>${p.date}</td>
-          <td><span class="badge badge-warning">Chờ thẩm định</span></td>
+          <td><span class="badge ${p.status === 'incomplete' ? 'badge-danger' : 'badge-warning'}">${p.status === 'incomplete' ? 'Chờ Provider hoàn tất hồ sơ' : 'Chờ thẩm định'}</span></td>
           <td style="text-align:right">
-            <button class="btn btn-primary btn-sm" onclick="openApprovalModal('${p.id}')">
-              <span>✓</span> Thẩm định hồ sơ
+            <button class="btn btn-primary btn-sm" ${p.status === 'incomplete' ? 'disabled title="Provider cần hoàn tất hồ sơ trước khi duyệt"' : ''} onclick="openApprovalModal('${p.id}')">
+              <span>✓</span> ${p.status === 'incomplete' ? 'Chưa đủ hồ sơ' : 'Thẩm định hồ sơ'}
             </button>
           </td>
         </tr>
@@ -388,8 +396,7 @@
     }
 
     function openApprovalModal(appId) {
-      const state = getAppState();
-      const prov = state.pendingProviders.find(p => p.id === appId);
+      const prov = pendingProviderApplications.find(p => p.id === appId);
       if (!prov) return;
 
       activeApprovalId = appId;
@@ -403,28 +410,17 @@
         <div class="dispute-box" style="margin-bottom:16px;">
           <div>
             <span class="form-label">Kinh nghiệm thực tế</span>
-            <p>${prov.experience}</p>
+          <p>${prov.experience || (Array.isArray(prov.skills) ? prov.skills.join(', ') : 'Chưa cập nhật')}</p>
           </div>
           <div>
             <span class="form-label">Chứng chỉ chuyên môn</span>
-            <p>${prov.cert}</p>
+          <p>${Array.isArray(prov.cert) ? prov.cert.join(', ') : (prov.cert || 'Chưa cập nhật')}</p>
           </div>
         </div>
 
-        <div class="form-group">
-          <span class="form-label">Giấy tờ tùy thân CCCD / Hộ chiếu (Thẩm định pháp lý)</span>
-          <div class="id-card-preview">
-            <div class="id-card-side">
-              <strong>[MẶT TRƯỚC CCCD]</strong>
-              <span>Số: ${prov.cccd}</span>
-              <p style="color:var(--primary); margin-top:6px;">✓ Đã xác thực OCR hợp lệ</p>
-            </div>
-            <div class="id-card-side">
-              <strong>[MẶT SAU CCCD]</strong>
-              <span>Đặc điểm nhận dạng</span>
-              <p style="color:var(--primary); margin-top:6px;">✓ Dấu vân tay & chip bảo mật</p>
-            </div>
-          </div>
+        <div class="dispute-box">
+          <div><span class="form-label">Khu vực hoạt động</span><p>${prov.location || 'Chưa cập nhật'}</p></div>
+          <div><span class="form-label">Giới thiệu</span><p>${prov.bio || 'Chưa cập nhật'}</p></div>
         </div>
       `;
       openModal('modal-provider-detail');
@@ -432,49 +428,30 @@
 
     function setupApprovalEvents() {
       // Approve provider
-      document.getElementById('approve-prov-btn').addEventListener('click', () => {
+      document.getElementById('approve-prov-btn').addEventListener('click', async () => {
         if (!activeApprovalId) return;
-        const state = getAppState();
-        const prov = state.pendingProviders.find(p => p.id === activeApprovalId);
+        const prov = pendingProviderApplications.find(p => p.id === activeApprovalId);
         if (prov) {
-          prov.status = 'approved';
-          state.users.unshift({
-            id: 'USR' + Math.floor(100 + Math.random() * 900),
-            name: prov.name,
-            email: prov.email,
-            phone: prov.phone,
-            role: 'Provider',
-            joinDate: 'Hôm nay',
-            spentOrEarned: '0đ',
-            status: 'active',
-            lockReason: ''
-          });
-          if (window.adminApi) {
-            window.adminApi.approveProvider(activeApprovalId).catch(console.warn);
-          }
-          saveAppState(state);
+          const result = await window.adminApi.approveProvider(activeApprovalId);
+          if (!result.success) return showToast('Không thể duyệt', result.message || 'Vui lòng thử lại.', 'error');
           closeModal('modal-provider-detail');
-          renderPendingProviders();
+          await renderPendingProviders();
           renderAllProviders();
-          updateSidebarBadges();
-          showToast('Phê duyệt Provider thành công', `Hồ sơ của ${prov.name} đã được cấp quyền nhận đơn trên sàn!`, 'success');
+          showToast('Phê duyệt Provider thành công', `Hồ sơ của ${prov.name} đã được duyệt và hiển thị trên trang tìm Provider.`, 'success');
         }
       });
 
       // Reject provider
-      document.getElementById('reject-prov-btn').addEventListener('click', () => {
+      document.getElementById('reject-prov-btn').addEventListener('click', async () => {
         if (!activeApprovalId) return;
-        const state = getAppState();
-        const prov = state.pendingProviders.find(p => p.id === activeApprovalId);
+        const prov = pendingProviderApplications.find(p => p.id === activeApprovalId);
         if (prov) {
-          prov.status = 'rejected';
-          if (window.adminApi) {
-            window.adminApi.rejectProvider(activeApprovalId).catch(console.warn);
-          }
-          saveAppState(state);
+          const reason = window.prompt('Nhập lý do từ chối hồ sơ (để Provider biết nội dung cần bổ sung):') || '';
+          if (!reason.trim()) return;
+          const result = await window.adminApi.rejectProvider(activeApprovalId, reason.trim());
+          if (!result.success) return showToast('Không thể từ chối', result.message || 'Vui lòng thử lại.', 'error');
           closeModal('modal-provider-detail');
-          renderPendingProviders();
-          updateSidebarBadges();
+          await renderPendingProviders();
           showToast('Từ chối hồ sơ Provider', `Đã yêu cầu ${prov.name} bổ sung hồ sơ hợp lệ.`, 'warning');
         }
       });

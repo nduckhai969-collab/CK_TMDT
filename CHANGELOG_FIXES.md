@@ -5,7 +5,7 @@
   làm đặt hàng, hủy đơn, thông báo, nạp VNPay, checkout giỏ hàng đều trả 500.
   Đã xuất cả hai tên, sửa import, id sinh theo thời gian nên khó trùng.
 - `data/db.js`: thêm `comments`, `notifications`, `walletTransactions`, `bookingLists` vào danh sách collection.
-  Trước đây dữ liệu vẫn ghi lên Firestore nhưng server không nạp lại sau khi khởi động.
+  Trước đây dữ liệu vẫn ghi lên MySQL nhưng server không nạp lại sau khi khởi động.
 
 ## 2. Đơn hàng, hủy đơn, thông báo
 - `services/orderService.js` viết lại: người bán được xác định qua `providers.userId`
@@ -27,7 +27,7 @@
 - `/api/providers/stats` đọc đúng collection `jobRequests`.
 
 ## 4. Thống kê
-- `Frontend/statistics.js` viết lại: sửa lỗi cú pháp, dùng `GET /api/admin/statistics` (dữ liệu Firestore),
+- `Frontend/statistics.js` viết lại: sửa lỗi cú pháp, dùng `GET /api/admin/statistics` (dữ liệu MySQL),
   khoảng ngày tùy chọn, tự gom theo tháng khi khoảng dài, biểu đồ tròn theo cùng khoảng ngày.
 - `common.js`: thêm `adminApi.getStatistics` (trước đây chưa định nghĩa).
 - `adminRoutes.js`: đọc ngày `YYYY-MM-DD` theo giờ địa phương (trước đây ở múi giờ +7 đơn của ngày đầu bị loại).

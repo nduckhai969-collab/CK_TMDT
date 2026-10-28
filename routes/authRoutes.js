@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { randomUUID } = require('crypto');
+const crypto = require('crypto');
+const { randomUUID } = crypto;
+const nodemailer = require('nodemailer');
 const db = require('../data/db');
-const { auth } = require('../firebase');
-const { authenticate, requireSignedIn, requireAdmin } = require('./customerAuth');
+const { signToken, hashPassword, verifyPassword } = require('../utils/authTokens');
+const { requireSignedIn, requireAdmin } = require('./customerAuth');
 
-// Đăng ký / đăng nhập / đăng xuất / quên mật khẩu / gửi email xác nhận
-// do Firebase Authentication (frontend) xử lý. Server chỉ quản lý HỒ SƠ người dùng.
+// Đăng ký và đăng nhập bằng tài khoản lưu trong MySQL.
 
 function publicUser(user) {
   let bal = user.balance;
@@ -32,7 +33,7 @@ function publicUser(user) {
         .filter(t => t.type === 'deposit' || t.type === 'refund')
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
       const totalDeductions = userTxns
-        .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+        .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw' || t.type === 'refund_reversal')
         .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
       bal = Math.max(0, totalDeposits - totalDeductions);
       if (user.balance !== bal) {
@@ -77,6 +78,67 @@ function nextUserId(users) {
   return `USR${String(max + 1).padStart(3, '0')}`;
 }
 
+function dateLabel(date = new Date()) {
+  return String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0') + '/' + date.getFullYear();
+}
+
+async function createProviderProfile(user, dateStr = dateLabel()) {
+  const providers = db.getCollection('providers') || [];
+  const existing = providers.find(item => item.userId === user.id || item.email?.toLowerCase() === user.email?.toLowerCase());
+  if (existing) return;
+  const maxId = providers.reduce((max, item) => Math.max(max, Number((/^PRV(\d+)$/.exec(item.id || '') || [])[1]) || 0), 0);
+  const days = ['T2', 'T3', 'T4', 'T5', 'T6'];
+  providers.unshift({
+    id: 'PRV' + String(maxId + 1).padStart(3, '0'), userId: user.id, name: user.name, email: user.email,
+    phone: user.phone || '', avatar: user.avatar || '', rating: 5, reviews: 0, completedOrders: 0,
+    createdAt: dateStr, verified: false, hourlyRate: null, specialty: '',
+    category: '', skills: [], availabilityStatus: 'inactive', profileCompleted: false,
+    workingHours: 'T2-T7, 08:00-20:00',
+    schedule: { mode: 'ready', slots: days.map(day => ({ day, morning: true, afternoon: true, evening: true })).concat([{ day: 'T7', morning: true, afternoon: true, evening: false }, { day: 'CN', morning: false, afternoon: false, evening: false }]) },
+    dateExceptions: {}
+  });
+  await db.saveCollectionAndWait('providers', providers);
+}
+
+function getMailTransporter() {
+  const smtpUser = String(process.env.SMTP_USER || '').trim();
+  const smtpPassword = String(process.env.SMTP_APP_PASSWORD || '').replace(/\s/g, '');
+  if (!smtpUser || !smtpPassword) throw new Error('SMTP_NOT_CONFIGURED');
+  const port = Number(process.env.SMTP_PORT || 465);
+  return { smtpUser, transporter: nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com', port,
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
+    auth: { user: smtpUser, pass: smtpPassword }
+  }) };
+}
+
+async function sendAccountEmail(to, subject, text, html) {
+  const { smtpUser, transporter } = getMailTransporter();
+  await transporter.sendMail({ from: process.env.SMTP_FROM || `SkillRental <${smtpUser}>`, to, subject, text, html });
+}
+
+async function issueEmailVerification(user) {
+  const existing = db.getCollection('emailVerifications') || [];
+  if (existing.some(item => item.userId === user.id && Date.now() - Date.parse(item.createdAt) < 60000)) return { sent: false, throttled: true };
+  const token = crypto.randomBytes(32).toString('base64url');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const ttlHours = Math.min(Math.max(Number(process.env.EMAIL_VERIFICATION_TTL_HOURS) || 24, 1), 72);
+  const records = existing.filter(item => item.userId !== user.id && Date.parse(item.expiresAt) > Date.now());
+  records.push({ id: tokenHash, userId: user.id, tokenHash, expiresAt: new Date(Date.now() + ttlHours * 3600000).toISOString(), createdAt: new Date().toISOString() });
+  await db.saveCollectionAndWait('emailVerifications', records);
+  const baseUrl = String(process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '');
+  const link = `${baseUrl}/verify.html?mode=verifyEmail&oobCode=${encodeURIComponent(token)}`;
+  try {
+    await sendAccountEmail(user.email, 'Xác nhận email SkillRental',
+      `Xin chào ${user.name},\n\nXác nhận địa chỉ email để kích hoạt tài khoản SkillRental:\n${link}\n\nLiên kết có hiệu lực ${ttlHours} giờ.`,
+      `<p>Xin chào ${String(user.name || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))},</p><p>Nhấn liên kết bên dưới để xác nhận email và kích hoạt tài khoản SkillRental. Liên kết có hiệu lực ${ttlHours} giờ.</p><p><a href="${link}">Xác nhận email</a></p>`);
+    return { sent: true };
+  } catch (error) {
+    await db.saveCollectionAndWait('emailVerifications', records.filter(item => item.tokenHash !== tokenHash)).catch(() => {});
+    throw error;
+  }
+}
+
 function detectImageType(buffer) {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
   if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'png';
@@ -84,128 +146,164 @@ function detectImageType(buffer) {
   return null;
 }
 
-// Tạo hồ sơ sau khi frontend đã tạo tài khoản Firebase (token có thể chưa xác nhận email)
-router.post('/register', authenticate({ allowNoProfile: true, allowUnverified: true }), async (req, res) => {
-  if (req.authUser) {
-    return res.status(409).json({ success: false, message: 'Tài khoản này đã có hồ sơ trên hệ thống!' });
-  }
-
-  const { name, phone, role } = req.body || {};
-  const email = req.firebaseUser.email;
-
-  if (!name || !String(name).trim() || !email) {
-    return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ họ tên và email!' });
-  }
-  if (phone && !/^[0-9+\s().-]{8,16}$/.test(String(phone).trim())) {
-    return res.status(400).json({ success: false, message: 'Số điện thoại không hợp lệ!' });
-  }
-
-  const users = db.getCollection('users');
-  const existingUser = users.find(u => String(u.email || '').toLowerCase() === email.toLowerCase());
-  if (existingUser) {
-    if (!existingUser.uid) {
-      existingUser.uid = req.firebaseUser.uid;
-      if (name) existingUser.name = String(name).trim();
-      if (phone) existingUser.phone = String(phone).trim();
-      if (role === 'Provider' || role === 'Customer') existingUser.role = role;
-      db.saveCollection('users', users);
-
-      try {
-        await auth.setCustomUserClaims(req.firebaseUser.uid, { role: existingUser.role });
-      } catch (err) {
-        console.error('[auth] Không gán được custom claims:', err.message);
-      }
-      return res.status(201).json({
-        success: true,
-        message: 'Đăng ký tài khoản thành công! Vui lòng kiểm tra email để xác nhận.',
-        user: publicUser(existingUser)
-      });
-    }
-    return res.status(409).json({ success: false, message: 'Email này đã được sử dụng trên hệ thống!' });
-  }
-
-  // Chỉ cho phép tự đăng ký Customer hoặc Provider, KHÔNG cho tự chọn Admin
-  const safeRole = role === 'Provider' ? 'Provider' : 'Customer';
-  const now = new Date();
-  const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-
-  const newUser = {
-    id: nextUserId(users),
-    uid: req.firebaseUser.uid,
-    name: String(name).trim(),
-    email,
-    phone: phone ? String(phone).trim() : '',
-    role: safeRole,
-    joinDate: dateStr,
-    spentOrEarned: '0đ',
-    balance: 0,
-    status: 'active',
-    avatar: '',
-    bio: ''
-  };
-
-  users.push(newUser);
-  db.saveCollection('users', users);
-
-  if (safeRole === 'Provider') {
-    const providers = db.getCollection('providers') || [];
-    let prv = providers.find(p => p.userId === newUser.id || (p.email && p.email.toLowerCase() === email.toLowerCase()));
-    if (!prv) {
-      const maxPrv = providers.reduce((m, p) => {
-        const match = /^PRV(\d+)$/.exec(p.id || '');
-        return match ? Math.max(m, parseInt(match[1], 10)) : m;
-      }, 0);
-      const defaultSlots = [
-        { day: 'T2', morning: true, afternoon: true, evening: true },
-        { day: 'T3', morning: true, afternoon: true, evening: true },
-        { day: 'T4', morning: true, afternoon: true, evening: true },
-        { day: 'T5', morning: true, afternoon: true, evening: true },
-        { day: 'T6', morning: true, afternoon: true, evening: true },
-        { day: 'T7', morning: true, afternoon: true, evening: false },
-        { day: 'CN', morning: false, afternoon: false, evening: false }
-      ];
-      prv = {
-        id: `PRV${String(maxPrv + 1).padStart(3, '0')}`,
-        userId: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        avatar: newUser.avatar || '',
-        rating: 5.0,
-        reviews: 0,
-        completedOrders: 0,
-        createdAt: dateStr,
-        verified: false,
-        hourlyRate: 200000,
-        specialty: 'Chuyên gia kỹ năng & Tư vấn',
-        category: 'IT',
-        skills: ['Chuyên môn', 'Làm việc chuyên nghiệp'],
-        availabilityStatus: 'ready',
-        workingHours: 'T2-T7, 08:00-20:00',
-        schedule: { mode: 'ready', slots: defaultSlots },
-        dateExceptions: {}
-      };
-      providers.unshift(prv);
-      db.saveCollection('providers', providers);
-    }
-  }
-
+let googleJwksCache = { keys: [], expiresAt: 0 };
+async function verifyGoogleCredential(token, clientId) {
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return null;
+  let header, claims;
   try {
-    await auth.setCustomUserClaims(req.firebaseUser.uid, { role: safeRole });
-  } catch (err) {
-    console.error('[auth] Không gán được custom claims:', err.message);
+    header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+  } catch (_) { return null; }
+  if (header.alg !== 'RS256' || !header.kid) return null;
+
+  if (Date.now() >= googleJwksCache.expiresAt) {
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+    if (!response.ok) throw new Error('Google public signing keys are unavailable.');
+    const body = await response.json();
+    const cacheControl = response.headers.get('cache-control') || '';
+    const maxAge = Number((/max-age=(\d+)/i.exec(cacheControl) || [])[1] || 300);
+    googleJwksCache = { keys: body.keys || [], expiresAt: Date.now() + Math.min(Math.max(maxAge, 60), 3600) * 1000 };
   }
 
-  res.status(201).json({
-    success: true,
-    message: 'Đăng ký tài khoản thành công! Vui lòng kiểm tra email để xác nhận.',
-    user: publicUser(newUser)
-  });
+  let jwk = googleJwksCache.keys.find(key => key.kid === header.kid && key.use === 'sig');
+  if (!jwk) {
+    googleJwksCache.expiresAt = 0;
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+    if (!response.ok) throw new Error('Google public signing keys are unavailable.');
+    const body = await response.json();
+    googleJwksCache = { keys: body.keys || [], expiresAt: Date.now() + 300000 };
+    jwk = googleJwksCache.keys.find(key => key.kid === header.kid && key.use === 'sig');
+  }
+  if (!jwk) return null;
+
+  const signingInput = Buffer.from(`${parts[0]}.${parts[1]}`);
+  const signature = Buffer.from(parts[2], 'base64url');
+  const publicKey = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  if (!crypto.verify('RSA-SHA256', signingInput, publicKey, signature)) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (!['accounts.google.com', 'https://accounts.google.com'].includes(claims.iss) || claims.aud !== clientId ||
+      !claims.sub || !claims.email || claims.email_verified !== true || !claims.exp || claims.exp <= now ||
+      (claims.iat && claims.iat > now + 60)) return null;
+  return claims;
+}
+
+// Đăng ký tài khoản trong MySQL.
+router.post('/register', async (req, res) => {
+  const { name, email, phone, password, role } = req.body || {};
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!name || !String(name).trim() || !cleanEmail || !password) return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ họ tên, email và mật khẩu!' });
+  if (String(name).trim().length > 100 || cleanEmail.length > 100) return res.status(400).json({ success: false, message: 'Họ tên tối đa 100 ký tự và email tối đa 100 ký tự.' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ success: false, message: 'Địa chỉ email không hợp lệ.' });
+  if (String(password).length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+  if (phone && !/^[0-9+\s().-]{8,16}$/.test(String(phone).trim())) return res.status(400).json({ success: false, message: 'Số điện thoại không hợp lệ!' });
+  const users = db.getCollection('users') || [];
+  if (users.some(user => String(user.email || '').trim().toLowerCase() === cleanEmail)) return res.status(409).json({ success: false, message: 'Email này đã được sử dụng trên hệ thống!' });
+  const safeRole = String(role || '').trim().toLowerCase() === 'provider' ? 'Provider' : 'Customer';
+  const now = new Date();
+  const dateStr = String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+  const user = { id: nextUserId(users), name: String(name).trim(), email: cleanEmail, phone: phone ? String(phone).trim() : '', role: safeRole, passwordHash: await hashPassword(password), joinDate: dateStr, spentOrEarned: '0đ', balance: 0, status: 'pending_verification', emailVerified: false, avatar: '', bio: '' };
+  users.push(user); await db.saveCollectionAndWait('users', users);
+  try {
+    await issueEmailVerification(user);
+  } catch (error) {
+    console.error('[auth] Không gửi được email xác nhận:', error.message);
+    return res.status(503).json({ success: false, code: 'EMAIL_SEND_FAILED', message: 'Tài khoản đang chờ xác nhận nhưng chưa gửi được email. Kiểm tra Gmail SMTP rồi dùng chức năng gửi lại email xác nhận.' });
+  }
+  return res.status(201).json({ success: true, verifyEmail: true, verificationSent: true, email: cleanEmail, role: safeRole, message: `Đã gửi email xác nhận tới ${cleanEmail}. Hãy mở email để kích hoạt tài khoản.` });
 });
 
-// Đăng nhập: frontend đăng nhập Firebase, gửi token lên đây để lấy hồ sơ
-router.post('/login', requireSignedIn, (req, res) => {
-  res.json({ success: true, message: 'Đăng nhập thành công!', user: publicUser(req.authUser) });
+router.post('/verify-email', async (req, res) => {
+  const token = String(req.body?.token || '');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const records = db.getCollection('emailVerifications') || [];
+  const record = records.find(item => item.tokenHash === tokenHash && Date.parse(item.expiresAt) > Date.now());
+  if (!record) return res.status(400).json({ success: false, message: 'Liên kết xác nhận không hợp lệ hoặc đã hết hạn. Hãy yêu cầu gửi lại email.' });
+  const users = db.getCollection('users') || [];
+  const user = users.find(item => item.id === record.userId);
+  if (!user) return res.status(400).json({ success: false, message: 'Không tìm thấy tài khoản cần xác nhận.' });
+  user.status = 'active';
+  user.emailVerified = true;
+  await db.saveCollectionAndWait('users', users);
+  await db.saveCollectionAndWait('emailVerifications', records.filter(item => item.tokenHash !== tokenHash));
+  if (user.role === 'Provider') await createProviderProfile(user, user.joinDate || dateLabel());
+  return res.json({ success: true, message: 'Email đã được xác nhận. Bạn có thể đăng nhập.' });
+});
+
+router.post('/resend-verification', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ success: false, message: 'Vui lòng nhập email cần xác nhận.' });
+  const user = (db.getCollection('users') || []).find(item => String(item.email || '').trim().toLowerCase() === email);
+  if (!user || user.emailVerified || user.status !== 'pending_verification') return res.json({ success: true, message: 'Nếu tài khoản cần xác nhận, email sẽ được gửi lại.' });
+  try {
+    const result = await issueEmailVerification(user);
+    return res.json({ success: true, message: result.throttled ? 'Hãy chờ một phút trước khi yêu cầu gửi lại.' : `Đã gửi lại email xác nhận tới ${email}.` });
+  } catch (error) {
+    console.error('[auth] Gửi lại email xác nhận thất bại:', error.message);
+    return res.status(503).json({ success: false, message: 'Gửi email thất bại. Kiểm tra Gmail SMTP trong .env.' });
+  }
+});
+
+// Google proves identity; the account profile and app session remain in MySQL.
+router.get('/google/config', (_req, res) => {
+  res.json({ success: true, clientId: process.env.GOOGLE_CLIENT_ID || '' });
+});
+
+router.post('/google', async (req, res) => {
+  const credential = String(req.body?.credential || '');
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || '');
+  if (!clientId) return res.status(503).json({ success: false, message: 'Chưa cấu hình GOOGLE_CLIENT_ID trong .env.' });
+  if (!credential || credential.length > 10000) return res.status(400).json({ success: false, message: 'Thông tin đăng nhập Google không hợp lệ.' });
+
+  let identity;
+  try {
+    identity = await verifyGoogleCredential(credential, clientId);
+  } catch (_) {
+    return res.status(502).json({ success: false, message: 'Không thể xác minh tài khoản với Google lúc này.' });
+  }
+  if (!identity) {
+    return res.status(401).json({ success: false, message: 'Thông tin xác thực Google không hợp lệ hoặc email chưa được xác minh.' });
+  }
+
+  const cleanEmail = String(identity.email).trim().toLowerCase();
+  const users = db.getCollection('users') || [];
+  let user = users.find(item => String(item.googleSub || '') === String(identity.sub));
+  if (!user) user = users.find(item => String(item.email || '').trim().toLowerCase() === cleanEmail);
+  if (user?.status === 'locked') return res.status(403).json({ success: false, code: 'ACCOUNT_LOCKED', message: `Tài khoản đã bị tạm khóa: ${user.lockReason || 'Liên hệ Admin'}` });
+
+  if (user) {
+    user.googleSub = String(identity.sub);
+    user.emailVerified = true;
+    if (user.status === 'pending_verification') user.status = 'active';
+    if (!user.avatar && identity.picture) user.avatar = String(identity.picture);
+    await db.saveCollectionAndWait('users', users);
+    if (user.role === 'Provider') await createProviderProfile(user, user.joinDate || dateLabel());
+  } else {
+    const role = String(req.body?.role || '').trim().toLowerCase() === 'provider' ? 'Provider' : 'Customer';
+    const dateStr = dateLabel();
+    user = {
+      id: nextUserId(users), googleSub: String(identity.sub), name: String(identity.name || cleanEmail.split('@')[0]).trim(),
+      email: cleanEmail, phone: '', role, authProvider: 'google', joinDate: dateStr,
+      spentOrEarned: '0đ', balance: 0, status: 'active', avatar: String(identity.picture || ''), bio: ''
+    };
+    users.push(user);
+    await db.saveCollectionAndWait('users', users);
+    if (role === 'Provider') await createProviderProfile(user, dateStr);
+  }
+
+  return res.json({ success: true, message: 'Đăng nhập Google thành công.', user: publicUser(user), accessToken: signToken(user.id) });
+});
+
+router.post('/login', async (req,res) => {
+  const email=String(req.body?.email||'').trim().toLowerCase();const password=String(req.body?.password||'');
+  const user=(db.getCollection('users')||[]).find(item=>String(item.email||'').trim().toLowerCase()===email);
+  let valid=user && await verifyPassword(password,user.passwordHash);
+  // Hỗ trợ mật khẩu mẫu cũ được lưu trực tiếp để đăng nhập lần đầu, sau đó chuyển sang hash.
+  if(user&&!valid&&typeof user.password==='string'&&user.password===password){user.passwordHash=await hashPassword(password);delete user.password;await db.saveCollectionAndWait('users',(db.getCollection('users')||[]).map(item=>item.id===user.id?user:item));valid=true;}
+  if(!valid)return res.status(401).json({success:false,message:'Email hoặc mật khẩu không chính xác.'});
+  if(user.status==='pending_verification'||user.emailVerified===false)return res.status(403).json({success:false,code:'EMAIL_NOT_VERIFIED',email:user.email,message:'Tài khoản chưa được xác nhận. Hãy mở email xác nhận hoặc yêu cầu gửi lại.'});
+  if(user.status==='locked')return res.status(403).json({success:false,code:'ACCOUNT_LOCKED',message:'Tài khoản đã bị tạm khóa: '+(user.lockReason||'Liên hệ Admin')});
+  return res.json({success:true,message:'Đăng nhập thành công!',user:publicUser(user),accessToken:signToken(user.id)});
 });
 
 // Hồ sơ hiện tại
@@ -225,7 +323,7 @@ router.get('/users', requireAdmin, (req, res) => {
   });
 });
 
-// Upload file avatar lên backend; Firestore chỉ lưu URL, không lưu nội dung ảnh.
+// Upload file avatar lên backend; MySQL chỉ lưu URL, không lưu nội dung ảnh.
 router.put('/profile/avatar', requireSignedIn, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '10mb' }), async (req, res) => {
   if (!Buffer.isBuffer(req.body) || !req.body.length) {
     return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh JPG, PNG hoặc WebP.' });
@@ -242,7 +340,7 @@ router.put('/profile/avatar', requireSignedIn, express.raw({ type: ['image/*', '
     return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
   }
 
-  const uid = String(req.firebaseUser?.uid || req.authUser?.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  const uid = String(req.authUser?.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
   if (!uid) return res.status(400).json({ success: false, message: 'Không xác định được tài khoản.' });
 
   const fileName = `${randomUUID()}.${extension}`;
@@ -267,13 +365,6 @@ router.put('/profile/avatar', requireSignedIn, express.raw({ type: ['image/*', '
     if (pIndex !== -1) {
       providers[pIndex].avatar = avatar;
       db.saveCollection('providers', providers);
-    }
-
-    // Đồng bộ sang Firebase Auth nếu có UID
-    if (req.firebaseUser && req.firebaseUser.uid) {
-      try {
-        await auth.updateUser(req.firebaseUser.uid, { photoURL: avatar });
-      } catch (_) {}
     }
 
     // Xóa file cũ chỉ khi nó nằm trong thư mục upload do ứng dụng quản lý.
@@ -312,7 +403,7 @@ router.put('/profile/cover', requireSignedIn, express.raw({ type: ['image/*', 'a
     return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
   }
 
-  const uid = String(req.firebaseUser?.uid || req.authUser?.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  const uid = String(req.authUser?.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
   if (!uid) return res.status(400).json({ success: false, message: 'Không xác định được tài khoản.' });
 
   const fileName = `${randomUUID()}.${extension}`;
@@ -398,130 +489,76 @@ router.put('/profile', requireSignedIn, async (req, res) => {
     if (bio !== undefined) providers[pIndex].bio = bio.trim();
     db.saveCollection('providers', providers);
   }
-
-  // Đồng bộ sang Firebase Auth
-  if (req.firebaseUser && req.firebaseUser.uid) {
-    try {
-      const fbUpdate = {};
-      if (name) fbUpdate.displayName = name.trim();
-      if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://'))) fbUpdate.photoURL = avatar;
-      if (Object.keys(fbUpdate).length > 0) await auth.updateUser(req.firebaseUser.uid, fbUpdate);
-    } catch (_) {}
-  }
-
   res.json({ success: true, message: 'Cập nhật thông tin thành công!', user: publicUser(users[index]) });
 });
 
-// Đổi mật khẩu: kiểm tra mật khẩu hiện tại qua Firebase Auth REST API rồi cập nhật
-router.put('/change-password', requireSignedIn, async (req, res) => {
-  const { currentPassword, newPassword } = req.body || {};
-
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới!' });
-  }
-  if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự!' });
-  }
-  if (currentPassword === newPassword) {
-    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải khác mật khẩu hiện tại!' });
-  }
-
-  const apiKey = process.env.FIREBASE_WEB_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ success: false, message: 'Server chưa cấu hình FIREBASE_WEB_API_KEY.' });
-  }
-
-  try {
-    const verify = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: req.firebaseUser.email, password: currentPassword, returnSecureToken: false })
-      }
-    );
-    if (!verify.ok) {
-      return res.status(401).json({ success: false, message: 'Mật khẩu hiện tại không chính xác!' });
-    }
-
-    await auth.updateUser(req.firebaseUser.uid, { password: newPassword });
-    res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
-  } catch (err) {
-    console.error('[auth] change-password:', err.message);
-    res.status(500).json({ success: false, message: 'Không thể đổi mật khẩu lúc này.' });
-  }
+// Đổi mật khẩu trong MySQL.
+router.put('/change-password', requireSignedIn, async (req,res) => {
+ const {currentPassword,newPassword}=req.body||{};if(!currentPassword||!newPassword||String(newPassword).length<8)return res.status(400).json({success:false,message:'Nhập mật khẩu hiện tại và mật khẩu mới (ít nhất 8 ký tự).'});
+ const users=db.getCollection('users')||[];const index=users.findIndex(user=>user.id===req.authUser.id);if(index<0||!await verifyPassword(currentPassword,users[index].passwordHash))return res.status(401).json({success:false,message:'Mật khẩu hiện tại không chính xác.'});
+ users[index].passwordHash=await hashPassword(newPassword);delete users[index].password;await db.saveCollectionAndWait('users',users);res.json({success:true,message:'Đổi mật khẩu thành công.'});
 });
-
-// Gửi lại email xác nhận từ server qua Firebase Admin SDK
-router.post('/resend-verification', async (req, res) => {
-  const { email } = req.body || {};
-  if (!email || !String(email).trim()) {
-    return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email!' });
-  }
-  const cleanEmail = String(email).trim().toLowerCase();
-  try {
-    const userRecord = await auth.getUserByEmail(cleanEmail);
-    if (userRecord.emailVerified) {
-      return res.json({ success: true, alreadyVerified: true, message: 'Email này đã được xác nhận. Bạn có thể đăng nhập ngay!' });
-    }
-    let verifyLink;
-    try {
-      const appUrl = process.env.APP_URL || 'https://skillrental-30a5e.firebaseapp.com';
-      verifyLink = await auth.generateEmailVerificationLink(cleanEmail, {
-        url: `${appUrl}/verify.html`,
-        handleCodeInApp: false
-      });
-    } catch (_) {
-      verifyLink = await auth.generateEmailVerificationLink(cleanEmail);
-    }
-
-    res.json({
-      success: true,
-      message: `Đã tạo liên kết xác nhận cho ${cleanEmail}. Vui lòng kiểm tra hộp thư của bạn.`,
-      verifyLink: process.env.NODE_ENV !== 'production' ? verifyLink : undefined
-    });
-  } catch (err) {
-    if (err.code === 'auth/user-not-found') {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản với email này.' });
-    }
-    console.error('[auth] resend-verification:', err.message);
-    res.status(500).json({ success: false, message: 'Không thể gửi lại email xác nhận lúc này.' });
-  }
-});
-
-// Quên mật khẩu: tạo liên kết đặt lại mật khẩu từ server qua Firebase Admin SDK
 router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body || {};
-  if (!email || !String(email).trim()) {
-    return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email!' });
-  }
-  const cleanEmail = String(email).trim().toLowerCase();
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ email không hợp lệ.' });
+  const smtpUser = String(process.env.SMTP_USER || '').trim();
+  const smtpPassword = String(process.env.SMTP_APP_PASSWORD || '').replace(/\s/g, '');
+  if (!smtpUser || !smtpPassword) return res.status(503).json({ success: false, message: 'Chưa cấu hình Gmail SMTP. Hãy điền SMTP_USER và SMTP_APP_PASSWORD trong .env.' });
+
+  const user = (db.getCollection('users') || []).find(item => String(item.email || '').trim().toLowerCase() === email);
+  // Always return the same result for known and unknown addresses.
+  const accepted = { success: true, message: 'Nếu email này có tài khoản, liên kết đặt lại mật khẩu sẽ được gửi trong ít phút.' };
+  if (!user) return res.json(accepted);
+
+  const token = crypto.randomBytes(32).toString('base64url');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const ttlMinutes = Math.min(Math.max(Number(process.env.PASSWORD_RESET_TTL_MINUTES) || 30, 5), 120);
+  const existingResets = db.getCollection('passwordResets') || [];
+  if (existingResets.some(item => item.userId === user.id && Date.now() - Date.parse(item.createdAt) < 60000)) return res.json(accepted);
+  const resets = existingResets.filter(item => item.userId !== user.id && Date.parse(item.expiresAt) > Date.now());
+  resets.push({ id: tokenHash, userId: user.id, tokenHash, expiresAt: new Date(Date.now() + ttlMinutes * 60000).toISOString(), createdAt: new Date().toISOString() });
+  await db.saveCollectionAndWait('passwordResets', resets);
+
+  const port = Number(process.env.SMTP_PORT || 465);
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com', port,
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
+    auth: { user: smtpUser, pass: smtpPassword }
+  });
+  const baseUrl = String(process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '');
+  const resetLink = `${baseUrl}/index.html?mode=resetPassword&oobCode=${encodeURIComponent(token)}`;
   try {
-    let resetLink;
-    try {
-      const appUrl = process.env.APP_URL || 'https://skillrental-30a5e.firebaseapp.com';
-      resetLink = await auth.generatePasswordResetLink(cleanEmail, {
-        url: `${appUrl}/verify.html`,
-        handleCodeInApp: false
-      });
-    } catch (_) {
-      resetLink = await auth.generatePasswordResetLink(cleanEmail);
-    }
-    res.json({
-      success: true,
-      message: `Nếu email ${cleanEmail} tồn tại trong hệ thống, liên kết khôi phục mật khẩu đã được tạo.`,
-      resetLink: process.env.NODE_ENV !== 'production' ? resetLink : undefined
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || `SkillRental <${smtpUser}>`, to: user.email,
+      subject: 'Đặt lại mật khẩu SkillRental',
+      text: `Xin chào ${user.name || ''},\n\nMở liên kết sau để đặt mật khẩu mới (hiệu lực ${ttlMinutes} phút):\n${resetLink}\n\nNếu bạn không yêu cầu, hãy bỏ qua email này.`,
+      html: `<p>Xin chào ${String(user.name || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))},</p><p>Liên kết đặt lại mật khẩu có hiệu lực ${ttlMinutes} phút:</p><p><a href="${resetLink}">Đặt lại mật khẩu</a></p><p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>`
     });
-  } catch (err) {
-    if (err.code === 'auth/user-not-found') {
-      return res.json({
-        success: true,
-        message: `Nếu email ${cleanEmail} tồn tại trong hệ thống, liên kết khôi phục mật khẩu đã được tạo.`
-      });
-    }
-    console.error('[auth] forgot-password:', err.message);
-    res.status(500).json({ success: false, message: 'Không thể xử lý yêu cầu đặt lại mật khẩu lúc này.' });
+    return res.json(accepted);
+  } catch (error) {
+    await db.saveCollectionAndWait('passwordResets', resets.filter(item => item.tokenHash !== tokenHash)).catch(() => {});
+    console.error('[auth] Không gửi được email khôi phục:', error.message);
+    return res.status(502).json({ success: false, message: 'Gửi email thất bại. Kiểm tra cấu hình Gmail SMTP trong .env.' });
   }
 });
+
+router.post('/reset-password', async (req, res) => {
+  const token = String(req.body?.token || '');
+  const newPassword = String(req.body?.newPassword || '');
+  if (newPassword.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const resets = db.getCollection('passwordResets') || [];
+  const reset = resets.find(item => item.tokenHash === tokenHash && Date.parse(item.expiresAt) > Date.now());
+  if (!reset) return res.status(400).json({ success: false, message: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.' });
+  const users = db.getCollection('users') || [];
+  const index = users.findIndex(item => item.id === reset.userId);
+  if (index < 0) return res.status(400).json({ success: false, message: 'Không tìm thấy tài khoản cần đặt lại mật khẩu.' });
+  users[index].passwordHash = await hashPassword(newPassword);
+  delete users[index].password;
+  await db.saveCollectionAndWait('users', users);
+  await db.saveCollectionAndWait('passwordResets', resets.filter(item => item.tokenHash !== tokenHash));
+  return res.json({ success: true, message: 'Đổi mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.' });
+});
+router.post('/resend-verification',(_req,res)=>res.status(410).json({success:false,message:'Tài khoản MySQL không yêu cầu xác nhận email.'}));
 
 module.exports = router;

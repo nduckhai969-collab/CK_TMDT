@@ -107,11 +107,11 @@ async function uploadProviderCoverFile(input) {
       try {
         localStorage.setItem('SKILLRENTAL_PROVIDER_COVER', res.cover);
         ['SKILLRENTAL_CURRENT_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => {
-          const uRaw = localStorage.getItem(key);
+          const uRaw = sessionStorage.getItem(key);
           const uObj = uRaw ? JSON.parse(uRaw) : {};
           uObj.cover = res.cover;
           if (!uObj.role) uObj.role = 'Provider';
-          localStorage.setItem(key, JSON.stringify(uObj));
+          sessionStorage.setItem(key, JSON.stringify(uObj));
         });
       } catch (_) {}
       showToast('Đã đổi ảnh bìa thành công!');
@@ -177,11 +177,11 @@ async function uploadProviderAvatarFile(input) {
       try {
         localStorage.setItem('SKILLRENTAL_PROVIDER_AVATAR', res.avatar);
         ['SKILLRENTAL_CURRENT_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => {
-          const uRaw = localStorage.getItem(key);
+          const uRaw = sessionStorage.getItem(key);
           const uObj = uRaw ? JSON.parse(uRaw) : {};
           uObj.avatar = res.avatar;
           if (!uObj.role) uObj.role = 'Provider';
-          localStorage.setItem(key, JSON.stringify(uObj));
+          sessionStorage.setItem(key, JSON.stringify(uObj));
         });
         if (typeof window.currentUser === 'object' && window.currentUser) {
           window.currentUser.avatar = res.avatar;
@@ -228,7 +228,7 @@ async function saveProfileChanges() {
   }
   if (bio) {
     const vBio = document.getElementById('viewBio');
-    if (vBio) vBio.innerHTML = '<p>' + bio.replace(/\n/g, '<br>') + '</p>';
+    if (vBio) vBio.innerHTML = '<p>' + escapeHtml(bio).replace(/\n/g, '<br>') + '</p>';
   }
   if (avatar) {
     const avatarEl = document.querySelector('.profile-avatar-lg');
@@ -276,14 +276,14 @@ async function saveProfileChanges() {
 
       ['SKILLRENTAL_CURRENT_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => {
         try {
-          const uRaw = localStorage.getItem(key);
+          const uRaw = sessionStorage.getItem(key);
           const uObj = uRaw ? JSON.parse(uRaw) : {};
           if (name) uObj.name = name;
           if (phone) uObj.phone = phone;
           if (headline) uObj.specialty = headline;
           if (avatar) uObj.avatar = avatar;
           if (cover) uObj.cover = cover;
-          localStorage.setItem(key, JSON.stringify(uObj));
+          sessionStorage.setItem(key, JSON.stringify(uObj));
         } catch (_) {}
       });
     }
@@ -367,26 +367,36 @@ async function deleteSkill(btn, skillName) {
 // Save hourly rate (Backend connected)
 async function saveHourlyRate() {
   const val = typeof readFormattedNumber === 'function' ? readFormattedNumber('inputHourlyRateVal') : document.getElementById('inputHourlyRateVal')?.value;
-  if (val) {
+  const minWeeklyHours = Number(document.getElementById('inputMinWeeklyHours')?.value || 0);
+  if (val || minWeeklyHours) {
     const formatted = Number(val).toLocaleString('vi-VN') + 'đ';
     const displayEl = document.getElementById('displayHourlyRate');
-    if (displayEl) {
+    if (displayEl && val) {
       displayEl.innerHTML = `${formatted} <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;">/ giờ làm việc</span>`;
     }
     try {
       if (window.providerApi) {
-        await window.providerApi.updateHourlyRate(val);
+        const payload = { minWeeklyHours: minWeeklyHours || null };
+        if (val) payload.hourlyRate = Number(val);
+        const response = await window.providerApi.updateProfile(payload);
+        if (!response?.success) throw new Error(response?.message || 'Không thể cập nhật thông tin đơn giá.');
+        if (currentProviderData) Object.assign(currentProviderData, payload);
       }
     } catch (e) {
       console.warn('Backend hourly rate update error:', e);
+      showToast(e.message || 'Không thể cập nhật thông tin đơn giá.');
+      return;
     }
   }
+  const weeklyHoursSummary = document.getElementById('weeklyHoursSummary');
+  if (weeklyHoursSummary) weeklyHoursSummary.textContent = minWeeklyHours ? `Tối thiểu ${minWeeklyHours} giờ/tuần.` : 'Chưa thiết lập số giờ tối thiểu mỗi tuần.';
   closeModal('editHourlyModal');
-  showToast('Đã cập nhật đơn giá theo giờ mới!');
+  showToast('Đã cập nhật thông tin nhận việc theo giờ.');
 }
 
 // Availability status switcher (Backend connected)
 async function setStatusMode(mode, saveToBackend = true) {
+  if (mode === 'inactive') mode = 'paused';
   currentMode = mode;
   const btnReady = document.getElementById('statusReady');
   const btnLimited = document.getElementById('statusLimited');
@@ -432,6 +442,41 @@ async function setStatusMode(mode, saveToBackend = true) {
     }
   } catch (e) {
     console.warn('Backend availability status error:', e);
+  }
+}
+
+async function toggleHourlyAvailability(toggle) {
+  if (!currentProviderData) return;
+  try {
+    const res = await window.providerApi.updateProfile({ hourlyEnabled: Boolean(toggle.checked) });
+    if (!res?.success) throw new Error(res?.message || 'Không thể cập nhật trạng thái nhận việc theo giờ.');
+    currentProviderData.hourlyEnabled = Boolean(toggle.checked);
+    const badge = document.getElementById('hourlyStatusBadge');
+    if (badge) {
+      badge.textContent = toggle.checked ? 'Đang bật nhận việc theo giờ' : 'Chưa bật nhận việc theo giờ';
+      badge.className = `badge ${toggle.checked ? 'badge-success' : 'badge-neutral'}`;
+    }
+    showToast(toggle.checked ? 'Đã bật nhận việc theo giờ.' : 'Đã tắt nhận việc theo giờ.');
+  } catch (error) {
+    toggle.checked = !toggle.checked;
+    showToast(error.message || 'Không thể cập nhật trạng thái nhận việc theo giờ.');
+  }
+}
+
+async function saveBookingRules() {
+  const leadTime = Number(document.getElementById('inputLeadTime')?.value || 0);
+  const maxProjects = Number(document.getElementById('inputMaxProjects')?.value || 0);
+  const payload = {};
+  if (leadTime) payload.leadTime = leadTime;
+  if (maxProjects && document.getElementById('inputMaxProjects')?.dataset.touched === 'true') payload.maxProjects = maxProjects;
+  if (!Object.keys(payload).length) return;
+  try {
+    const result = await window.providerApi.updateAvailability(payload);
+    if (!result?.success) throw new Error(result?.message || 'Không thể lưu quy tắc nhận đơn.');
+    if (currentProviderData) Object.assign(currentProviderData, payload);
+    showToast('Đã lưu quy tắc nhận đơn.');
+  } catch (error) {
+    showToast(error.message || 'Không thể lưu quy tắc nhận đơn.');
   }
 }
 
@@ -482,13 +527,29 @@ function setBusinessHoursOnly() {
 const WEEK_DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 function renderScheduleMatrix(slots) {
-  if (!slots || !Array.isArray(slots) || slots.length === 0) return;
+  if (!Array.isArray(slots)) slots = [];
+  const tbody = document.getElementById('scheduleTableBody');
+  if (!tbody) return;
+  if (tbody.querySelectorAll('tr').length < 3) {
+    const shifts = [
+      { key: 'morning', name: 'Ca Sáng', time: '08:00 - 12:00', icon: 'fa-sun', color: '#F59E0B' },
+      { key: 'afternoon', name: 'Ca Chiều', time: '13:30 - 17:30', icon: 'fa-cloud-sun', color: '#3B82F6' },
+      { key: 'evening', name: 'Ca Tối', time: '19:00 - 22:00', icon: 'fa-moon', color: '#6366F1' }
+    ];
+    tbody.innerHTML = shifts.map(shift => `<tr><td class="schedule-time-col"><div style="font-weight:700;color:var(--secondary);"><i class="fa-solid ${shift.icon}" style="color:${shift.color};margin-right:4px;"></i> ${shift.name}</div><div style="font-size:11px;color:var(--text-muted);">${shift.time}</div></td>${WEEK_DAYS.map(() => '<td><div class="slot-cell busy" onclick="toggleSlot(this)">Chưa mở lịch</div></td>').join('')}</tr>`).join('');
+  }
   const rows = document.querySelectorAll('#scheduleTableBody tr');
   if (rows.length < 3) return;
 
   WEEK_DAYS.forEach((day, dIdx) => {
     const slotObj = slots.find(s => s.day === day);
-    if (!slotObj) return;
+    if (!slotObj) {
+      [0, 1, 2].forEach((rowIndex) => {
+        const cell = rows[rowIndex]?.querySelectorAll('.slot-cell')[dIdx];
+        if (cell) { cell.className = 'slot-cell busy'; cell.textContent = 'Chưa mở lịch'; }
+      });
+      return;
+    }
 
     const morningCell = rows[0]?.querySelectorAll('.slot-cell')[dIdx];
     if (morningCell) setSlotCellStatus(morningCell, !!slotObj.morning);
@@ -633,7 +694,50 @@ function renderServicesList(services) {
 
 function escapeHtml(text) {
   if (!text) return '';
-  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderProviderProfileCollections(provider) {
+  const skills = Array.isArray(provider.skills) ? provider.skills : [];
+  const normalizeSkill = skill => typeof skill === 'string' ? { name: skill, group: 'primary' } : (skill || {});
+  const skillItems = skills.map(normalizeSkill).filter(skill => skill.name || skill.skill);
+  const renderSkill = skill => {
+    const name = String(skill.name || skill.skill || '');
+    const encodedName = encodeURIComponent(name).replace(/'/g, '%27');
+    return `<div class="skill-card-item"><div class="skill-info"><div class="skill-name"><i class="fa-solid fa-code" style="color:var(--primary);"></i> ${escapeHtml(name)}</div>${skill.level ? `<span class="skill-badge-level level-${escapeHtml(skill.level)}" style="margin-top:4px;width:fit-content;">${escapeHtml(skill.levelLabel || skill.level)}</span>` : ''}</div><button class="btn btn-outline btn-sm" style="padding:0 8px;color:var(--danger);" onclick="deleteSkill(this, decodeURIComponent('${encodedName}'))"><i class="fa-solid fa-trash"></i></button></div>`;
+  };
+  const primary = document.getElementById('primarySkillsList');
+  const secondary = document.getElementById('secondarySkillsList');
+  const primarySkills = skillItems.filter(skill => skill.group !== 'secondary');
+  const secondarySkills = skillItems.filter(skill => skill.group === 'secondary');
+  if (primary) primary.innerHTML = primarySkills.length ? primarySkills.map(renderSkill).join('') : '<div style="color:var(--text-muted);font-size:13px;">Chưa có kỹ năng chuyên môn.</div>';
+  if (secondary) secondary.innerHTML = secondarySkills.length ? secondarySkills.map(renderSkill).join('') : '<div style="color:var(--text-muted);font-size:13px;">Chưa có kỹ năng bổ trợ.</div>';
+  const skillCount = document.getElementById('primarySkillsCount');
+  if (skillCount) skillCount.textContent = `${primarySkills.length} kỹ năng`;
+
+  const certifications = Array.isArray(provider.certifications) ? provider.certifications : [];
+  const certList = document.getElementById('certificationsList');
+  if (certList) certList.innerHTML = certifications.length
+    ? certifications.map(cert => {
+      const item = typeof cert === 'string' ? { name: cert } : (cert || {});
+      return `<div class="cert-item-card"><div class="cert-icon-box"><i class="fa-solid fa-certificate"></i></div><div class="cert-content"><div class="cert-name">${escapeHtml(item.name || item.title || 'Chứng chỉ')}</div>${item.issuer || item.organization ? `<div class="cert-org">${escapeHtml(item.issuer || item.organization)}</div>` : ''}${item.issuedAt || item.date || item.id ? `<div class="cert-meta">${item.issuedAt || item.date ? `<span>Cấp: ${escapeHtml(item.issuedAt || item.date)}</span>` : ''}${item.id ? `<span>ID: ${escapeHtml(item.id)}</span>` : ''}</div>` : ''}</div>${item.verified ? '<span class="badge badge-success">Đã xác minh</span>' : ''}</div>`;
+    }).join('') : '<div style="color:var(--text-muted);font-size:13px;">Chưa có chứng chỉ được cập nhật.</div>';
+
+  const experienceItems = [...(Array.isArray(provider.experiences) ? provider.experiences : []), ...(Array.isArray(provider.education) ? provider.education : [])];
+  const experienceSection = document.getElementById('experienceSection');
+  const experienceList = document.getElementById('experienceList');
+  if (experienceSection && experienceList) {
+    experienceSection.style.display = experienceItems.length ? '' : 'none';
+    experienceList.innerHTML = experienceItems.map(item => `<div style="display:flex;gap:12px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--primary);margin-top:6px;"></div><div><div style="font-weight:600;font-size:14px;">${escapeHtml(item.title || item.position || item.degree || item.name || '')}${item.organization || item.company || item.school ? ` • ${escapeHtml(item.organization || item.company || item.school)}` : ''}</div><div style="font-size:12px;color:var(--text-muted);">${escapeHtml(item.period || [item.from, item.to].filter(Boolean).join(' - '))}</div>${item.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">${escapeHtml(item.description)}</div>` : ''}</div></div>`).join('');
+  }
+
+  const links = provider.portfolioLinks || provider.links || {};
+  const portfolio = document.getElementById('portfolioLinks');
+  const linkEntries = Array.isArray(links) ? links : Object.entries(links).map(([label, url]) => ({ label, url }));
+  const validLinks = linkEntries.map(link => typeof link === 'string' ? { label: link, url: link } : link).filter(link => {
+    try { return ['http:', 'https:'].includes(new URL(link.url).protocol); } catch (_) { return false; }
+  });
+  if (portfolio) portfolio.innerHTML = validLinks.length ? validLinks.map(link => `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:10px;"><i class="fa-solid fa-link" style="width:18px;"></i> ${escapeHtml(link.label || link.url)}</a>`).join('') : '<span style="color:var(--text-muted);font-size:13px;">Chưa có liên kết portfolio.</span>';
 }
 
 function openCreateServiceModal() {
@@ -732,8 +836,10 @@ async function deletePackageService(id) {
 
 async function loadProviderProfile() {
   // 1. Render tức thời từ LocalStorage để không bao giờ bị chớp ảnh cũ hoặc hiển thị '--'
-  const localAvatar = localStorage.getItem('SKILLRENTAL_PROVIDER_AVATAR');
-  const localCover = localStorage.getItem('SKILLRENTAL_PROVIDER_COVER');
+  // Profile pictures come from the authenticated Provider record. Shared browser
+  // keys can otherwise leak one account's avatar or cover into another account.
+  const localAvatar = '';
+  const localCover = '';
 
   if (localAvatar) {
     const avatarEl = document.querySelector('.profile-avatar-lg');
@@ -849,59 +955,100 @@ async function loadProviderProfile() {
     const sideRole = document.querySelector('.sidebar-profile .profile-role');
     if (sideRole && (p.specialty || p.headline)) sideRole.textContent = p.specialty || p.headline;
 
-    if (p.email) {
-      const vEmail = document.getElementById('viewEmail');
-      if (vEmail) vEmail.textContent = p.email;
-    }
-    if (p.phone) {
-      const vPhone = document.getElementById('viewPhone');
-      if (vPhone) vPhone.textContent = p.phone;
-    }
-    if (p.createdAt || p.joinDate) {
-      const vJoin = document.getElementById('viewJoinDate');
-      if (vJoin) vJoin.textContent = 'Tham gia: ' + (p.createdAt || p.joinDate);
-    }
-    if (p.rating !== undefined) {
-      const rEl = document.getElementById('statRatingDisplay');
-      if (rEl) rEl.innerHTML = `${p.rating || 5.0} ⭐ <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">(${p.reviewCount || p.reviews || 0})</span>`;
-    }
-    if (p.completedOrders !== undefined) {
-      const oEl = document.getElementById('statOrdersDisplay');
-      if (oEl) oEl.innerHTML = `${p.completedOrders || 0} <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">dự án</span>`;
-    }
-    if (p.name) {
-      const vName = document.getElementById('viewName');
-      if (vName) vName.innerText = p.name;
-      const iName = document.getElementById('inputName');
-      if (iName) iName.value = p.name;
-    }
-    if (p.specialty || p.headline) {
-      const vHead = document.getElementById('viewHeadline');
-      if (vHead) vHead.innerText = p.specialty || p.headline;
-      const iHead = document.getElementById('inputHeadline');
-      if (iHead) iHead.value = p.specialty || p.headline;
-    }
-    if (p.location) {
-      const vLoc = document.getElementById('viewLocation');
-      if (vLoc) vLoc.innerText = p.location;
-      const iLoc = document.getElementById('inputLocation');
-      if (iLoc) iLoc.value = p.location;
-    }
-    if (p.bio) {
-      const vBio = document.getElementById('viewBio');
-      if (vBio) vBio.innerHTML = '<p>' + p.bio.replace(/\n/g, '<br>') + '</p>';
-      const iBio = document.getElementById('inputBio');
-      if (iBio) iBio.value = p.bio;
-    }
-    if (p.hourlyRate) {
+    const vEmail = document.getElementById('viewEmail');
+    if (vEmail) vEmail.textContent = p.email || 'Chưa cập nhật email';
+    const vPhone = document.getElementById('viewPhone');
+    if (vPhone) vPhone.textContent = p.phone || 'Chưa cập nhật số điện thoại';
+    const phoneBadge = document.getElementById('verifiedPhoneValue');
+    if (phoneBadge) phoneBadge.textContent = p.phoneVerified ? 'Đã xác minh' : (p.phone || 'Chưa cập nhật');
+    const emailBadge = document.getElementById('verifiedEmailBadge');
+    if (emailBadge) emailBadge.textContent = p.emailVerified ? 'Đã xác minh' : 'Chưa xác minh';
+    const identityBadge = document.getElementById('identityVerificationBadge');
+    if (identityBadge) identityBadge.textContent = p.verified ? 'Đã xác minh' : 'Chưa xác minh';
+    const profileIdentityBadge = document.getElementById('profileIdentityBadge');
+    if (profileIdentityBadge) profileIdentityBadge.textContent = p.verified ? 'Đã xác minh danh tính' : 'Chưa xác minh danh tính';
+    const bankBadge = document.getElementById('bankAccountBadge');
+    if (bankBadge) bankBadge.textContent = p.bankName || p.bankAccount?.bank || 'Chưa cập nhật';
+    const vJoin = document.getElementById('viewJoinDate');
+    if (vJoin) vJoin.textContent = p.createdAt || p.joinDate ? 'Tham gia: ' + (p.createdAt || p.joinDate) : 'Chưa có thông tin ngày tham gia';
+    const rEl = document.getElementById('statRatingDisplay');
+    if (rEl) rEl.innerHTML = Number(p.reviewCount || p.reviews || 0) ? `${Number(p.rating || 0).toFixed(1)} ⭐ <span style="font-size:13px;font-weight:500;color:var(--text-muted);">(${Number(p.reviewCount || p.reviews || 0)})</span>` : 'Chưa có đánh giá';
+    const oEl = document.getElementById('statOrdersDisplay');
+    if (oEl) oEl.innerHTML = `${Number(p.completedOrders || 0)} <span style="font-size:12px;font-weight:500;color:var(--text-muted);">dự án</span>`;
+    const responseRate = document.getElementById('statResponseRateDisplay');
+    if (responseRate) responseRate.textContent = p.responseRate != null ? `${p.responseRate}%` : 'Chưa có dữ liệu';
+    const onTimeRate = document.getElementById('statOnTimeRateDisplay');
+    if (onTimeRate) onTimeRate.textContent = p.onTimeRate != null ? `${p.onTimeRate}%` : 'Chưa có dữ liệu';
+    const displayName = String(p.name || '').trim();
+    const vName = document.getElementById('viewName');
+    if (vName) vName.innerText = displayName || 'Chưa cập nhật tên';
+    const iName = document.getElementById('inputName');
+    if (iName) iName.value = displayName;
+    const sidebarName = document.querySelector('.sidebar-profile .profile-name');
+    if (sidebarName) sidebarName.textContent = displayName || 'Chưa cập nhật tên';
+    const headline = p.specialty || p.headline || '';
+    const vHead = document.getElementById('viewHeadline');
+    if (vHead) vHead.innerText = headline || 'Chưa cập nhật chức danh';
+    const iHead = document.getElementById('inputHeadline');
+    if (iHead) iHead.value = headline;
+    const location = p.location || '';
+    const vLoc = document.getElementById('viewLocation');
+    if (vLoc) vLoc.innerText = location || 'Chưa cập nhật địa điểm';
+    const iLoc = document.getElementById('inputLocation');
+    if (iLoc) iLoc.value = location;
+    const iCategory = document.getElementById('inputCategory');
+    if (iCategory) iCategory.value = p.category || '';
+    const languages = Array.isArray(p.languages) ? p.languages.join(', ') : (p.languages || '');
+    const languagesWrap = document.getElementById('viewLanguagesWrap');
+    const languagesEl = document.getElementById('viewLanguages');
+    if (languagesWrap) languagesWrap.style.display = languages ? '' : 'none';
+    if (languagesEl) languagesEl.textContent = languages;
+    const bio = String(p.bio || '');
+    const vBio = document.getElementById('viewBio');
+    if (vBio) vBio.innerHTML = bio ? '<p>' + escapeHtml(bio).replace(/\n/g, '<br>') + '</p>' : 'Chưa có phần giới thiệu.';
+    const iBio = document.getElementById('inputBio');
+    if (iBio) iBio.value = bio;
+    {
       const vRate = document.getElementById('displayHourlyRate');
-      if (vRate) vRate.innerHTML = `${Number(p.hourlyRate).toLocaleString('vi-VN')}đ <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;">/ giờ làm việc</span>`;
+      if (vRate) vRate.innerHTML = p.hourlyRate ? `${Number(p.hourlyRate).toLocaleString('vi-VN')}đ <span style="font-size: 15px; color: var(--text-muted); font-weight: 500;">/ giờ làm việc</span>` : 'Chưa cập nhật đơn giá';
       const iRate = document.getElementById('inputHourlyRateVal');
-      if (iRate) iRate.value = Number(p.hourlyRate).toLocaleString('vi-VN');
+      if (iRate) iRate.value = p.hourlyRate ? Number(p.hourlyRate).toLocaleString('vi-VN') : '';
     }
 
     const mode = p.mode || p.availabilityStatus || 'ready';
     setStatusMode(mode, false);
+
+    const completionFields = [p.name, p.phone, p.specialty || p.headline, p.category, p.location, p.bio, p.avatar, p.cover, p.skills?.length, p.hourlyRate];
+    const completion = Math.round(completionFields.filter(value => value !== undefined && value !== null && value !== '' && value !== 0).length / completionFields.length * 100);
+    const completionBar = document.getElementById('profileCompletenessBar');
+    const completionValue = document.getElementById('profileCompletenessValue');
+    if (completionBar) completionBar.style.width = `${completion}%`;
+    if (completionValue) completionValue.textContent = `${completion}%`;
+    const completionHint = document.getElementById('profileCompletenessHint');
+    if (completionHint) completionHint.textContent = completion === 100 ? 'Hồ sơ đã được cập nhật đầy đủ.' : 'Hãy cập nhật thông tin còn thiếu để hoàn thiện hồ sơ.';
+
+    const hourlyToggle = document.getElementById('hourlyAvailabilityToggle');
+    if (hourlyToggle) hourlyToggle.checked = p.hourlyEnabled !== undefined ? Boolean(p.hourlyEnabled) : Boolean(p.hourlyRate);
+    const hourlyStatusBadge = document.getElementById('hourlyStatusBadge');
+    if (hourlyStatusBadge) {
+      const hourlyEnabled = p.hourlyEnabled !== undefined ? Boolean(p.hourlyEnabled) : Boolean(p.hourlyRate);
+      hourlyStatusBadge.textContent = hourlyEnabled ? 'Đang bật nhận việc theo giờ' : 'Chưa bật nhận việc theo giờ';
+      hourlyStatusBadge.className = `badge ${hourlyEnabled ? 'badge-success' : 'badge-neutral'}`;
+    }
+    const weeklyHours = document.getElementById('inputMinWeeklyHours');
+    const weeklyHoursSummary = document.getElementById('weeklyHoursSummary');
+    if (weeklyHours) weeklyHours.value = p.minWeeklyHours || '';
+    if (weeklyHoursSummary) weeklyHoursSummary.textContent = p.minWeeklyHours ? `Tối thiểu ${p.minWeeklyHours} giờ/tuần.` : 'Chưa thiết lập số giờ tối thiểu mỗi tuần.';
+    const leadTimeInput = document.getElementById('inputLeadTime');
+    if (leadTimeInput) leadTimeInput.value = p.leadTime || '';
+    const maxProjects = Number(p.maxProjects || p.maxConcurrentProjects || 0);
+    const maxProjectsInput = document.getElementById('inputMaxProjects');
+    const maxProjectsValue = document.getElementById('maxProjectValue');
+    if (maxProjectsInput) {
+      maxProjectsInput.dataset.touched = 'false';
+      if (maxProjects > 0) maxProjectsInput.value = String(Math.min(10, Math.max(1, maxProjects)));
+    }
+    if (maxProjectsValue) maxProjectsValue.textContent = maxProjects > 0 ? `${maxProjects} Dự án` : 'Chưa thiết lập';
 
     if (p.vacation) {
       if (p.vacation.from && document.getElementById('inputVacationFrom')) {
@@ -919,26 +1066,28 @@ async function loadProviderProfile() {
       renderScheduleMatrix(p.schedule.slots);
     }
 
+    renderProviderProfileCollections(p);
+
     renderServicesList(providerServices);
 
     const badgeEl = document.getElementById('displayProviderCodeBadge');
-    if (badgeEl) badgeEl.textContent = 'Mã: ' + (p.id || 'PRV001');
+    if (badgeEl) badgeEl.textContent = p.id ? 'Mã: ' + p.id : 'Mã: Chưa cấp';
     const linkEl = document.getElementById('linkPublicProfile');
     if (linkEl) {
-      const publicUrl = `customer_provider.html?id=${encodeURIComponent(p.id || 'PRV001')}`;
+      const publicUrl = p.id ? `customer_provider.html?id=${encodeURIComponent(p.id)}` : '#';
       linkEl.href = publicUrl;
       const textEl = document.getElementById('linkPublicProfileText'); if (textEl) textEl.textContent = publicUrl; else linkEl.textContent = publicUrl;
     }
 
     try {
       ['SKILLRENTAL_CURRENT_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => {
-        const uRaw = localStorage.getItem(key);
+        const uRaw = sessionStorage.getItem(key);
         if (uRaw) {
           const uObj = JSON.parse(uRaw);
           if (p.avatar) uObj.avatar = p.avatar;
           if (p.cover) uObj.cover = p.cover;
           if (p.name) uObj.name = p.name;
-          localStorage.setItem(key, JSON.stringify(uObj));
+          sessionStorage.setItem(key, JSON.stringify(uObj));
         }
       });
     } catch (_) {}
@@ -961,7 +1110,7 @@ function previewPublicProfile() {
   if (currentProviderData && currentProviderData.id) {
     window.open(`customer_provider.html?id=${encodeURIComponent(currentProviderData.id)}`, '_blank');
   } else {
-    window.open('customer_provider.html?id=PRV001', '_blank');
+    showToast('Chưa có mã hồ sơ để xem trước.');
   }
 }
 window.previewPublicProfile = previewPublicProfile;

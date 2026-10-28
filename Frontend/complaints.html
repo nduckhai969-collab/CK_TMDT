@@ -8,10 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
 </head>
 <body>
   <div class="app">
@@ -216,20 +213,52 @@
   <script src="common.js"></script>
   <script>
     let activeCompId = null;
+    let activeCancellationCase = null;
+    let liveDisputeCases = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadDisputeCases();
       renderComplaintsTable();
       setupComplaintEvents();
     });
 
+    async function loadDisputeCases() {
+      try {
+        const [complaintResult, orderResult] = await Promise.all([
+          window.adminApi.getComplaints(), window.adminApi.getOrders()
+        ]);
+        if (!complaintResult.success || !orderResult.success) throw new Error('Không tải được dữ liệu tranh chấp từ máy chủ.');
+        const complaints = Array.isArray(complaintResult.complaints) ? complaintResult.complaints : [];
+        const rejectedCancellations = (orderResult.orders || [])
+          .filter(order => ['cancel_requested', 'cancel_rejected'].includes(order.orderStatus))
+          .map(order => ({
+            id: `CANCEL_${order.id}`, orderId: order.id, type: 'cancellation', status: 'pending', priority: 'high',
+            complainant: order.customer || order.customerName || order.customerId || 'Khách hàng',
+            defendant: order.provider || order.providerName || order.providerId || 'Provider',
+            reason: order.cancelRequest?.reason || 'Khách yêu cầu hủy đơn.',
+            providerNote: order.cancelRequest?.providerNote || '',
+            amount: Number(order.escrowDeposit || order.price || 0).toLocaleString('vi-VN') + 'đ',
+            orderStatus: order.orderStatus
+          }));
+        liveDisputeCases = [...complaints, ...rejectedCancellations];
+      } catch (error) {
+        console.error('Không tải được danh sách tranh chấp:', error);
+        liveDisputeCases = null;
+      }
+    }
+
+    function getDisputeCases() {
+      return liveDisputeCases || getAppState().complaints || [];
+    }
+
     function renderComplaintsTable() {
-      const state = getAppState();
+      const cases = getDisputeCases();
       const q = (document.getElementById('comp-search')?.value || '').toLowerCase().trim();
       const prio = document.getElementById('comp-priority-filter')?.value || 'all';
       const st = document.getElementById('comp-status-filter')?.value || 'all';
 
-      const filtered = state.complaints.filter(c => {
-        const matchQ = c.id.toLowerCase().includes(q) || c.orderId.toLowerCase().includes(q) || c.complainant.toLowerCase().includes(q) || c.defendant.toLowerCase().includes(q) || c.reason.toLowerCase().includes(q);
+      const filtered = cases.filter(c => {
+        const matchQ = [c.id, c.orderId, c.complainant, c.defendant, c.reason].some(value => String(value || '').toLowerCase().includes(q));
         const matchPrio = (prio === 'all') || (c.priority === prio);
         const matchSt = (st === 'all') || (c.status === st);
         return matchQ && matchPrio && matchSt;

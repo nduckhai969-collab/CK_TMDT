@@ -72,7 +72,7 @@ function slotsForDate(provider, date, orders = [], now = new Date()) {
 
   const dayIsAvailable = forceAvailable || (row
     ? (row.morning || row.afternoon || row.evening)
-    : (provider.workingHours ? allowedDayKeys(provider.workingHours).includes(weekday) : true));
+    : (provider.workingHours ? allowedDayKeys(provider.workingHours).includes(weekday) : false));
   if (!dayIsAvailable) return [];
 
   const range = (row || forceAvailable) ? null : workingTimeRange(provider.workingHours);

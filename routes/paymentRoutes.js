@@ -308,7 +308,7 @@ router.get('/vnpay/return', (req, res) => {
         .filter(x => x.type === 'deposit' || x.type === 'refund')
         .reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
       const totalDeductions = userTxns
-        .filter(x => x.type === 'escrow' || x.type === 'order_payment' || x.type === 'withdraw')
+        .filter(x => x.type === 'escrow' || x.type === 'order_payment' || x.type === 'withdraw' || x.type === 'refund_reversal')
         .reduce((sum, x) => sum + Math.abs(Number(x.amount) || 0), 0);
       const calculatedBalance = Math.max(0, totalDeposits - totalDeductions);
 
@@ -557,7 +557,7 @@ router.get('/balance', (req, res) => {
       .filter(t => t.type === 'deposit' || t.type === 'refund')
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const totalDeductions = userTxns
-      .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+      .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw' || t.type === 'refund_reversal')
       .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
     realBalance = Math.max(Number(customer.balance) || 0, totalDeposits - totalDeductions);
   } else {
@@ -639,7 +639,7 @@ router.all('/qr-confirm', (req, res) => {
       .filter(t => t.type === 'deposit' || t.type === 'refund')
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const totalDeductions = userTxns
-      .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+      .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw' || t.type === 'refund_reversal')
       .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
     const calculatedBalance = Math.max(0, totalDeposits - totalDeductions);
 

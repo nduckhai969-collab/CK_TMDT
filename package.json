@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "seed": "node scripts/seedFirebase.js",
-    "test:payment": "node scripts/testPayment.js",
+    "seed": "node scripts/seedMysql.js",
     "check": "node scripts/checkFrontend.js"
   },
   "repository": {
@@ -18,7 +17,8 @@
     "cors": "^2.8.6",
     "dotenv": "^16.4.5",
     "express": "^5.2.1",
-    "firebase-admin": "^12.6.0"
+    "mysql2": "^3.24.6",
+    "nodemailer": "^10.2.1"
   },
   "keywords": [],
   "author": "",

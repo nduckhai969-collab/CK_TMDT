@@ -268,88 +268,100 @@ router.post('/unlock-requests/:id/decide', (req, res) => {
 // ============================================================================
 // 4. PROVIDER & SKILL APPROVALS (UC-54, UC-55, UC-56)
 // ============================================================================
-router.get('/providers/pending', (req, res) => {
-  const pending = db.getCollection('pendingProviders');
-  res.json({ success: true, total: pending.length, pendingProviders: pending });
+router.get('/providers/pending', async (req, res) => {
+  const [pending, providers, users] = await Promise.all([
+    db.getCollectionFresh('pendingProviders'),
+    db.getCollectionFresh('providers'),
+    db.getCollectionFresh('users')
+  ]);
+  const providerApplications = providers
+    .filter(provider => provider.verified !== true && provider.reviewStatus !== 'rejected')
+    .map(provider => {
+      const user = users.find(item => item.id === provider.userId || item.email?.toLowerCase() === provider.email?.toLowerCase());
+      return {
+        id: provider.id, providerId: provider.id, userId: provider.userId,
+        name: provider.name || user?.name || 'Provider', email: provider.email || user?.email || '',
+        phone: provider.phone || user?.phone || '', specialty: provider.specialty || '',
+        category: provider.category || '', location: provider.location || '', skills: provider.skills || [],
+        bio: provider.bio || '', experience: provider.experience || '',
+        cert: provider.certifications || [], date: provider.createdAt || provider.joinDate || '',
+        status: provider.profileCompleted === true ? 'pending' : 'incomplete', source: 'provider-profile'
+      };
+    });
+  const profileUserIds = new Set(providerApplications.map(item => item.userId).filter(Boolean));
+  const legacyPending = pending.filter(item => item.status === 'pending' && !profileUserIds.has(item.userId));
+  const allPending = [...legacyPending, ...providerApplications];
+  res.json({ success: true, total: allPending.length, pendingProviders: allPending });
 });
 
-router.post('/providers/:id/approve', (req, res) => {
-  const pending = db.getCollection('pendingProviders');
+router.post('/providers/:id/approve', async (req, res) => {
+  const pending = await db.getCollectionFresh('pendingProviders');
   const item = pending.find(p => p.id === req.params.id);
-
-  if (!item) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ đăng ký Provider!' });
+  const providers = await db.getCollectionFresh('providers');
+  const users = await db.getCollectionFresh('users');
+  let provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (item && p.userId === item.userId));
+  if (!item && !provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ đăng ký Provider!' });
+  if (provider && provider.profileCompleted !== true) {
+    return res.status(409).json({ success: false, message: 'Provider cần hoàn tất hồ sơ trước khi Admin duyệt.' });
   }
-
-  item.status = 'approved';
-  db.saveCollection('pendingProviders', pending);
-
-  // Upgrade or add to providers collection
-  const providers = db.getCollection('providers');
-  let provider = providers.find(p => p.name === item.name || (p.userId && p.userId === item.userId));
+  if (item) {
+    item.status = 'approved';
+    db.saveCollection('pendingProviders', pending);
+  }
 
   if (!provider) {
-    const newId = `PRV${String(providers.length + 1).padStart(3, '0')}`;
+    const user = users.find(u => u.id === item.userId || u.email?.toLowerCase() === item.email?.toLowerCase());
+    const maxId = providers.reduce((max, p) => Math.max(max, Number((/^PRV(\d+)$/.exec(p.id || '') || [])[1]) || 0), 0);
     provider = {
-      id: newId,
-      userId: item.userId || `USR_P_${Date.now()}`,
-      name: item.name,
-      specialty: item.specialty,
-      category: 'IT',
-      rating: 5.0,
-      reviewCount: 0,
-      hourlyRate: 300000,
-      completedOrders: 0,
-      location: 'Việt Nam',
-      verified: true,
-      badge: 'VERIFIED PROVIDER',
-      bio: item.bio || '',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
+      id: `PRV${String(maxId + 1).padStart(3, '0')}`, userId: item.userId || user?.id || `USR_P_${Date.now()}`,
+      name: item.name || user?.name || 'Provider', email: item.email || user?.email || '', phone: item.phone || user?.phone || '',
+      specialty: item.specialty || '', category: item.category || 'IT', rating: 5, reviewCount: 0,
+      hourlyRate: Number(item.hourlyRate) || 300000, completedOrders: 0, location: item.location || 'Việt Nam',
+      verified: true, profileCompleted: true, reviewStatus: 'approved', badge: 'VERIFIED PROVIDER',
+      bio: item.bio || '', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
       cover: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
-      skills: item.specialty ? item.specialty.split(/[,/]/).map(s => s.trim()) : ['Chuyên môn'],
-      certifications: item.cert ? item.cert.split(/[,]/).map(c => c.trim()) : [],
-      packages: [],
-      availabilityStatus: 'ready'
+      skills: Array.isArray(item.skills) ? item.skills : (item.specialty ? item.specialty.split(/[,/]/).map(s => s.trim()) : ['Chuyên môn']),
+      certifications: Array.isArray(item.cert) ? item.cert : (item.cert ? item.cert.split(/[,]/).map(c => c.trim()) : []),
+      packages: [], availabilityStatus: 'ready'
     };
     providers.push(provider);
-    db.saveCollection('providers', providers);
   } else {
     provider.verified = true;
-    db.saveCollection('providers', providers);
+    provider.reviewStatus = 'approved';
+    if (!provider.availabilityStatus || provider.availabilityStatus === 'inactive') provider.availabilityStatus = 'ready';
   }
+  db.saveCollection('providers', providers);
 
-  // Update user role if user exists
-  const users = db.getCollection('users');
-  const user = users.find(u => u.email === item.email || u.id === item.userId);
+  const user = users.find(u => u.email?.toLowerCase() === (item?.email || provider.email || '').toLowerCase() || u.id === (item?.userId || provider.userId));
   if (user) {
     user.role = 'Provider';
+    if (user.status === 'pending_verification') user.status = 'active';
     db.saveCollection('users', users);
   }
-
-  res.json({
-    success: true,
-    message: `Đã phê duyệt hồ sơ Provider thành công cho [${item.name}].`,
-    provider
-  });
+  res.json({ success: true, message: `Đã phê duyệt hồ sơ Provider thành công cho [${item?.name || provider.name}].`, provider });
 });
 
-router.post('/providers/:id/reject', (req, res) => {
+router.post('/providers/:id/reject', async (req, res) => {
   const { reason } = req.body;
-  const pending = db.getCollection('pendingProviders');
+  const pending = await db.getCollectionFresh('pendingProviders');
   const item = pending.find(p => p.id === req.params.id);
-
-  if (!item) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ đăng ký Provider!' });
+  const providers = await db.getCollectionFresh('providers');
+  const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (item && p.userId === item.userId));
+  if (!item && !provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ đăng ký Provider!' });
+  const rejectReason = reason || 'Thông tin chưa đầy đủ hoặc không hợp lệ';
+  if (item) {
+    item.status = 'rejected';
+    item.rejectReason = rejectReason;
+    db.saveCollection('pendingProviders', pending);
   }
-
-  item.status = 'rejected';
-  item.rejectReason = reason || 'Thông tin chưa đầy đủ hoặc không hợp lệ';
-  db.saveCollection('pendingProviders', pending);
-
-  res.json({
-    success: true,
-    message: `Đã từ chối hồ sơ Provider của [${item.name}].`
-  });
+  if (provider) {
+    provider.verified = false;
+    provider.reviewStatus = 'rejected';
+    provider.rejectReason = rejectReason;
+    provider.availabilityStatus = 'inactive';
+    db.saveCollection('providers', providers);
+  }
+  res.json({ success: true, message: `Đã từ chối hồ sơ Provider của [${item?.name || provider?.name || 'Provider'}].` });
 });
 
 // Skills & Certifications Approvals (UC-56)
@@ -519,9 +531,31 @@ router.post('/services/:id/unlock', (req, res) => {
 // ============================================================================
 // 6. ORDERS & ESCROW INTERVENTION (UC-60, UC-61)
 // ============================================================================
-router.get('/orders', (req, res) => {
+router.get('/orders', async (req, res) => {
   const { status, escrowStatus } = req.query;
-  let orders = db.getCollection('orders');
+  const [allOrders, users, providers, services] = await Promise.all([
+    db.getCollectionFresh('orders'), db.getCollectionFresh('users'),
+    db.getCollectionFresh('providers'), db.getCollectionFresh('services')
+  ]);
+  let orders = allOrders.map(order => {
+    const customer = users.find(user => user.id === order.customerId || user.uid === order.customerId);
+    const provider = providers.find(item => item.id === order.providerId);
+    const service = services.find(item => item.id === order.serviceId);
+    const escrowLabels = {
+      escrow_held: 'Đã giữ ký quỹ', refunded: 'Đã hoàn tiền', disputed: 'Tạm giữ tranh chấp',
+      completed: 'Đã giải ngân', payment_cancelled: 'Chưa thanh toán', partial_refunded: 'Hoàn tiền một phần'
+    };
+    const createdAt = order.createdAt || order.created_at || '';
+    return {
+      ...order,
+      customer: order.customer || customer?.name || order.customerName || order.customerId || 'Khách hàng',
+      provider: order.provider || provider?.name || order.providerName || order.providerId || 'Provider',
+      service: order.service || order.serviceTitle || service?.title || 'Dịch vụ',
+      price: order.priceFormatted || `${(Number(order.price) || 0).toLocaleString('vi-VN')}đ`,
+      escrowStatusLabel: escrowLabels[order.escrowStatus] || order.escrowStatus || 'Chưa cập nhật',
+      date: order.date || createdAt
+    };
+  });
 
   if (status && status !== 'all') {
     orders = orders.filter(o => o.orderStatus === status);
@@ -900,7 +934,7 @@ router.get('/statistics', (req, res) => {
     delivered: filteredOrders.filter(o => o.orderStatus === 'delivered').length,
     completed: filteredOrders.filter(o => o.orderStatus === 'completed').length,
     cancelled: filteredOrders.filter(o => o.orderStatus === 'cancelled').length,
-    disputed: filteredOrders.filter(o => o.orderStatus === 'disputed').length
+    disputed: filteredOrders.filter(o => ['disputed', 'cancel_requested', 'cancel_rejected'].includes(o.orderStatus)).length
   };
 
   res.json({

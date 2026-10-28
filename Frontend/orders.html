@@ -8,10 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
 </head>
 <body>
   <div class="app">
@@ -167,7 +164,7 @@
               <option value="confirmed">Đã xác nhận</option>
               <option value="processing">Đang thực hiện</option>
               <option value="completed">Hoàn thành</option>
-              <option value="disputed">Khiếu nại / Tranh chấp</option>
+              <option value="dispute">Tranh chấp / Chờ Admin phân xử</option>
               <option value="cancelled">Đã hủy</option>
             </select>
             <div style="display:flex; align-items:center; gap:6px;">
@@ -242,6 +239,8 @@
       delivered:  { text: 'Đã bàn giao',          badge: 'badge-purple' },
       completed:  { text: 'Hoàn thành',           badge: 'badge-success' },
       disputed:   { text: 'Khiếu nại / Tranh chấp', badge: 'badge-danger' },
+      cancel_requested: { text: 'Chờ Provider phản hồi hủy', badge: 'badge-warning' },
+      cancel_rejected: { text: 'Provider từ chối hủy — Chờ Admin phân xử', badge: 'badge-danger' },
       cancelled:  { text: 'Đã hủy',               badge: 'badge-danger' }
     };
 
@@ -268,25 +267,43 @@
       cancelled: []  // Trạng thái kết thúc đã hủy
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
+    let liveOrders = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadLiveOrders();
       renderOrdersTable();
       setupOrderEvents();
     });
 
+    async function loadLiveOrders() {
+      try {
+        const response = await window.adminApi.getOrders();
+        if (response.success && Array.isArray(response.orders)) liveOrders = response.orders;
+      } catch (error) {
+        console.warn('Không tải được đơn hàng mới từ máy chủ:', error);
+      }
+    }
+
+    function getOrdersList() {
+      return liveOrders || getAppState().orders || [];
+    }
+
     function renderOrdersTable() {
-      const state = getAppState();
+      const orders = getOrdersList();
       const q = (document.getElementById('order-search')?.value || '').toLowerCase().trim();
       const st = document.getElementById('order-status-filter')?.value || 'all';
       const dateVal = document.getElementById('order-date-filter')?.value || '';
 
-      const filtered = (state.orders || []).filter(o => {
+      const filtered = orders.filter(o => {
         const matchQ = (o.id || '').toLowerCase().includes(q) ||
                        (o.customer || '').toLowerCase().includes(q) ||
                        (o.provider || '').toLowerCase().includes(q) ||
                        (o.service || '').toLowerCase().includes(q) ||
                        (o.date || '').toLowerCase().includes(q);
 
-        const matchSt = (st === 'all') || (o.orderStatus === st);
+        const matchSt = st === 'all' || (st === 'dispute'
+          ? ['disputed', 'cancel_requested', 'cancel_rejected'].includes(o.orderStatus)
+          : o.orderStatus === st);
 
         let matchDate = true;
         if (dateVal && window.adminUtils) {
@@ -299,7 +316,7 @@
 
       const tbody = document.getElementById('orders-tbody');
       const countEl = document.getElementById('orders-count-text');
-      if (countEl) countEl.textContent = `Hiển thị ${filtered.length} / ${(state.orders || []).length} đơn hàng`;
+      if (countEl) countEl.textContent = `Hiển thị ${filtered.length} / ${orders.length} đơn hàng`;
 
       if (!tbody) return;
 
@@ -319,7 +336,7 @@
           <td><strong style="color:var(--secondary)">${o.price}</strong></td>
           <td>
             <span class="badge ${o.escrowStatus === 'Đã giữ ký quỹ' ? 'badge-info' : o.escrowStatus === 'Đã giải ngân' ? 'badge-success' : o.escrowStatus === 'Tạm giữ tranh chấp' ? 'badge-danger' : 'badge-warning'}">
-              ${o.escrowStatus}
+              ${o.escrowStatusLabel || o.escrowStatus}
             </span>
           </td>
           <td>
@@ -361,7 +378,7 @@
       document.getElementById('btn-cancel-order-intervene').addEventListener('click', () => {
         if (!activeOrderId) return;
         const state = getAppState();
-        const order = (state.orders || []).find(o => o.id === activeOrderId);
+        const order = getOrdersList().find(o => o.id === activeOrderId);
         if (!order) return;
 
         if (order.orderStatus === 'cancelled') {
@@ -383,24 +400,27 @@
       });
 
       // Lắng nghe thay đổi từ các trang khác
-      window.addEventListener('storage', (e) => {
+      window.addEventListener('storage', async (e) => {
         if (!e.key || e.key === 'SKILL_RENTAL_ADMIN_STATE_V1') {
+          await loadLiveOrders();
           renderOrdersTable();
         }
       });
-      window.addEventListener('appStateUpdated', renderOrdersTable);
+      window.addEventListener('appStateUpdated', async () => { await loadLiveOrders(); renderOrdersTable(); });
     }
 
     // Mở modal chi tiết & quy trình nghiệp vụ đơn hàng
     function openOrderModal(id) {
-      const state = getAppState();
-      const order = (state.orders || []).find(o => o.id === id);
+      const order = getOrdersList().find(o => o.id === id);
       if (!order) return;
 
       activeOrderId = id;
       const stInfo = STATUS_MAP[order.orderStatus] || { text: order.orderStatus, badge: 'badge-neutral' };
       const transitions = VALID_TRANSITIONS[order.orderStatus] || [];
       const isTerminal = order.orderStatus === 'completed' || order.orderStatus === 'cancelled';
+      const needsCancelArbitration = ['cancel_requested', 'cancel_rejected'].includes(order.orderStatus);
+      const interveneButton = document.getElementById('btn-cancel-order-intervene');
+      if (interveneButton) interveneButton.style.display = needsCancelArbitration ? 'none' : '';
 
       const body = document.getElementById('modal-order-detail-body');
       body.innerHTML = `
@@ -428,6 +448,24 @@
           </div>
         </div>
 
+        ${needsCancelArbitration ? `
+          <div class="dispute-box" style="margin-bottom:16px;display:block">
+            <strong>Yêu cầu hủy cần Admin phân xử</strong>
+            <p><b>Lý do khách:</b> ${order.cancelRequest?.reason || 'Không có lý do được lưu.'}</p>
+            <p><b>Phản hồi Provider:</b> ${order.cancelRequest?.providerNote || 'Chưa ghi phản hồi.'}</p>
+            <label class="form-label" for="arbitration-action">Phán quyết</label>
+            <select id="arbitration-action" class="form-control">
+              <option value="continue">Cho đơn tiếp tục thực hiện</option>
+              <option value="cancel">Hủy đơn và hoàn tiền theo tỷ lệ</option>
+            </select>
+            <label class="form-label" for="arbitration-refund">Tỷ lệ hoàn cho khách (%)</label>
+            <input id="arbitration-refund" class="form-control" type="number" min="0" max="100" value="100">
+            <label class="form-label" for="arbitration-note">Căn cứ phán quyết (bắt buộc)</label>
+            <textarea id="arbitration-note" class="form-control" rows="3" minlength="10" required placeholder="Ghi rõ căn cứ xem xét của Admin"></textarea>
+            <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="submitOrderArbitration('${order.id}')">Lưu phán quyết</button>
+          </div>
+        ` : ''}
+
         <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:16px;">
           <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
             <span>Tổng giá trị đơn hàng:</span>
@@ -435,7 +473,7 @@
           </div>
           <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
             <span>Trạng thái tài khoản ký quỹ (Escrow):</span>
-            <strong style="color:var(--primary);">${order.escrowStatus}</strong>
+            <strong style="color:var(--primary);">${order.escrowStatusLabel || order.escrowStatus}</strong>
           </div>
           <div style="display:flex; justify-content:space-between;">
             <span>Phí hoa hồng nền tảng (10%):</span>
@@ -449,9 +487,9 @@
             Quy trình nghiệp vụ: Cập nhật trạng thái đơn hàng
           </label>
 
-          ${isTerminal ? `
+          ${isTerminal || needsCancelArbitration ? `
             <div style="background:#F1F5F9; border-radius:6px; padding:10px 12px; font-size:12.5px; color:#475569;">
-              ⓘ Đơn hàng này đã kết thúc ở trạng thái <strong>${stInfo.text}</strong>. Theo quy chế sàn, đơn đã hoàn thành hoặc đã hủy không thể chuyển sang trạng thái khác.
+              ${needsCancelArbitration ? 'ⓘ Chỉ được cập nhật sau khi Admin ghi phán quyết ở khu vực phân xử phía trên.' : `ⓘ Đơn hàng này đã kết thúc ở trạng thái <strong>${stInfo.text}</strong>. Theo quy chế sàn, đơn đã hoàn thành hoặc đã hủy không thể chuyển sang trạng thái khác.`}
             </div>
           ` : `
             <div style="display:flex; gap:10px; align-items:center;">
@@ -472,6 +510,23 @@
       openModal('modal-order-detail');
     }
 
+    async function submitOrderArbitration(orderId) {
+      const action = document.getElementById('arbitration-action')?.value;
+      const adminNote = document.getElementById('arbitration-note')?.value?.trim() || '';
+      const refundPercentage = Number(document.getElementById('arbitration-refund')?.value);
+      if (!adminNote) return showToast('Thiếu căn cứ', 'Vui lòng ghi rõ căn cứ phán quyết.', 'error');
+      try {
+        const result = await window.adminApi.arbitrateCancellation(orderId, action, adminNote, refundPercentage);
+        if (!result.success) return showToast('Không thể lưu phán quyết', result.message || 'Vui lòng thử lại.', 'error');
+        await loadLiveOrders();
+        renderOrdersTable();
+        closeModal('modal-order-detail');
+        showToast('Đã lưu phán quyết', result.message || 'Đơn hàng đã được cập nhật.', 'success');
+      } catch (error) {
+        showToast('Lỗi kết nối', error.message || 'Không thể lưu phán quyết.', 'error');
+      }
+    }
+
     // Xử lý cập nhật trạng thái đơn hàng
     function handleUpdateOrderStatus(orderId) {
       const selectEl = document.getElementById('order-next-status-select');
@@ -481,7 +536,7 @@
       if (!newStatus) return;
 
       const state = getAppState();
-      const order = (state.orders || []).find(o => o.id === orderId);
+      const order = getOrdersList().find(o => o.id === orderId);
       if (!order) return;
 
       // Kiểm tra tính hợp lệ của chuyển đổi

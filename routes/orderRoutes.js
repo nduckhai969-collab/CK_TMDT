@@ -344,7 +344,7 @@ router.post('/', requireCustomer, (req, res) => {
     .filter(t => t.type === 'deposit' || t.type === 'refund')
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
   const totalDeductions = userTxns
-    .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+    .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw' || t.type === 'refund_reversal')
     .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
   const ledgerBalance = Math.max(0, totalDeposits - totalDeductions);
   const realBalance = Math.max(userBalance, ledgerBalance);

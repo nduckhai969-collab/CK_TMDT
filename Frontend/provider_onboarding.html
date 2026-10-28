@@ -7,10 +7,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
   <style>
     body {
       background: #f8fafc;
@@ -219,6 +216,7 @@
           <div class="form-item">
             <label>Lĩnh vực chuyên môn chính <span class="req">*</span></label>
             <select id="obCategory" required>
+              <option value="" disabled selected>Chọn lĩnh vực chuyên môn</option>
               <option value="Lập trình & CNTT">Lập trình & Công nghệ thông tin</option>
               <option value="Thiết kế & Đồ họa">Thiết kế Đồ họa & UI/UX</option>
               <option value="Marketing & Bán hàng">Marketing & Truyền thông số</option>
@@ -234,7 +232,7 @@
         <div class="form-grid-2">
           <div class="form-item">
             <label>Đơn giá làm việc mỗi giờ (VNĐ/giờ) <span class="req">*</span></label>
-            <input type="number" id="obHourlyRate" placeholder="Ví dụ: 300000" min="50000" step="10000" value="300000" required>
+            <input type="number" id="obHourlyRate" placeholder="Ví dụ: 300000" min="50000" step="10000" required>
             <div class="input-hint">Mức giá đề xuất: 200.000đ - 600.000đ/giờ</div>
           </div>
 
@@ -371,7 +369,11 @@
             name,
             phone,
             specialty,
+            category,
             address: location,
+            hourlyRate,
+            skills,
+            bio,
             profileCompleted: true
           };
           localStorage.setItem(SESSION_KEY, JSON.stringify(updatedUser));

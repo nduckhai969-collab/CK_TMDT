@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
+const { firestore } = require('../firebase');
 const { requireSignedIn } = require('./customerAuth');
 const { notifyProvider } = require('../services/notificationService');
 
@@ -23,10 +24,10 @@ router.get('/', (req, res) => {
 });
 
 // Create a comment
-router.post('/', requireSignedIn, (req, res) => {
+router.post('/', requireSignedIn, async (req, res) => {
   const { targetType, targetId, content, parentId } = req.body;
   const cleanContent = typeof content === 'string' ? content.trim() : '';
-  if (targetType !== 'service' || !targetId || !cleanContent) {
+  if (!['service', 'post'].includes(targetType) || !targetId || !cleanContent) {
     return res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
   }
   if (cleanContent.length > 1500) {
@@ -34,8 +35,23 @@ router.post('/', requireSignedIn, (req, res) => {
   }
 
   const comments = db.getCollection('comments') || [];
-  const service = (db.getCollection('services') || []).find(item => item.id === targetId);
-  if (!service) return res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ.' });
+  let providerId, targetTitle;
+  if (targetType === 'service') {
+    const service = (db.getCollection('services') || []).find(item => item.id === targetId);
+    if (!service) return res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ.' });
+    providerId = service.providerId;
+    targetTitle = service.title || service.name || '';
+  } else {
+    try {
+      const postSnapshot = await firestore.collection('posts').doc(targetId).get();
+      if (!postSnapshot.exists) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
+      const post = postSnapshot.data();
+      providerId = post.providerId;
+      targetTitle = post.title || '';
+    } catch (error) {
+      return res.status(503).json({ success: false, message: 'Chưa xác minh được bài viết. Vui lòng thử lại.' });
+    }
+  }
   
   if (parentId) {
     const parentComment = comments.find(c => c.id === parentId && c.targetType === targetType && c.targetId === targetId && c.status !== 'hidden');
@@ -45,7 +61,7 @@ router.post('/', requireSignedIn, (req, res) => {
     
     // Check reply permission
     const providers = db.getCollection('providers') || [];
-    const serviceProvider = providers.find(p => p.id === service.providerId);
+    const serviceProvider = providers.find(p => p.id === providerId);
     const isServiceProvider = serviceProvider && serviceProvider.userId === req.authUser.id;
     const isParentAuthor = parentComment.userId === req.authUser.id;
     if (!isServiceProvider && !isParentAuthor) {
@@ -68,7 +84,10 @@ router.post('/', requireSignedIn, (req, res) => {
 
   comments.push(newComment);
   db.saveCollection('comments', comments);
-  if (!parentId) notifyProvider(service.providerId, 'Bình luận dịch vụ mới', `${req.authUser.name || 'Khách hàng'} đã bình luận về dịch vụ ${service.title || ''}.`, 'info');
+  if (!parentId) {
+    const targetLabel = targetType === 'post' ? `bài viết “${targetTitle}”` : `dịch vụ ${targetTitle}`;
+    notifyProvider(providerId, 'Bình luận mới', `${req.authUser.name || 'Người dùng'} đã bình luận về ${targetLabel}.`, 'info', targetType === 'post' ? `/customer_provider.html?id=${encodeURIComponent(providerId)}` : '');
+  }
 
   res.status(201).json({ success: true, message: 'Đã gửi bình luận.', comment: newComment });
 });

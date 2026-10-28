@@ -12,7 +12,8 @@ ml/.venv/
 **/__pycache__/
 *.pyc
 
-# Local backup files
+# Database local cache — không track, dùng Firestore làm nguồn chính
+data/database.json
 data/database.backup.json
 data/database.json.backup_*
 

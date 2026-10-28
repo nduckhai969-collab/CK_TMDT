@@ -456,6 +456,15 @@ window.providerApi = {
     return res.json();
   },
 
+  respondCancellation: async (id, approve, reason = '') => {
+    const res = await fetch(`${API_BASE}/api/providers/orders/${id}/cancellation-response`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ approve, reason })
+    });
+    return res.json();
+  },
+
   updateOrderProgress: async (id, progressPercent, completedTasks, notes) => {
     const res = await fetch(`${API_BASE}/api/providers/orders/${id}/progress`, {
       method: 'POST',

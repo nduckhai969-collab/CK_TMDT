@@ -36,30 +36,30 @@ const CUSTOMER_SESSION_KEY = 'SKILLRENTAL_CUSTOMER_USER';
 // ============================================================
 
 function getCurrentCustomer() {
-  const cRaw = localStorage.getItem(CUSTOMER_SESSION_KEY);
-  if (cRaw) {
-    try {
-      const cUser = JSON.parse(cRaw);
-      if (cUser && cUser.id && !['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(cUser.id) && cUser.role === 'Customer') {
-        return cUser;
-      }
-    } catch (_) {}
-  }
   const raw = localStorage.getItem(SESSION_KEY);
-
   if (!raw) {
+    // A role-specific cache is only a mirror; it must not resurrect a signed-out user.
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
     return null;
   }
 
   try {
     const user = JSON.parse(raw);
     if (!user || !user.id || ['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(user.id)) {
+      localStorage.removeItem(CUSTOMER_SESSION_KEY);
       (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
       return null;
     }
+    if (user.role !== 'Customer') {
+      localStorage.removeItem(CUSTOMER_SESSION_KEY);
+      return null;
+    }
+    // Keep the legacy customer cache aligned with the canonical active session.
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
     return user;
   } catch (error) {
     console.error('Session data không hợp lệ:', error);
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
     (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
     return null;
   }
@@ -749,7 +749,21 @@ async function refreshCustomerAccountSummary() {
   }
   const freshUser = { ...cachedUser, ...result.user };
   setCurrentCustomer(freshUser);
+  syncCustomerNavbarIdentity(freshUser);
   balanceLabel.textContent = `Số dư: ${formatVND(Number(freshUser.balance) || 0)}`;
+}
+
+function syncCustomerNavbarIdentity(user) {
+  const accountButton = document.getElementById('customerAccountButton');
+  if (accountButton) {
+    const avatar = accountButton.children[0];
+    const name = accountButton.children[1];
+    if (avatar) avatar.outerHTML = renderCustomerNavbarAvatar(user, 28);
+    if (name) name.textContent = user.name || 'Tài khoản';
+  }
+  const accountMenu = document.getElementById('customerAccountMenu');
+  const menuName = accountMenu?.firstElementChild?.firstElementChild;
+  if (menuName) menuName.textContent = user.name || 'Tài khoản';
 }
 
 async function toggleCustomerNotifications() {
@@ -2701,20 +2715,48 @@ window.getCategoryBadge =
 // ============================================================
 let favoriteProviderIds = new Set();
 let favoriteProviderIdsLoaded = false;
+let favoriteProviderUserId = null;
 
 async function loadFavoriteProviderIds() {
-  const user = getCurrentCustomer();
+  let user = getCurrentCustomer();
   if (!user || user.role !== 'Customer') {
     favoriteProviderIds = new Set();
-    favoriteProviderIdsLoaded = true;
+    favoriteProviderIdsLoaded = false;
+    favoriteProviderUserId = null;
     syncFavoriteButtons();
     return favoriteProviderIds;
   }
-  const result = await apiRequest('/api/providers/favorites');
-  if (result.success) {
+  try {
+    // Local storage can retain a stale role or account ID. Ask the authenticated
+    // API which profile the Firebase token actually belongs to before loading
+    // customer-only data.
+    const session = await apiRequest('/api/auth/me');
+    if (!session.success || !session.user) {
+      throw new Error(session.message || 'Không xác minh được tài khoản hiện tại.');
+    }
+    user = { ...user, ...session.user };
+    setCurrentCustomer(user);
+    if (user.role !== 'Customer') {
+      favoriteProviderIds = new Set();
+      favoriteProviderIdsLoaded = false;
+      favoriteProviderUserId = null;
+      syncFavoriteButtons();
+      showToast('Không thể thêm yêu thích', 'Phiên đăng nhập hiện tại không phải tài khoản khách hàng.', 'error');
+      return favoriteProviderIds;
+    }
+
+    const result = await apiRequest('/api/providers/favorites');
+    if (!result.success) {
+      favoriteProviderIdsLoaded = false;
+      throw new Error(result.message || 'Không tải được danh sách yêu thích.');
+    }
     favoriteProviderIds = new Set(result.providerIds || []);
     favoriteProviderIdsLoaded = true;
+    favoriteProviderUserId = user.id;
     syncFavoriteButtons();
+  } catch (error) {
+    console.error('Không tải được danh sách Provider yêu thích:', error);
+    showToast('Không tải được yêu thích', error.message || 'Vui lòng thử lại.', 'error');
   }
   return favoriteProviderIds;
 }
@@ -2734,7 +2776,11 @@ function syncFavoriteButtons() {
 
 async function toggleFavoriteProvider(providerId, button = null) {
   if (!requireCustomerLogin()) return;
-  if (!favoriteProviderIdsLoaded) await loadFavoriteProviderIds();
+  const user = getCurrentCustomer();
+  if (!favoriteProviderIdsLoaded || favoriteProviderUserId !== user?.id) {
+    await loadFavoriteProviderIds();
+  }
+  if (!favoriteProviderIdsLoaded || favoriteProviderUserId !== user?.id) return;
   const isFavorite = favoriteProviderIds.has(providerId);
   if (button) button.disabled = true;
   try {

@@ -166,6 +166,14 @@
     if (existingIndex !== -1) {
       // ĐÃ TỒN TẠI: Không tạo mới, không sinh ID mới, giữ nguyên role & status & balance
       const existing = state.users[existingIndex];
+      if (typeof userData.balance === 'number') existing.balance = userData.balance;
+      // The server profile is authoritative after sign-in. Keep the local Admin
+      // mirror aligned so a stale cached role cannot make the UI send requests
+      // under a different role than the API recognizes.
+      if (['Admin', 'Customer', 'Provider'].includes(userData.role)) {
+        existing.role = userData.role;
+      }
+      if (userData.id) existing.id = userData.id;
       if (uid && (!existing.uid || existing.uid !== uid)) {
         existing.uid = uid;
       }
@@ -394,6 +402,11 @@
       const finalUser = syncUserToAdminState(userToSync);
 
       localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+      if (finalUser.role === 'Provider') {
+        localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(finalUser));
+      } else if (finalUser.role === 'Customer') {
+        localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(finalUser));
+      }
       window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
       return { success: true, user: finalUser };
     },
@@ -503,6 +516,8 @@
     // G. ĐĂNG XUẤT TOÀN DIỆN
     async logout() {
       localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem('SKILLRENTAL_CUSTOMER_USER');
+      localStorage.removeItem('SKILLRENTAL_PROVIDER_USER');
       try { await fbAuth.signOut(); } catch (_) {}
       window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: null } }));
       window.dispatchEvent(new CustomEvent('skillrental:logout'));
@@ -550,6 +565,11 @@
         const finalUser = syncUserToAdminState(userToSync);
 
         localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+      if (finalUser.role === 'Provider') {
+        localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(finalUser));
+      } else if (finalUser.role === 'Customer') {
+        localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(finalUser));
+      }
         window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
         return { success: true, user: finalUser };
       } catch (err) {
@@ -584,6 +604,11 @@
 
         const finalUser = syncUserToAdminState(userToSync);
         localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+      if (finalUser.role === 'Provider') {
+        localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(finalUser));
+      } else if (finalUser.role === 'Customer') {
+        localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(finalUser));
+      }
         window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
         return { success: true, user: finalUser };
       } catch (err) {
@@ -601,6 +626,11 @@
       const res = await callApi('/api/auth/profile', 'PUT', token, { name, phone, address, avatar, role });
       if (res.success && res.user) {
         localStorage.setItem(SESSION_KEY, JSON.stringify(res.user));
+        if (res.user.role === 'Customer') {
+          localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(res.user));
+        } else if (res.user.role === 'Provider') {
+          localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(res.user));
+        }
         window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: res.user } }));
       }
       return res;

@@ -575,8 +575,16 @@ async function saveVacationSchedule() {
 function renderServicesList(services) {
   const container = document.getElementById('packagesContainer');
   if (!container) return;
+  const serviceList = Array.isArray(services) ? services : [];
+  const publicCount = serviceList.filter(service => service.status !== 'inactive').length;
+  const countLabel = document.getElementById('serviceCountSummary');
+  if (countLabel) {
+    countLabel.textContent = publicCount === serviceList.length
+      ? `${publicCount} gói đang hiển thị`
+      : `${publicCount} đang hiển thị · ${serviceList.length} tổng`;
+  }
 
-  if (!services || services.length === 0) {
+  if (serviceList.length === 0) {
     container.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: #fff; border: 1px dashed var(--border-color); border-radius: 12px;">
         <i class="fa-solid fa-box-open" style="font-size: 36px; color: var(--text-muted); margin-bottom: 12px;"></i>
@@ -590,7 +598,7 @@ function renderServicesList(services) {
     return;
   }
 
-  container.innerHTML = services.map(s => {
+  container.innerHTML = serviceList.map(s => {
     const priceFormatted = Number(s.price || 0).toLocaleString('vi-VN') + 'đ';
     const duration = s.duration || s.deliveryTime || '3-5 ngày';
     const lines = (s.description || '').split('\n').filter(l => l.trim().length > 0);
@@ -600,6 +608,7 @@ function renderServicesList(services) {
       <div class="package-card" data-service-id="${s.id}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <span class="badge badge-neutral" style="width: fit-content;">${escapeHtml(s.category || 'Dịch vụ')}</span>
+          ${s.status === 'inactive' ? '<span class="badge badge-warning" style="font-size:11px;">Đang ẩn với khách hàng</span>' : ''}
           <span class="badge badge-success" style="font-size: 11px;"><i class="fa-solid fa-clock"></i> ${escapeHtml(duration)}</span>
         </div>
         <div style="font-weight: 700; font-size: 17px; margin-top: 10px; color: var(--secondary);">${escapeHtml(s.title || s.name || 'Gói dịch vụ')}</div>
@@ -751,9 +760,13 @@ async function loadProviderProfile() {
   }
 
   try {
-    if (!window.providerApi) return;
+    const packagesContainer = document.getElementById('packagesContainer');
+    const countLabel = document.getElementById('serviceCountSummary');
+    if (packagesContainer) packagesContainer.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:36px;color:var(--text-muted);">Đang tải gói dịch vụ...</div>';
+    if (countLabel) countLabel.textContent = 'Đang tải...';
+    if (!window.providerApi) throw new Error('Không thể kết nối tới dữ liệu gói dịch vụ.');
     const res = await window.providerApi.getProfile();
-    if (!res || !res.provider) return;
+    if (!res || !res.success || !res.provider) throw new Error(res?.message || 'Không tải được hồ sơ dịch vụ.');
 
     currentProviderData = res.provider;
     providerServices = res.services || [];
@@ -934,6 +947,10 @@ async function loadProviderProfile() {
     drawProviderMonthlyCalendar();
   } catch (err) {
     console.warn('Lỗi nạp thông tin hồ sơ provider:', err);
+    const packagesContainer = document.getElementById('packagesContainer');
+    const countLabel = document.getElementById('serviceCountSummary');
+    if (packagesContainer) packagesContainer.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:36px;color:var(--danger);">Không tải được gói dịch vụ. Vui lòng tải lại trang.</div>';
+    if (countLabel) countLabel.textContent = 'Chưa tải được';
   }
 }
 

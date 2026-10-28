@@ -7,6 +7,10 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .post-discussion-backdrop{position:fixed;inset:0;z-index:3000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.58)}.post-discussion-backdrop.is-open{display:flex}.post-discussion-dialog{width:min(1080px,96vw);height:min(760px,90vh);display:flex;flex-direction:column;overflow:hidden;background:var(--bg-surface);border:1px solid var(--border-color);border-radius:16px;box-shadow:0 24px 70px rgba(15,23,42,.28)}.post-discussion-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border-color);flex:none}.post-discussion-title{font-size:16px;font-weight:700;color:var(--text-main)}.post-discussion-close{width:36px;height:36px;border:1px solid var(--border-color);border-radius:9px;background:var(--bg-surface);color:var(--text-main);font-size:20px;cursor:pointer}.post-discussion-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);min-height:0;flex:1}.post-discussion-content{min-width:0;min-height:0;overflow-y:auto;padding:22px 24px;border-right:1px solid var(--border-color)}.post-discussion-content h3{margin:0 0 10px;font-size:19px;line-height:1.35;color:var(--text-main)}.post-discussion-meta{margin-bottom:18px;color:var(--text-muted);font-size:12px}.post-discussion-body{color:var(--text-main);font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}.post-editor-form{display:grid;gap:14px}.post-editor-form[hidden],.post-discussion-readonly[hidden]{display:none}.post-editor-form textarea{min-height:240px;resize:vertical}.post-editor-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}.post-discussion-comments{display:flex;flex-direction:column;min-width:0;min-height:0;padding:16px 18px}.post-discussion-section-title{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:12px}.post-comment-list{display:grid;align-content:start;gap:9px;min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 6px 8px 0;scrollbar-gutter:stable}.post-comment-item{padding:11px 12px;background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-input)}.post-comment-item.is-reply{margin-left:24px;border-left:3px solid var(--primary-light)}.post-comment-meta{display:flex;justify-content:space-between;gap:12px;font-size:12px}.post-comment-meta strong{color:var(--text-main)}.post-comment-meta time{color:var(--text-muted);font-size:11px}.post-comment-content{margin:5px 0 0;color:var(--text-main);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.post-comment-reply-action{margin-top:7px;padding:0;border:0;background:transparent;color:var(--primary-dark);font-size:11px;font-weight:700;cursor:pointer}.post-comment-composer{display:grid;grid-template-columns:1fr auto;gap:8px;flex:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)}.post-comment-composer[hidden]{display:none}.post-comment-composer textarea{width:100%;min-height:64px;padding:10px;border:1px solid var(--border-color);border-radius:var(--radius-input);resize:vertical}.post-comment-reply-target{grid-column:1/-1;color:var(--text-muted);font-size:11px}.post-comment-composer button{align-self:end}.post-comment-empty{padding:22px 12px;text-align:center;color:var(--text-muted);font-size:12px}.post-comment-status{padding:12px;color:var(--text-muted);font-size:12px}@media(max-width:720px){.post-discussion-backdrop{padding:8px}.post-discussion-dialog{width:100%;height:94vh;border-radius:12px}.post-discussion-header{padding:12px 14px}.post-discussion-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1.15fr) minmax(0,.85fr)}.post-discussion-content{grid-row:1;padding:16px;border-right:0}.post-discussion-comments{grid-row:2;padding:12px;border-top:1px solid var(--border-color)}.post-comment-item.is-reply{margin-left:12px}.post-comment-composer{grid-template-columns:1fr}.post-comment-composer button{justify-self:end}}
+    .post-discussion-dialog,.post-discussion-header,.post-discussion-content{background-color:var(--bg-surface)}.post-discussion-comments{background-color:#F8FAFC}
+  </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
@@ -29,16 +33,15 @@
         <a href="profile.html" class="nav-link"><i class="fa-solid fa-id-card-clip"></i><span>Hồ Sơ & Dịch Vụ</span></a>
 
         <div class="nav-section-title">Công việc & Đơn hàng</div>
-        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);">6</span></a>
-        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);">2</span></a>
+        <a href="jobs.html" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>Đề xuất & Ứng tuyển</span><span class="badge-count" style="background-color: var(--primary);" hidden></span></a>
+        <a href="bookings.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i><span>Đặt lịch & Tiến độ</span><span class="badge-count" style="background-color: var(--primary);" hidden></span></a>
 
         <div class="nav-section-title">Kinh doanh & Khách hàng</div>
-        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count">3</span></a>
+        <a href="chat.html" class="nav-link"><i class="fa-solid fa-comments"></i><span>Tin nhắn Khách hàng</span><span class="badge-count" hidden></span></a>
         <a href="payment.html" class="nav-link"><i class="fa-solid fa-credit-card"></i><span>Thanh toán & Phí sàn</span></a>
         <a href="income.html" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Ví & Thu nhập</span></a>
         <a href="review.html" class="nav-link"><i class="fa-solid fa-star"></i><span>Đánh giá & Uy tín</span></a>
-        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);">1</span></a>
-
+        <a href="complaint.html" class="nav-link"><i class="fa-solid fa-shield-halved"></i><span>Khiếu nại & Tranh chấp</span><span class="badge-count" style="background-color: var(--warning);" hidden></span></a>
         <div class="nav-section-title">Dịch vụ hệ thống</div>
         <a href="package.html" class="nav-link"><i class="fa-solid fa-box-archive"></i><span>Mua dịch vụ</span></a>
         <a href="post.html" class="nav-link active"><i class="fa-solid fa-newspaper"></i><span>Bài viết & Portfolio</span></a>
@@ -57,136 +60,328 @@
       <header class="top-header">
         <div class="header-title">Quản Lý Bài Viết & Portfolio Showcase</div>
         <div class="header-actions">
-          <button class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Đăng Bài Viết Mới</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="openNewPost()"><i class="fa-solid fa-plus"></i> Đăng bài viết</button>
         </div>
       </header>
 
       <div class="content-body">
         <div class="card">
           <div class="card-header">
-            <div class="card-title"><i class="fa-solid fa-newspaper" style="color: var(--primary-accent);"></i> Danh Sách Bài Viết Đã Đăng</div>
+            <div class="card-title"><i class="fa-solid fa-newspaper" style="color: var(--primary-accent);"></i> Bài viết &amp; bản nháp <span id="postCountSummary" style="font-size:12px;color:var(--text-muted);font-weight:500;margin-left:8px;">Đang tải...</span></div>
+            <select id="postStatusFilter" class="form-control" style="max-width:180px;" onchange="renderProviderPosts()" aria-label="Lọc bài viết">
+              <option value="all">Tất cả bài viết</option>
+              <option value="published">Đã xuất bản</option>
+              <option value="draft">Bản nháp</option>
+            </select>
           </div>
 
           <table class="data-table">
             <thead>
               <tr>
-                <th>Hình ảnh</th>
                 <th>Tiêu Đề Bài Viết</th>
                 <th>Chuyên Mục</th>
-                <th>Lượt Xem</th>
-                <th>Lượt Thích</th>
+                <th>Tóm tắt</th>
                 <th>Ngày Đăng</th>
                 <th>Trạng Thái</th>
                 <th>Hành Động</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <div class="post-thumb" style="background:#E2E8F0; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text-muted);">UI/UX</div>
-                </td>
-                <td><strong>Quy trình thiết kế Landing Page giúp tối ưu chuyển đổi</strong></td>
-                <td>Thiết kế UI/UX</td>
-                <td>1.420</td>
-                <td>98</td>
-                <td>10/09/2026</td>
-                <td><span class="badge badge-success"><span class="badge-dot"></span> Đã xuất bản</span></td>
-                <td>
-                  <div style="display:flex; gap:6px;">
-                    <button class="btn btn-outline btn-sm" style="padding:0 10px;"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn btn-outline btn-sm" style="padding:0 10px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
-                  </div>
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  <div class="post-thumb" style="background:#DCFCE7; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--primary-accent);">React</div>
-                </td>
-                <td><strong>Top 10 giải pháp tối ưu hiệu năng ReactJS cho Web App lớn</strong></td>
-                <td>Lập Trình Web</td>
-                <td>850</td>
-                <td>45</td>
-                <td>02/09/2026</td>
-                <td><span class="badge badge-warning"><span class="badge-dot"></span> Bản nháp</span></td>
-                <td>
-                  <div style="display:flex; gap:6px;">
-                    <button class="btn btn-outline btn-sm" style="padding:0 10px;"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn btn-outline btn-sm" style="padding:0 10px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="providerPostsTableBody"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--text-muted);">Đang tải bài viết...</td></tr></tbody>
           </table>
         </div>
 
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Soạn Bài Viết Quảng Bá Kỹ Năng</div>
-          </div>
-
-          <div class="grid-2">
-            <div class="form-group">
-              <label class="form-label">Tiêu đề bài viết</label>
-              <input type="text" class="form-control" id="postTitleInput" placeholder="Nhập tiêu đề thu hút người đọc...">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Chuyên mục kỹ năng</label>
-              <select class="form-control" id="postCategorySelect">
-                <option value="IT">Lập Trình Web & App (IT)</option>
-                <option value="Design">Thiết kế UI/UX & Graphics</option>
-                <option value="Marketing">Digital Marketing & SEO</option>
-                <option value="Content">Biên Dịch & Content Writing</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Nội dung bài viết</label>
-            <textarea class="form-control" id="postContentText" style="min-height: 140px;" placeholder="Chia sẻ kinh nghiệm làm việc, dự án tiêu biểu..."></textarea>
-          </div>
-
-          <div style="display:flex; gap:12px;">
-            <button class="btn btn-primary" onclick="publishPostAction()"><i class="fa-solid fa-paper-plane"></i> Xuất Bản Bài Viết</button>
-            <button class="btn btn-secondary" onclick="showToast('Đã lưu bài viết vào bản nháp!')"><i class="fa-solid fa-floppy-disk"></i> Lưu Bản Nháp</button>
-          </div>
-        </div>
       </div>
     </main>
   </div>
 
+  <div id="postDiscussionModal" class="post-discussion-backdrop" role="dialog" aria-modal="true" aria-labelledby="postDiscussionHeading">
+    <section class="post-discussion-dialog">
+      <header class="post-discussion-header"><h2 id="postDiscussionHeading" class="post-discussion-title">Bài viết &amp; bình luận</h2><button type="button" class="post-discussion-close" id="closePostDiscussion" aria-label="Đóng">×</button></header>
+      <div class="post-discussion-grid">
+        <article class="post-discussion-content">
+          <div id="postDiscussionReadonly" class="post-discussion-readonly"><h3 id="postDiscussionPostTitle"></h3><div id="postDiscussionPostMeta" class="post-discussion-meta"></div><div id="postDiscussionPostBody" class="post-discussion-body"></div></div>
+          <form id="postEditorForm" class="post-editor-form" hidden>
+            <div class="form-group"><label class="form-label" for="postTitleInput">Tiêu đề bài viết</label><input type="text" class="form-control" id="postTitleInput" maxlength="180" required placeholder="Nhập tiêu đề bài viết..."></div>
+            <div class="form-group"><label class="form-label" for="postCategorySelect">Chuyên mục kỹ năng</label><select class="form-control" id="postCategorySelect"><option value="IT">Lập Trình Web &amp; App (IT)</option><option value="Design">Thiết kế UI/UX &amp; Graphics</option><option value="Marketing">Digital Marketing &amp; SEO</option><option value="Content">Biên Dịch &amp; Content Writing</option></select></div>
+            <div class="form-group"><label class="form-label" for="postContentText">Nội dung bài viết</label><textarea class="form-control" id="postContentText" maxlength="20000" placeholder="Chia sẻ kinh nghiệm làm việc, dự án tiêu biểu..." required></textarea></div>
+            <div class="post-editor-actions"><button type="button" class="btn btn-secondary" id="saveDraftButton" onclick="savePostDraftAction()"><i class="fa-solid fa-floppy-disk"></i> Lưu bản nháp</button><button type="button" class="btn btn-outline" id="cancelPostEditButton" onclick="cancelPostEdit()">Hủy</button><button type="submit" class="btn btn-primary" id="publishPostButton"><i class="fa-solid fa-paper-plane"></i> Đăng bài</button></div>
+          </form>
+        </article>
+        <section class="post-discussion-comments"><div id="postDiscussionCommentsTitle" class="post-discussion-section-title">Bình luận</div><div id="postDiscussionComments" class="post-comment-list"><div class="post-comment-status">Chọn một bài viết để xem bình luận.</div></div>
+          <form id="postCommentComposer" class="post-comment-composer" hidden><div id="postCommentReplyTarget" class="post-comment-reply-target"></div><textarea id="postCommentReplyInput" required maxlength="1500" placeholder="Viết câu trả lời…" aria-label="Nội dung trả lời"></textarea><button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-paper-plane"></i> Gửi trả lời</button></form>
+        </section>
+      </div>
+    </section>
+  </div>
+
   <script src="provider.js"></script>
   <script>
-    async function publishPostAction() {
+    let providerPosts = [];
+    let editingPostId = null;
+    const postCategoryLabels = { IT: 'Lập Trình Web & App', Design: 'Thiết kế UI/UX', Marketing: 'Digital Marketing & SEO', Content: 'Biên Dịch & Content Writing' };
+
+    function escapePostHtml(value) {
+      return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function formatPostDate(post) {
+      const date = post.createdAt ? new Date(post.createdAt) : null;
+      return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('vi-VN') : (post.date || '—');
+    }
+
+    async function loadProviderPosts() {
+      const body = document.getElementById('providerPostsTableBody');
+      try {
+        const result = await window.providerApi.getMyPosts();
+        if (!result || !result.success) throw new Error(result?.message || 'Không tải được danh sách bài viết.');
+        providerPosts = Array.isArray(result.posts) ? result.posts : [];
+        renderProviderPosts();
+      } catch (error) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--danger);">${escapePostHtml(error.message || 'Không tải được bài viết.')}</td></tr>`;
+        document.getElementById('postCountSummary').textContent = 'Chưa tải được';
+      }
+    }
+
+    function renderProviderPosts() {
+      const body = document.getElementById('providerPostsTableBody');
+      const filter = document.getElementById('postStatusFilter').value;
+      const publishedCount = providerPosts.filter(post => post.status !== 'draft').length;
+      const draftCount = providerPosts.length - publishedCount;
+      document.getElementById('postCountSummary').textContent = `${providerPosts.length} bài · ${publishedCount} đã xuất bản · ${draftCount} bản nháp`;
+      const posts = providerPosts.filter(post => filter === 'all' || (post.status === 'draft' ? 'draft' : 'published') === filter);
+      if (!posts.length) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted);">${providerPosts.length ? 'Không có bài viết trong bộ lọc này.' : 'Bạn chưa có bài viết. Hãy soạn bài bên dưới.'}</td></tr>`;
+        return;
+      }
+      body.innerHTML = posts.map(post => {
+        const status = post.status === 'draft'
+          ? '<span class="badge badge-warning">Bản nháp</span>'
+          : '<span class="badge badge-success"><span class="badge-dot"></span> Đã xuất bản</span>';
+        return `<tr>
+          <td><strong>${escapePostHtml(post.title || 'Chưa có tiêu đề')}</strong></td>
+          <td>${escapePostHtml(postCategoryLabels[post.category] || post.category || 'Chưa phân loại')}</td>
+          <td style="max-width:300px;white-space:normal;">${escapePostHtml(post.summary || post.content || '').slice(0, 180)}</td>
+          <td>${escapePostHtml(formatPostDate(post))}</td>
+          <td>${status}</td>
+          <td><div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-outline btn-sm" data-post-action="edit" data-post-id="${escapePostHtml(post.id)}" aria-label="Sửa bài viết"><i class="fa-solid fa-pen"></i></button>
+            <button type="button" class="btn btn-outline btn-sm" data-post-action="delete" data-post-id="${escapePostHtml(post.id)}" aria-label="Xóa bài viết" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+            ${post.status !== 'draft' ? `<button type="button" class="btn btn-outline btn-sm" data-post-action="comments" data-post-id="${escapePostHtml(post.id)}" aria-haspopup="dialog"><i class="fa-regular fa-comments"></i> Bình luận</button>` : ''}
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function openNewPost() {
+      editingPostId = null;
+      document.getElementById('postTitleInput').value = '';
+      document.getElementById('postCategorySelect').value = 'IT';
+      document.getElementById('postContentText').value = '';
+      openPostEditor('create');
+    }
+
+    function editProviderPost(id) {
+      const post = providerPosts.find(item => item.id === id);
+      if (!post) return;
+      editingPostId = post.id;
+      document.getElementById('postTitleInput').value = post.title || '';
+      document.getElementById('postCategorySelect').value = post.category || 'IT';
+      document.getElementById('postContentText').value = post.content || '';
+      openPostEditor('edit', post);
+    }
+
+    function cancelPostEdit() {
+      editingPostId = null;
+      document.getElementById('postTitleInput').value = '';
+      document.getElementById('postCategorySelect').value = 'IT';
+      document.getElementById('postContentText').value = '';
+      closePostDiscussion();
+    }
+
+    async function saveProviderPost(status) {
       const title = document.getElementById('postTitleInput').value.trim();
       const category = document.getElementById('postCategorySelect').value;
       const content = document.getElementById('postContentText').value.trim();
-
       if (!title || !content) {
-        showToast('Vui lòng nhập đầy đủ tiêu đề và nội dung bài viết!');
+        showToast('Vui lòng nhập tiêu đề và nội dung bài viết.', 'error');
         return;
       }
-
-      showToast('Đang xuất bản bài viết Showcase...', 'info');
+      const payload = { title, category, content, summary: content.slice(0, 150), status };
+      const buttons = ['publishPostButton', 'saveDraftButton'].map(id => document.getElementById(id));
+      buttons.forEach(button => { button.disabled = true; });
       try {
-        if (window.providerApi) {
-          const res = await window.providerApi.createPost({
-            title,
-            category,
-            summary: content.slice(0, 150) + (content.length > 150 ? '...' : ''),
-            content
-          });
-          if (res && res.success) {
-            showToast(res.message);
-            document.getElementById('postTitleInput').value = '';
-            document.getElementById('postContentText').value = '';
-          } else showToast(res && res.message ? res.message : 'Không thể lưu bài viết.');
-        }
-      } catch (e) {
-        showToast('Không thể kết nối máy chủ. Bài viết chưa được lưu.');
+        const result = editingPostId
+          ? await window.providerApi.updatePost(editingPostId, payload)
+          : await window.providerApi.createPost(payload);
+        if (!result || !result.success) throw new Error(result?.message || 'Không thể lưu bài viết.');
+        showToast(result.message || (status === 'draft' ? 'Đã lưu bản nháp.' : 'Đã xuất bản bài viết.'));
+        cancelPostEdit();
+        await loadProviderPosts();
+      } catch (error) {
+        showToast(error.message || 'Không thể kết nối máy chủ. Bài viết chưa được lưu.', 'error');
+      } finally {
+        buttons.forEach(button => { button.disabled = false; });
       }
     }
+
+    function publishPostAction() { return saveProviderPost('published'); }
+    function savePostDraftAction() { return saveProviderPost('draft'); }
+
+    async function deleteProviderPost(id) {
+      const post = providerPosts.find(item => item.id === id);
+      if (!post || !confirm(`Xóa bài viết “${post.title || 'Chưa có tiêu đề'}”?`)) return;
+      try {
+        const result = await window.providerApi.deletePost(id);
+        if (!result || !result.success) throw new Error(result?.message || 'Không xóa được bài viết.');
+        showToast(result.message || 'Đã xóa bài viết.');
+        if (editingPostId === id) cancelPostEdit();
+        await loadProviderPosts();
+      } catch (error) {
+        showToast(error.message || 'Không xóa được bài viết.', 'error');
+      }
+    }
+
+    let activeDiscussionPostId = null;
+    let discussionTrigger = null;
+    const discussionModal = document.getElementById('postDiscussionModal');
+    const discussionComments = document.getElementById('postDiscussionComments');
+    const commentComposer = document.getElementById('postCommentComposer');
+    const postEditorForm = document.getElementById('postEditorForm');
+
+    function openPostEditor(mode, post = null) {
+      activeDiscussionPostId = post?.id || null;
+      discussionTrigger = document.activeElement;
+      document.getElementById('postDiscussionHeading').textContent = mode === 'edit' ? 'Chỉnh sửa bài viết' : 'Đăng bài viết mới';
+      document.getElementById('postDiscussionReadonly').hidden = true;
+      postEditorForm.hidden = false;
+      document.getElementById('publishPostButton').innerHTML = mode === 'edit' && post?.status !== 'draft'
+        ? '<i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi'
+        : '<i class="fa-solid fa-paper-plane"></i> Đăng bài';
+      document.getElementById('postDiscussionCommentsTitle').textContent = post ? 'Bình luận' : 'Trao đổi';
+      commentComposer.hidden = true;
+      commentComposer.reset();
+      delete commentComposer.dataset.parentId;
+      if (post) {
+        discussionComments.innerHTML = '<div class="post-comment-status">Đang tải bình luận…</div>';
+        loadDiscussionComments(post.id);
+      } else {
+        discussionComments.innerHTML = '<div class="post-comment-empty">Bình luận sẽ xuất hiện tại đây sau khi bài viết được đăng.</div>';
+      }
+      discussionModal.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('postTitleInput').focus();
+    }
+
+    async function openPostDiscussion(id, trigger) {
+      const post = providerPosts.find(item => item.id === id);
+      if (!post) return;
+      discussionTrigger = trigger || null;
+      activeDiscussionPostId = id;
+      document.getElementById('postDiscussionHeading').textContent = post.title || 'Bài viết';
+      document.getElementById('postDiscussionReadonly').hidden = false;
+      postEditorForm.hidden = true;
+      document.getElementById('postDiscussionPostTitle').textContent = post.title || 'Bài viết';
+      document.getElementById('postDiscussionPostMeta').textContent = [postCategoryLabels[post.category] || post.category, formatPostDate(post)].filter(Boolean).join(' · ');
+      document.getElementById('postDiscussionPostBody').textContent = post.content || post.summary || 'Bài viết chưa có nội dung.';
+      document.getElementById('postDiscussionCommentsTitle').textContent = 'Bình luận';
+      discussionComments.innerHTML = '<div class="post-comment-status">Đang tải bình luận…</div>';
+      commentComposer.hidden = true;
+      commentComposer.reset();
+      delete commentComposer.dataset.parentId;
+      discussionModal.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+      await loadDiscussionComments(id);
+    }
+
+    async function loadDiscussionComments(postId) {
+      try {
+        const response = await fetch(`/api/comments?targetType=post&targetId=${encodeURIComponent(postId)}`);
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Không tải được bình luận.');
+        if (activeDiscussionPostId !== postId) return;
+        const comments = Array.isArray(result.comments) ? result.comments : [];
+        discussionComments.replaceChildren();
+        document.getElementById('postDiscussionCommentsTitle').textContent = `Bình luận (${comments.length})`;
+        if (!comments.length) {
+          const empty = document.createElement('div'); empty.className = 'post-comment-empty'; empty.textContent = 'Bài viết chưa có bình luận.'; discussionComments.append(empty); return;
+        }
+        const children = new Map();
+        comments.forEach(comment => { if (comment.parentId) { if (!children.has(comment.parentId)) children.set(comment.parentId, []); children.get(comment.parentId).push(comment); } });
+        function appendComment(comment, depth = 0) {
+          const item = document.createElement('article'); item.className = `post-comment-item${depth ? ' is-reply' : ''}`;
+          const meta = document.createElement('div'); meta.className = 'post-comment-meta';
+          const author = document.createElement('strong'); author.textContent = comment.userName || 'Người dùng';
+          const date = document.createElement('time'); date.textContent = comment.createdAt ? new Date(comment.createdAt).toLocaleString('vi-VN') : '';
+          const content = document.createElement('p'); content.className = 'post-comment-content'; content.textContent = comment.content || '';
+          const reply = document.createElement('button'); reply.type = 'button'; reply.className = 'post-comment-reply-action'; reply.dataset.replyToComment = comment.id; reply.dataset.replyToName = comment.userName || 'Người dùng'; reply.textContent = 'Trả lời';
+          meta.append(author, date); item.append(meta, content, reply); discussionComments.append(item);
+          (children.get(comment.id) || []).forEach(child => appendComment(child, depth + 1));
+        }
+        comments.filter(comment => !comment.parentId).forEach(root => {
+          appendComment(root);
+        });
+      } catch (error) {
+        if (activeDiscussionPostId !== postId) return;
+        discussionComments.innerHTML = `<div class="post-comment-status" style="color:var(--danger)">${escapePostHtml(error.message || 'Không tải được bình luận.')}</div>`;
+      }
+    }
+
+    function closePostDiscussion() {
+      discussionModal.classList.remove('is-open');
+      document.body.style.overflow = '';
+      activeDiscussionPostId = null;
+      if (discussionTrigger) discussionTrigger.focus();
+      discussionTrigger = null;
+    }
+
+    document.getElementById('providerPostsTableBody').addEventListener('click', event => {
+      const button = event.target.closest('[data-post-action]');
+      if (!button) return;
+      if (button.dataset.postAction === 'edit') editProviderPost(button.dataset.postId);
+      if (button.dataset.postAction === 'delete') deleteProviderPost(button.dataset.postId);
+      if (button.dataset.postAction === 'comments') openPostDiscussion(button.dataset.postId, button);
+    });
+
+    discussionComments.addEventListener('click', event => {
+      const replyButton = event.target.closest('[data-reply-to-comment]');
+      if (!replyButton) return;
+      commentComposer.hidden = false;
+      commentComposer.dataset.parentId = replyButton.dataset.replyToComment;
+      document.getElementById('postCommentReplyTarget').textContent = `Đang trả lời ${replyButton.dataset.replyToName}`;
+      document.getElementById('postCommentReplyInput').focus();
+    });
+
+    commentComposer.addEventListener('submit', async event => {
+      event.preventDefault();
+      const content = document.getElementById('postCommentReplyInput').value.trim();
+      const parentId = commentComposer.dataset.parentId;
+      const postId = activeDiscussionPostId;
+      const submit = commentComposer.querySelector('button[type="submit"]');
+      if (!content || !parentId || !postId) return;
+      submit.disabled = true;
+      try {
+        const response = await fetch('/api/comments', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({targetType:'post', targetId:postId, parentId, content})});
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Không gửi được trả lời.');
+        showToast('Đã gửi trả lời bình luận.');
+        await loadDiscussionComments(postId);
+        commentComposer.hidden = true; commentComposer.reset(); delete commentComposer.dataset.parentId;
+      } catch (error) {
+        showToast(error.message || 'Không gửi được trả lời.', 'error');
+      } finally { submit.disabled = false; }
+    });
+
+    postEditorForm.addEventListener('submit', event => {
+      event.preventDefault();
+      publishPostAction();
+    });
+
+    document.getElementById('closePostDiscussion').addEventListener('click', closePostDiscussion);
+    discussionModal.addEventListener('click', event => { if (event.target === discussionModal) closePostDiscussion(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && discussionModal.classList.contains('is-open')) closePostDiscussion(); });
+
+    document.addEventListener('DOMContentLoaded', loadProviderPosts);
+    Object.assign(window, { openNewPost, editProviderPost, cancelPostEdit, publishPostAction, savePostDraftAction, deleteProviderPost, renderProviderPosts });
   </script>
 </body>
 </html>

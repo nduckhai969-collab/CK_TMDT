@@ -43,7 +43,7 @@
         <a href="jobs.html" class="nav-link active">
           <i class="fa-solid fa-briefcase"></i>
           <span>Đề xuất &amp; Ứng tuyển</span>
-          <span class="badge-count" id="marketJobCount" style="background-color: var(--primary);">0</span>
+          <span class="badge-count" id="providerJobsNavCount" style="background-color: var(--primary);" hidden></span>
         </a>
         <a href="bookings.html" class="nav-link">
           <i class="fa-solid fa-calendar-check"></i>
@@ -54,7 +54,7 @@
         <a href="chat.html" class="nav-link">
           <i class="fa-solid fa-comments"></i>
           <span>Tin nhắn Khách hàng</span>
-          <span class="badge-count">3</span>
+          <span class="badge-count" hidden></span>
         </a>
         
         <a href="payment.html" class="nav-link">
@@ -75,7 +75,7 @@
         <a href="complaint.html" class="nav-link">
           <i class="fa-solid fa-shield-halved"></i>
           <span>Khiếu nại &amp; Tranh chấp</span>
-          <span class="badge-count" style="background-color: var(--warning);">1</span>
+          <span class="badge-count" style="background-color: var(--warning);" hidden></span>
         </a>
 
         <div class="nav-section-title">Dịch vụ hệ thống</div>
@@ -620,7 +620,6 @@
         const result = await window.providerApi.getMarketJobs();
         if (!result.success) throw new Error(result.message || 'Không tải được danh sách yêu cầu.');
         marketJobs = Array.isArray(result.jobs) ? result.jobs : [];
-        document.getElementById('marketJobCount').textContent = marketJobs.length;
         document.getElementById('marketTabCount').textContent = marketJobs.length;
         const categorySelect = document.getElementById('marketCategory');
         const selectedCategory = categorySelect.value;

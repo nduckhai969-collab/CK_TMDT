@@ -586,6 +586,23 @@ window.providerApi = {
       body: JSON.stringify(postData)
     });
     return res.json();
+  },
+
+  updatePost: async (id, postData) => {
+    const res = await fetch(`${API_BASE}/api/providers/posts/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify(postData)
+    });
+    return res.json();
+  },
+
+  deletePost: async (id) => {
+    const res = await fetch(`${API_BASE}/api/providers/posts/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    return res.json();
   }
 };
 
@@ -621,6 +638,38 @@ if (typeof window.showToast !== 'function') {
 }
 
 // Update Topbar Profile & Badges
+function setProviderNavBadge(page, count) {
+  const link = Array.from(document.querySelectorAll('.sidebar-nav a[href]')).find(anchor => {
+    try { return new URL(anchor.getAttribute('href'), location.href).pathname.endsWith(`/${page}`); }
+    catch (_) { return false; }
+  });
+  if (!link) return;
+  let badge = link.querySelector('.badge-count');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'badge-count';
+    badge.hidden = true;
+    link.appendChild(badge);
+  }
+  badge.style.backgroundColor = 'var(--primary)';
+  const value = Number(count);
+  if (!Number.isFinite(value) || value <= 0) {
+    badge.textContent = '0';
+    badge.hidden = true;
+    return;
+  }
+  badge.textContent = value > 99 ? '99+' : String(value);
+  badge.hidden = false;
+}
+
+function updateProviderNavBadges(stats = {}) {
+  setProviderNavBadge('jobs.html', stats.submittedProposalsCount);
+  setProviderNavBadge('bookings.html', stats.pendingOrders);
+  // Chat messages do not currently persist read state, so do not show a made-up count.
+  setProviderNavBadge('chat.html', undefined);
+  setProviderNavBadge('complaint.html', stats.unresolvedComplaintsCount);
+}
+
 async function updateProviderHeader() {
   const provider = getCurrentProvider();
 
@@ -655,20 +704,10 @@ async function updateProviderHeader() {
     const res = await window.providerApi.getDashboardStats();
     if (res && res.success && res.stats) {
       const stats = res.stats;
-      // Update badge counts in sidebar
-      const badges = document.querySelectorAll('.sidebar-nav .badge-count');
-      if (badges.length >= 3) {
-        // jobs badge
-        if (stats.submittedProposalsCount !== undefined) {
-          badges[0].textContent = stats.submittedProposalsCount || 6;
-        }
-        // bookings badge
-        if (stats.activeProjectsCount !== undefined) {
-          badges[1].textContent = stats.activeProjectsCount || 2;
-        }
-      }
+      updateProviderNavBadges(stats);
     }
   } catch (e) {
+    updateProviderNavBadges();
     console.log('Provider stats: Offline mode');
   }
 }

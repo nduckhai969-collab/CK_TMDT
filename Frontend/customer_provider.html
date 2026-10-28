@@ -15,6 +15,7 @@
     .service-pkg-price{font-size:18px;font-weight:800;color:#16a34a;margin-bottom:8px}
     .service-pkg-features{list-style:none;padding:0;margin:8px 0 14px;font-size:12px;color:#475569}
     .service-pkg-features li{margin-bottom:4px;display:flex;align-items:baseline;gap:6px}
+    .post-preview{padding:14px 0;border-top:1px solid #edf0f2}.post-preview h3{font-size:14px;margin:0 0 6px;color:#182230}.post-preview-excerpt{margin:8px 0;color:#586575;font-size:12px;line-height:1.6;white-space:pre-wrap}.post-detail-backdrop{position:fixed;inset:0;background:#0f172a99;z-index:1000;display:none;align-items:center;justify-content:center;padding:18px}.post-detail-backdrop.is-open{display:flex}.post-detail-dialog{width:min(1040px,96vw);height:min(760px,90vh);display:flex;flex-direction:column;overflow:hidden;background:#fff;border:1px solid #e5ebe8;border-radius:14px;box-shadow:0 24px 60px #0f172a40}.post-detail-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex:none;padding:18px 22px;border-bottom:1px solid #e5ebe8;background:#fff}.post-detail-close{border:0;background:#f1f5f9;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:18px}.post-detail-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);min-height:0;flex:1}.post-detail-content{min-width:0;min-height:0;overflow-y:auto;white-space:pre-wrap;line-height:1.75;color:#344054;padding:22px 24px;background:#fff}.post-detail-comments{min-width:0;min-height:0;overflow-y:auto;border-left:1px solid #e5ebe8;padding:16px 18px;background:#f8fafc}.post-detail-comments>strong{display:block;padding-bottom:10px;border-bottom:1px solid #e5ebe8}@media(max-width:720px){.post-detail-backdrop{padding:8px}.post-detail-dialog{width:100%;height:94vh;border-radius:12px}.post-detail-header{padding:12px 14px}.post-detail-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1.05fr) minmax(0,.95fr)}.post-detail-content{grid-row:1;padding:16px}.post-detail-comments{grid-row:2;padding:12px;border-left:0;border-top:1px solid #e5ebe8}.post-detail-comments form{grid-template-columns:1fr!important}.post-detail-comments form button{justify-self:end}}
     @media(max-width:720px){.profile-layout{grid-template-columns:1fr;padding:0 14px}.booking-card{position:static;grid-row:1}.profile-intro{align-items:flex-start}.profile-name{font-size:18px}}
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -99,6 +100,7 @@
   </aside>
 </main>
 <div id="footer-placeholder"></div>
+<div id="postDetailModal" class="post-detail-backdrop" role="dialog" aria-modal="true" aria-labelledby="postDetailTitle" onclick="if(event.target===this)closePostDetail()"><section class="post-detail-dialog"><header class="post-detail-header"><div><h2 id="postDetailTitle" style="font-size:19px;color:#182230;margin:0 0 6px"></h2><small id="postDetailMeta" style="color:#8792a0"></small></div><button type="button" class="post-detail-close" aria-label="Đóng chi tiết bài viết" onclick="closePostDetail()">×</button></header><div class="post-detail-grid"><article id="postDetailContent" class="post-detail-content"></article><section id="postDetailComments" class="post-detail-comments"></section></div></section></div>
 <script src="customer.js"></script>
 <script>
 let currentProvider=null;
@@ -251,25 +253,46 @@ async function loadProviderPosts(id){
     if(!Array.isArray(result.posts)||!result.posts.length){container.textContent='Provider chưa có bài viết công khai.';return}
     result.posts.forEach(post=>{
       const card=document.createElement('article');
-      card.style.cssText='padding:12px 0;border-top:1px solid #edf0f2';
-      const title=document.createElement('h3');title.textContent=post.title||'Bài viết Provider';title.style.cssText='font-size:14px;margin:0 0 6px;color:#182230';
+      card.className='post-preview';
+      const title=document.createElement('h3');title.textContent=post.title||'Bài viết Provider';
       const meta=document.createElement('small');meta.textContent=[post.category,post.date].filter(Boolean).join(' · ');meta.style.color='#8792a0';
-      const content=document.createElement('p');content.textContent=post.content||post.summary||'';content.style.margin='8px 0 0';
-      const comments=document.createElement('div');comments.style.cssText='margin-top:12px;padding-top:10px;border-top:1px solid #edf0f2';
-      card.append(title,meta,content,comments);container.appendChild(card);
-      renderPostComments(post,comments);
+      const body=post.summary||post.content||'';
+      const excerpt=document.createElement('p');excerpt.className='post-preview-excerpt';excerpt.textContent=body.length>180?`${body.slice(0,180).trimEnd()}…`:body;
+      const button=document.createElement('button');button.type='button';button.className='btn btn-outline';button.textContent='Xem chi tiết bài viết';button.style.cssText='margin-top:4px;padding:7px 11px;font-size:12px';button.addEventListener('click',()=>openPostDetail(post));
+      card.append(title,meta,excerpt,button);container.appendChild(card);
     });
   }catch(error){container.textContent=error.message||'Chưa tải được bài viết.'}
 }
+
+function openPostDetail(post){
+  document.getElementById('postDetailTitle').textContent=post.title||'Bài viết Provider';
+  document.getElementById('postDetailMeta').textContent=[post.category,post.date].filter(Boolean).join(' · ');
+  document.getElementById('postDetailContent').textContent=post.content||post.summary||'Bài viết chưa có nội dung.';
+  const modal=document.getElementById('postDetailModal');modal.classList.add('is-open');document.body.style.overflow='hidden';
+  renderPostComments(post,document.getElementById('postDetailComments'));
+}
+function closePostDetail(){document.getElementById('postDetailModal').classList.remove('is-open');document.body.style.overflow=''}
+document.addEventListener('keydown',event=>{if(event.key==='Escape')closePostDetail()});
 
 async function renderPostComments(post,container){
   container.replaceChildren();
   const heading=document.createElement('strong');heading.textContent='Bình luận';heading.style.cssText='display:block;font-size:12px;margin-bottom:8px;color:#344054';
   const list=document.createElement('div');list.style.cssText='display:grid;gap:8px;margin-bottom:10px';
   const form=document.createElement('form');form.style.cssText='display:grid;grid-template-columns:1fr auto;gap:8px';
+  const replyNotice=document.createElement('div');replyNotice.style.cssText='display:none;grid-column:1/-1;font-size:11px;color:#667085';
   const input=document.createElement('textarea');input.maxLength=1500;input.required=true;input.rows=2;input.placeholder='Viết bình luận về bài viết...';input.setAttribute('aria-label','Bình luận về bài viết');input.style.cssText='width:100%;box-sizing:border-box;padding:9px;border:1px solid #d0d5dd;border-radius:8px;font:12px Inter,sans-serif;resize:vertical';
   const button=document.createElement('button');button.type='submit';button.innerHTML='<i class="fa-solid fa-paper-plane"></i> Gửi';button.style.cssText='align-self:end;border:0;border-radius:8px;background:#16a34a;color:#fff;padding:9px 12px;font-weight:700;cursor:pointer';
-  form.append(input,button);container.append(heading,list,form);
+  const cancelReply=document.createElement('button');cancelReply.type='button';cancelReply.textContent='Hủy trả lời';cancelReply.style.cssText='display:none;grid-column:1/-1;justify-self:start;padding:0;border:0;background:none;color:#667085;font-size:11px;cursor:pointer';
+  form.append(replyNotice,cancelReply,input,button);container.append(heading,list,form);
+
+  function resetReplyMode(){delete form.dataset.parentId;replyNotice.style.display='none';replyNotice.textContent='';cancelReply.style.display='none';input.placeholder='Viết bình luận về bài viết...';input.setAttribute('aria-label','Bình luận về bài viết');button.innerHTML='<i class="fa-solid fa-paper-plane"></i> Gửi'}
+  cancelReply.addEventListener('click',resetReplyMode);
+  list.addEventListener('click',event=>{
+    const replyButton=event.target.closest('[data-reply-comment]');if(!replyButton)return;
+    form.dataset.parentId=replyButton.dataset.replyComment;
+    replyNotice.textContent=`Đang trả lời ${replyButton.dataset.replyName}`;replyNotice.style.display='block';cancelReply.style.display='inline-block';
+    input.placeholder='Viết câu trả lời...';input.setAttribute('aria-label','Trả lời bình luận');button.innerHTML='<i class="fa-solid fa-reply"></i> Trả lời';input.focus();
+  });
 
   async function refresh(){
     list.replaceChildren();
@@ -283,7 +306,8 @@ async function renderPostComments(post,container){
         const author=document.createElement('strong');author.textContent=comment.userName||'Người dùng';author.style.cssText='font-size:11px;color:#344054';
         const date=document.createElement('small');date.textContent=comment.createdAt?new Date(comment.createdAt).toLocaleString('vi-VN'):'';date.style.cssText='float:right;font-size:10px;color:#98a2b3';
         const body=document.createElement('p');body.textContent=comment.content||'';body.style.cssText='font-size:12px;line-height:1.5;margin:5px 0 0;color:#475467;white-space:pre-wrap';
-        item.append(author,date,body);list.append(item);
+        const reply=document.createElement('button');reply.type='button';reply.dataset.replyComment=comment.id;reply.dataset.replyName=comment.userName||'Người dùng';reply.textContent='Trả lời';reply.style.cssText='margin-top:6px;padding:0;border:0;background:none;color:#15803d;font-size:11px;font-weight:700;cursor:pointer';
+        item.append(author,date,body,reply);list.append(item);
       });
     }catch(error){const message=document.createElement('small');message.textContent=error.message||'Không tải được bình luận.';message.style.color='#b42318';list.append(message)}
   }
@@ -291,10 +315,14 @@ async function renderPostComments(post,container){
     event.preventDefault();
     const content=input.value.trim();if(!content)return;
     button.disabled=true;
-    const result=await apiRequest('/api/comments',{method:'POST',body:JSON.stringify({targetType:'post',targetId:post.id,content})});
-    button.disabled=false;
-    if(!result.success){showToast('Không gửi được bình luận',result.message||'Vui lòng thử lại.','error');return}
-    input.value='';showToast('Đã gửi bình luận','Bình luận của bạn đã được đăng.','success');await refresh();
+    const payload={targetType:'post',targetId:post.id,content};if(form.dataset.parentId)payload.parentId=form.dataset.parentId;
+    const wasReply=Boolean(form.dataset.parentId);
+    try{
+      const result=await apiRequest('/api/comments',{method:'POST',body:JSON.stringify(payload)});
+      if(!result.success){showToast('Không gửi được bình luận',result.message||'Vui lòng thử lại.','error');return}
+      input.value='';resetReplyMode();showToast(wasReply?'Đã gửi trả lời':'Đã gửi bình luận',wasReply?'Phản hồi của bạn đã được đăng.':'Bình luận của bạn đã được đăng.','success');await refresh();
+    }catch(error){showToast('Không gửi được bình luận',error.message||'Vui lòng thử lại.','error')}
+    finally{button.disabled=false}
   });
   await refresh();
 }

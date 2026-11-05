@@ -14,6 +14,7 @@ const serviceRoutes = require('./routes/serviceRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const bookingListRoutes = require('./routes/bookingListRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const { requireAdmin } = require('./routes/customerAuth');
@@ -67,6 +68,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/email', emailRoutes);
 
 // ============================================================================
 // PUBLIC SEED ENDPOINT — No auth required

@@ -7,6 +7,8 @@
     "start": "node server.js",
     "dev": "node server.js",
     "seed": "node scripts/seedMysql.js",
+    "email:worker": "node scripts/emailWorker.js",
+    "email:dry": "node scripts/emailWorker.js --dry",
     "check": "node scripts/checkFrontend.js"
   },
   "repository": {

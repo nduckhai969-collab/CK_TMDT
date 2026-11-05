@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
 <script src="js/auth-client.js"></script>
+<script src="js/admin-topbar.js"></script>
 </head>
 <body>
   <div class="app">
@@ -125,23 +126,11 @@
           <span class="breadcrumb-tag">TÀI CHÍNH / DÒNG TIỀN ESCROW</span>
           <div class="top-search">
             <span>⌕</span>
-            <input type="text" placeholder="Tìm kiếm nhanh giao dịch, STK, ngân hàng...">
+            <input type="text" placeholder="Tìm kiếm nhanh giao dịch, STK, ngân hàng... (Nhấn Enter)" onkeyup="handleQuickSearch(event)">
           </div>
         </div>
 
-        <div class="topbar-right">
-          <button class="icon-badge-btn" onclick="showToast('Đối soát', 'Đối soát tài khoản ngân hàng ký quỹ khớp 100%', 'success')">
-            <span>♢</span>
-            <span class="badge-dot">3</span>
-          </button>
-          <div class="admin-profile">
-            <div class="admin-avatar">A</div>
-            <div class="admin-info">
-              <strong>Nguyễn Văn Admin</strong>
-              <span>Quản trị viên hệ thống</span>
-            </div>
-          </div>
-        </div>
+        <div class="topbar-right"></div>
       </header>
 
       <div class="content-area">

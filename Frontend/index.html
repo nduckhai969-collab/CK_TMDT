@@ -3212,7 +3212,11 @@
       return;
     }
 
-    if (user.role === 'Provider') {
+    if (user.role === 'Admin') {
+
+      window.location.href = 'admin.html';
+
+    } else if (user.role === 'Provider') {
 
       window.location.href = 'dashboard.html';
 

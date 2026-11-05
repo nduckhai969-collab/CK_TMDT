@@ -62,6 +62,7 @@
     }
   </style>
 <script src="js/auth-client.js"></script>
+<script src="js/admin-topbar.js"></script>
 </head>
 <body>
   <div class="app">
@@ -156,22 +157,11 @@
           <span class="breadcrumb-tag" id="breadcrumb-title">QUẢN LÝ / NGƯỜI DÙNG</span>
           <div class="top-search">
             <span>⌕</span>
-            <input type="text" id="top-search-input" placeholder="Tìm kiếm nhanh người dùng, email, SĐT...">
+            <input type="text" id="top-search-input" placeholder="Tìm kiếm nhanh người dùng, email, SĐT... (Nhấn Enter)" onkeyup="handleQuickSearch(event)">
           </div>
         </div>
 
-        <div class="topbar-right">
-          <button class="icon-badge-btn" onclick="showToast('Thông báo hệ thống', 'Bạn có các tác vụ người dùng cần kiểm tra', 'info')">
-            <span>♢</span><span class="badge-dot">3</span>
-          </button>
-          <div class="admin-profile">
-            <div class="admin-avatar">A</div>
-            <div class="admin-info">
-              <strong>Nguyễn Văn Admin</strong>
-              <span>Quản trị viên hệ thống</span>
-            </div>
-          </div>
-        </div>
+        <div class="topbar-right"></div>
       </header>
 
       <div class="content-area">

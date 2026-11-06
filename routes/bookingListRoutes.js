@@ -64,8 +64,11 @@ router.get('/', requireCustomer, (req, res) => {
 });
 
 // Thêm vào danh sách đặt lịch
-router.post('/items', requireCustomer, (req, res) => {
-  const { serviceId, providerId, serviceTitle, price, hours } = req.body || {};
+// Thêm vào danh sách đặt lịch / Giỏ hàng (Hỗ trợ cả POST / và POST /items)
+router.post(['/', '/items'], requireCustomer, (req, res) => {
+  const serviceId = req.body.serviceId || req.body.product_id || req.body.productId;
+  const hours = req.body.hours !== undefined ? req.body.hours : (req.body.quantity !== undefined ? req.body.quantity : 1);
+  const { providerId, serviceTitle, price } = req.body || {};
   
   let effectiveServiceId = serviceId;
   const services = db.getCollection('services') || [];
@@ -153,6 +156,61 @@ router.post('/items', requireCustomer, (req, res) => {
     message: 'Đã thêm dịch vụ vào danh sách đặt lịch!',
     serviceId: effectiveServiceId,
     bookingList
+  });
+});
+
+// ============================================================================
+// 6. ĐỒNG BỘ GIỎ HÀNG TẠM TỪ LOCALSTORAGE VÀO DATABASE SAU KHI ĐĂNG NHẬP
+// ============================================================================
+router.post('/sync', requireCustomer, (req, res) => {
+  const { items } = req.body || {};
+  const bookingList = getBookingList(req.authUser.id);
+
+  if (!Array.isArray(items) || !items.length) {
+    return res.json({
+      success: true,
+      message: 'Không có sản phẩm nào cần đồng bộ.',
+      bookingList,
+      items: bookingList.items
+    });
+  }
+
+  const services = db.getCollection('services') || [];
+
+  for (const item of items) {
+    const prodId = item.product_id || item.productId || item.serviceId;
+    const qty = Math.max(1, Math.min(99, Number(item.quantity !== undefined ? item.quantity : item.hours) || 1));
+    if (!prodId) continue;
+
+    const s = services.find(srv => srv.id === prodId);
+    if (!s) continue;
+
+    const existing = bookingList.items.find(i => (i.serviceId === prodId || i.product_id === prodId));
+    if (existing) {
+      // UPDATE: Tăng số lượng nếu sản phẩm đã có trong giỏ
+      existing.hours = Math.min(99, Number(existing.hours || 1) + qty);
+      existing.quantity = existing.hours;
+    } else {
+      // INSERT: Thêm mới sản phẩm vào giỏ hàng
+      bookingList.items.push({
+        id: `CART_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        user_id: req.authUser.id,
+        serviceId: prodId,
+        product_id: prodId,
+        hours: qty,
+        quantity: qty
+      });
+    }
+  }
+
+  updateBookingList(bookingList);
+  console.log(`[cart] 🛒 Đã đồng bộ ${items.length} mục từ giỏ hàng tạm vào Database cho user: ${req.authUser.email}`);
+
+  return res.json({
+    success: true,
+    message: 'Đã hợp nhất giỏ hàng thành công vào cơ sở dữ liệu!',
+    bookingList,
+    items: bookingList.items
   });
 });
 

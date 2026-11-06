@@ -140,6 +140,104 @@ router.get('/', requireCustomer, (req, res) => {
   });
 });
 
+// ============================================================================
+// CHỨC NĂNG 9: XEM LỊCH SỬ MUA HÀNG (GET /orders/history)
+// SQL TƯƠNG ĐƯƠNG:
+// SELECT o.id, o.total_price, o.status, o.created_at, p.name as product_name, p.image
+// FROM orders o
+// JOIN order_items oi ON o.id = oi.order_id
+// JOIN products p ON oi.product_id = p.id
+// WHERE o.user_id = ?
+// ORDER BY o.created_at DESC;
+// ============================================================================
+router.get('/history', requireSignedIn, (req, res) => {
+  const userId = req.session?.userId || req.authUser?.id || req.authUser?.uid;
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để xem lịch sử mua hàng.' });
+  }
+
+  // Tự động đồng bộ các đơn yêu cầu (job) nếu có
+  syncPendingJobOrders(userId, req.authUser?.uid);
+
+  const ordersCol = db.getCollection('orders') || [];
+  const orderItemsCol = db.getCollection('order_items') || [];
+  const servicesCol = db.getCollection('services') || [];
+  const productsCol = db.getCollection('products') || [];
+
+  const isOwner = (cid) => cid === userId || (req.authUser?.uid && cid === req.authUser.uid) || (req.authUser?.id && cid === req.authUser.id);
+
+  // Lọc danh sách đơn hàng của người dùng hiện tại
+  const userOrders = ordersCol.filter(o => isOwner(o.user_id) || isOwner(o.customerId));
+
+  // Chuỗi trạng thái chuẩn Enum:
+  // PENDING_PAYMENT -> PAID -> PROCESSING -> SHIPPED -> DELIVERED -> CANCELLED
+  const normalizeStatus = (o) => {
+    const raw = String(o.status || o.orderStatus || '').toUpperCase();
+    if (raw === 'CANCELLED' || raw === 'CANCEL' || o.orderStatus === 'cancelled') return 'CANCELLED';
+    if (raw === 'DELIVERED' || raw === 'COMPLETED' || o.orderStatus === 'completed' || o.escrowStatus === 'escrow_released') return 'DELIVERED';
+    if (raw === 'SHIPPED' || o.orderStatus === 'delivered' || o.orderStatus === 'shipped') return 'SHIPPED';
+    if (raw === 'PROCESSING' || o.orderStatus === 'in_progress') return 'PROCESSING';
+    if (raw === 'PAID' || o.paymentStatus === 'paid' || o.escrowStatus === 'escrow_held') return 'PAID';
+    return 'PENDING_PAYMENT';
+  };
+
+  // Thực hiện JOIN: orders -> order_items -> products / services
+  const history = userOrders.map(o => {
+    const oId = o.id;
+    const items = orderItemsCol.filter(oi => String(oi.order_id) === String(oId));
+
+    let itemsJoined = [];
+    if (items.length > 0) {
+      itemsJoined = items.map(oi => {
+        const prod = servicesCol.find(p => p.id === oi.product_id) || productsCol.find(p => p.id === oi.product_id) || {};
+        return {
+          product_id: oi.product_id,
+          product_name: prod.title || prod.name || oi.product_name || 'Dịch vụ / Sản phẩm',
+          price: Number(oi.price_at_purchase || prod.price || 0),
+          quantity: Number(oi.quantity || 1),
+          image: prod.thumbnail || prod.image || prod.cover || prod.avatar || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300'
+        };
+      });
+    } else {
+      const prod = servicesCol.find(p => p.id === o.serviceId) || productsCol.find(p => p.id === o.serviceId) || {};
+      itemsJoined = [{
+        product_id: o.serviceId || 'SVC_GENERAL',
+        product_name: o.serviceTitle || prod.title || prod.name || 'Dịch vụ cung cấp',
+        price: Number(o.price || o.totalPrice || o.total_price || 0),
+        quantity: 1,
+        image: prod.thumbnail || prod.image || o.serviceThumbnail || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300'
+      }];
+    }
+
+    const firstItem = itemsJoined[0] || {};
+    const createdAt = o.created_at || o.createdAt || o.date || new Date().toISOString();
+
+    return {
+      id: o.id,
+      user_id: o.user_id || o.customerId || userId,
+      total_price: Number(o.total_price || o.totalPrice || o.price || 0),
+      status: normalizeStatus(o),
+      created_at: createdAt,
+      product_name: firstItem.product_name || 'Dịch vụ',
+      image: firstItem.image || '',
+      items: itemsJoined,
+      shipping_address: o.shipping_address || o.customerAddress || 'Hồ Chí Minh, Việt Nam',
+      provider_id: o.providerId || '',
+      provider_name: o.providerName || '',
+      escrow_status: o.escrowStatus || ''
+    };
+  });
+
+  // ORDER BY o.created_at DESC
+  history.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  res.json({
+    success: true,
+    total: history.length,
+    orders: history
+  });
+});
+
 // Single order detail
 router.get('/:id', requireCustomer, (req, res) => {
   const orders = db.getCollection('orders');

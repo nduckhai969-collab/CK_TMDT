@@ -6,7 +6,7 @@ const db = require('../data/db');
 const { requireSignedIn, requireCustomer } = require('./customerAuth');
 const vnpay = require('../services/vnpayService');
 const checkout = require('../services/checkoutService');
-const { createNotification } = require('../services/notificationService');
+const { createNotification, notifyProvider } = require('../services/notificationService');
 const { formatDateTime } = require('../utils/dates');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
@@ -184,10 +184,27 @@ router.post('/orders/:orderId/pay-with-balance', requireCustomer, (req, res) => 
 // 2. XỬ LÝ KẾT QUẢ KHI THANH TOÁN XONG TRÊN VNPAY QUAY VỀ
 function processGatewayResult(query) {
   const { valid, params } = vnpay.verifyQuery(query);
-  if (!valid) return { code: '97', message: 'Invalid signature' };
+  if (!valid) return { code: '97', message: 'Invalid Checksum' };
 
   const transactions = db.getCollection('walletTransactions') || [];
-  const txn = transactions.find((t) => t.id === params.vnp_TxnRef && (t.type === 'deposit' || t.type === 'order_payment'));
+  let txn = transactions.find((t) => t.id === params.vnp_TxnRef && (t.type === 'deposit' || t.type === 'order_payment'));
+  const orders = db.getCollection('orders') || [];
+  let order = orders.find((o) => o.id === params.vnp_TxnRef || o.paymentRef === params.vnp_TxnRef);
+  if (!order && txn && txn.orderIds && txn.orderIds.length) {
+    order = orders.find((o) => o.id === txn.orderIds[0]);
+  }
+  if (!txn && order) {
+    txn = {
+      id: order.id,
+      userId: order.customerId || order.user_id,
+      type: 'order_payment',
+      amount: Number(order.total_price || order.escrowDeposit || order.price || 0),
+      status: (order.paymentStatus === 'paid' || order.status === 'PAID') ? 'success' : 'pending',
+      orderIds: [order.id],
+      createdAt: new Date().toISOString()
+    };
+    transactions.unshift(txn);
+  }
   if (!txn) return { code: '01', message: 'Order not found' };
 
   if (Number(params.vnp_Amount) !== Math.round(txn.amount) * 100) {
@@ -208,6 +225,43 @@ function processGatewayResult(query) {
   if (!success) {
     txn.status = 'failed';
     db.saveCollection('walletTransactions', transactions);
+    // Cập nhật trạng thái đơn hàng thành PAYMENT_FAILED và hoàn trả số lượng tồn kho (Rollback Stock)
+    const orderItems = db.getCollection('order_items') || [];
+    const services = db.getCollection('services') || [];
+    let servicesChanged = false;
+    const orderIds = (txn.orderIds && txn.orderIds.length) ? txn.orderIds : (order ? [order.id] : []);
+    orderIds.forEach((oid) => {
+      const ord = orders.find((o) => o.id === oid);
+      if (ord) {
+        ord.status = 'PAYMENT_FAILED';
+        ord.paymentStatus = 'failed';
+        const items = orderItems.filter((oi) => oi.order_id === ord.id || oi.orderId === ord.id);
+        items.forEach((oi) => {
+          const srv = services.find((s) => s.id === oi.product_id || s.id === oi.productId);
+          if (srv) {
+            srv.stock = (srv.stock !== undefined ? Number(srv.stock) : 50) + (Number(oi.quantity) || 1);
+            servicesChanged = true;
+          }
+        });
+      }
+    });
+    db.saveCollection('orders', orders);
+    if (servicesChanged) db.saveCollection('services', services);
+
+    // Ghi nhận bảng payment_transactions
+    const paymentTransactions = db.getCollection('payment_transactions') || [];
+    paymentTransactions.unshift({
+      id: `TXN_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+      order_id: orderIds[0] || (order && order.id) || params.vnp_TxnRef,
+      transaction_no: params.vnp_TransactionNo || '',
+      payment_method: 'vnpay',
+      amount: Number(params.vnp_Amount) / 100,
+      status: 'FAILED',
+      raw_response: JSON.stringify(params),
+      createdAt: new Date().toISOString()
+    });
+    db.saveCollection('payment_transactions', paymentTransactions);
+
     return { code: '00', message: 'Confirm Success', txn, success: false };
   }
 
@@ -231,6 +285,38 @@ function processGatewayResult(query) {
     const latest = db.getCollection('walletTransactions') || [];
     const stored = latest.find((t) => t.id === txn.id);
     if (stored && txn.creditedToWallet) { stored.creditedToWallet = txn.creditedToWallet; db.saveCollection('walletTransactions', latest); }
+
+    const orderIds = (txn && txn.orderIds && txn.orderIds.length) ? txn.orderIds : (order ? [order.id] : []);
+    orderIds.forEach((oid) => {
+      const ord = orders.find((o) => o.id === oid);
+      if (ord) {
+        ord.status = 'PAID';
+        ord.paymentStatus = 'paid';
+        ord.orderStatus = ord.orderStatus === 'pending' ? 'processing' : ord.orderStatus;
+        ord.escrowStatus = 'escrow_held';
+        notifyProvider(
+          ord.providerId,
+          '🔔 Đơn hàng mới đã thanh toán!',
+          `Khách hàng ${ord.customerName || 'Khách hàng'} đã thanh toán thành công đơn hàng #${ord.id} (${Number(ord.total_price || ord.price || 0).toLocaleString('vi-VN')}đ). Vui lòng chuẩn bị đóng gói hàng / triển khai dịch vụ!`,
+          'success',
+          `/bookings.html?orderId=${encodeURIComponent(ord.id)}`
+        );
+      }
+    });
+    db.saveCollection('orders', orders);
+
+    const paymentTransactions = db.getCollection('payment_transactions') || [];
+    paymentTransactions.unshift({
+      id: `TXN_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+      order_id: orderIds[0] || (order && order.id) || params.vnp_TxnRef,
+      transaction_no: params.vnp_TransactionNo || '',
+      payment_method: 'vnpay',
+      amount: Number(params.vnp_Amount) / 100,
+      status: 'SUCCESS',
+      raw_response: JSON.stringify(params),
+      createdAt: new Date().toISOString()
+    });
+    db.saveCollection('payment_transactions', paymentTransactions);
   }
   return { code: '00', message: 'Confirm Success', txn, success: true };
 }

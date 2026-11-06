@@ -1108,6 +1108,12 @@
           return;
         }
 
+        const token = params.get('token');
+        if (token && (mode === 'resetPassword' || !mode)) {
+          window.location.href = `reset_password.html?token=${encodeURIComponent(token)}`;
+          return;
+        }
+
         if (mode === 'resetPassword' && oobCode) {
           renderResetPassword(oobCode);
           return;

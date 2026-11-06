@@ -64,6 +64,11 @@ function buildCartSpecs(bookingList, schedulesByProvider) {
     if (!Number.isInteger(qty) || qty < 1 || qty > 99 || !Number.isFinite(Number(srv.price)) || Number(srv.price) < 0) {
       throw httpError(400, `Thông tin dịch vụ ${item.serviceId} trong giỏ không hợp lệ.`);
     }
+    // Kiểm tra số lượng tồn kho (Inventory Check)
+    const stock = srv.stock !== undefined ? Number(srv.stock) : 50;
+    if (stock < qty) {
+      throw httpError(400, `Sản phẩm / Dịch vụ "${srv.title || srv.name || item.serviceId}" không đủ số lượng tồn kho (chỉ còn ${stock}, bạn đặt ${qty}).`);
+    }
     if (!srv.providerId) {
       throw httpError(400, `Dịch vụ ${item.serviceId} chưa được gán Provider.`);
     }
@@ -117,6 +122,11 @@ function buildOrderDocument(spec, ctx) {
   const gateway = ctx.mode === 'gateway';
   const order = {
     id: ctx.id,
+    user_id: ctx.customer.id,
+    total_price: spec.escrowDeposit || spec.price,
+    status: gateway ? 'PENDING_PAYMENT' : 'PAID',
+    shipping_address: ctx.customerAddress || ctx.customer.address || '',
+    created_at: dateStr,
     customerId: ctx.customer.id,
     customerName: ctx.customer.name,
     customerPhone: ctx.customerPhone || ctx.customer.phone || '',
@@ -170,11 +180,36 @@ function createOrders(customer, specs, { mode, paymentMethod, customerPhone, cus
   const now = new Date();
   const created = [];
   const transactions = db.getCollection('walletTransactions') || [];
+  const orderItems = db.getCollection('order_items') || [];
+  const services = db.getCollection('services') || [];
+  let servicesModified = false;
 
   for (const spec of specs) {
     const id = nextOrderId(orders, created);
     const order = buildOrderDocument(spec, { id, mode, now, customer: customerRecord, customerPhone, customerAddress, notes, paymentMethod, paymentRef });
     created.push(order);
+
+    // Trừ kho tồn và ghi nhận chi tiết đơn hàng (order_items)
+    for (const item of (spec.items || [])) {
+      const srv = services.find((s) => s.id === item.serviceId);
+      if (srv) {
+        const curStock = srv.stock !== undefined ? Number(srv.stock) : 50;
+        srv.stock = Math.max(0, curStock - (Number(item.quantity) || 1));
+        servicesModified = true;
+      }
+      orderItems.push({
+        id: `OI_${id}_${item.serviceId}`,
+        order_id: id,
+        orderId: id,
+        product_id: item.serviceId,
+        productId: item.serviceId,
+        quantity: Number(item.quantity) || 1,
+        price_at_purchase: item.itemPrice / (Number(item.quantity) || 1),
+        priceAtPurchase: item.itemPrice / (Number(item.quantity) || 1),
+        serviceTitle: item.serviceTitle || (srv ? srv.title : 'Dịch vụ'),
+        createdAt: formatDateTime(now)
+      });
+    }
 
     if (mode === 'wallet') {
       const newBal = (Number(customerRecord.balance) || 0) - spec.escrowDeposit;
@@ -197,6 +232,8 @@ function createOrders(customer, specs, { mode, paymentMethod, customerPhone, cus
 
   orders.unshift(...created.slice().reverse());
   db.saveCollection('orders', orders);
+  db.saveCollection('order_items', orderItems);
+  if (servicesModified) db.saveCollection('services', services);
   if (mode === 'wallet') {
     db.saveCollection('users', users);
     db.saveCollection('walletTransactions', transactions);
@@ -443,10 +480,23 @@ function expireUnpaidOrders(nowMs = Date.now()) {
 
   const expiredIds = new Set(expired.map((o) => o.id));
   const jobs = db.getCollection('jobRequests') || [];
+  const orderItems = db.getCollection('order_items') || [];
+  const services = db.getCollection('services') || [];
   let jobsModified = false;
+  let servicesModified = false;
 
   expired.forEach((order) => {
+    order.status = 'CANCELLED';
     order.orderStatus = 'cancelled';
+    // Hoàn trả số lượng tồn kho (Rollback Stock)
+    const items = orderItems.filter((oi) => oi.order_id === order.id || oi.orderId === order.id);
+    items.forEach((oi) => {
+      const srv = services.find((s) => s.id === oi.product_id || s.id === oi.productId);
+      if (srv) {
+        srv.stock = (srv.stock !== undefined ? Number(srv.stock) : 50) + (Number(oi.quantity) || 1);
+        servicesModified = true;
+      }
+    });
     order.paymentStatus = 'cancelled';
     order.escrowStatus = 'payment_cancelled';
     order.cancelReason = 'Quá hạn thanh toán ký quỹ 24h';
@@ -484,6 +534,9 @@ function expireUnpaidOrders(nowMs = Date.now()) {
   db.saveCollection('orders', orders);
   if (jobsModified) {
     db.saveCollection('jobRequests', jobs);
+  }
+  if (servicesModified) {
+    db.saveCollection('services', services);
   }
 
   const transactions = db.getCollection('walletTransactions') || [];

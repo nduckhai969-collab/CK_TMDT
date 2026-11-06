@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
 const { processReleaseEscrow, processForceRefund } = require('../services/orderService');
+const sessionStore = require('../data/sessionStore');
 
 // ============================================================================
 // 1. DASHBOARD & SYSTEM OVERVIEW (UC-51)
@@ -159,6 +160,68 @@ router.get('/users', (req, res) => {
   }
 
   res.json({ success: true, total: users.length, users });
+});
+
+// ============================================================================
+// CHỨC NĂNG 12.1: KHÓA TÀI KHOẢN VI PHẠM & HỦY TOÀN BỘ PHIÊN LÀM VIỆC (SESSION)
+// PUT /admin/users/:id/ban
+// ============================================================================
+router.put('/users/:id/ban', (req, res) => {
+  const { reason } = req.body;
+  const users = db.getCollection('users');
+  const user = users.find(u => u.id === req.params.id || u.uid === req.params.id);
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+  }
+
+  // 1. Cập nhật trạng thái trong Database
+  user.is_active = false;
+  user.status = 'locked';
+  user.lockReason = (reason && String(reason).trim()) || 'Vi phạm điều khoản dịch vụ hệ thống';
+  user.bannedAt = new Date().toISOString();
+
+  db.saveCollection('users', users);
+
+  // 2. Cơ chế Session-Cookie: Xóa toàn bộ session của user trên bộ nhớ Server
+  const destroyedCount = sessionStore.destroyAllUserSessions(user.id);
+  if (user.uid && user.uid !== user.id) {
+    sessionStore.destroyAllUserSessions(user.uid);
+  }
+
+  res.json({
+    success: true,
+    message: `Đã khóa tài khoản [${user.name || user.email}] (is_active = false) và hủy ${destroyedCount} phiên làm việc (Session) trên máy chủ. Người dùng sẽ bị đăng xuất ngay lập tức.`,
+    user
+  });
+});
+
+router.post('/users/:id/ban', (req, res) => {
+  const { reason } = req.body;
+  const users = db.getCollection('users');
+  const user = users.find(u => u.id === req.params.id || u.uid === req.params.id);
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+  }
+
+  user.is_active = false;
+  user.status = 'locked';
+  user.lockReason = (reason && String(reason).trim()) || 'Vi phạm điều khoản dịch vụ hệ thống';
+  user.bannedAt = new Date().toISOString();
+
+  db.saveCollection('users', users);
+
+  const destroyedCount = sessionStore.destroyAllUserSessions(user.id);
+  if (user.uid && user.uid !== user.id) {
+    sessionStore.destroyAllUserSessions(user.uid);
+  }
+
+  res.json({
+    success: true,
+    message: `Đã khóa tài khoản [${user.name || user.email}] (is_active = false) và hủy ${destroyedCount} phiên làm việc (Session) trên máy chủ. Người dùng sẽ bị đăng xuất ngay lập tức.`,
+    user
+  });
 });
 
 // Lock user account (UC-53)
@@ -517,6 +580,147 @@ router.post('/services/:id/unlock', (req, res) => {
 });
 
 // ============================================================================
+// ============================================================================
+// CHỨC NĂNG 12.2: QUẢN LÝ SẢN PHẨM / DỊCH VỤ (PRODUCTS)
+// ============================================================================
+// GET /admin/products -> Xem danh sách sản phẩm
+router.get('/products', (req, res) => {
+  const { status, category, q } = req.query;
+  let services = db.getCollection('services') || [];
+
+  if (status && status !== 'all') {
+    services = services.filter(s => s.status === status);
+  }
+  if (category && category !== 'all') {
+    services = services.filter(s => s.category?.toLowerCase() === category.toLowerCase());
+  }
+  if (q) {
+    const keyword = q.toLowerCase().trim();
+    services = services.filter(s =>
+      (s.title && s.title.toLowerCase().includes(keyword)) ||
+      (s.name && s.name.toLowerCase().includes(keyword)) ||
+      (s.providerName && s.providerName.toLowerCase().includes(keyword)) ||
+      (s.id && s.id.toLowerCase().includes(keyword))
+    );
+  }
+
+  res.json({ success: true, total: services.length, products: services });
+});
+
+// POST /admin/products -> Admin duyệt hoặc đăng sản phẩm mới
+router.post(['/products', '/services'], (req, res) => {
+  const { name, title, price, stock, category, provider_id, providerId, description, desc, image, thumbnail } = req.body;
+  const services = db.getCollection('services') || [];
+  const products = db.getCollection('products') || [];
+  const providers = db.getCollection('providers') || [];
+
+  const id = `PRD${Date.now()}`;
+  const prv = providers.find(p => p.id === (providerId || provider_id)) || {};
+
+  const newProduct = {
+    id,
+    name: name || title || 'Sản phẩm mới',
+    title: title || name || 'Sản phẩm mới',
+    price: Number(price) || 0,
+    stock: Number(stock !== undefined ? stock : 100),
+    category: category || 'IT',
+    provider_id: providerId || provider_id || prv.id || 'PRV001',
+    providerId: providerId || provider_id || prv.id || 'PRV001',
+    providerName: prv.name || 'Nhà cung cấp',
+    description: description || desc || '',
+    desc: desc || description || '',
+    image: image || thumbnail || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600',
+    thumbnail: thumbnail || image || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600',
+    status: 'active',
+    is_deleted: false,
+    createdAt: new Date().toISOString()
+  };
+
+  services.unshift(newProduct);
+  products.unshift(newProduct);
+  db.saveCollection('services', services);
+  db.saveCollection('products', products);
+
+  res.status(201).json({
+    success: true,
+    message: `Admin đã đăng / duyệt sản phẩm [${newProduct.name}] thành công!`,
+    product: newProduct
+  });
+});
+
+// PUT /admin/products/:id -> Cập nhật giá, kho hàng
+router.put(['/products/:id', '/services/:id'], (req, res) => {
+  const { name, title, price, stock, category, description, desc, status } = req.body;
+  const services = db.getCollection('services') || [];
+  const products = db.getCollection('products') || [];
+
+  const itemSvc = services.find(s => s.id === req.params.id);
+  const itemPrd = products.find(p => p.id === req.params.id);
+  const item = itemSvc || itemPrd;
+
+  if (!item) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm!' });
+  }
+
+  if (name !== undefined) item.name = name;
+  if (title !== undefined) item.title = title;
+  if (price !== undefined) item.price = Number(price);
+  if (stock !== undefined) item.stock = Number(stock);
+  if (category !== undefined) item.category = category;
+  if (description !== undefined) item.description = description;
+  if (desc !== undefined) item.desc = desc;
+  if (status !== undefined) item.status = status;
+  item.updatedAt = new Date().toISOString();
+
+  if (itemSvc) Object.assign(itemSvc, item);
+  if (itemPrd) Object.assign(itemPrd, item);
+
+  db.saveCollection('services', services);
+  db.saveCollection('products', products);
+
+  res.json({
+    success: true,
+    message: `Admin đã cập nhật sản phẩm [${item.name || item.title}] thành công!`,
+    product: item
+  });
+});
+
+// DELETE /admin/products/:id -> Xóa sản phẩm (Soft Delete - ẩn sản phẩm chứ không xóa hẳn khỏi DB)
+router.delete(['/products/:id', '/services/:id'], (req, res) => {
+  const services = db.getCollection('services') || [];
+  const products = db.getCollection('products') || [];
+
+  const itemSvc = services.find(s => s.id === req.params.id);
+  const itemPrd = products.find(p => p.id === req.params.id);
+  const item = itemSvc || itemPrd;
+
+  if (!item) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm!' });
+  }
+
+  item.is_deleted = true;
+  item.status = 'inactive';
+  item.deletedAt = new Date().toISOString();
+
+  if (itemSvc) {
+    itemSvc.is_deleted = true;
+    itemSvc.status = 'inactive';
+  }
+  if (itemPrd) {
+    itemPrd.is_deleted = true;
+    itemPrd.status = 'inactive';
+  }
+
+  db.saveCollection('services', services);
+  db.saveCollection('products', products);
+
+  res.json({
+    success: true,
+    message: `Đã xóa (ẩn) sản phẩm [${item.name || item.title}] thành công (Soft delete)!`,
+    product: item
+  });
+});
+
 // 6. ORDERS & ESCROW INTERVENTION (UC-60, UC-61)
 // ============================================================================
 router.get('/orders', (req, res) => {
@@ -531,6 +735,107 @@ router.get('/orders', (req, res) => {
   }
 
   res.json({ success: true, total: orders.length, orders });
+});
+
+// ============================================================================
+// CHỨC NĂNG 12.3: CAN THIỆP ĐỔI TRẠNG THÁI ĐƠN HÀNG KHI TRANH CHẤP
+// PATCH /admin/orders/:id/status
+// ============================================================================
+router.patch('/orders/:id/status', (req, res) => {
+  const { status, note } = req.body;
+  if (!status) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp trạng thái đơn hàng mới!' });
+  }
+
+  const orders = db.getCollection('orders') || [];
+  const order = orders.find(o => o.id === req.params.id);
+
+  if (!order) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  }
+
+  const prevStatus = order.status || order.orderStatus;
+  const normalized = String(status).toUpperCase();
+
+  order.status = normalized;
+  order.orderStatus = status.toLowerCase();
+  if (note) order.adminNote = note;
+  order.updatedAt = new Date().toISOString();
+
+  // Nếu Admin can thiệp hủy đơn hàng (CANCELLED) -> Hoàn lại kho nếu chưa hoàn
+  if ((normalized === 'CANCELLED' || status.toLowerCase() === 'cancelled') && prevStatus !== 'CANCELLED' && prevStatus !== 'cancelled') {
+    const orderItems = db.getCollection('order_items') || [];
+    const services = db.getCollection('services') || [];
+    const products = db.getCollection('products') || [];
+    const items = orderItems.filter(oi => String(oi.order_id) === String(order.id));
+
+    if (items.length > 0) {
+      items.forEach(oi => {
+        const p = services.find(s => s.id === oi.product_id) || products.find(s => s.id === oi.product_id);
+        if (p && typeof p.stock === 'number') {
+          p.stock += Number(oi.quantity) || 1;
+        }
+      });
+      db.saveCollection('services', services);
+      db.saveCollection('products', products);
+    }
+  }
+
+  db.saveCollection('orders', orders);
+
+  res.json({
+    success: true,
+    message: `Admin đã can thiệp đổi trạng thái đơn hàng #${order.id} sang [${order.status}].`,
+    order
+  });
+});
+
+router.put('/orders/:id/status', (req, res) => {
+  const { status, note } = req.body;
+  if (!status) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp trạng thái đơn hàng mới!' });
+  }
+
+  const orders = db.getCollection('orders') || [];
+  const order = orders.find(o => o.id === req.params.id);
+
+  if (!order) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  }
+
+  const prevStatus = order.status || order.orderStatus;
+  const normalized = String(status).toUpperCase();
+
+  order.status = normalized;
+  order.orderStatus = status.toLowerCase();
+  if (note) order.adminNote = note;
+  order.updatedAt = new Date().toISOString();
+
+  if ((normalized === 'CANCELLED' || status.toLowerCase() === 'cancelled') && prevStatus !== 'CANCELLED' && prevStatus !== 'cancelled') {
+    const orderItems = db.getCollection('order_items') || [];
+    const services = db.getCollection('services') || [];
+    const products = db.getCollection('products') || [];
+    const items = orderItems.filter(oi => String(oi.order_id) === String(order.id));
+
+    if (items.length > 0) {
+      items.forEach(oi => {
+        const p = services.find(s => s.id === oi.product_id) || products.find(s => s.id === oi.product_id);
+        if (p && typeof p.stock === 'number') {
+          p.stock += Number(oi.quantity) || 1;
+        }
+      });
+      db.saveCollection('services', services);
+      db.saveCollection('products', products);
+    }
+  }
+
+  db.saveCollection('orders', orders);
+
+  res.json({
+    success: true,
+    message: `Admin đã can thiệp đổi trạng thái đơn hàng #${order.id} sang [${order.status}].`,
+    order
+  });
 });
 
 router.post('/orders/:id/force-release', (req, res) => {

@@ -9,6 +9,7 @@
     "seed": "node scripts/seedMysql.js",
     "email:worker": "node scripts/emailWorker.js",
     "email:dry": "node scripts/emailWorker.js --dry",
+    "ml:train": "node scripts/trainReviewModel.js",
     "check": "node scripts/checkFrontend.js"
   },
   "repository": {

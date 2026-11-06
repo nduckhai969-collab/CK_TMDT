@@ -5,6 +5,7 @@ const { requireCustomer, requireProvider } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { replyToReview } = require('../services/reviewService');
 const { predictAspects } = require('../services/aspectInference');
+const REVIEW_ANALYSIS_VERSION = 2;
 
 const ASPECT_VN = {
   quality: 'Chất lượng',
@@ -20,10 +21,15 @@ function analyzeReviewContent(content, rating) {
     const pred = predictAspects(content);
     const aspectMap = {};
     (pred.aspects || []).forEach(a => {
+      // Chỉ đưa nhãn khen/chê ra như kết luận khi xác suất lớp đủ mạnh.
+      // Dự đoán yếu vẫn được giữ lại dưới dạng "uncertain" để người xem biết mô hình có nhận ra khía cạnh.
+      const isConfident = (a.confidence || 0) >= 0.70;
       aspectMap[a.aspect] = {
         aspect: a.aspect,
-        sentiment: a.sentiment,
-        confidence: Math.round((a.confidence || 0.8) * 100)
+        sentiment: isConfident ? a.sentiment : 'uncertain',
+        confidence: Math.round((a.confidence || 0) * 100),
+        detectionConfidence: Math.round((a.prob || 0) * 100),
+        source: 'model'
       };
     });
 
@@ -31,43 +37,44 @@ function analyzeReviewContent(content, rating) {
 
     // Domain booster cho ngữ cảnh thực tế tiếng Việt
     // 1. Quality
-    if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh)\s*(xấu|tệ|kém|dở|hỏng|lỗi|sơ sài)/i.test(lower)) {
+    if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(xấu|tệ|kém|dở|hỏng|lỗi|sơ sài)/iu.test(lower)) {
       aspectMap.quality = { aspect: 'quality', sentiment: 'neg', confidence: 92 };
-    } else if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh|dịch vụ)\s*(đẹp|tốt|chuẩn|xịn|chuyên nghiệp|ưng ý|xuất sắc|rất tốt)/i.test(lower)) {
+    } else if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh|dịch vụ)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(đẹp|tốt|chuẩn|xịn|chuyên nghiệp|ưng ý|xuất sắc|rất tốt)/iu.test(lower)) {
       aspectMap.quality = { aspect: 'quality', sentiment: 'pos', confidence: 92 };
     }
 
     // 2. Price
-    if (/(giá|chi phí|tiền)\s*(phải chăng|rẻ|hợp lý|ổn|mềm|vừa túi|tốt|hạt dẻ)/i.test(lower)) {
+    if (/(giá|chi phí|tiền|mức giá|mức phí)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(phải chăng|rẻ|hợp lý|ổn|mềm|vừa túi|tốt|hạt dẻ|tiết kiệm)/iu.test(lower)) {
       aspectMap.price = { aspect: 'price', sentiment: 'pos', confidence: 90 };
-    } else if (/(giá|chi phí|tiền)\s*(đắt|chát|cao|cắt cổ|quá đắt|phát sinh)/i.test(lower)) {
+    } else if (/(giá|chi phí|tiền|mức giá|mức phí)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(đắt|chát|cao|cắt cổ|phát sinh|tốn kém)/iu.test(lower)) {
       aspectMap.price = { aspect: 'price', sentiment: 'neg', confidence: 90 };
     }
 
     // 3. Speed
-    if (/(giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi)\s*(đúng hẹn|nhanh|đúng giờ|sớm|siêu nhanh|cực nhanh)/i.test(lower)) {
+    if (/(giao hàng|giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(đúng hẹn|nhanh|đúng giờ|sớm|siêu nhanh|cực nhanh)/iu.test(lower)) {
       aspectMap.speed = { aspect: 'speed', sentiment: 'pos', confidence: 91 };
-    } else if (/(giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi)\s*(chậm|trễ|muộn|chậm trễ|lề mề|delay)/i.test(lower) || /đến muộn|trễ hẹn/i.test(lower)) {
+    } else if (/(giao hàng|giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(chậm|trễ|muộn|chậm trễ|lề mề|delay)/iu.test(lower) || /đến muộn|trễ hẹn/i.test(lower)) {
       aspectMap.speed = { aspect: 'speed', sentiment: 'neg', confidence: 91 };
     }
 
     // 4. Attitude
-    if (/thái độ\s*(với khách|kém|tệ|lồi lõm|cáu|khó chịu|bất lịch sự|xúc phạm|coi thường|ngang ngược)/i.test(lower)) {
+    if (/(thái độ|phục vụ|hỗ trợ|thợ|chuyên gia|anh|chị|bạn)(?:\s+(?:với khách|rất|quá|khá|cực kỳ|thật sự)){0,2}\s*(kém|tệ|lồi lõm|cáu|khó chịu|bất lịch sự|xúc phạm|coi thường|ngang ngược)/iu.test(lower)) {
       aspectMap.attitude = { aspect: 'attitude', sentiment: 'neg', confidence: 93 };
-    } else if (/(thái độ|phục vụ|hỗ trợ|thợ|chuyên gia|anh|chị|bạn)\s*(tốt|nhiệt tình|lịch sự|chu đáo|thân thiện|dễ thương)/i.test(lower)) {
+    } else if (/(thái độ|phục vụ|hỗ trợ|thợ|chuyên gia|anh|chị|bạn)(?:\s+(?:rất|quá|khá|cực kỳ|thật sự)){0,2}\s*(tốt|nhiệt tình|lịch sự|chu đáo|thân thiện|dễ thương)/iu.test(lower)) {
       aspectMap.attitude = { aspect: 'attitude', sentiment: 'pos', confidence: 93 };
     }
 
     // 5. Warranty
     if (/(không|chẳng|chưa|từ chối|hết|mất)\s*(chịu\s*)?bảo hành/i.test(lower) || /bảo hành\s*(kém|tệ|lừa đảo|không có)/i.test(lower)) {
       aspectMap.warranty = { aspect: 'warranty', sentiment: 'neg', confidence: 92 };
-    } else if (/(bảo hành|hỗ trợ sau|sửa lỗi)\s*(chu đáo|đầy đủ|nhiệt tình|uy tín|tận tâm|dài hạn)/i.test(lower)) {
+    } else if (/(bảo hành|hỗ trợ sau|sửa lỗi)(?:\s+(?:rất|quá|khá|cực kỳ|thật sự)){0,2}\s*(chu đáo|đầy đủ|nhiệt tình|uy tín|tận tâm|dài hạn)/iu.test(lower)) {
       aspectMap.warranty = { aspect: 'warranty', sentiment: 'pos', confidence: 92 };
     }
 
     const aspectList = Object.values(aspectMap);
     const numPos = aspectList.filter(a => a.sentiment === 'pos').length;
     const numNeg = aspectList.filter(a => a.sentiment === 'neg').length;
+    const hasUncertain = aspectList.some(a => a.sentiment === 'uncertain');
 
     // Lời khuyên phủ định mạnh (VETO)
     const hasStrongNegVeto = /(đừng|không nên|k nên|chớ|tẩy chay|tránh xa)\s*(thuê|tuyển|dùng|mua|hợp tác)/i.test(lower) ||
@@ -76,24 +83,26 @@ function analyzeReviewContent(content, rating) {
     let overallSentiment = 'neutral';
     if (hasStrongNegVeto) {
       overallSentiment = 'neg';
+    } else if (hasUncertain || aspectList.length === 0) {
+      overallSentiment = 'uncertain';
     } else if (numPos > 0 && numNeg > 0) {
       overallSentiment = numNeg > numPos ? 'neg' : 'mixed';
     } else if (numPos > 0) {
       overallSentiment = 'pos';
     } else if (numNeg > 0) {
       overallSentiment = 'neg';
-    } else if (typeof rating === 'number') {
-      if (rating >= 4) overallSentiment = 'pos';
-      else if (rating <= 2) overallSentiment = 'neg';
     }
 
     return {
+      analysisVersion: REVIEW_ANALYSIS_VERSION,
       overallSentiment,
       aspects: aspectList.map(a => ({
         aspect: a.aspect,
         aspectName: ASPECT_VN[a.aspect] || a.aspect,
         sentiment: a.sentiment,
-        confidence: a.confidence
+        confidence: a.confidence,
+        detectionConfidence: a.detectionConfidence,
+        source: a.source || 'rule'
       }))
     };
   } catch (err) {
@@ -104,18 +113,29 @@ function analyzeReviewContent(content, rating) {
 
 function enrichReviewWithAI(r) {
   if (!r) return r;
-  if (r.aiAnalysis) return r;
+  if (r.aiAnalysis?.analysisVersion === REVIEW_ANALYSIS_VERSION) return r;
   const analysis = analyzeReviewContent(r.content, Number(r.rating) || 5);
-  return {
-    ...r,
-    aiAnalysis: analysis
-  };
+  r.aiAnalysis = analysis;
+  return r;
+}
+
+async function refreshStoredReviewAnalyses() {
+  const reviews = db.getCollection('reviews') || [];
+  const needsRefresh = reviews.some(r => r?.content && r.aiAnalysis?.analysisVersion !== REVIEW_ANALYSIS_VERSION);
+  if (!needsRefresh) return reviews;
+  reviews.forEach(enrichReviewWithAI);
+  await db.saveCollectionAndWait('reviews', reviews);
+  return reviews;
 }
 
 // Real-time AI analysis preview endpoint
 router.post('/analyze', (req, res) => {
   const content = (req.body && (req.body.content || req.body.text)) || '';
+  if (typeof content !== 'string' || content.trim().length < 3 || content.length > 2000) {
+    return res.status(400).json({ success: false, message: 'Nhập bình luận từ 3 đến 2.000 ký tự để phân tích.' });
+  }
   const analysis = analyzeReviewContent(content);
+  if (!analysis) return res.status(503).json({ success: false, message: 'Mô hình phân tích hiện chưa sẵn sàng.' });
   res.json({
     success: true,
     analysis
@@ -123,12 +143,12 @@ router.post('/analyze', (req, res) => {
 });
 
 // Public reviews
-router.get('/public', (req, res) => {
+router.get('/public', async (req, res) => {
   const { providerId } = req.query;
   if (!providerId) {
     return res.status(400).json({ success: false, message: 'Thiếu providerId' });
   }
-  const reviews = (db.getCollection('reviews') || []).filter(r => r.providerId === providerId);
+  const reviews = (await refreshStoredReviewAnalyses()).filter(r => r.providerId === providerId);
   res.json({
     success: true,
     total: reviews.length,
@@ -137,12 +157,12 @@ router.get('/public', (req, res) => {
 });
 
 // List reviews
-router.get('/', requireCustomer, (req, res) => {
+router.get('/', requireCustomer, async (req, res) => {
   const { providerId, customerId } = req.query;
   if (customerId && customerId !== req.authUser.id) {
     return res.status(403).json({ success: false, message: 'Bạn không có quyền xem đánh giá của tài khoản khác.' });
   }
-  let reviews = (db.getCollection('reviews') || []).filter(review => review.customerId === req.authUser.id);
+  let reviews = (await refreshStoredReviewAnalyses()).filter(review => review.customerId === req.authUser.id);
 
   if (providerId) {
     reviews = reviews.filter(r => r.providerId === providerId);
@@ -155,7 +175,7 @@ router.get('/', requireCustomer, (req, res) => {
 });
 
 // Post review
-router.post('/', requireCustomer, (req, res) => {
+router.post('/', requireCustomer, async (req, res) => {
   const { orderId, providerId, providerName, serviceTitle, rating, content, criteria } = req.body;
   const reviewContent = typeof content === 'string' ? content.trim() : '';
   const numericRating = Number(rating);
@@ -164,20 +184,19 @@ router.post('/', requireCustomer, (req, res) => {
     return res.status(400).json({ success: false, message: 'Chọn từ 1 đến 5 sao và nhập đánh giá từ 3 đến 2.000 ký tự.' });
   }
 
-  let order = (db.getCollection('orders') || []).find(item => item.id === orderId);
+  const order = (db.getCollection('orders') || []).find(item => item.id === orderId);
   if (!order) {
-    order = {
-      id: orderId || 'DH001231',
-      customerId: req.authUser.id,
-      providerId: providerId || 'PRV001',
-      providerName: providerName || 'Nguyễn Văn An',
-      serviceTitle: serviceTitle || 'Dịch vụ hoàn tất',
-      orderStatus: 'completed'
-    };
+    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng để đánh giá.' });
+  }
+  if (order.customerId !== req.authUser.id && (!req.authUser.uid || order.customerId !== req.authUser.uid)) {
+    return res.status(403).json({ success: false, message: 'Bạn chỉ có thể đánh giá đơn hàng của mình.' });
+  }
+  if (!['completed', 'delivered'].includes(String(order.orderStatus || '').toLowerCase())) {
+    return res.status(400).json({ success: false, message: 'Chỉ có thể đánh giá đơn hàng đã hoàn tất.' });
   }
 
   const reviews = db.getCollection('reviews') || [];
-  const existingIndex = reviews.findIndex(r => r.orderId === orderId);
+  const existingIndex = reviews.findIndex(r => r.orderId === orderId && r.customerId === req.authUser.id);
 
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
@@ -186,9 +205,9 @@ router.post('/', requireCustomer, (req, res) => {
     reviews[existingIndex].rating = numericRating;
     reviews[existingIndex].content = reviewContent;
     reviews[existingIndex].date = dateStr;
-    reviews[existingIndex].criteria = Array.isArray(criteria) ? criteria : ['Chuyên nghiệp', 'Đúng hẹn'];
+    if (Array.isArray(criteria)) reviews[existingIndex].criteria = criteria;
     reviews[existingIndex].aiAnalysis = analyzeReviewContent(reviewContent, numericRating);
-    db.saveCollection('reviews', reviews);
+    await db.saveCollectionAndWait('reviews', reviews);
     return res.status(200).json({
       success: true,
       message: 'Cập nhật đánh giá thành công!',
@@ -215,7 +234,7 @@ router.post('/', requireCustomer, (req, res) => {
   };
 
   reviews.unshift(newReview);
-  db.saveCollection('reviews', reviews);
+  await db.saveCollectionAndWait('reviews', reviews);
 
   // Recalculate provider rating
   const providers = db.getCollection('providers');

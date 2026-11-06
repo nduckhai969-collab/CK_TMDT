@@ -786,16 +786,20 @@ function renderAiBadge(aiAnalysis) {
     bg = '#FFFBEB'; border = '#FDE68A'; color = '#B45309'; label = 'Khen - Chê đan xen'; icon = '<i class="fa-solid fa-circle-half-stroke" style="color:#d97706;margin-right:5px;"></i>';
   } else if (sent === 'neutral') {
     bg = '#F1F5F9'; border = '#CBD5E1'; color = '#475569'; label = 'Trung tính'; icon = '<i class="fa-solid fa-circle-info" style="color:#64748b;margin-right:5px;"></i>';
+  } else if (sent === 'uncertain') {
+    bg = '#FFF7ED'; border = '#FED7AA'; color = '#9A3412'; label = 'Chưa đủ chắc chắn'; icon = '<i class="fa-solid fa-circle-question" style="color:#ea580c;margin-right:5px;"></i>';
   }
 
   const aspects = Array.isArray(aiAnalysis.aspects) ? aiAnalysis.aspects : [];
   const aspectChips = aspects.map(a => {
     const isP = a.sentiment === 'pos', isN = a.sentiment === 'neg';
-    const cColor = isP ? '#15803D' : isN ? '#B91C1C' : '#64748B';
-    const cBg = isP ? '#DCFCE7' : isN ? '#FEE2E2' : '#F1F5F9';
-    const sign = isP ? 'Khen' : isN ? 'Chê' : '~';
+    const isUncertain = a.sentiment === 'uncertain';
+    const cColor = isP ? '#15803D' : isN ? '#B91C1C' : isUncertain ? '#9A3412' : '#64748B';
+    const cBg = isP ? '#DCFCE7' : isN ? '#FEE2E2' : isUncertain ? '#FFEDD5' : '#F1F5F9';
+    const sign = isP ? 'Khen' : isN ? 'Chê' : isUncertain ? 'Chưa chắc' : 'Trung tính';
     const name = a.aspectName || a.aspect;
-    return '<span style="display:inline-flex;align-items:center;padding:2px 7px;border-radius:9999px;font-size:11px;font-weight:600;color:' + cColor + ';background:' + cBg + ';margin-left:4px;border:1px solid rgba(0,0,0,0.05);">' + name + ': ' + sign + '</span>';
+    const confidence = a.source === 'model' && Number.isFinite(Number(a.confidence)) ? ' (' + Number(a.confidence) + '%)' : '';
+    return '<span title="Mức xác suất dự đoán của mô hình; dưới 70% được đánh dấu chưa chắc" style="display:inline-flex;align-items:center;padding:2px 7px;border-radius:9999px;font-size:11px;font-weight:600;color:' + cColor + ';background:' + cBg + ';margin-left:4px;border:1px solid rgba(0,0,0,0.05);">' + name + ': ' + sign + confidence + '</span>';
   }).join('');
 
   return '<div class="ai-sentiment-box" style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;padding:4px 10px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;font-size:12px;font-weight:700;color:' + color + ';margin-top:6px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">' +

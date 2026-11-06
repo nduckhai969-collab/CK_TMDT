@@ -137,7 +137,7 @@
           <a href="customer_orders.html" class="btn btn-outline" style="font-weight:600; padding:11px 20px;">
             Để Sau
           </a>
-          <button type="submit" id="btnSubmitReview" class="btn btn-primary btn-lg" style="font-weight:700; padding:12px 32px; box-shadow:0 4px 14px rgba(22,163,74,0.3);">
+          <button type="submit" id="btnSubmitReview" class="btn btn-primary btn-lg" disabled style="font-weight:700; padding:12px 32px; box-shadow:0 4px 14px rgba(22,163,74,0.3);">
             <i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay
           </button>
         </div>
@@ -167,16 +167,6 @@
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
       document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
 
-      // Đảm bảo session tài khoản Customer khả dụng khi test
-      if (!getCurrentCustomer()) {
-        setCurrentCustomer({
-          id: 'USR003',
-          name: 'Lê Hoàng Long',
-          email: 'long.le@example.com',
-          role: 'Customer'
-        });
-      }
-
       setRating(5);
       initAiRealtimePreview();
 
@@ -202,7 +192,7 @@
       try {
         const ordersRes = await apiRequest('/api/orders');
         if (ordersRes.success && Array.isArray(ordersRes.orders) && ordersRes.orders.length > 0) {
-          const completed = ordersRes.orders.find(o => o.orderStatus === 'completed') || ordersRes.orders[0];
+          const completed = ordersRes.orders.find(o => o.orderStatus === 'completed');
           if (completed) {
             applyOrder(completed);
             return;
@@ -212,14 +202,14 @@
         console.warn('Không lấy được danh sách orders:', e);
       }
 
-      // Đơn hàng dự phòng mẫu hoàn tất để việc đánh giá và test AI luôn hoạt động trơn tru
-      applyOrder({
-        id: orderId || 'DH001231',
-        serviceTitle: 'Khóa học IELTS Speaking 1 kèm 1 cấp tốc',
-        providerId: 'PRV003',
-        providerName: 'Phạm Hữu Cường',
-        orderStatus: 'completed'
-      });
+      targetOrder = null;
+      document.getElementById('orderIdText').textContent = 'Không tìm thấy đơn hàng';
+      document.getElementById('orderServiceTitle').textContent = 'Bạn cần đơn hàng đã hoàn tất để gửi đánh giá.';
+      document.getElementById('orderProviderName').textContent = '';
+      const btn = document.getElementById('btnSubmitReview');
+      if (btn) btn.disabled = true;
+      const form = document.getElementById('reviewForm');
+      if (form) form.hidden = true;
     }
 
     async function applyOrder(ord) {
@@ -246,70 +236,11 @@
       }
     }
 
-    function clientFallbackAnalysis(text) {
-      const lower = text.toLowerCase();
-      const map = {};
-
-      // 1. Quality
-      if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh)\s*(xấu|tệ|kém|dở|hỏng|lỗi|sơ sài)/i.test(lower)) {
-        map.quality = { aspect: 'quality', aspectName: 'Chất lượng', sentiment: 'neg', confidence: 92 };
-      } else if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh|dịch vụ)\s*(đẹp|tốt|chuẩn|xịn|chuyên nghiệp|ưng ý|xuất sắc|rất tốt)/i.test(lower)) {
-        map.quality = { aspect: 'quality', aspectName: 'Chất lượng', sentiment: 'pos', confidence: 92 };
-      }
-
-      // 2. Price
-      if (/(giá|chi phí|tiền)\s*(phải chăng|rẻ|hợp lý|ổn|mềm|vừa túi|tốt|hạt dẻ)/i.test(lower)) {
-        map.price = { aspect: 'price', aspectName: 'Giá cả', sentiment: 'pos', confidence: 90 };
-      } else if (/(giá|chi phí|tiền)\s*(đắt|chát|cao|cắt cổ|quá đắt|phát sinh)/i.test(lower)) {
-        map.price = { aspect: 'price', aspectName: 'Giá cả', sentiment: 'neg', confidence: 90 };
-      }
-
-      // 3. Speed
-      if (/(giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi)\s*(đúng hẹn|nhanh|đúng giờ|sớm|siêu nhanh|cực nhanh)/i.test(lower)) {
-        map.speed = { aspect: 'speed', aspectName: 'Tốc độ', sentiment: 'pos', confidence: 91 };
-      } else if (/(giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi)\s*(chậm|trễ|muộn|chậm trễ|lề mề|delay)/i.test(lower) || /đến muộn|trễ hẹn/i.test(lower)) {
-        map.speed = { aspect: 'speed', aspectName: 'Tốc độ', sentiment: 'neg', confidence: 91 };
-      }
-
-      // 4. Attitude
-      if (/thái độ\s*(với khách|kém|tệ|lồi lõm|cáu|khó chịu|bất lịch sự|xúc phạm|coi thường|ngang ngược)/i.test(lower)) {
-        map.attitude = { aspect: 'attitude', aspectName: 'Thái độ', sentiment: 'neg', confidence: 93 };
-      } else if (/(thái độ|phục vụ|hỗ trợ|thợ|chuyên gia|anh|chị|bạn)\s*(tốt|nhiệt tình|lịch sự|chu đáo|thân thiện|dễ thương)/i.test(lower)) {
-        map.attitude = { aspect: 'attitude', aspectName: 'Thái độ', sentiment: 'pos', confidence: 93 };
-      }
-
-      // 5. Warranty
-      if (/(không|chẳng|chưa|từ chối|hết|mất)\s*(chịu\s*)?bảo hành/i.test(lower) || /bảo hành\s*(kém|tệ|lừa đảo|không có)/i.test(lower)) {
-        map.warranty = { aspect: 'warranty', aspectName: 'Bảo hành', sentiment: 'neg', confidence: 92 };
-      } else if (/(bảo hành|hỗ trợ sau|sửa lỗi)\s*(chu đáo|đầy đủ|nhiệt tình|uy tín|tận tâm|dài hạn)/i.test(lower)) {
-        map.warranty = { aspect: 'warranty', aspectName: 'Bảo hành', sentiment: 'pos', confidence: 92 };
-      }
-
-      const aspectList = Object.values(map);
-      const numPos = aspectList.filter(a => a.sentiment === 'pos').length;
-      const numNeg = aspectList.filter(a => a.sentiment === 'neg').length;
-
-      const hasStrongNegVeto = /(đừng|không nên|k nên|chớ|tẩy chay|tránh xa)\s*(thuê|tuyển|dùng|mua|hợp tác)/i.test(lower) ||
-        /lừa đảo|thất vọng hoàn toàn|quá tệ hại|cạch mặt/i.test(lower);
-
-      let sent = 'neutral';
-      if (hasStrongNegVeto) {
-        sent = 'neg';
-      } else if (numPos > 0 && numNeg > 0) {
-        sent = numNeg > numPos ? 'neg' : 'mixed';
-      } else if (numPos > 0) {
-        sent = 'pos';
-      } else if (numNeg > 0) {
-        sent = 'neg';
-      }
-
-      return { overallSentiment: sent, aspects: aspectList };
-    }
-
     function initAiRealtimePreview() {
       const reviewTextEl = document.getElementById('reviewText');
       const aiPreviewBox = document.getElementById('aiLivePreviewBox');
       let aiDebounceTimer = null;
+      let latestRequestId = 0;
 
       if (!reviewTextEl || !aiPreviewBox) return;
 
@@ -322,27 +253,28 @@
           return;
         }
 
-        // 1. Phản hồi tức thì bằng client fallback để UI mượt mà
-        const fallback = clientFallbackAnalysis(text);
+        const requestId = ++latestRequestId;
         aiPreviewBox.style.display = 'block';
-        aiPreviewBox.innerHTML = `
-          ${typeof renderAiBadge === 'function' ? renderAiBadge(fallback) : ''}
-        `;
+        aiPreviewBox.textContent = 'Đang phân tích bình luận…';
 
-        // 2. Tinh chỉnh chuẩn xác bằng mô hình học máy trên server
         aiDebounceTimer = setTimeout(async () => {
           try {
             const res = await apiRequest('/api/reviews/analyze', {
               method: 'POST',
               body: { content: text }
             });
+            if (requestId !== latestRequestId) return;
             if (res.success && res.analysis) {
               aiPreviewBox.style.display = 'block';
               aiPreviewBox.innerHTML = `
                 ${typeof renderAiBadge === 'function' ? renderAiBadge(res.analysis) : ''}
               `;
+            } else {
+              aiPreviewBox.textContent = res.message || 'Chưa phân tích được bình luận.';
             }
           } catch (err) {
+            if (requestId !== latestRequestId) return;
+            aiPreviewBox.textContent = 'Không kết nối được dịch vụ phân tích.';
             console.warn('AI analysis error:', err);
           }
         }, 150);
@@ -378,25 +310,12 @@
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi...`;
 
-      let user = getCurrentCustomer();
-      if (!user) {
-        user = {
-          id: 'USR003',
-          name: 'Lê Hoàng Long',
-          email: 'long.le@example.com',
-          role: 'Customer'
-        };
-        setCurrentCustomer(user);
-      }
-
-      if (!targetOrder) {
-        targetOrder = {
-          id: 'DH001231',
-          providerId: 'PRV003',
-          providerName: 'Phạm Hữu Cường',
-          serviceTitle: 'Khóa học IELTS Speaking 1 kèm 1 cấp tốc',
-          orderStatus: 'completed'
-        };
+      const user = getCurrentCustomer();
+      if (!user || !targetOrder) {
+        showToast('Chưa thể gửi đánh giá', 'Đăng nhập và chọn một đơn hàng thật đã hoàn tất.', 'warning');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay`;
+        return;
       }
 
       const ratingVal = currentRating || 5;

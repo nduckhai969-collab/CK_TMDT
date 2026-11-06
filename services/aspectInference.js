@@ -14,19 +14,19 @@ const SENT_MODEL_PATH = path.join(MODEL_DIR, 'aspect_sentiment.json');
 
 let detModel = null;
 let sentModel = null;
+let loadedModelSignature = '';
 
 function loadModels() {
-  if (!detModel) {
-    if (!fs.existsSync(DET_MODEL_PATH)) {
-      throw new Error(`Không tìm thấy file mô hình Aspect Detection tại ${DET_MODEL_PATH}`);
-    }
-    detModel = JSON.parse(fs.readFileSync(DET_MODEL_PATH, 'utf8'));
+  for (const modelPath of [DET_MODEL_PATH, SENT_MODEL_PATH]) {
+    if (!fs.existsSync(modelPath)) throw new Error(`Không tìm thấy file mô hình tại ${modelPath}`);
   }
-  if (!sentModel) {
-    if (!fs.existsSync(SENT_MODEL_PATH)) {
-      throw new Error(`Không tìm thấy file mô hình Aspect Sentiment tại ${SENT_MODEL_PATH}`);
-    }
+  const signature = [DET_MODEL_PATH, SENT_MODEL_PATH]
+    .map(modelPath => `${fs.statSync(modelPath).mtimeMs}:${fs.statSync(modelPath).size}`)
+    .join('|');
+  if (signature !== loadedModelSignature) {
+    detModel = JSON.parse(fs.readFileSync(DET_MODEL_PATH, 'utf8'));
     sentModel = JSON.parse(fs.readFileSync(SENT_MODEL_PATH, 'utf8'));
+    loadedModelSignature = signature;
   }
 }
 

@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
-const { firestore } = require('../firebase');
 const { requireSignedIn } = require('./customerAuth');
 const { notifyProvider } = require('../services/notificationService');
 
@@ -43,9 +42,8 @@ router.post('/', requireSignedIn, async (req, res) => {
     targetTitle = service.title || service.name || '';
   } else {
     try {
-      const postSnapshot = await firestore.collection('posts').doc(targetId).get();
-      if (!postSnapshot.exists) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
-      const post = postSnapshot.data();
+      const post = (await db.getCollectionFresh('posts')).find(item => item.id === targetId);
+      if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
       providerId = post.providerId;
       targetTitle = post.title || '';
     } catch (error) {
@@ -60,12 +58,24 @@ router.post('/', requireSignedIn, async (req, res) => {
     }
     
     // Check reply permission
-    const providers = db.getCollection('providers') || [];
-    const serviceProvider = providers.find(p => p.id === providerId);
-    const isServiceProvider = serviceProvider && serviceProvider.userId === req.authUser.id;
+    const providers = await db.getCollectionFresh('providers');
+    const serviceProvider = providers.find(p => p.id === providerId || p.userId === providerId);
+    const providerAccountIds = [
+      req.authUser.id,
+      req.authUser.uid,
+      req.authUser.providerId,
+      ].filter(Boolean);
+    const isSameEmail = serviceProvider && req.authUser.email && serviceProvider.email &&
+      serviceProvider.email.toLowerCase() === req.authUser.email.toLowerCase();
+    const isServiceProvider = serviceProvider && (
+      providerAccountIds.includes(serviceProvider.id) ||
+      providerAccountIds.some(id => [serviceProvider.userId, serviceProvider.uid].includes(id)) ||
+      isSameEmail
+    );
     const isParentAuthor = parentComment.userId === req.authUser.id;
-    if (!isServiceProvider && !isParentAuthor) {
-      return res.status(403).json({ success: false, message: 'Chỉ chủ dịch vụ hoặc tác giả bình luận gốc mới được phản hồi.' });
+    const isAdmin = req.authUser.role === 'Admin';
+    if (!isServiceProvider && !isParentAuthor && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Chỉ chủ Provider của bài viết hoặc tác giả bình luận mới được phản hồi.' });
     }
   }
 
@@ -77,6 +87,7 @@ router.post('/', requireSignedIn, async (req, res) => {
     userId: req.authUser.id,
     userName: req.authUser.name,
     content: cleanContent,
+    targetTitle,
     parentId: parentId || null,
     status: 'active',
     createdAt: new Date().toISOString()

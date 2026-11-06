@@ -136,14 +136,14 @@ router.post('/state', (req, res) => {
 });
 
 // ============================================================================
-// 3. USER MANAGEMENT (UC-52, UC-53, UC-53b) - FIRESTORE SINGLE SOURCE OF TRUTH
+// 3. USER MANAGEMENT (UC-52, UC-53, UC-53b)
 // ============================================================================
 router.get('/users', (req, res) => {
   const { role, status, q } = req.query;
   let users = db.getCollection('users');
 
   if (role && role !== 'all') {
-    users = users.filter(u => u.role && u.role.toLowerCase() === role.toLowerCase());
+    users = users.filter(u => u.role.toLowerCase() === role.toLowerCase());
   }
   if (status && status !== 'all') {
     users = users.filter(u => u.status === status);
@@ -161,137 +161,105 @@ router.get('/users', (req, res) => {
   res.json({ success: true, total: users.length, users });
 });
 
-// Single user detail from Firestore
-router.get('/users/:id', (req, res) => {
+// ============================================================================
+// CHỨC NĂNG 12.1: KHÓA TÀI KHOẢN VI PHẠM & HỦY TOÀN BỘ PHIÊN LÀM VIỆC (SESSION)
+// PUT /admin/users/:id/ban
+// ============================================================================
+router.put('/users/:id/ban', (req, res) => {
+  const { reason } = req.body;
+  const users = db.getCollection('users');
+  const user = users.find(u => u.id === req.params.id || u.uid === req.params.id);
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+  }
+
+  // 1. Cập nhật trạng thái trong Database
+  user.is_active = false;
+  user.status = 'locked';
+  user.lockReason = (reason && String(reason).trim()) || 'Vi phạm điều khoản dịch vụ hệ thống';
+  user.bannedAt = new Date().toISOString();
+
+  db.saveCollection('users', users);
+
+  res.json({
+    success: true,
+    message: `Đã khóa tài khoản [${user.name || user.email}] (is_active = false). Người dùng sẽ bị đăng xuất ngay lập tức.`,
+    user
+  });
+});
+
+router.post('/users/:id/ban', (req, res) => {
+  const { reason } = req.body;
+  const users = db.getCollection('users');
+  const user = users.find(u => u.id === req.params.id || u.uid === req.params.id);
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+  }
+
+  user.is_active = false;
+  user.status = 'locked';
+  user.lockReason = (reason && String(reason).trim()) || 'Vi phạm điều khoản dịch vụ hệ thống';
+  user.bannedAt = new Date().toISOString();
+
+  db.saveCollection('users', users);
+
+  res.json({
+    success: true,
+    message: `Đã khóa tài khoản [${user.name || user.email}] (is_active = false). Người dùng sẽ bị đăng xuất ngay lập tức.`,
+    user
+  });
+});
+
+// Lock user account (UC-53)
+router.post('/users/:id/lock', (req, res) => {
+  const { reason, duration } = req.body;
+  if (!reason || !reason.trim()) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do khóa tài khoản!' });
+  }
+
   const users = db.getCollection('users');
   const user = users.find(u => u.id === req.params.id);
 
   if (!user) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
   }
 
-  res.json({ success: true, user });
+  const durationText = duration === 'permanent' ? 'Vĩnh viễn' : (duration ? `${duration} ngày` : '7 ngày');
+  user.status = 'locked';
+  user.lockReason = reason.trim();
+  user.lockDuration = durationText;
+
+  db.saveCollection('users', users);
+
+  res.json({
+    success: true,
+    message: `Đã khóa tài khoản ${user.name} (${durationText}).`,
+    user
+  });
 });
 
-// Lock user account (UC-53) - Firestore Single Source of Truth
-router.post('/users/:id/lock', async (req, res) => {
-  try {
-    const { reason, duration } = req.body;
-    if (!reason || !reason.trim()) {
-      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp lý do khóa tài khoản!' });
-    }
+// Unlock user account
+router.post('/users/:id/unlock', (req, res) => {
+  const users = db.getCollection('users');
+  const user = users.find(u => u.id === req.params.id);
 
-    const users = db.getCollection('users');
-    const user = users.find(u => u.id === req.params.id);
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
-    }
-
-    // Nghiệp vụ bảo mật: Không được phép tự khóa tài khoản Quản trị viên hệ thống
-    if (user.role === 'Admin' || user.id === 'ADM001' || user.id === 'ADM002') {
-      return res.status(400).json({ success: false, message: 'Không thể khóa tài khoản Quản trị viên hệ thống!' });
-    }
-
-    const isPermanent = duration === 'permanent';
-    const durationDays = parseInt(duration, 10) || 7;
-    const durationText = isPermanent ? 'Vĩnh viễn' : `${durationDays} ngày`;
-
-    const now = new Date();
-    const expiresDate = isPermanent ? null : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
-
-    user.status = 'locked';
-    user.lockReason = reason.trim();
-    user.lockDuration = durationText;
-    user.isPermanentLock = isPermanent;
-    user.lockedAt = now.toLocaleString('vi-VN');
-    user.lockExpiresAt = expiresDate ? expiresDate.toISOString() : null;
-    user.lockExpiresAtFormatted = expiresDate ? expiresDate.toLocaleString('vi-VN') : 'Vĩnh viễn';
-    user.lockedBy = (req.authUser && (req.authUser.name || req.authUser.email)) || 'Admin Quản Trị B4';
-
-    // Đồng bộ vô hiệu hóa tài khoản Firebase Authentication (nếu có tài khoản đăng nhập)
-    const { auth } = require('../firebase');
-    if (auth && (user.uid || user.email)) {
-      try {
-        let fbUid = user.uid;
-        if (!fbUid && user.email) {
-          const record = await auth.getUserByEmail(user.email).catch(() => null);
-          if (record) fbUid = record.uid;
-        }
-        if (fbUid) {
-          await auth.updateUser(fbUid, { disabled: true }).catch(err => {
-            console.warn('[Admin] Firebase Auth disable warning:', err.message);
-          });
-        }
-      } catch (authErr) {
-        console.warn('[Admin] Firebase Auth disable check failed:', authErr.message);
-      }
-    }
-
-    // Ghi đè bền vững trực tiếp vào Firestore
-    await db.saveCollectionAndWait('users', users);
-
-    res.json({
-      success: true,
-      message: `Đã khóa tài khoản ${user.name} (${durationText}) thành công.`,
-      user
-    });
-  } catch (error) {
-    console.error('[Admin] Lỗi khóa người dùng:', error);
-    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
   }
-});
 
-// Unlock user account - Firestore Single Source of Truth
-router.post('/users/:id/unlock', async (req, res) => {
-  try {
-    const users = db.getCollection('users');
-    const user = users.find(u => u.id === req.params.id);
+  user.status = 'active';
+  user.lockReason = '';
+  user.lockDuration = '';
 
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng trong Firestore!' });
-    }
+  db.saveCollection('users', users);
 
-    user.status = 'active';
-    user.lockReason = '';
-    user.lockDuration = '';
-    user.isPermanentLock = false;
-    user.lockExpiresAt = null;
-    user.lockExpiresAtFormatted = null;
-    user.unlockedAt = new Date().toLocaleString('vi-VN');
-    user.unlockedBy = (req.authUser && (req.authUser.name || req.authUser.email)) || 'Admin Quản Trị B4';
-
-    // Khôi phục quyền đăng nhập Firebase Authentication (nếu có)
-    const { auth } = require('../firebase');
-    if (auth && (user.uid || user.email)) {
-      try {
-        let fbUid = user.uid;
-        if (!fbUid && user.email) {
-          const record = await auth.getUserByEmail(user.email).catch(() => null);
-          if (record) fbUid = record.uid;
-        }
-        if (fbUid) {
-          await auth.updateUser(fbUid, { disabled: false }).catch(err => {
-            console.warn('[Admin] Firebase Auth enable warning:', err.message);
-          });
-        }
-      } catch (authErr) {
-        console.warn('[Admin] Firebase Auth enable check failed:', authErr.message);
-      }
-    }
-
-    // Ghi đè bền vững trực tiếp vào Firestore
-    await db.saveCollectionAndWait('users', users);
-
-    res.json({
-      success: true,
-      message: `Đã mở khóa tài khoản ${user.name} thành công.`,
-      user
-    });
-  } catch (error) {
-    console.error('[Admin] Lỗi mở khóa người dùng:', error);
-    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
-  }
+  res.json({
+    success: true,
+    message: `Đã mở khóa tài khoản ${user.name} thành công.`,
+    user
+  });
 });
 
 // Unlock Requests / Appeals (UC-53b)
@@ -300,153 +268,151 @@ router.get('/unlock-requests', (req, res) => {
   res.json({ success: true, total: requests.length, requests });
 });
 
-router.post('/unlock-requests/:id/decide', async (req, res) => {
-  try {
-    const { decision } = req.body; // 'approve', 'probation', 'reject', 'reject_perm'
-    const requests = db.getCollection('unlockRequests');
-    const reqIndex = requests.findIndex(r => r.id === req.params.id || r.userId === req.params.id);
+router.post('/unlock-requests/:id/decide', (req, res) => {
+  const { decision } = req.body; // 'approve', 'probation', 'reject', 'reject_perm'
+  const requests = db.getCollection('unlockRequests');
+  const reqIndex = requests.findIndex(r => r.id === req.params.id || r.userId === req.params.id);
 
-    if (reqIndex === -1) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn khiếu nại mở khóa!' });
-    }
-
-    const request = requests[reqIndex];
-    const users = db.getCollection('users');
-    const user = users.find(u => u.id === request.id || u.id === request.userId);
-
-    let message = '';
-    const now = new Date();
-
-    if (decision === 'approve') {
-      if (user) {
-        user.status = 'active';
-        user.lockReason = '';
-        user.lockDuration = '';
-        user.isPermanentLock = false;
-        user.lockExpiresAt = null;
-        user.unlockedAt = now.toLocaleString('vi-VN');
-      }
-      message = `Tài khoản ${request.name} đã được phục hồi quyền truy cập thành công.`;
-      requests.splice(reqIndex, 1);
-    } else if (decision === 'probation') {
-      if (user) {
-        user.status = 'active';
-        user.lockReason = 'Đang theo dõi thử thách 30 ngày';
-        user.lockDuration = '30 ngày thử thách';
-        user.isPermanentLock = false;
-        user.lockExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      }
-      message = `Tài khoản ${request.name} được chuyển sang chế độ theo dõi thử thách 30 ngày.`;
-      requests.splice(reqIndex, 1);
-    } else if (decision === 'reject_perm') {
-      if (user) {
-        user.status = 'locked';
-        user.lockDuration = 'Vĩnh viễn';
-        user.isPermanentLock = true;
-        user.lockExpiresAt = null;
-      }
-      message = `Đã giữ nguyên án khóa vĩnh viễn với tài khoản ${request.name}.`;
-      requests.splice(reqIndex, 1);
-    } else {
-      message = `Đã từ chối đơn mở khóa của ${request.name}.`;
-      requests.splice(reqIndex, 1);
-    }
-
-    await db.saveCollectionAndWait('users', users);
-    await db.saveCollectionAndWait('unlockRequests', requests);
-
-    res.json({ success: true, message });
-  } catch (error) {
-    console.error('[Admin] Lỗi xử lý yêu cầu mở khóa:', error);
-    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật Firestore: ' + error.message });
+  if (reqIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn khiếu nại mở khóa!' });
   }
+
+  const request = requests[reqIndex];
+  const users = db.getCollection('users');
+  const user = users.find(u => u.id === request.id || u.id === request.userId);
+
+  let message = '';
+  if (decision === 'approve') {
+    if (user) {
+      user.status = 'active';
+      user.lockReason = '';
+      user.lockDuration = '';
+    }
+    message = `Tài khoản ${request.name} đã được phục hồi quyền truy cập thành công.`;
+    requests.splice(reqIndex, 1);
+  } else if (decision === 'probation') {
+    if (user) {
+      user.status = 'active';
+      user.lockReason = 'Đang theo dõi thử thách 30 ngày';
+      user.lockDuration = '30 ngày thử thách';
+    }
+    message = `Tài khoản ${request.name} được chuyển sang chế độ theo dõi thử thách 30 ngày.`;
+    requests.splice(reqIndex, 1);
+  } else if (decision === 'reject_perm') {
+    if (user) {
+      user.status = 'locked';
+      user.lockDuration = 'Vĩnh viễn';
+    }
+    message = `Đã giữ nguyên án khóa vĩnh viễn với tài khoản ${request.name}.`;
+    requests.splice(reqIndex, 1);
+  } else {
+    message = `Đã từ chối đơn mở khóa của ${request.name}.`;
+    requests.splice(reqIndex, 1);
+  }
+
+  db.saveCollection('users', users);
+  db.saveCollection('unlockRequests', requests);
+
+  res.json({ success: true, message });
 });
 
 // ============================================================================
 // 4. PROVIDER & SKILL APPROVALS (UC-54, UC-55, UC-56)
 // ============================================================================
-router.get('/providers/pending', (req, res) => {
-  const pending = db.getCollection('pendingProviders');
-  res.json({ success: true, total: pending.length, pendingProviders: pending });
+router.get('/providers/pending', async (req, res) => {
+  const [pending, providers, users] = await Promise.all([
+    db.getCollectionFresh('pendingProviders'),
+    db.getCollectionFresh('providers'),
+    db.getCollectionFresh('users')
+  ]);
+  const providerApplications = providers
+    .filter(provider => provider.verified !== true && provider.reviewStatus !== 'rejected')
+    .map(provider => {
+      const user = users.find(item => item.id === provider.userId || item.email?.toLowerCase() === provider.email?.toLowerCase());
+      return {
+        id: provider.id, providerId: provider.id, userId: provider.userId,
+        name: provider.name || user?.name || 'Provider', email: provider.email || user?.email || '',
+        phone: provider.phone || user?.phone || '', specialty: provider.specialty || '',
+        category: provider.category || '', location: provider.location || '', skills: provider.skills || [],
+        bio: provider.bio || '', experience: provider.experience || '',
+        cert: provider.certifications || [], date: provider.createdAt || provider.joinDate || '',
+        status: provider.profileCompleted === true ? 'pending' : 'incomplete', source: 'provider-profile'
+      };
+    });
+  const profileUserIds = new Set(providerApplications.map(item => item.userId).filter(Boolean));
+  const legacyPending = pending.filter(item => item.status === 'pending' && !profileUserIds.has(item.userId));
+  const allPending = [...legacyPending, ...providerApplications];
+  res.json({ success: true, total: allPending.length, pendingProviders: allPending });
 });
 
-router.post('/providers/:id/approve', (req, res) => {
-  const pending = db.getCollection('pendingProviders');
+router.post('/providers/:id/approve', async (req, res) => {
+  const pending = await db.getCollectionFresh('pendingProviders');
   const item = pending.find(p => p.id === req.params.id);
-
-  if (!item) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ đăng ký Provider!' });
+  const providers = await db.getCollectionFresh('providers');
+  const users = await db.getCollectionFresh('users');
+  let provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (item && p.userId === item.userId));
+  if (!item && !provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ đăng ký Provider!' });
+  if (provider && provider.profileCompleted !== true) {
+    return res.status(409).json({ success: false, message: 'Provider cần hoàn tất hồ sơ trước khi Admin duyệt.' });
   }
-
-  item.status = 'approved';
-  db.saveCollection('pendingProviders', pending);
-
-  // Upgrade or add to providers collection
-  const providers = db.getCollection('providers');
-  let provider = providers.find(p => p.name === item.name || (p.userId && p.userId === item.userId));
+  if (item) {
+    item.status = 'approved';
+    db.saveCollection('pendingProviders', pending);
+  }
 
   if (!provider) {
-    const newId = `PRV${String(providers.length + 1).padStart(3, '0')}`;
+    const user = users.find(u => u.id === item.userId || u.email?.toLowerCase() === item.email?.toLowerCase());
+    const maxId = providers.reduce((max, p) => Math.max(max, Number((/^PRV(\d+)$/.exec(p.id || '') || [])[1]) || 0), 0);
     provider = {
-      id: newId,
-      userId: item.userId || `USR_P_${Date.now()}`,
-      name: item.name,
-      specialty: item.specialty,
-      category: 'IT',
-      rating: 5.0,
-      reviewCount: 0,
-      hourlyRate: 300000,
-      completedOrders: 0,
-      location: 'Việt Nam',
-      verified: true,
-      badge: 'VERIFIED PROVIDER',
-      bio: item.bio || '',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
+      id: `PRV${String(maxId + 1).padStart(3, '0')}`, userId: item.userId || user?.id || `USR_P_${Date.now()}`,
+      name: item.name || user?.name || 'Provider', email: item.email || user?.email || '', phone: item.phone || user?.phone || '',
+      specialty: item.specialty || '', category: item.category || 'IT', rating: 5, reviewCount: 0,
+      hourlyRate: Number(item.hourlyRate) || 300000, completedOrders: 0, location: item.location || 'Việt Nam',
+      verified: true, profileCompleted: true, reviewStatus: 'approved', badge: 'VERIFIED PROVIDER',
+      bio: item.bio || '', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
       cover: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800',
-      skills: item.specialty ? item.specialty.split(/[,/]/).map(s => s.trim()) : ['Chuyên môn'],
-      certifications: item.cert ? item.cert.split(/[,]/).map(c => c.trim()) : [],
-      packages: [],
-      availabilityStatus: 'ready'
+      skills: Array.isArray(item.skills) ? item.skills : (item.specialty ? item.specialty.split(/[,/]/).map(s => s.trim()) : ['Chuyên môn']),
+      certifications: Array.isArray(item.cert) ? item.cert : (item.cert ? item.cert.split(/[,]/).map(c => c.trim()) : []),
+      packages: [], availabilityStatus: 'ready'
     };
     providers.push(provider);
-    db.saveCollection('providers', providers);
   } else {
     provider.verified = true;
-    db.saveCollection('providers', providers);
+    provider.reviewStatus = 'approved';
+    if (!provider.availabilityStatus || provider.availabilityStatus === 'inactive') provider.availabilityStatus = 'ready';
   }
+  db.saveCollection('providers', providers);
 
-  // Update user role if user exists
-  const users = db.getCollection('users');
-  const user = users.find(u => u.email === item.email || u.id === item.userId);
+  const user = users.find(u => u.email?.toLowerCase() === (item?.email || provider.email || '').toLowerCase() || u.id === (item?.userId || provider.userId));
   if (user) {
     user.role = 'Provider';
+    if (user.status === 'pending_verification') user.status = 'active';
     db.saveCollection('users', users);
   }
-
-  res.json({
-    success: true,
-    message: `Đã phê duyệt hồ sơ Provider thành công cho [${item.name}].`,
-    provider
-  });
+  res.json({ success: true, message: `Đã phê duyệt hồ sơ Provider thành công cho [${item?.name || provider.name}].`, provider });
 });
 
-router.post('/providers/:id/reject', (req, res) => {
+router.post('/providers/:id/reject', async (req, res) => {
   const { reason } = req.body;
-  const pending = db.getCollection('pendingProviders');
+  const pending = await db.getCollectionFresh('pendingProviders');
   const item = pending.find(p => p.id === req.params.id);
-
-  if (!item) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ đăng ký Provider!' });
+  const providers = await db.getCollectionFresh('providers');
+  const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (item && p.userId === item.userId));
+  if (!item && !provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ đăng ký Provider!' });
+  const rejectReason = reason || 'Thông tin chưa đầy đủ hoặc không hợp lệ';
+  if (item) {
+    item.status = 'rejected';
+    item.rejectReason = rejectReason;
+    db.saveCollection('pendingProviders', pending);
   }
-
-  item.status = 'rejected';
-  item.rejectReason = reason || 'Thông tin chưa đầy đủ hoặc không hợp lệ';
-  db.saveCollection('pendingProviders', pending);
-
-  res.json({
-    success: true,
-    message: `Đã từ chối hồ sơ Provider của [${item.name}].`
-  });
+  if (provider) {
+    provider.verified = false;
+    provider.reviewStatus = 'rejected';
+    provider.rejectReason = rejectReason;
+    provider.availabilityStatus = 'inactive';
+    db.saveCollection('providers', providers);
+  }
+  res.json({ success: true, message: `Đã từ chối hồ sơ Provider của [${item?.name || provider?.name || 'Provider'}].` });
 });
 
 // Skills & Certifications Approvals (UC-56)
@@ -614,11 +580,174 @@ router.post('/services/:id/unlock', (req, res) => {
 });
 
 // ============================================================================
+// ============================================================================
+// CHỨC NĂNG 12.2: QUẢN LÝ SẢN PHẨM / DỊCH VỤ (PRODUCTS)
+// ============================================================================
+// GET /admin/products -> Xem danh sách sản phẩm
+router.get('/products', (req, res) => {
+  const { status, category, q } = req.query;
+  let services = db.getCollection('services') || [];
+
+  if (status && status !== 'all') {
+    services = services.filter(s => s.status === status);
+  }
+  if (category && category !== 'all') {
+    services = services.filter(s => s.category?.toLowerCase() === category.toLowerCase());
+  }
+  if (q) {
+    const keyword = q.toLowerCase().trim();
+    services = services.filter(s =>
+      (s.title && s.title.toLowerCase().includes(keyword)) ||
+      (s.name && s.name.toLowerCase().includes(keyword)) ||
+      (s.providerName && s.providerName.toLowerCase().includes(keyword)) ||
+      (s.id && s.id.toLowerCase().includes(keyword))
+    );
+  }
+
+  res.json({ success: true, total: services.length, products: services });
+});
+
+// POST /admin/products -> Admin duyệt hoặc đăng sản phẩm mới
+router.post(['/products', '/services'], (req, res) => {
+  const { name, title, price, stock, category, provider_id, providerId, description, desc, image, thumbnail } = req.body;
+  const services = db.getCollection('services') || [];
+  const products = db.getCollection('products') || [];
+  const providers = db.getCollection('providers') || [];
+
+  const id = `PRD${Date.now()}`;
+  const prv = providers.find(p => p.id === (providerId || provider_id)) || {};
+
+  const newProduct = {
+    id,
+    name: name || title || 'Sản phẩm mới',
+    title: title || name || 'Sản phẩm mới',
+    price: Number(price) || 0,
+    stock: Number(stock !== undefined ? stock : 100),
+    category: category || 'IT',
+    provider_id: providerId || provider_id || prv.id || 'PRV001',
+    providerId: providerId || provider_id || prv.id || 'PRV001',
+    providerName: prv.name || 'Nhà cung cấp',
+    description: description || desc || '',
+    desc: desc || description || '',
+    image: image || thumbnail || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600',
+    thumbnail: thumbnail || image || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600',
+    status: 'active',
+    is_deleted: false,
+    createdAt: new Date().toISOString()
+  };
+
+  services.unshift(newProduct);
+  products.unshift(newProduct);
+  db.saveCollection('services', services);
+  db.saveCollection('products', products);
+
+  res.status(201).json({
+    success: true,
+    message: `Admin đã đăng / duyệt sản phẩm [${newProduct.name}] thành công!`,
+    product: newProduct
+  });
+});
+
+// PUT /admin/products/:id -> Cập nhật giá, kho hàng
+router.put(['/products/:id', '/services/:id'], (req, res) => {
+  const { name, title, price, stock, category, description, desc, status } = req.body;
+  const services = db.getCollection('services') || [];
+  const products = db.getCollection('products') || [];
+
+  const itemSvc = services.find(s => s.id === req.params.id);
+  const itemPrd = products.find(p => p.id === req.params.id);
+  const item = itemSvc || itemPrd;
+
+  if (!item) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm!' });
+  }
+
+  if (name !== undefined) item.name = name;
+  if (title !== undefined) item.title = title;
+  if (price !== undefined) item.price = Number(price);
+  if (stock !== undefined) item.stock = Number(stock);
+  if (category !== undefined) item.category = category;
+  if (description !== undefined) item.description = description;
+  if (desc !== undefined) item.desc = desc;
+  if (status !== undefined) item.status = status;
+  item.updatedAt = new Date().toISOString();
+
+  if (itemSvc) Object.assign(itemSvc, item);
+  if (itemPrd) Object.assign(itemPrd, item);
+
+  db.saveCollection('services', services);
+  db.saveCollection('products', products);
+
+  res.json({
+    success: true,
+    message: `Admin đã cập nhật sản phẩm [${item.name || item.title}] thành công!`,
+    product: item
+  });
+});
+
+// DELETE /admin/products/:id -> Xóa sản phẩm (Soft Delete - ẩn sản phẩm chứ không xóa hẳn khỏi DB)
+router.delete(['/products/:id', '/services/:id'], (req, res) => {
+  const services = db.getCollection('services') || [];
+  const products = db.getCollection('products') || [];
+
+  const itemSvc = services.find(s => s.id === req.params.id);
+  const itemPrd = products.find(p => p.id === req.params.id);
+  const item = itemSvc || itemPrd;
+
+  if (!item) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm!' });
+  }
+
+  item.is_deleted = true;
+  item.status = 'inactive';
+  item.deletedAt = new Date().toISOString();
+
+  if (itemSvc) {
+    itemSvc.is_deleted = true;
+    itemSvc.status = 'inactive';
+  }
+  if (itemPrd) {
+    itemPrd.is_deleted = true;
+    itemPrd.status = 'inactive';
+  }
+
+  db.saveCollection('services', services);
+  db.saveCollection('products', products);
+
+  res.json({
+    success: true,
+    message: `Đã xóa (ẩn) sản phẩm [${item.name || item.title}] thành công (Soft delete)!`,
+    product: item
+  });
+});
+
 // 6. ORDERS & ESCROW INTERVENTION (UC-60, UC-61)
 // ============================================================================
-router.get('/orders', (req, res) => {
+router.get('/orders', async (req, res) => {
   const { status, escrowStatus } = req.query;
-  let orders = db.getCollection('orders');
+  const [allOrders, users, providers, services] = await Promise.all([
+    db.getCollectionFresh('orders'), db.getCollectionFresh('users'),
+    db.getCollectionFresh('providers'), db.getCollectionFresh('services')
+  ]);
+  let orders = allOrders.map(order => {
+    const customer = users.find(user => user.id === order.customerId || user.uid === order.customerId);
+    const provider = providers.find(item => item.id === order.providerId);
+    const service = services.find(item => item.id === order.serviceId);
+    const escrowLabels = {
+      escrow_held: 'Đã giữ ký quỹ', refunded: 'Đã hoàn tiền', disputed: 'Tạm giữ tranh chấp',
+      completed: 'Đã giải ngân', payment_cancelled: 'Chưa thanh toán', partial_refunded: 'Hoàn tiền một phần'
+    };
+    const createdAt = order.createdAt || order.created_at || '';
+    return {
+      ...order,
+      customer: order.customer || customer?.name || order.customerName || order.customerId || 'Khách hàng',
+      provider: order.provider || provider?.name || order.providerName || order.providerId || 'Provider',
+      service: order.service || order.serviceTitle || service?.title || 'Dịch vụ',
+      price: order.priceFormatted || `${(Number(order.price) || 0).toLocaleString('vi-VN')}đ`,
+      escrowStatusLabel: escrowLabels[order.escrowStatus] || order.escrowStatus || 'Chưa cập nhật',
+      date: order.date || createdAt
+    };
+  });
 
   if (status && status !== 'all') {
     orders = orders.filter(o => o.orderStatus === status);
@@ -628,6 +757,107 @@ router.get('/orders', (req, res) => {
   }
 
   res.json({ success: true, total: orders.length, orders });
+});
+
+// ============================================================================
+// CHỨC NĂNG 12.3: CAN THIỆP ĐỔI TRẠNG THÁI ĐƠN HÀNG KHI TRANH CHẤP
+// PATCH /admin/orders/:id/status
+// ============================================================================
+router.patch('/orders/:id/status', (req, res) => {
+  const { status, note } = req.body;
+  if (!status) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp trạng thái đơn hàng mới!' });
+  }
+
+  const orders = db.getCollection('orders') || [];
+  const order = orders.find(o => o.id === req.params.id);
+
+  if (!order) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  }
+
+  const prevStatus = order.status || order.orderStatus;
+  const normalized = String(status).toUpperCase();
+
+  order.status = normalized;
+  order.orderStatus = status.toLowerCase();
+  if (note) order.adminNote = note;
+  order.updatedAt = new Date().toISOString();
+
+  // Nếu Admin can thiệp hủy đơn hàng (CANCELLED) -> Hoàn lại kho nếu chưa hoàn
+  if ((normalized === 'CANCELLED' || status.toLowerCase() === 'cancelled') && prevStatus !== 'CANCELLED' && prevStatus !== 'cancelled') {
+    const orderItems = db.getCollection('order_items') || [];
+    const services = db.getCollection('services') || [];
+    const products = db.getCollection('products') || [];
+    const items = orderItems.filter(oi => String(oi.order_id) === String(order.id));
+
+    if (items.length > 0) {
+      items.forEach(oi => {
+        const p = services.find(s => s.id === oi.product_id) || products.find(s => s.id === oi.product_id);
+        if (p && typeof p.stock === 'number') {
+          p.stock += Number(oi.quantity) || 1;
+        }
+      });
+      db.saveCollection('services', services);
+      db.saveCollection('products', products);
+    }
+  }
+
+  db.saveCollection('orders', orders);
+
+  res.json({
+    success: true,
+    message: `Admin đã can thiệp đổi trạng thái đơn hàng #${order.id} sang [${order.status}].`,
+    order
+  });
+});
+
+router.put('/orders/:id/status', (req, res) => {
+  const { status, note } = req.body;
+  if (!status) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp trạng thái đơn hàng mới!' });
+  }
+
+  const orders = db.getCollection('orders') || [];
+  const order = orders.find(o => o.id === req.params.id);
+
+  if (!order) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng!' });
+  }
+
+  const prevStatus = order.status || order.orderStatus;
+  const normalized = String(status).toUpperCase();
+
+  order.status = normalized;
+  order.orderStatus = status.toLowerCase();
+  if (note) order.adminNote = note;
+  order.updatedAt = new Date().toISOString();
+
+  if ((normalized === 'CANCELLED' || status.toLowerCase() === 'cancelled') && prevStatus !== 'CANCELLED' && prevStatus !== 'cancelled') {
+    const orderItems = db.getCollection('order_items') || [];
+    const services = db.getCollection('services') || [];
+    const products = db.getCollection('products') || [];
+    const items = orderItems.filter(oi => String(oi.order_id) === String(order.id));
+
+    if (items.length > 0) {
+      items.forEach(oi => {
+        const p = services.find(s => s.id === oi.product_id) || products.find(s => s.id === oi.product_id);
+        if (p && typeof p.stock === 'number') {
+          p.stock += Number(oi.quantity) || 1;
+        }
+      });
+      db.saveCollection('services', services);
+      db.saveCollection('products', products);
+    }
+  }
+
+  db.saveCollection('orders', orders);
+
+  res.json({
+    success: true,
+    message: `Admin đã can thiệp đổi trạng thái đơn hàng #${order.id} sang [${order.status}].`,
+    order
+  });
 });
 
 router.post('/orders/:id/force-release', (req, res) => {
@@ -676,7 +906,6 @@ router.post('/orders/:id/arbitrate-cancel', (req, res) => {
   }
 });
 
-// ============================================================================
 // 7. REVIEW MODERATION (UC-62, UC-63)
 // ============================================================================
 router.get('/reviews', (req, res) => {
@@ -736,240 +965,69 @@ router.post('/comments/:id/status', (req, res) => {
 // 8. DISPUTES & COMPLAINTS RESOLUTION (UC-64, UC-65)
 // ============================================================================
 router.get('/complaints', (req, res) => {
-  const { status, priority, search } = req.query;
-  let complaints = db.getCollection('complaints') || [];
-
-  if (status && status !== 'all') {
-    if (status === 'pending') {
-      complaints = complaints.filter(c => ['submitted', 'pending', 'under_review', 'awaiting_information'].includes(c.status));
-    } else if (status === 'resolved') {
-      complaints = complaints.filter(c => ['resolved', 'rejected'].includes(c.status));
-    } else {
-      complaints = complaints.filter(c => c.status === status);
-    }
-  }
-
-  if (priority && priority !== 'all') {
-    complaints = complaints.filter(c => c.priority === priority);
-  }
-
-  if (search && search.trim()) {
-    const q = search.trim().toLowerCase();
-    complaints = complaints.filter(c =>
-      (c.id && c.id.toLowerCase().includes(q)) ||
-      (c.orderId && c.orderId.toLowerCase().includes(q)) ||
-      (c.complainant && c.complainant.toLowerCase().includes(q)) ||
-      (c.defendant && c.defendant.toLowerCase().includes(q)) ||
-      (c.reason && c.reason.toLowerCase().includes(q))
-    );
-  }
-
+  const complaints = db.getCollection('complaints');
   res.json({ success: true, total: complaints.length, complaints });
 });
 
-// Admin updates complaint status (e.g. under_review or awaiting_information)
-router.post('/complaints/:id/status', async (req, res) => {
-  try {
-    const { status, note } = req.body;
-    if (!status || !['under_review', 'awaiting_information', 'submitted', 'pending'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ. Chọn under_review hoặc awaiting_information.' });
-    }
+router.post('/complaints/:id/resolve', (req, res) => {
+  const { resolution, refundPercentage = 100, note } = req.body;
+  const complaints = db.getCollection('complaints');
+  const complaint = complaints.find(c => c.id === req.params.id);
 
-    const complaints = db.getCollection('complaints') || [];
-    const complaint = complaints.find(c => c.id === req.params.id);
-
-    if (!complaint) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
-    }
-
-    if (['resolved', 'rejected'].includes(complaint.status)) {
-      return res.status(400).json({ success: false, message: 'Khiếu nại đã có phán quyết cuối cùng, không thể đổi trạng thái trung gian.' });
-    }
-
-    const now = new Date();
-    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    complaint.status = status;
-    complaint.updatedAt = dateStr;
-
-    if (!complaint.timeline) complaint.timeline = [];
-    const statusLabels = {
-      under_review: 'Admin tiếp nhận & Đang xem xét chứng cứ',
-      awaiting_information: 'Admin yêu cầu các bên bổ sung thông tin chứng cứ',
-      submitted: 'Chờ phân xử'
-    };
-    complaint.timeline.push({
-      time: dateStr,
-      actor: req.authUser.id,
-      actorName: req.authUser.name || 'Admin',
-      role: 'Admin',
-      action: 'admin_status_change',
-      note: `${statusLabels[status] || status}${note ? ': ' + note : ''}`,
-      status
-    });
-
-    await db.saveCollectionAndWait('complaints', complaints);
-
-    // Notify parties
-    const { createNotification, notifyProvider } = require('../services/notificationService');
-    if (complaint.complainantId) {
-      createNotification(complaint.complainantId, 'Cập nhật tiến độ khiếu nại',
-        `Khiếu nại ${complaint.id} đã được chuyển sang trạng thái: "${statusLabels[status] || status}". ${note || ''}`,
-        'info', '/customer_complaints.html');
-    }
-    if (complaint.defendantId) {
-      notifyProvider(complaint.defendantId, 'Cập nhật tiến độ khiếu nại',
-        `Khiếu nại ${complaint.id} đã được Admin cập nhật trạng thái: "${statusLabels[status] || status}". ${note || ''}`,
-        'info', '/complaint.html');
-    }
-
-    res.json({
-      success: true,
-      message: `Đã cập nhật trạng thái khiếu nại thành "${statusLabels[status] || status}"!`,
-      complaint
-    });
-  } catch (err) {
-    console.error('[adminRoutes] Lỗi cập nhật trạng thái complaint:', err);
-    res.status(500).json({ success: false, message: 'Lỗi ghi Firestore: ' + err.message });
+  if (!complaint) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
   }
-});
 
-router.post('/complaints/:id/resolve', async (req, res) => {
-  try {
-    const { resolution, refundPercentage = 100, note, verdict } = req.body;
-    const complaints = db.getCollection('complaints') || [];
-    const complaint = complaints.find(c => c.id === req.params.id);
+  complaint.status = 'resolved';
+  complaint.resolution = resolution;
+  complaint.resolutionNote = note || '';
 
-    if (!complaint) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ khiếu nại!' });
-    }
+  const orders = db.getCollection('orders');
+  const order = orders.find(o => o.id === complaint.orderId);
+  const users = db.getCollection('users');
 
-    if (complaint.status === 'resolved' || complaint.status === 'rejected') {
-      return res.status(400).json({ success: false, message: 'Khiếu nại này đã có phán quyết trước đó. Không thể phán quyết lại!' });
-    }
-
-    const now = new Date();
-    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    complaint.resolution = resolution;
-    complaint.resolutionNote = note || '';
-    complaint.resolvedAt = dateStr;
-    complaint.resolvedBy = req.authUser.name || 'Admin';
-    complaint.updatedAt = dateStr;
-
-    let decisionLabel = verdict || '';
-
-    const orders = db.getCollection('orders') || [];
-    const order = orders.find(o => o.id === complaint.orderId);
-    const users = db.getCollection('users') || [];
-    const { createNotification, notifyProvider } = require('../services/notificationService');
+  if (order) {
+    const totalDeposit = Number(order.escrowDeposit) || Number(order.price) || 0;
+    const priceNum = Number(order.price) || 0;
 
     if (resolution === 'refund_customer') {
-      complaint.status = 'resolved';
-      if (!decisionLabel) decisionLabel = 'Hoàn tiền 100% cho Khách hàng';
-      complaint.verdict = decisionLabel;
-
-      if (order) {
-        order.escrowStatus = 'refunded';
-        order.orderStatus = 'cancelled';
-        if (!order.milestones) order.milestones = [];
-        order.milestones.push({ title: 'Admin giải quyết khiếu nại: Hoàn 100% tiền ký quỹ cho khách hàng', done: true, time: dateStr });
-
-        const totalDeposit = Number(order.escrowDeposit) || Number(order.price) || 0;
-        const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
-        if (cust) {
-          cust.balance = (cust.balance || 0) + totalDeposit;
-        }
-      }
+      order.escrowStatus = 'refunded';
+      order.orderStatus = 'cancelled';
+      // Refund customer
+      const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
+      if (cust) cust.balance = (cust.balance || 0) + totalDeposit;
     } else if (resolution === 'pay_provider') {
-      complaint.status = 'resolved';
-      if (!decisionLabel) decisionLabel = 'Giải ngân 100% cho Provider';
-      complaint.verdict = decisionLabel;
-
-      if (order) {
-        order.escrowStatus = 'completed';
-        order.orderStatus = 'completed';
-        if (!order.milestones) order.milestones = [];
-        order.milestones.push({ title: 'Admin giải quyết khiếu nại: Bác bỏ khiếu nại và giải ngân tiền cho Provider', done: true, time: dateStr });
-
-        const priceNum = Number(order.price) || 0;
-        const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
-        if (prov) {
-          prov.balance = (prov.balance || 0) + priceNum;
-        }
-      }
+      order.escrowStatus = 'completed';
+      order.orderStatus = 'completed';
+      // Pay provider
+      const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
+      if (prov) prov.balance = (prov.balance || 0) + priceNum;
     } else if (resolution === 'partial_refund') {
-      complaint.status = 'resolved';
-      const pct = Math.max(0, Math.min(100, Number(refundPercentage) || 50));
-      if (!decisionLabel) decisionLabel = `Bồi thường ${pct}/${100 - pct} giữa hai bên`;
-      complaint.verdict = decisionLabel;
-      complaint.refundPercentage = pct;
+      const pct = Math.max(0, Math.min(100, Number(refundPercentage)));
+      const refundAmt = Math.round(priceNum * (pct / 100));
+      const payAmt = priceNum - refundAmt;
 
-      if (order) {
-        const priceNum = Number(order.price) || 0;
-        const refundAmt = Math.round(priceNum * (pct / 100));
-        const payAmt = priceNum - refundAmt;
+      order.escrowStatus = 'partial_refunded';
+      order.orderStatus = 'completed';
 
-        order.escrowStatus = 'partial_refunded';
-        order.orderStatus = 'cancelled';
-        if (!order.milestones) order.milestones = [];
-        order.milestones.push({ title: `Admin giải quyết khiếu nại: Bồi thường ${pct}% cho khách và giải ngân ${100 - pct}% cho provider`, done: true, time: dateStr });
+      const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
+      if (cust) cust.balance = (cust.balance || 0) + refundAmt;
 
-        const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
-        if (cust) cust.balance = (cust.balance || 0) + refundAmt;
-
-        const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
-        if (prov) prov.balance = (prov.balance || 0) + payAmt;
-      }
-    } else if (resolution === 'reject') {
-      complaint.status = 'rejected';
-      if (!decisionLabel) decisionLabel = 'Bác bỏ khiếu nại của Khách hàng';
-      complaint.verdict = decisionLabel;
-
-      if (order) {
-        order.escrowStatus = 'escrow_held';
-        order.orderStatus = 'processing';
-        if (!order.milestones) order.milestones = [];
-        order.milestones.push({ title: 'Admin bác bỏ khiếu nại: Đơn hàng tiếp tục thực hiện', done: true, time: dateStr });
-      }
+      const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
+      if (prov) prov.balance = (prov.balance || 0) + payAmt;
     }
 
-    if (!complaint.timeline) complaint.timeline = [];
-    complaint.timeline.push({
-      time: dateStr,
-      actor: req.authUser.id,
-      actorName: req.authUser.name || 'Admin',
-      role: 'Admin',
-      action: 'admin_resolution',
-      note: `Phán quyết: ${decisionLabel}${note ? '. Lý do: ' + note : ''}`,
-      status: complaint.status
-    });
-
-    if (order) await db.saveCollectionAndWait('orders', orders);
-    await db.saveCollectionAndWait('users', users);
-    await db.saveCollectionAndWait('complaints', complaints);
-
-    // Notify Customer & Provider
-    if (complaint.complainantId) {
-      createNotification(complaint.complainantId, 'Phán quyết khiếu nại đã có kết quả',
-        `Admin đã đưa ra phán quyết cho khiếu nại ${complaint.id}: ${decisionLabel}. ${note ? 'Ghi chú: ' + note : ''}`,
-        'success', '/customer_complaints.html');
-    }
-    if (complaint.defendantId) {
-      notifyProvider(complaint.defendantId, 'Phán quyết khiếu nại đã có kết quả',
-        `Admin đã đưa ra phán quyết cho khiếu nại ${complaint.id}: ${decisionLabel}. ${note ? 'Ghi chú: ' + note : ''}`,
-        'info', '/complaint.html');
-    }
-
-    res.json({
-      success: true,
-      message: `Phán quyết tranh chấp đã được thực thi thành công: "${decisionLabel}"!`,
-      complaint
-    });
-  } catch (err) {
-    console.error('[adminRoutes] Lỗi resolve complaint:', err);
-    res.status(500).json({ success: false, message: 'Lỗi ghi Firestore: ' + err.message });
+    db.saveCollection('orders', orders);
+    db.saveCollection('users', users);
   }
+
+  db.saveCollection('complaints', complaints);
+
+  res.json({
+    success: true,
+    message: 'Phán quyết tranh chấp đã được thực thi và tiền ký quỹ Escrow đã được xử lý thỏa đáng!',
+    complaint
+  });
 });
 
 // ============================================================================
@@ -1168,7 +1226,7 @@ router.get('/statistics', (req, res) => {
     delivered: filteredOrders.filter(o => o.orderStatus === 'delivered').length,
     completed: filteredOrders.filter(o => o.orderStatus === 'completed').length,
     cancelled: filteredOrders.filter(o => o.orderStatus === 'cancelled').length,
-    disputed: filteredOrders.filter(o => o.orderStatus === 'disputed').length
+    disputed: filteredOrders.filter(o => ['disputed', 'cancel_requested', 'cancel_rejected'].includes(o.orderStatus)).length
   };
 
   res.json({

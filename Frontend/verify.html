@@ -673,7 +673,7 @@
           </div>
         </div>
         <h1 class="card-title">Đang Khởi Tạo...</h1>
-        <p class="card-subtitle">Hệ thống đang kiểm tra mã xác thực với máy chủ Firebase.</p>
+        <p class="card-subtitle">Tài khoản được xác thực bằng email và mật khẩu trong MySQL.</p>
       </div>
     </div>
   </main>
@@ -689,466 +689,68 @@
     © 2026 <strong>SkillRental Platform</strong> — Nền Tảng Kết Nối Chuyên Gia & Dịch Vụ Hàng Đầu.
   </footer>
 
-  <!-- Firebase SDKs (v8/v9 compat) -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   
-  <!-- Firebase Project Configuration -->
-  <script src="js/firebase-config.js"></script>
-  
-  <!-- Canvas Confetti Effect (for celebration) -->
+
+<!-- Canvas Confetti Effect (for celebration) -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
-  <!-- Main Controller Logic -->
   <script>
-    (function () {
-      // 1. Khởi tạo Firebase App
-      let fbApp, fbAuth;
-      try {
-        if (window.FIREBASE_CONFIG) {
-          fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(window.FIREBASE_CONFIG);
-          fbAuth = firebase.auth();
-          fbAuth.languageCode = 'vi';
-        }
-      } catch (err) {
-        console.error('[VerifyPage] Lỗi khởi tạo Firebase:', err);
+    document.addEventListener('DOMContentLoaded', () => {
+      const box = document.getElementById('dynamicContent');
+      const params = new URLSearchParams(location.search);
+      const mode = params.get('mode');
+      const token = params.get('oobCode') || params.get('token') || '';
+      const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+      const apiBase = isLocal && location.port && location.port !== '3000' ? 'http://localhost:3000' : '';
+      if (!box) return;
+
+      if (mode === 'verifyEmail' && token) {
+        box.innerHTML = '<div class="hero-icon-container"><div class="hero-icon-box state-loading"><i class="fa-solid fa-spinner fa-spin"></i></div></div><h1 class="card-title">Đang Xác Nhận Email...</h1><p class="card-subtitle">Đang kích hoạt tài khoản của bạn.</p>';
+        fetch(apiBase + '/api/auth/verify-email', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token}) })
+          .then(async response => { const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || 'Không thể xác nhận email.'); return result; })
+          .then(result => { box.innerHTML = '<div class="hero-icon-container"><div class="hero-icon-box state-prompt"><i class="fa-solid fa-circle-check"></i></div></div><h1 class="card-title">Email Đã Được Xác Nhận</h1><p class="card-subtitle">Tài khoản đã được kích hoạt. Bây giờ bạn có thể đăng nhập.</p><div class="btn-group"><a href="index.html?auth=login" class="btn-primary-action"><span>Đăng Nhập Ngay</span><i class="fa-solid fa-right-to-bracket"></i></a></div>'; if (window.confetti) window.confetti({ particleCount: 90, spread: 65, origin: { y: 0.65 } }); })
+          .catch(error => { box.innerHTML = '<div class="hero-icon-container"><div class="hero-icon-box state-prompt"><i class="fa-solid fa-triangle-exclamation"></i></div></div><h1 class="card-title">Chưa Xác Nhận Được</h1><p class="card-subtitle" id="verifyError"></p><div class="btn-group"><a href="index.html?auth=login" class="btn-primary-action"><span>Quay Lại Đăng Nhập</span><i class="fa-solid fa-right-to-bracket"></i></a></div>'; document.getElementById('verifyError').textContent = error.message; });
+        return;
       }
 
-      const contentBox = document.getElementById('dynamicContent');
-      let countdownTimer = null;
-
-      function toast(msg, isError = false) {
-        const el = document.getElementById('verifyToast');
-        const txt = document.getElementById('verifyToastMsg');
-        if (!el || !txt) return;
-        txt.textContent = msg;
-        el.querySelector('i').className = isError ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-circle-check';
-        el.querySelector('i').style.color = isError ? '#EF4444' : '#4ADE80';
-        el.classList.add('show');
-        setTimeout(() => el.classList.remove('show'), 3500);
-      }
-
-      function fireConfetti() {
-        if (typeof confetti === 'function') {
-          confetti({
-            particleCount: 80,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#16A34A', '#22C55E', '#3B82F6', '#F59E0B']
-          });
-        }
-      }
-
-      // ========================================================================
-      // RENDERERS FOR DIFFERENT STATES
-      // ========================================================================
-
-      // 1. PROMPT VERIFY STATE (Tương tự ảnh 1 nhưng thiết kế hiện đại sang xịn)
-      function renderVerifyPrompt(oobCode, continueUrl) {
-        contentBox.innerHTML = `
-          <div class="hero-icon-container">
-            <div class="hero-pulse-ring"></div>
-            <div class="hero-icon-box state-prompt">
-              <i class="fa-solid fa-envelope-circle-check"></i>
-              <div class="hero-sub-badge badge-shield">
-                <i class="fa-solid fa-lock"></i>
-              </div>
-            </div>
-          </div>
-
-          <h1 class="card-title">Xác Thực Địa Chỉ Email</h1>
-          <p class="card-subtitle">
-            Bảo vệ tài khoản và kích hoạt đầy đủ tính năng giao dịch, thuê chuyên gia trên SkillRental.
-          </p>
-
-          <div class="info-card neutral-info">
-            <div class="info-card-icon" style="color: #2563EB;">
-              <i class="fa-solid fa-shield-heart"></i>
-            </div>
-            <div class="info-card-text">
-              <strong>Xác minh bảo mật 1 chạm</strong>
-              Nhấn nút bên dưới để hoàn tất việc xác thực địa chỉ email cho tài khoản của bạn.
-            </div>
-          </div>
-
-          <div class="btn-group">
-            <button type="button" class="btn-primary-action btn-blue-action" id="btnDoVerify">
-              <span>Xác nhận</span>
-              <i class="fa-solid fa-check"></i>
-            </button>
-            <a href="index.html" class="btn-secondary-action">
-              <span>Để sau / Quay về trang chủ</span>
-            </a>
-          </div>
-        `;
-
-        document.getElementById('btnDoVerify').addEventListener('click', () => {
-          executeVerification(oobCode, continueUrl);
-        });
-      }
-
-      // 2. LOADING STATE
-      function renderLoading(msg = 'Đang kích hoạt tài khoản của bạn...') {
-        contentBox.innerHTML = `
-          <div class="hero-icon-container">
-            <div class="hero-pulse-ring"></div>
-            <div class="hero-icon-box state-loading">
-              <div class="spinner-ring" style="margin:0;"></div>
-            </div>
-          </div>
-          <h1 class="card-title">Đang Xác Thực...</h1>
-          <p class="card-subtitle">${msg}</p>
-        `;
-      }
-
-      // 3. SUCCESS STATE (Nâng cấp ảnh 2 thành giao diện chuẩn Brand)
-      function renderVerifySuccess(continueUrl) {
-        fireConfetti();
-
-        const targetLoginUrl = continueUrl || 'index.html?auth=login&verified=1';
-        let secondsLeft = 5;
-
-        contentBox.innerHTML = `
-          <div class="hero-icon-container">
-            <div class="hero-pulse-ring"></div>
-            <div class="hero-icon-box state-success">
-              <i class="fa-solid fa-circle-check"></i>
-              <div class="hero-sub-badge badge-success">
-                <i class="fa-solid fa-check"></i>
-              </div>
-            </div>
-          </div>
-
-          <h1 class="card-title">Email Đã Được Xác Minh! 🎉</h1>
-          <p class="card-subtitle">
-            Chúc mừng bạn! Tài khoản đã được kích hoạt thành công. Giờ đây bạn có thể đăng nhập để trải nghiệm đầy đủ các dịch vụ.
-          </p>
-
-          <div class="benefits-list">
-            <div class="benefits-item">
-              <i class="fa-solid fa-check-circle"></i>
-              <span>Kích hoạt hồ sơ thành viên chính thức</span>
-            </div>
-            <div class="benefits-item">
-              <i class="fa-solid fa-check-circle"></i>
-              <span>Tự do thuê kỹ năng hoặc đăng ký làm Nhà Cung Cấp</span>
-            </div>
-            <div class="benefits-item">
-              <i class="fa-solid fa-check-circle"></i>
-              <span>Bảo vệ quyền lợi ký quỹ an toàn 100%</span>
-            </div>
-          </div>
-
-          <div class="btn-group">
-            <a href="${targetLoginUrl}" class="btn-primary-action" id="btnGoLogin">
-              <span>ĐĂNG NHẬP NGAY</span>
-              <i class="fa-solid fa-right-to-bracket"></i>
-            </a>
-            <a href="customer.html" class="btn-secondary-action">
-              <i class="fa-solid fa-compass"></i>
-              <span>Khám Phá Dịch Vụ Ngay</span>
-            </a>
-          </div>
-
-          <div class="redirect-timer">
-            <i class="fa-regular fa-clock"></i>
-            <span>Tự động chuyển trang sau <strong id="secondsCountdown">${secondsLeft}</strong> giây</span>
-          </div>
-        `;
-
-        // Tự động đếm ngược chuyển trang
-        if (countdownTimer) clearInterval(countdownTimer);
-        countdownTimer = setInterval(() => {
-          secondsLeft--;
-          const counterEl = document.getElementById('secondsCountdown');
-          if (counterEl) counterEl.textContent = secondsLeft;
-          if (secondsLeft <= 0) {
-            clearInterval(countdownTimer);
-            window.location.href = targetLoginUrl;
-          }
-        }, 1000);
-      }
-
-      // 4. ERROR STATE
-      function renderVerifyError(errMessage) {
-        contentBox.innerHTML = `
-          <div class="hero-icon-container">
-            <div class="hero-icon-box state-error">
-              <i class="fa-solid fa-circle-exclamation"></i>
-              <div class="hero-sub-badge badge-warn">
-                <i class="fa-solid fa-xmark"></i>
-              </div>
-            </div>
-          </div>
-
-          <h1 class="card-title">Xác Thực Không Thành Công</h1>
-          <p class="card-subtitle">
-            ${errMessage || 'Mã xác thực email đã hết hạn, không hợp lệ hoặc đã được sử dụng trước đó.'}
-          </p>
-
-          <div class="resend-box">
-            <div class="resend-box-title">
-              <i class="fa-solid fa-paper-plane" style="color:var(--primary);"></i>
-              <span>Gửi lại liên kết xác nhận mới:</span>
-            </div>
-            <div class="resend-input-row">
-              <input type="email" id="resendEmailInput" placeholder="Nhập địa chỉ email của bạn..." />
-              <button type="button" id="btnResendAction">Gửi Lại</button>
-            </div>
-          </div>
-
-          <div class="btn-group">
-            <a href="index.html?auth=login" class="btn-primary-action">
-              <span>Thử Đăng Nhập Tài Khoản</span>
-              <i class="fa-solid fa-right-to-bracket"></i>
-            </a>
-            <a href="index.html" class="btn-secondary-action">
-              <i class="fa-solid fa-house"></i>
-              <span>Về Trang Chủ</span>
-            </a>
-          </div>
-        `;
-
-        document.getElementById('btnResendAction')?.addEventListener('click', async () => {
-          const email = document.getElementById('resendEmailInput')?.value?.trim();
-          if (!email) {
-            toast('Vui lòng nhập địa chỉ email!', true);
-            return;
-          }
-          const btn = document.getElementById('btnResendAction');
-          btn.disabled = true;
-          btn.textContent = 'Đang gửi...';
-
+      if (mode === 'resetPassword' && token) {
+        box.innerHTML = `<div class="hero-icon-container"><div class="hero-icon-box state-prompt"><i class="fa-solid fa-key"></i></div></div><h1 class="card-title">Đặt Mật Khẩu Mới</h1><p class="card-subtitle">Tạo mật khẩu mới cho tài khoản SkillRental của bạn.</p><form id="resetPasswordForm"><div class="input-group"><label class="input-label" for="newPassword">Mật khẩu mới</label><div class="input-box"><i class="fa-solid fa-lock input-icon"></i><input class="form-control-sr" id="newPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Ít nhất 6 ký tự" required></div></div><div class="input-group"><label class="input-label" for="confirmPassword">Nhập lại mật khẩu</label><div class="input-box"><i class="fa-solid fa-lock input-icon"></i><input class="form-control-sr" id="confirmPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Nhập lại mật khẩu mới" required></div></div><div id="resetMessage" role="status" style="display:none;margin-bottom:14px;padding:11px 13px;border-radius:10px;font-size:13px;"></div><div class="btn-group"><button class="btn-primary-action" id="resetSubmit" type="submit"><span>Lưu Mật Khẩu Mới</span><i class="fa-solid fa-check"></i></button></div></form>`;
+        const form = document.getElementById('resetPasswordForm');
+        form.addEventListener('submit', async event => {
+          event.preventDefault();
+          const password = document.getElementById('newPassword').value;
+          const confirmation = document.getElementById('confirmPassword').value;
+          const message = document.getElementById('resetMessage');
+          const button = document.getElementById('resetSubmit');
+          if (password.length < 6) return showMessage('Mật khẩu cần ít nhất 6 ký tự.', true);
+          if (password !== confirmation) return showMessage('Hai mật khẩu chưa khớp nhau.', true);
+          button.disabled = true;
+          button.innerHTML = '<span>Đang lưu...</span><i class="fa-solid fa-spinner fa-spin"></i>';
           try {
-            const res = await fetch('/api/auth/resend-verification', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email })
-            }).then(r => r.json());
-
-            if (res.success) {
-              toast(res.message || 'Đã gửi lại email xác nhận!');
-              btn.textContent = 'Đã gửi ✓';
-            } else {
-              toast(res.message || 'Không thể gửi lại email.', true);
-              btn.disabled = false;
-              btn.textContent = 'Gửi Lại';
-            }
-          } catch (_) {
-            toast('Lỗi kết nối tới máy chủ.', true);
-            btn.disabled = false;
-            btn.textContent = 'Gửi Lại';
+            const response = await fetch(apiBase + '/api/auth/reset-password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token, newPassword:password}) });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Không thể đặt lại mật khẩu.');
+            if (window.confetti) window.confetti({ particleCount: 90, spread: 65, origin: { y: 0.65 } });
+            box.innerHTML = '<div class="hero-icon-container"><div class="hero-icon-box state-prompt"><i class="fa-solid fa-circle-check"></i></div></div><h1 class="card-title">Đã Đổi Mật Khẩu</h1><p class="card-subtitle">Mật khẩu mới đã được lưu. Bạn có thể đăng nhập bằng email và mật khẩu mới.</p><div class="btn-group"><a href="index.html?auth=login" class="btn-primary-action"><span>Đăng Nhập Ngay</span><i class="fa-solid fa-right-to-bracket"></i></a></div>';
+          } catch (error) {
+            showMessage(error.message, true);
+            button.disabled = false;
+            button.innerHTML = '<span>Lưu Mật Khẩu Mới</span><i class="fa-solid fa-check"></i>';
+          }
+          function showMessage(text, isError) {
+            message.textContent = text;
+            message.style.display = 'block';
+            message.style.background = isError ? '#FEF2F2' : '#F0FDF4';
+            message.style.color = isError ? '#B91C1C' : '#166534';
           }
         });
+        return;
       }
 
-      // 5. RESET PASSWORD FORM STATE
-      async function renderResetPassword(oobCode) {
-        renderLoading('Đang kiểm tra liên kết đặt lại mật khẩu...');
-
-        let accountEmail = '';
-        try {
-          if (fbAuth) {
-            accountEmail = await fbAuth.verifyPasswordResetCode(oobCode);
-          }
-        } catch (err) {
-          renderVerifyError('Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
-          return;
-        }
-
-        contentBox.innerHTML = `
-          <div class="hero-icon-container">
-            <div class="hero-pulse-ring" style="background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%);"></div>
-            <div class="hero-icon-box state-reset">
-              <i class="fa-solid fa-key"></i>
-            </div>
-          </div>
-
-          <h1 class="card-title">Đặt Lại Mật Khẩu</h1>
-          <p class="card-subtitle">
-            Cập nhật mật khẩu mới cho tài khoản <strong>${accountEmail || 'của bạn'}</strong>
-          </p>
-
-          <form id="resetPwdForm" style="text-align: left;">
-            <div class="input-group">
-              <label class="input-label" for="newPwd">Mật khẩu mới (tối thiểu 6 ký tự)</label>
-              <div class="input-box">
-                <i class="fa-solid fa-lock input-icon"></i>
-                <input type="password" id="newPwd" class="form-control-sr" placeholder="Nhập mật khẩu mới" minlength="6" required />
-                <button type="button" class="toggle-pwd-btn" onclick="togglePwdVisibility('newPwd', this)">
-                  <i class="fa-solid fa-eye"></i>
-                </button>
-              </div>
-            </div>
-
-            <div class="input-group">
-              <label class="input-label" for="confirmPwd">Nhập lại mật khẩu mới</label>
-              <div class="input-box">
-                <i class="fa-solid fa-shield-halved input-icon"></i>
-                <input type="password" id="confirmPwd" class="form-control-sr" placeholder="Xác nhận lại mật khẩu" minlength="6" required />
-                <button type="button" class="toggle-pwd-btn" onclick="togglePwdVisibility('confirmPwd', this)">
-                  <i class="fa-solid fa-eye"></i>
-                </button>
-              </div>
-            </div>
-
-            <div class="btn-group" style="margin-top: 20px;">
-              <button type="submit" class="btn-primary-action" id="btnSubmitNewPwd">
-                <i class="fa-solid fa-check"></i>
-                <span>LƯU MẬT KHẨU MỚI</span>
-              </button>
-              <a href="index.html?auth=login" class="btn-secondary-action">
-                <span>Hủy / Quay lại đăng nhập</span>
-              </a>
-            </div>
-          </form>
-        `;
-
-        document.getElementById('resetPwdForm')?.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const p1 = document.getElementById('newPwd').value;
-          const p2 = document.getElementById('confirmPwd').value;
-          if (p1 !== p2) {
-            toast('Mật khẩu nhập lại không khớp!', true);
-            return;
-          }
-          if (p1.length < 6) {
-            toast('Mật khẩu tối thiểu 6 ký tự!', true);
-            return;
-          }
-
-          const btn = document.getElementById('btnSubmitNewPwd');
-          btn.disabled = true;
-          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Đang lưu...</span>';
-
-          try {
-            await fbAuth.confirmPasswordReset(oobCode, p1);
-            fireConfetti();
-            contentBox.innerHTML = `
-              <div class="hero-icon-container">
-                <div class="hero-icon-box state-success">
-                  <i class="fa-solid fa-circle-check"></i>
-                </div>
-              </div>
-              <h1 class="card-title">Mật Khẩu Đã Được Thay Đổi!</h1>
-              <p class="card-subtitle">Bạn có thể sử dụng mật khẩu mới này để đăng nhập ngay bây giờ.</p>
-              <div class="btn-group">
-                <a href="index.html?auth=login" class="btn-primary-action">
-                  <span>Đăng Nhập Ngay</span>
-                  <i class="fa-solid fa-right-to-bracket"></i>
-                </a>
-              </div>
-            `;
-          } catch (err) {
-            toast(err.message || 'Không thể đổi mật khẩu.', true);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>LƯU MẬT KHẨU MỚI</span>';
-          }
-        });
-      }
-
-      // Helper show/hide password
-      window.togglePwdVisibility = function (fieldId, btn) {
-        const inp = document.getElementById(fieldId);
-        if (!inp) return;
-        const isPwd = inp.type === 'password';
-        inp.type = isPwd ? 'text' : 'password';
-        btn.innerHTML = isPwd ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
-      };
-
-      // ========================================================================
-      // EXECUTE EMAIL VERIFICATION ACTION
-      // ========================================================================
-      async function executeVerification(oobCode, continueUrl) {
-        renderLoading('Đang kết nối với Firebase Authentication...');
-
-        if (!fbAuth) {
-          renderVerifyError('Không tìm thấy cấu hình Firebase Auth. Vui lòng tải lại trang.');
-          return;
-        }
-
-        try {
-          // Gọi hàm cốt lõi của Firebase Auth Client
-          await fbAuth.applyActionCode(oobCode);
-          renderVerifySuccess(continueUrl);
-        } catch (err) {
-          console.error('[VerifyPage] Lỗi applyActionCode:', err);
-          let userMsg = 'Mã xác thực email đã hết hạn hoặc đã được sử dụng trước đó.';
-          if (err.code === 'auth/invalid-action-code') {
-            userMsg = 'Liên kết xác minh không hợp lệ hoặc tài khoản của bạn đã được kích hoạt trước đó rồi.';
-          } else if (err.code === 'auth/expired-action-code') {
-            userMsg = 'Liên kết xác minh đã hết hạn. Vui lòng yêu cầu gửi lại email mới bên dưới.';
-          } else if (err.code === 'auth/user-disabled') {
-            userMsg = 'Tài khoản liên kết đã bị khóa hoặc tạm ngưng.';
-          }
-          renderVerifyError(userMsg);
-        }
-      }
-
-      // ========================================================================
-      // MAIN DISPATCHER (QUERY STRING PARSER)
-      // ========================================================================
-      document.addEventListener('DOMContentLoaded', () => {
-        const params = new URLSearchParams(window.location.search);
-        const mode = params.get('mode');
-        const oobCode = params.get('oobCode');
-        const continueUrl = params.get('continueUrl');
-        const verifiedParam = params.get('verified');
-
-        // Trường hợp đã hoàn tất xác nhận từ trước
-        if (verifiedParam === '1') {
-          renderVerifySuccess(continueUrl);
-          return;
-        }
-
-        // Bắt theo chế độ Firebase Auth Action
-        if (mode === 'verifyEmail' && oobCode) {
-          // Hiển thị giao diện xác thực đẹp mắt với nút Complete Verification
-          renderVerifyPrompt(oobCode, continueUrl);
-          return;
-        }
-
-        if (mode === 'resetPassword' && oobCode) {
-          renderResetPassword(oobCode);
-          return;
-        }
-
-        if (mode === 'recoverEmail' && oobCode) {
-          renderLoading('Đang khôi phục email của bạn...');
-          if (fbAuth) {
-            fbAuth.applyActionCode(oobCode).then(() => {
-              renderVerifySuccess(continueUrl);
-            }).catch(err => {
-              renderVerifyError('Không thể khôi phục email: ' + err.message);
-            });
-          }
-          return;
-        }
-
-        // Nếu người dùng truy cập trực tiếp không có tham số
-        contentBox.innerHTML = `
-          <div class="hero-icon-container">
-            <div class="hero-icon-box state-prompt">
-              <i class="fa-solid fa-shield-halved"></i>
-            </div>
-          </div>
-          <h1 class="card-title">Cổng Xác Thực SkillRental</h1>
-          <p class="card-subtitle">
-            Trang này dùng để xác thực email hoặc đặt lại mật khẩu khi bạn nhấp vào liên kết gửi từ hộp thư.
-          </p>
-          <div class="btn-group">
-            <a href="index.html?auth=login" class="btn-primary-action">
-              <span>Đăng Nhập Tài Khoản</span>
-              <i class="fa-solid fa-right-to-bracket"></i>
-            </a>
-            <a href="index.html" class="btn-secondary-action">
-              <i class="fa-solid fa-house"></i>
-              <span>Về Trang Chủ</span>
-            </a>
-          </div>
-        `;
-      });
-    })();
+      const expired = mode === 'resetPassword';
+      box.innerHTML = `<div class="hero-icon-container"><div class="hero-icon-box state-prompt"><i class="fa-solid fa-${expired ? 'triangle-exclamation' : 'shield-halved'}"></i></div></div><h1 class="card-title">${expired ? 'Liên Kết Không Hợp Lệ' : 'Tài Khoản MySQL'}</h1><p class="card-subtitle">${expired ? 'Liên kết đặt lại mật khẩu bị thiếu hoặc đã hết hạn. Hãy yêu cầu gửi liên kết mới từ trang đăng nhập.' : 'Tài khoản đăng nhập bằng email và mật khẩu trong hệ thống. Để đặt lại mật khẩu, hãy chọn “Quên mật khẩu” ở trang đăng nhập.'}</p><div class="btn-group"><a href="index.html?auth=${expired ? 'forgot' : 'login'}" class="btn-primary-action"><span>${expired ? 'Yêu Cầu Link Mới' : 'Đăng Nhập Tài Khoản'}</span><i class="fa-solid fa-right-to-bracket"></i></a><a href="index.html" class="btn-secondary-action"><i class="fa-solid fa-house"></i><span>Về Trang Chủ</span></a></div>`;
+    });
   </script>
+
 </body>
 </html>

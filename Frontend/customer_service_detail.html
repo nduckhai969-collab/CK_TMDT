@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi Tiết Dịch Vụ - SkillRental</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #F8FAFC; color: #0F172A; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+    .detail-container { max-width: 1160px; margin: 28px auto 60px; padding: 0 20px; }
+    .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; margin-bottom: 20px; }
+    .breadcrumb a { color: #64748B; text-decoration: none; }
+    .breadcrumb a:hover { color: #16A34A; }
+    .detail-layout { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr); gap: 28px; align-items: start; }
+    .detail-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 28px; box-shadow: 0 4px 16px rgba(15,23,42,.04); margin-bottom: 24px; }
+    .service-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: #DCFCE7; color: #15803D; font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+    .service-title { font-size: 24px; font-weight: 800; color: #0F172A; margin: 0 0 16px; line-height: 1.35; }
+    .service-image-box { width: 100%; height: 360px; border-radius: 14px; overflow: hidden; background: #F1F5F9; margin-bottom: 24px; border: 1px solid #E2E8F0; }
+    .service-image-box img { width: 100%; height: 100%; object-fit: cover; }
+    .section-title { font-size: 17px; font-weight: 800; color: #0F172A; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+    .service-desc { font-size: 14px; line-height: 1.7; color: #334155; white-space: pre-line; margin-bottom: 24px; }
+    .features-list { list-style: none; padding: 0; margin: 0 0 24px; display: grid; gap: 10px; }
+    .features-list li { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: #334155; }
+    .features-list li i { color: #16A34A; font-size: 14px; }
+    
+    /* Sticky Sidebar */
+    .pricing-sidebar { position: sticky; top: 88px; display: grid; gap: 20px; }
+    .pricing-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(15,23,42,.06); }
+    .price-display { font-size: 28px; font-weight: 900; color: #16A34A; margin-bottom: 6px; }
+    .price-unit { font-size: 13px; color: #64748B; font-weight: 500; }
+    .qty-row { display: flex; align-items: center; justify-content: space-between; margin: 18px 0; padding: 12px 0; border-top: 1px solid #F1F5F9; border-bottom: 1px solid #F1F5F9; }
+    .qty-controls { display: flex; align-items: center; border: 1px solid #CBD5E1; border-radius: 8px; overflow: hidden; }
+    .qty-btn { width: 34px; height: 34px; background: #F8FAFC; border: none; font-size: 15px; font-weight: bold; cursor: pointer; color: #334155; }
+    .qty-btn:hover { background: #E2E8F0; }
+    .qty-input { width: 44px; height: 34px; text-align: center; border: none; font-size: 14px; font-weight: 700; outline: none; }
+    
+    .action-btn { width: 100%; height: 46px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; text-decoration: none; box-sizing: border-box; transition: all .2s; }
+    .btn-add-cart { background: #FFFFFF; color: #16A34A; border: 2px solid #16A34A; margin-bottom: 10px; }
+    .btn-add-cart:hover { background: #F0FDF4; }
+    .btn-buy-now { background: #16A34A; color: #FFFFFF; border: none; box-shadow: 0 4px 14px rgba(22,163,74,.3); }
+    .btn-buy-now:hover { background: #15803D; }
+    
+    /* Provider Info Box */
+    .provider-box { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 22px; box-shadow: 0 4px 16px rgba(15,23,42,.04); }
+    .provider-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .provider-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #E2E8F0; }
+    .provider-name { font-size: 16px; font-weight: 800; color: #0F172A; text-decoration: none; }
+    .provider-name:hover { color: #16A34A; }
+    .provider-meta { font-size: 12px; color: #64748B; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+    .provider-rating { display: inline-flex; align-items: center; gap: 4px; color: #D97706; font-weight: 700; font-size: 13px; }
+    .provider-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    .provider-action-btn { padding: 9px; border-radius: 8px; font-size: 12.5px; font-weight: 600; text-align: center; text-decoration: none; border: 1px solid #CBD5E1; color: #334155; background: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .provider-action-btn:hover { border-color: #16A34A; color: #16A34A; background: #F0FDF4; }
+    
+    .escrow-banner { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 14px; font-size: 12px; color: #166534; line-height: 1.5; margin-top: 14px; display: flex; align-items: flex-start; gap: 10px; }
+    .escrow-banner i { color: #16A34A; font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+
+    @media (max-width: 860px) {
+      .detail-layout { grid-template-columns: 1fr; }
+      .pricing-sidebar { position: static; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Dynamic Customer Navbar -->
+  <div id="navbar-placeholder"></div>
+
+  <main class="detail-container">
+    <div class="breadcrumb">
+      <a href="customer.html"><i class="fa-solid fa-house"></i> Trang chủ</a>
+      <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i>
+      <a href="find_provider.html">Khám phá</a>
+      <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i>
+      <span id="breadcrumbCategory">Dịch vụ</span>
+      <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i>
+      <span id="breadcrumbTitle" style="color:#0F172A;font-weight:600;">Chi tiết</span>
+    </div>
+
+    <div id="loadingState" style="text-align:center; padding:80px 20px; color:#64748B;">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size:32px; color:#16A34A; margin-bottom:12px;"></i>
+      <div>Đang tải thông tin sản phẩm & nhà cung cấp...</div>
+    </div>
+
+    <div class="detail-layout" id="detailContent" style="display:none;">
+      <!-- Cột Trái: Toàn Bộ Thông Tin Chi Tiết Sản Phẩm -->
+      <div>
+        <div class="detail-card">
+          <div class="service-badge" id="serviceCategoryBadge">Lập trình & CNTT</div>
+          <h1 class="service-title" id="serviceTitle">Đang tải tên dịch vụ...</h1>
+          
+          <div class="service-image-box">
+            <img id="serviceThumbnail" src="" alt="Hình ảnh dịch vụ">
+          </div>
+
+          <h2 class="section-title"><i class="fa-solid fa-align-left" style="color:#16A34A;"></i> Mô Tả Chi Tiết Dịch Vụ</h2>
+          <div class="service-desc" id="serviceDescription">
+            Mô tả dịch vụ chi tiết...
+          </div>
+
+          <h2 class="section-title"><i class="fa-solid fa-circle-check" style="color:#16A34A;"></i> Cam Kết Chất Lượng</h2>
+          <ul class="features-list">
+            <li><i class="fa-solid fa-circle-check"></i> Hoàn thành đúng tiến độ cam kết theo thỏa thuận</li>
+            <li><i class="fa-solid fa-circle-check"></i> Hỗ trợ sửa đổi theo phản hồi trong quá trình thực hiện</li>
+            <li><i class="fa-solid fa-circle-check"></i> Toàn bộ thanh toán được bảo vệ 100% qua cơ chế Ký Quỹ Escrow</li>
+            <li><i class="fa-solid fa-circle-check"></i> Tiền chỉ giải ngân cho Provider sau khi bạn hài lòng và bấm nghiệm thu</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Cột Phải: Giá, Số Lượng, Thêm Giỏ Hàng & Thông Tin Provider (JOIN) -->
+      <aside class="pricing-sidebar">
+        <!-- Card Đặt Mua / Thêm Giỏ Hàng -->
+        <div class="pricing-card">
+          <div style="font-size:13px; color:#64748B; font-weight:600;">Đơn giá dịch vụ</div>
+          <div class="price-display" id="servicePriceDisplay">0đ</div>
+          <div class="price-unit" id="serviceDurationDisplay">Thời gian thực hiện: 1 giờ</div>
+
+          <div class="qty-row">
+            <span style="font-size:13px; font-weight:700; color:#334155;">Số lượng (Giờ / Gói):</span>
+            <div class="qty-controls">
+              <button type="button" class="qty-btn" onclick="adjustQty(-1)">-</button>
+              <input type="number" id="serviceQtyInput" class="qty-input" value="1" min="1" max="99" readonly>
+              <button type="button" class="qty-btn" onclick="adjustQty(1)">+</button>
+            </div>
+          </div>
+
+          <!-- Nút Thêm vào giỏ hàng (Chức năng 6: Hỗ trợ cả Khách vãng lai và Đã đăng nhập) -->
+          <button type="button" class="action-btn btn-add-cart" id="btnAddToCart" onclick="onAddToCartClick()">
+            <i class="fa-solid fa-cart-plus"></i> Thêm Vào Giỏ Hàng
+          </button>
+
+          <!-- Nút Đặt lịch ngay -->
+          <button type="button" class="action-btn btn-buy-now" id="btnBuyNow" onclick="onBuyNowClick()">
+            <i class="fa-solid fa-bolt"></i> Đặt Lịch Ngay
+          </button>
+
+          <div class="escrow-banner">
+            <i class="fa-solid fa-shield-halved"></i>
+            <div><strong>Thanh Toán Ký Quỹ Escrow:</strong> Tiền được giữ an toàn tại sàn và chỉ chuyển cho Provider khi hoàn thành.</div>
+          </div>
+        </div>
+
+        <!-- Box Thông Tin Nhà Cung Cấp (Provider) - Kết quả của SQL JOIN -->
+        <div class="provider-box">
+          <div style="font-size:12px; font-weight:700; color:#94A3B8; text-transform:uppercase; margin-bottom:12px; letter-spacing:.5px;">Thông Tin Nhà Cung Cấp</div>
+          <div class="provider-header">
+            <img id="providerAvatar" class="provider-avatar" src="" alt="Logo nhà cung cấp">
+            <div style="min-width:0; flex:1;">
+              <a id="providerNameLink" href="#" class="provider-name">Đang tải Provider...</a>
+              <div class="provider-meta">
+                <i class="fa-solid fa-location-dot" style="color:#94A3B8;"></i>
+                <span id="providerAddress">Hồ Chí Minh</span>
+              </div>
+              <div class="provider-meta" style="margin-top:3px;">
+                <span class="provider-rating">
+                  <i class="fa-solid fa-star"></i> <span id="providerRating">5.0</span>
+                </span>
+                <span id="providerVerifiedBadge" style="color:#16A34A; font-weight:700; font-size:11px; margin-left:6px;"><i class="fa-solid fa-circle-check"></i> Đã xác thực</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="provider-actions">
+            <a id="btnViewProviderProfile" href="#" class="provider-action-btn">
+              <i class="fa-solid fa-user"></i> Xem Hồ Sơ
+            </a>
+            <a id="btnChatProvider" href="#" class="provider-action-btn">
+              <i class="fa-solid fa-comment-dots"></i> Nhắn Tin
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="customer.js"></script>
+  <script>
+    let currentProduct = null;
+    let currentProvider = null;
+
+    function adjustQty(delta) {
+      const input = document.getElementById('serviceQtyInput');
+      if (!input) return;
+      let val = parseInt(input.value, 10) || 1;
+      val = Math.max(1, Math.min(99, val + delta));
+      input.value = val;
+    }
+
+    // 1. Load Chi Tiết Sản Phẩm & Nhà Cung Cấp (API: GET /api/services/:id hoặc GET /api/products/:id)
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('');
+      
+      const params = new URLSearchParams(window.location.search);
+      const serviceId = params.get('id') || 'SVC001';
+
+      try {
+        const res = await fetch(`/api/services/${encodeURIComponent(serviceId)}`).then(r => r.json());
+        if (!res.success || (!res.product && !res.service)) {
+          document.getElementById('loadingState').innerHTML = `
+            <div style="color:#EF4444; font-size:18px; font-weight:700; margin-bottom:8px;">❌ Không tìm thấy sản phẩm!</div>
+            <p>Sản phẩm hoặc dịch vụ này không tồn tại hoặc đã ngừng cung cấp.</p>
+            <a href="customer.html" class="btn btn-primary" style="display:inline-block; margin-top:12px; padding:8px 18px; text-decoration:none;">Về Trang Chủ</a>
+          `;
+          return;
+        }
+
+        currentProduct = res.product || res.service;
+        currentProvider = res.provider || (currentProduct && currentProduct.provider);
+
+        // Hiển thị dữ liệu lên giao diện
+        document.getElementById('breadcrumbCategory').textContent = currentProduct.category || 'Dịch vụ';
+        document.getElementById('breadcrumbTitle').textContent = currentProduct.name || currentProduct.title;
+        document.getElementById('serviceCategoryBadge').textContent = currentProduct.category || 'Kỹ năng';
+        document.getElementById('serviceTitle').textContent = currentProduct.name || currentProduct.title;
+        document.getElementById('serviceThumbnail').src = currentProduct.image || currentProduct.thumbnail || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600';
+        document.getElementById('serviceDescription').textContent = currentProduct.description || currentProduct.desc || 'Chưa có mô tả chi tiết.';
+        document.getElementById('servicePriceDisplay').textContent = `${(Number(currentProduct.price) || 0).toLocaleString('vi-VN')}đ`;
+        document.getElementById('serviceDurationDisplay').textContent = `Thời gian thực hiện: ${currentProduct.duration || '1 giờ'}`;
+
+        // Thông tin Provider (Kết quả JOIN)
+        if (currentProvider) {
+          document.getElementById('providerAvatar').src = currentProvider.avatar || currentProvider.logo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
+          document.getElementById('providerNameLink').textContent = currentProvider.name || 'Nhà Cung Cấp';
+          document.getElementById('providerNameLink').href = `customer_provider.html?id=${encodeURIComponent(currentProvider.id)}`;
+          document.getElementById('providerAddress').textContent = currentProvider.address || currentProvider.location || 'TP. Hồ Chí Minh';
+          document.getElementById('providerRating').textContent = Number(currentProvider.rating || 5.0).toFixed(1);
+          document.getElementById('btnViewProviderProfile').href = `customer_provider.html?id=${encodeURIComponent(currentProvider.id)}`;
+          document.getElementById('btnChatProvider').href = `customer_chat.html?with=${encodeURIComponent(currentProvider.id)}`;
+        }
+
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('detailContent').style.display = 'grid';
+      } catch (err) {
+        document.getElementById('loadingState').innerHTML = `<div style="color:#EF4444;">Lỗi kết nối máy chủ khi tải chi tiết sản phẩm.</div>`;
+      }
+    });
+
+    // 2. Thêm Vào Giỏ Hàng (Xử lý cả Khách vãng lai & Đã đăng nhập)
+    function onAddToCartClick() {
+      if (!currentProduct) return;
+      const qty = parseInt(document.getElementById('serviceQtyInput').value, 10) || 1;
+      
+      // Gọi hàm addToCart trong customer.js
+      if (typeof window.addToCart === 'function') {
+        window.addToCart(currentProduct.id, qty, currentProduct);
+      } else {
+        alert('Đã thêm dịch vụ vào giỏ hàng!');
+      }
+    }
+
+    // 3. Mua / Đặt Lịch Ngay
+    function onBuyNowClick() {
+      if (!currentProduct) return;
+      const qty = parseInt(document.getElementById('serviceQtyInput').value, 10) || 1;
+      
+      // Thêm vào giỏ trước rồi chuyển đến trang checkout giỏ hàng
+      if (typeof window.addToCart === 'function') {
+        window.addToCart(currentProduct.id, qty, currentProduct);
+      }
+      setTimeout(() => {
+        window.location.href = 'customer_cart.html';
+      }, 300);
+    }
+  </script>
+</body>
+</html>

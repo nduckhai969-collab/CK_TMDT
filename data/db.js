@@ -11,8 +11,8 @@ const INITIAL_DATABASE = {
 
     { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', password: '123', joinDate: '10/01/2025', spentOrEarned: '0đ', balance: 500000, status: 'active', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150' },
     { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', password: '123', joinDate: '15/01/2025', spentOrEarned: '0đ', balance: 1000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150' },
-    { id: 'ADM001', uid: 'ZUGPGZNGOtfQTJsqIHlfEHrtSeH3', name: 'Quản Trị Viên Sàn', email: 'admin@skillrental.com', phone: '0999 888 777', role: 'Admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
-    { id: 'ADM002', uid: 'xeANHaeYvocn4udmyaI8cMccCc22', name: 'SkillRental Admin', email: 'skillrentaladmin@gmail.com', phone: '0999 888 666', role: 'Admin', joinDate: '17/10/2026', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }
+    { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'skillrentaladmin@gmail.com', phone: '0999 888 777', role: 'Admin', password: 'admin123@', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
+    { id: 'ADM002', name: 'Admin Dự Phòng', email: 'admin@skillrental.com', phone: '0999 888 666', role: 'Admin', password: 'admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }
   ],
 
   providers: [
@@ -664,180 +664,11 @@ const INITIAL_DATABASE = {
   ]
 };
 
-// ============================================================
-// FIRESTORE-BACKED DATABASE (cache trong RAM + ghi xuống Firestore)
-// ------------------------------------------------------------
-// - Giữ nguyên API đồng bộ db.getCollection / db.saveCollection nên
-//   toàn bộ routes hiện có KHÔNG phải sửa.
-// - Khi server khởi động: await db.init() nạp toàn bộ collection từ Firestore.
-// - saveCollection(): cập nhật cache ngay, chỉ ghi các document thay đổi
-//   (và xóa document bị loại) xuống Firestore theo hàng đợi.
-// - Mỗi document dùng field `id` của item làm document ID.
-// - Thứ tự mảng được lưu bằng field `_idx` (được lọc bỏ khi trả về route).
-// Giới hạn: chạy 1 instance server (cache nằm trong RAM).
-// ============================================================
-const { firestore } = require('../firebase');
-
-// Collection ngoài INITIAL_DATABASE (tạo trong lúc chạy) cũng phải khai báo ở đây,
-// nếu không server sẽ không nạp lại chúng từ Firestore sau khi khởi động.
-const EXTRA_COLLECTIONS = ['favoriteProviders', 'comments', 'notifications', 'walletTransactions', 'bookingLists'];
+// MySQL persistence adapter giữ nguyên API collection để các route hiện có dùng chung.
+const EXTRA_COLLECTIONS = ['favoriteProviders', 'comments', 'notifications', 'walletTransactions', 'bookingLists', 'posts', 'passwordResets', 'emailVerifications', 'emails', 'emailEvents', 'emailSuppressions'];
 const COLLECTIONS = Array.from(new Set([...Object.keys(INITIAL_DATABASE), ...EXTRA_COLLECTIONS]));
-
-function stable(value) {
-  if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
-  if (value && typeof value === 'object') {
-    return '{' + Object.keys(value).sort()
-      .filter(k => value[k] !== undefined)
-      .map(k => JSON.stringify(k) + ':' + stable(value[k])).join(',') + '}';
-  }
-  return JSON.stringify(value);
-}
-
-const docKey = id => String(id).replace(/\//g, '_');
-const clone = x => JSON.parse(JSON.stringify(x));
-
-// Tự động bổ sung giá trị mặc định cho các trường mới (Aspect Recommendation System)
-// mà không làm thay đổi hành vi của các luồng nghiệp vụ hiện tại.
-function applyDefaults(name, item) {
-  if (!item || typeof item !== 'object') return item;
-  const row = { ...item };
-  if (name === 'providers') {
-    if (row.aspectScores === undefined) row.aspectScores = null;
-    if (row.cancelRate === undefined) row.cancelRate = 0;
-    if (row.completedOrders === undefined) row.completedOrders = 0;
-    if (row.reviewCount === undefined) row.reviewCount = 0;
-    if (row.verified === undefined) row.verified = false;
-  } else if (name === 'services') {
-    if (row.aspectScores === undefined) row.aspectScores = null;
-    if (row.reviewCount === undefined) row.reviewCount = 0;
-  } else if (name === 'users') {
-    if (row.aspectWeights === undefined) {
-      row.aspectWeights = { quality: 0.2, price: 0.2, speed: 0.2, attitude: 0.2, warranty: 0.2 };
-    }
-  } else if (name === 'reviews') {
-    if (row.groundTruth === undefined) row.groundTruth = null;
-  }
-  return row;
-}
-
-class Database {
-  constructor() {
-    this.cache = {};
-    this.snapshot = {};
-    this.queue = Promise.resolve();
-    this.writeErrors = 0;
-    this.ready = false;
-  }
-
-  async init() {
-    await Promise.all(COLLECTIONS.map(async (name) => {
-      const snap = await firestore.collection(name).get();
-      const rows = snap.docs.map(d => d.data());
-      rows.sort((a, b) => (a._idx ?? 0) - (b._idx ?? 0));
-      this.cache[name] = rows.map(({ _idx, ...rest }) => applyDefaults(name, rest));
-      const sigs = new Map();
-      rows.forEach(r => sigs.set(docKey(r.id), stable(applyDefaults(name, r))));
-      this.snapshot[name] = sigs;
-    }));
-    this.ready = true;
-    const users = (this.cache.users || []).length;
-    console.log(`[db] Đã nạp Firestore: ${COLLECTIONS.length} collection, ${users} user.`);
-    if (users === 0) {
-      console.warn('[db] Firestore đang trống. Chạy "npm run seed" để nhập dữ liệu mẫu và tạo tài khoản.');
-    }
-  }
-
-  getCollection(name) {
-    if (!this.ready) console.warn(`[db] getCollection("${name}") được gọi trước db.init()`);
-    return clone((this.cache[name] || []).map(item => applyDefaults(name, item)));
-  }
-
-  // Read the latest committed collection from Firestore. Use this for public
-  // reads that must be visible across server instances immediately.
-  async getCollectionFresh(name) {
-    await this.flush();
-    const snap = await firestore.collection(name).get();
-    const rows = snap.docs.map(d => d.data());
-    rows.sort((a, b) => (a._idx ?? 0) - (b._idx ?? 0));
-    this.cache[name] = rows.map(({ _idx, ...rest }) => applyDefaults(name, rest));
-    this.snapshot[name] = new Map(rows.map(row => [docKey(row.id), stable(applyDefaults(name, row))]));
-    return clone((this.cache[name] || []).map(item => applyDefaults(name, item)));
-  }
-
-  saveCollection(name, items) {
-    if (!Array.isArray(items)) return false;
-    const next = clone(items).map(item => applyDefaults(name, item));
-    next.forEach((item) => {
-      if (item.id === undefined || item.id === null || item.id === '') {
-        item.id = firestore.collection(name).doc().id;
-      }
-    });
-    this.cache[name] = next;
-
-    const old = this.snapshot[name] || new Map();
-    const fresh = new Map();
-    const upserts = [];
-    next.forEach((item, idx) => {
-      const key = docKey(item.id);
-      const doc = { ...item, _idx: idx };
-      const sig = stable(doc);
-      fresh.set(key, sig);
-      if (old.get(key) !== sig) upserts.push({ key, doc });
-    });
-    const deletes = [...old.keys()].filter(key => !fresh.has(key));
-    this.snapshot[name] = fresh;
-
-    if (upserts.length || deletes.length) this._enqueue(name, upserts, deletes);
-    return true;
-  }
-
-  async saveCollectionAndWait(name, items) {
-    const errorsBefore = this.writeErrors;
-    if (!this.saveCollection(name, items)) return false;
-    await this.flush();
-    if (this.writeErrors > errorsBefore) {
-      // Allow a later save to retry all documents after a failed batch.
-      this.snapshot[name] = new Map();
-      throw new Error(`Firestore write failed for collection "${name}".`);
-    }
-    return true;
-  }
-
-  _enqueue(name, upserts, deletes) {
-    const ops = [
-      ...upserts.map(u => ({ type: 'set', key: u.key, doc: u.doc })),
-      ...deletes.map(key => ({ type: 'delete', key }))
-    ];
-    this.queue = this.queue.then(async () => {
-      for (let i = 0; i < ops.length; i += 400) {
-        const batch = firestore.batch();
-        ops.slice(i, i + 400).forEach((op) => {
-          const ref = firestore.collection(name).doc(op.key);
-          if (op.type === 'set') batch.set(ref, op.doc);
-          else batch.delete(ref);
-        });
-        await batch.commit();
-      }
-    }).catch(err => {
-      this.writeErrors++;
-      console.error(`[db] Lỗi ghi Firestore (${name}):`, err.message);
-    });
-  }
-
-  // Chờ ghi xong (dùng khi tắt server hoặc trong script seed)
-  flush() {
-    return this.queue;
-  }
-
-  // Tương thích code cũ: trả toàn bộ dữ liệu
-  read() {
-    const out = {};
-    COLLECTIONS.forEach((name) => { out[name] = this.getCollection(name); });
-    return out;
-  }
-}
-
-const db = new Database();
+const SqlDatabase = require('./sqlDatabase');
+const db = new SqlDatabase(COLLECTIONS, INITIAL_DATABASE);
 module.exports = db;
 module.exports.INITIAL_DATABASE = INITIAL_DATABASE;
 module.exports.COLLECTIONS = COLLECTIONS;

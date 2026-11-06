@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
+const { randomUUID } = require('crypto');
 
 const db = require('../data/db');
-const { auth, firestore } = require('../firebase');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireProvider, requireSignedIn } = require('./customerAuth');
 const { generateId } = require('../utils/id');
@@ -22,22 +24,59 @@ function getMyProvider(req) {
       db.saveCollection('providers', providers);
     }
   }
+
   if (!p) {
     p = {
       id: generateId('PRV'),
       userId: req.authUser.id,
-      name: req.authUser.name,
-      avatar: req.authUser.avatar,
-      email: req.authUser.email,
-      phone: req.authUser.phone,
+      name: req.authUser.name || 'Chuyên Gia Mới',
+      avatar: req.authUser.avatar || '',
+      cover: req.authUser.cover || '',
+      email: req.authUser.email || '',
+      phone: req.authUser.phone || '',
       rating: 5.0,
       reviews: 0,
       completedOrders: 0,
       createdAt: formatDateTime(new Date()),
-      verified: false
+      verified: false,
+      hourlyRate: null,
+      specialty: '',
+      category: '',
+      skills: [],
+      availabilityStatus: 'inactive',
+      profileCompleted: false,
+      workingHours: '',
+      schedule: { mode: 'inactive', slots: [] },
+      dateExceptions: {}
     };
     providers.unshift(p);
     db.saveCollection('providers', providers);
+  } else {
+    let changed = false;
+    const templateSkills = Array.isArray(p.skills) && p.skills.length === 2 && p.skills[0] === 'Chuyên môn' && p.skills[1] === 'Làm việc chuyên nghiệp';
+    if (!p.profileCompleted && p.specialty === 'Chuyên gia kỹ năng & Tư vấn' && p.category === 'IT' && templateSkills && Number(p.hourlyRate) === 200000) {
+      p.specialty = '';
+      p.category = '';
+      p.skills = [];
+      p.hourlyRate = null;
+      p.availabilityStatus = 'inactive';
+      changed = true;
+    }
+    if (!p.schedule || !Array.isArray(p.schedule.slots) || p.schedule.slots.length === 0) {
+      p.schedule = { mode: p.availabilityStatus || 'inactive', slots: [] };
+      changed = true;
+    }
+    if (!p.availabilityStatus) {
+      p.availabilityStatus = 'ready';
+      changed = true;
+    }
+    if (p.workingHours === undefined || p.workingHours === null) {
+      p.workingHours = '';
+      changed = true;
+    }
+    if (changed) {
+      db.saveCollection('providers', providers);
+    }
   }
   return p;
 }
@@ -58,7 +97,7 @@ router.get('/stats', async (req, res) => {
   res.json({
     success: true,
     stats: {
-      activeProviders: providers.length,
+      activeProviders: providers.filter(provider => provider.verified === true).length,
       skillsCount: skills.size + services.length,
       requestsCreated: jobs.length,
       avgRating: ratings.length ? `${(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)}/5` : '0/5'
@@ -68,6 +107,7 @@ router.get('/stats', async (req, res) => {
 
 router.get('/featured', async (req, res) => {
   const providers = [...(await db.getCollectionFresh('providers'))]
+    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
     .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
@@ -75,21 +115,49 @@ router.get('/featured', async (req, res) => {
 
 router.get('/newest', async (req, res) => {
   const providers = [...(await db.getCollectionFresh('providers'))]
+    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
     .sort((a, b) => new Date(b.createdAt || b.joinDate || 0) - new Date(a.createdAt || a.joinDate || 0));
-  // When the demo records have no registration timestamp, show the most recently
-  // appended provider records first.
   if (providers.every(p => !p.createdAt && !p.joinDate)) providers.reverse();
   res.json({ success: true, providers: providers.slice(0, 6) });
 });
+
+function detectImageType(buffer) {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'png';
+  if (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') return 'webp';
+  return null;
+}
 
 // LƯU Ý: các route cố định ('/me', '/dashboard/stats'...) phải đứng TRƯỚC '/:id', nếu không Express coi 'me' là một id.
 /* ==========================================================
    PROVIDER DASHBOARD APIs
 ========================================================== */
 
-router.get('/me', requireProvider, (req, res) => {
+router.get('/me', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
-  res.json({ success: true, provider });
+  const providers = db.getCollection('providers') || [];
+  const pIdx = providers.findIndex(p => p.id === provider.id);
+  if (pIdx !== -1) {
+    let needSave = false;
+    if (req.authUser && req.authUser.avatar && (!providers[pIdx].avatar || providers[pIdx].avatar.includes('unsplash')) && !req.authUser.avatar.includes('unsplash')) {
+      providers[pIdx].avatar = req.authUser.avatar;
+      provider.avatar = req.authUser.avatar;
+      needSave = true;
+    } else if (providers[pIdx].avatar && req.authUser && (!req.authUser.avatar || req.authUser.avatar.includes('unsplash')) && !providers[pIdx].avatar.includes('unsplash')) {
+      req.authUser.avatar = providers[pIdx].avatar;
+      const users = db.getCollection('users') || [];
+      const uIdx = users.findIndex(u => u.id === req.authUser.id || u.id === provider.userId);
+      if (uIdx !== -1) {
+        users[uIdx].avatar = providers[pIdx].avatar;
+        db.saveCollection('users', users);
+      }
+    }
+    if (needSave) {
+      db.saveCollection('providers', providers);
+    }
+  }
+  const services = ((await db.getCollectionFresh('services')) || []).filter(s => s.providerId === provider.id);
+  return res.json({ success: true, provider, services });
 });
 
 router.put('/profile', requireProvider, async (req, res) => {
@@ -98,46 +166,61 @@ router.put('/profile', requireProvider, async (req, res) => {
   const index = providers.findIndex(p => p.id === provider.id);
   
   if (index !== -1) {
-    const { name, phone, avatar, bio, specialty, category, location, skills, hourlyRate, bankAccount, bankName } = req.body;
+    const { name, phone, avatar, cover, bio, specialty, category, location, skills, hourlyRate, hourlyEnabled, minWeeklyHours, bankAccount, bankName, profileCompleted, experiences, education, certifications, portfolioLinks, languages, responseRate, onTimeRate, maxProjects, leadTime } = req.body || {};
+    const cleanSkills = Array.isArray(skills) ? skills.map(skill => String(skill).trim()).filter(Boolean) : (typeof skills === 'string' ? skills.split(',').map(skill => skill.trim()).filter(Boolean) : null);
+    if (profileCompleted) {
+      const price = Number(hourlyRate);
+      if (!String(specialty || '').trim() || !String(category || '').trim() || !String(location || '').trim() || !Number.isFinite(price) || price < 50000 || !cleanSkills?.length || !String(bio || '').trim()) {
+        return res.status(400).json({ success: false, message: 'Vui lòng nhập chức danh, lĩnh vực, khu vực, giá giờ, kỹ năng và phần giới thiệu trước khi hoàn tất hồ sơ.' });
+      }
+    }
     if (name !== undefined && String(name).trim()) providers[index].name = String(name).trim();
     if (phone !== undefined) providers[index].phone = String(phone).trim();
     if (avatar !== undefined && avatar) providers[index].avatar = avatar;
+    if (cover !== undefined) providers[index].cover = cover;
     if (bio !== undefined) providers[index].bio = bio;
     if (specialty !== undefined) providers[index].specialty = specialty;
     if (category !== undefined) providers[index].category = category;
     if (location !== undefined) providers[index].location = location;
-    if (skills !== undefined) providers[index].skills = Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim());
+    if (skills !== undefined) providers[index].skills = cleanSkills || [];
     if (hourlyRate !== undefined) providers[index].hourlyRate = Number(hourlyRate);
+    if (hourlyEnabled !== undefined) providers[index].hourlyEnabled = Boolean(hourlyEnabled);
+    if (minWeeklyHours !== undefined) providers[index].minWeeklyHours = Number(minWeeklyHours) || null;
+    if (experiences !== undefined) providers[index].experiences = Array.isArray(experiences) ? experiences : [];
+    if (education !== undefined) providers[index].education = Array.isArray(education) ? education : [];
+    if (certifications !== undefined) providers[index].certifications = Array.isArray(certifications) ? certifications : [];
+    if (portfolioLinks !== undefined) providers[index].portfolioLinks = portfolioLinks && typeof portfolioLinks === 'object' ? portfolioLinks : {};
+    if (languages !== undefined) providers[index].languages = languages;
+    if (responseRate !== undefined) providers[index].responseRate = Number(responseRate);
+    if (onTimeRate !== undefined) providers[index].onTimeRate = Number(onTimeRate);
+    if (maxProjects !== undefined) providers[index].maxProjects = Number(maxProjects);
+    if (leadTime !== undefined) providers[index].leadTime = Number(leadTime);
     if (bankAccount !== undefined) providers[index].bankAccount = bankAccount;
     if (bankName !== undefined) providers[index].bankName = bankName;
+    if (profileCompleted === true) {
+      providers[index].profileCompleted = true;
+      if (providers[index].verified !== true) {
+        providers[index].availabilityStatus = 'inactive';
+        providers[index].reviewStatus = 'pending';
+        delete providers[index].rejectReason;
+      } else {
+        providers[index].availabilityStatus = 'ready';
+      }
+    }
     
     db.saveCollection('providers', providers);
 
     // Đồng bộ sang collection 'users'
     const users = db.getCollection('users');
-    const uIndex = users.findIndex(u => u.id === req.authUser.id);
+    const uIndex = users.findIndex(u => u.id === req.authUser.id || u.id === provider.userId);
     if (uIndex !== -1) {
       if (name !== undefined && String(name).trim()) users[uIndex].name = String(name).trim();
       if (phone !== undefined) users[uIndex].phone = String(phone).trim();
       if (avatar !== undefined && avatar) users[uIndex].avatar = avatar;
+      if (cover !== undefined) users[uIndex].cover = cover;
       if (location !== undefined) users[uIndex].address = location;
+      if (bio !== undefined) users[uIndex].bio = bio;
       db.saveCollection('users', users);
-    }
-
-    // Đồng bộ lên Firebase Auth
-    if (req.firebaseUser && req.firebaseUser.uid) {
-      try {
-        const fbUpdate = {};
-        if (name && String(name).trim()) fbUpdate.displayName = String(name).trim();
-        if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
-          fbUpdate.photoURL = avatar;
-        }
-        if (Object.keys(fbUpdate).length > 0) {
-          await auth.updateUser(req.firebaseUser.uid, fbUpdate);
-        }
-      } catch (err) {
-        console.warn('[provider] Cập nhật Firebase Auth profile thất bại:', err.message);
-      }
     }
 
     res.json({ success: true, message: 'Cập nhật hồ sơ thành công!', provider: providers[index] });
@@ -146,37 +229,344 @@ router.put('/profile', requireProvider, async (req, res) => {
   }
 });
 
-router.get('/dashboard/stats', requireProvider, (req, res) => {
+// Upload avatar cho Provider (Hỗ trợ cả Base64 JSON và Raw Binary, PUT & POST, /profile/avatar & /avatar)
+const handleProviderAvatarUpload = async (req, res) => {
+  let fileBuffer = null;
+  let extension = null;
+  let customUrl = null;
+
+  if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+    fileBuffer = req.body;
+    extension = detectImageType(fileBuffer);
+  } else if (req.body && typeof req.body === 'object' && req.body.avatar) {
+    const rawVal = String(req.body.avatar).trim();
+    if (rawVal.startsWith('data:image/')) {
+      const match = /^data:image\/([a-zA-Z0-9+.-]+);base64,([\s\S]+)$/.exec(rawVal);
+      if (match) {
+        let ext = match[1].toLowerCase();
+        if (ext === 'jpeg') ext = 'jpg';
+        fileBuffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
+        extension = detectImageType(fileBuffer) || (['jpg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg');
+      }
+    } else if (rawVal.startsWith('http://') || rawVal.startsWith('https://')) {
+      customUrl = rawVal;
+    }
+  }
+
+  if (!fileBuffer && !customUrl) {
+    return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh JPG, PNG hoặc WebP.' });
+  }
+
+  try {
+    const provider = getMyProvider(req);
+    const providers = db.getCollection('providers') || [];
+    let index = providers.findIndex(p => p.id === provider.id);
+    if (index === -1) {
+      providers.unshift(provider);
+      index = 0;
+    }
+
+    const uid = String(req.authUser?.id || provider.id).replace(/[^a-zA-Z0-9_-]/g, '');
+    let avatar = customUrl;
+    if (fileBuffer) {
+      if (!extension) {
+        extension = 'jpg';
+      }
+      const fileName = `${randomUUID()}.${extension}`;
+      const relativePath = path.posix.join('avatars', uid, fileName);
+      const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
+      const absolutePath = path.resolve(uploadRoot, ...relativePath.split('/'));
+      if (!absolutePath.toLowerCase().startsWith(uploadRoot.toLowerCase() + path.sep)) {
+        return res.status(400).json({ success: false, message: 'Đường dẫn lưu ảnh không hợp lệ.' });
+      }
+      await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true });
+      await fs.promises.writeFile(absolutePath, fileBuffer);
+      avatar = `${req.protocol}://${req.get('host')}/uploads/${relativePath.split('/').map(encodeURIComponent).join('/')}`;
+    }
+    const previousAvatar = providers[index].avatar;
+    providers[index].avatar = avatar;
+    db.saveCollection('providers', providers);
+
+    // Đồng bộ sang collection 'users'
+    const users = db.getCollection('users') || [];
+    const uIndex = users.findIndex(u => u.id === req.authUser.id || u.id === provider.userId);
+    if (uIndex !== -1) {
+      users[uIndex].avatar = avatar;
+      db.saveCollection('users', users);
+    }
+
+    // Xóa file cũ
+    if (previousAvatar) {
+      try {
+        const previousUrl = new URL(previousAvatar, avatar);
+        const previousPath = decodeURIComponent(previousUrl.pathname);
+        if (previousUrl.origin === new URL(avatar).origin && previousPath.startsWith('/uploads/avatars/')) {
+          const oldFile = path.resolve(uploadRoot, ...previousPath.slice('/uploads/'.length).split('/'));
+          if (oldFile.toLowerCase().startsWith(uploadRoot.toLowerCase() + path.sep) && oldFile !== absolutePath) {
+            await fs.promises.unlink(oldFile).catch(() => {});
+          }
+        }
+      } catch (_) {}
+    }
+
+    return res.json({ success: true, message: 'Đã cập nhật ảnh đại diện.', avatar, provider: providers[index] });
+  } catch (err) {
+    console.error('[provider] Upload avatar:', err.message);
+    return res.status(500).json({ success: false, message: 'Không thể lưu ảnh đại diện lúc này: ' + err.message });
+  }
+};
+
+router.put(['/profile/avatar', '/avatar'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderAvatarUpload);
+router.post(['/profile/avatar', '/avatar'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderAvatarUpload);
+
+// Upload cover (ảnh bìa) cho Provider (Hỗ trợ cả PUT & POST, /profile/cover & /cover)
+const handleProviderCoverUpload = async (req, res) => {
+  let fileBuffer = null;
+  let extension = null;
+  let customUrl = null;
+
+  if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+    fileBuffer = req.body;
+    extension = detectImageType(fileBuffer);
+  } else if (req.body && typeof req.body === 'object' && (req.body.cover || req.body.avatar)) {
+    const rawVal = String(req.body.cover || req.body.avatar).trim();
+    if (rawVal.startsWith('data:image/')) {
+      const match = /^data:image\/([a-zA-Z0-9+.-]+);base64,([\s\S]+)$/.exec(rawVal);
+      if (match) {
+        let ext = match[1].toLowerCase();
+        if (ext === 'jpeg') ext = 'jpg';
+        fileBuffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
+        extension = detectImageType(fileBuffer) || (['jpg', 'png', 'webp', 'gif'].includes(ext) ? ext : 'jpg');
+      }
+    } else if (rawVal.startsWith('http://') || rawVal.startsWith('https://')) {
+      customUrl = rawVal;
+    }
+  }
+
+  if (!fileBuffer && !customUrl) {
+    return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh JPG, PNG hoặc WebP.' });
+  }
+
+  try {
+    const provider = getMyProvider(req);
+    const providers = db.getCollection('providers') || [];
+    let index = providers.findIndex(p => p.id === provider.id);
+    if (index === -1) {
+      providers.unshift(provider);
+      index = 0;
+    }
+
+    const uid = String(req.authUser?.id || provider.id).replace(/[^a-zA-Z0-9_-]/g, '');
+    let cover = customUrl;
+
+    if (fileBuffer) {
+      if (!extension) {
+        extension = 'jpg';
+      }
+      const fileName = `${randomUUID()}.${extension}`;
+      const relativePath = path.posix.join('covers', uid, fileName);
+      const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
+      const absolutePath = path.resolve(uploadRoot, ...relativePath.split('/'));
+      if (!absolutePath.toLowerCase().startsWith(uploadRoot.toLowerCase() + path.sep)) {
+        return res.status(400).json({ success: false, message: 'Đường dẫn lưu ảnh không hợp lệ.' });
+      }
+
+      await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true });
+      await fs.promises.writeFile(absolutePath, fileBuffer);
+      cover = `${req.protocol}://${req.get('host')}/uploads/${relativePath.split('/').map(encodeURIComponent).join('/')}`;
+    }
+    const previousCover = providers[index].cover;
+    providers[index].cover = cover;
+    db.saveCollection('providers', providers);
+
+    // Đồng bộ sang collection 'users'
+    const users = db.getCollection('users') || [];
+    const uIndex = users.findIndex(u => u.id === req.authUser.id || u.id === provider.userId);
+    if (uIndex !== -1) {
+      users[uIndex].cover = cover;
+      db.saveCollection('users', users);
+    }
+
+    // Xóa file cũ
+    if (previousCover) {
+      try {
+        const previousUrl = new URL(previousCover, cover);
+        const previousPath = decodeURIComponent(previousUrl.pathname);
+        if (previousUrl.origin === new URL(cover).origin && previousPath.startsWith('/uploads/covers/')) {
+          const oldFile = path.resolve(uploadRoot, ...previousPath.slice('/uploads/'.length).split('/'));
+          if (oldFile.toLowerCase().startsWith(uploadRoot.toLowerCase() + path.sep) && oldFile !== absolutePath) {
+            await fs.promises.unlink(oldFile).catch(() => {});
+          }
+        }
+      } catch (_) {}
+    }
+
+    return res.json({ success: true, message: 'Đã cập nhật ảnh bìa thành công!', cover, provider: providers[index] });
+  } catch (err) {
+    console.error('[provider] Upload cover:', err.message);
+    return res.status(500).json({ success: false, message: 'Không thể lưu ảnh bìa lúc này: ' + err.message });
+  }
+};
+
+router.put(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
+router.post(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
+
+// ============================================================================
+// 14. CẬP NHẬT THÔNG TIN HỒ SƠ NGƯỜI BÁN (PROVIDER PROFILE)
+// GET & PUT /api/providers/profile
+// Đối với Người bán (Provider), ngoài họ tên/số điện thoại, họ sẽ cần cập nhật thêm
+// các trường đặc thù vào bảng providers như: Tên thương hiệu/Kỹ năng, Mô tả dịch vụ,
+// Giá thuê theo giờ/ngày, và Ảnh đại diện/Ảnh bìa.
+// ============================================================================
+router.get(['/profile', '/me/profile'], requireSignedIn, (req, res) => {
+  const provider = getMyProvider(req);
+  res.json({
+    success: true,
+    provider,
+    user: req.authUser
+  });
+});
+
+router.put(['/me/profile'], requireSignedIn, (req, res) => {
+  try {
+    const {
+      name,
+      phone,
+      specialty,
+      brandName,
+      headline,
+      category,
+      skills,
+      bio,
+      description,
+      hourlyRate,
+      dailyRate,
+      location,
+      address,
+      avatar,
+      cover,
+      availabilityStatus,
+      workingHours
+    } = req.body || {};
+
+    const provider = getMyProvider(req);
+    const providers = db.getCollection('providers') || [];
+    let pIndex = providers.findIndex(p => p.id === provider.id);
+    if (pIndex === -1) {
+      providers.unshift(provider);
+      pIndex = 0;
+    }
+    const prov = providers[pIndex];
+
+    // Cập nhật các trường đặc thù của Provider vào bảng providers
+    const effectiveSpecialty = specialty !== undefined ? specialty : (brandName !== undefined ? brandName : headline);
+    if (effectiveSpecialty !== undefined) prov.specialty = String(effectiveSpecialty).trim();
+
+    if (category !== undefined) prov.category = String(category).trim();
+
+    const effectiveBio = bio !== undefined ? bio : description;
+    if (effectiveBio !== undefined) prov.bio = String(effectiveBio).trim();
+
+    if (hourlyRate !== undefined && hourlyRate !== null && hourlyRate !== '') {
+      prov.hourlyRate = Number(String(hourlyRate).replace(/[^0-9]/g, '')) || 0;
+    }
+
+    if (dailyRate !== undefined && dailyRate !== null && dailyRate !== '') {
+      prov.dailyRate = Number(String(dailyRate).replace(/[^0-9]/g, '')) || 0;
+    } else if (prov.hourlyRate > 0 && !prov.dailyRate) {
+      prov.dailyRate = prov.hourlyRate * 8; // Ước tính 8h/ngày
+    }
+
+    if (skills !== undefined) {
+      if (Array.isArray(skills)) {
+        prov.skills = skills.map(s => String(s).trim()).filter(Boolean);
+      } else if (typeof skills === 'string') {
+        prov.skills = skills.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+
+    const effectiveLocation = location !== undefined ? location : address;
+    if (effectiveLocation !== undefined) prov.location = String(effectiveLocation).trim();
+
+    if (name !== undefined && String(name).trim()) prov.name = String(name).trim();
+    if (phone !== undefined) prov.phone = String(phone).trim();
+    if (avatar) prov.avatar = String(avatar).trim();
+    if (cover) prov.cover = String(cover).trim();
+    if (availabilityStatus) prov.availabilityStatus = availabilityStatus;
+    if (workingHours !== undefined) prov.workingHours = String(workingHours).trim();
+
+    prov.profileCompleted = true;
+    prov.updatedAt = new Date().toISOString();
+    db.saveCollection('providers', providers);
+
+    // Đồng bộ các trường thông tin cơ bản sang bảng users
+    const users = db.getCollection('users') || [];
+    const uIndex = users.findIndex(u => u.id === req.authUser.id || u.id === prov.userId);
+    let updatedUser = null;
+    if (uIndex !== -1) {
+      const u = users[uIndex];
+      if (prov.name) u.name = prov.name;
+      if (prov.phone) u.phone = prov.phone;
+      if (prov.avatar) u.avatar = prov.avatar;
+      if (prov.cover) u.cover = prov.cover;
+      if (prov.location) u.address = prov.location;
+      if (prov.bio) u.bio = prov.bio;
+      u.updatedAt = new Date().toISOString();
+      db.saveCollection('users', users);
+      updatedUser = u;
+    }
+
+    console.log(`[provider] ✅ Đã cập nhật hồ sơ Người bán: ${prov.name} (${prov.id})`);
+    return res.json({
+      success: true,
+      message: 'Cập nhật thông tin hồ sơ Người bán thành công!',
+      provider: prov,
+      user: updatedUser
+    });
+  } catch (err) {
+    console.error('[provider] Lỗi cập nhật profile:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi cập nhật hồ sơ người bán: ' + err.message });
+  }
+});
+
+router.get('/dashboard/stats', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
   const orders = db.getCollection('orders') || [];
-  
   const myOrders = orders.filter(o => o.providerId === provider.id && isVisibleToProvider(o));
-  
+  const jobRequests = (await db.getCollectionFresh('jobRequests')) || [];
+  const myApplications = jobRequests.flatMap(job => (job.applicants || []).filter(applicant =>
+    applicant.providerId === provider.id || applicant.providerUserId === req.authUser.id
+  ));
+  const complaints = (db.getCollection('complaints') || []).filter(complaint => complaint.defendantId === provider.id);
+
   const pending = myOrders.filter(o => o.orderStatus === 'pending').length;
   const processing = myOrders.filter(o => o.orderStatus === 'processing').length;
   const completed = myOrders.filter(o => o.orderStatus === 'completed').length;
-  
-  // Tổng doanh thu từ các đơn completed
   const totalRevenue = myOrders
     .filter(o => o.orderStatus === 'completed')
     .reduce((sum, o) => sum + Number(o.price || 0), 0);
-    
+
   res.json({
     success: true,
     stats: {
       pendingOrders: pending,
       processingOrders: processing,
       completedOrders: completed,
+      activeProjectsCount: processing,
+      submittedProposalsCount: myApplications.length,
+      unresolvedComplaintsCount: complaints.filter(complaint => complaint.status !== 'resolved').length,
       totalRevenue,
+      totalRevenueFormatted: `${totalRevenue.toLocaleString('vi-VN')}đ`,
       rating: provider.rating || 5.0,
+      averageRating: provider.rating || 5.0,
       balance: req.authUser.balance || 0
     }
   });
 });
 
-router.get('/me/services', requireProvider, (req, res) => {
+router.get('/me/services', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
-  const services = (db.getCollection('services') || []).filter(s => s.providerId === provider.id);
+  const services = ((await db.getCollectionFresh('services')) || []).filter(s => s.providerId === provider.id);
   res.json({ success: true, services });
 });
 
@@ -235,7 +625,6 @@ router.post('/wallet/withdraw', requireProvider, (req, res) => {
   res.json({ success: true, message: 'Đã gửi yêu cầu rút tiền thành công!' });
 });
 
-
 // ---- Thao tác đơn hàng của người bán (đường dẫn mà provider.js đang gọi) ----
 function orderAction(handler) {
   return (req, res) => {
@@ -269,7 +658,6 @@ router.post('/reviews/:id/reply', requireProvider, (req, res) => {
     res.status(err.status || 400).json({ success: false, message: err.message });
   }
 });
-
 
 // Route cố định phải đứng TRƯỚC '/:id' (nếu không Express coi 'packages' là một id).
 router.get('/packages', (req, res) => {
@@ -306,7 +694,30 @@ router.delete('/:id/favorite', requireCustomer, (req, res) => {
   res.json({ success: true, favorited: false, message: 'Đã bỏ Provider khỏi danh sách yêu thích.' });
 });
 
-router.get('/:id/availability', (req, res) => {
+router.get('/:id/availability', async (req, res) => {
+  const providers = await db.getCollectionFresh('providers');
+  const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (p.email && p.email.toLowerCase() === req.params.id.toLowerCase()));
+  if (!provider || provider.verified !== true) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
+  const monthMatch = String(req.query.month || '').match(/^(\d{4})-(\d{2})$/);
+  if (!monthMatch) return res.status(400).json({ success: false, message: 'Tháng không hợp lệ.' });
+  const year = Number(monthMatch[1]);
+  const month = Number(monthMatch[2]) - 1;
+  if (month < 0 || month > 11) return res.status(400).json({ success: false, message: 'Tháng không hợp lệ.' });
+  const orders = await db.getCollectionFresh('orders');
+  const availability = {};
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day, 12);
+    const slots = slotsForDate(provider, date, orders);
+    if (slots.length) {
+      const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      availability[iso] = slots;
+    }
+  }
+  return res.json({ success: true, availability });
+});
+
+const _dummy_router = { get: () => {} }; _dummy_router.get('/_old', (req, res) => {
   const provider = (db.getCollection('providers') || []).find(p => p.id === req.params.id);
   if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
   const monthMatch = String(req.query.month || '').match(/^(\d{4})-(\d{2})$/);
@@ -332,14 +743,51 @@ router.get('/:id', async (req, res) => {
   const [providers, allServices, allReviews] = await Promise.all([
     db.getCollectionFresh('providers'), db.getCollectionFresh('services'), db.getCollectionFresh('reviews')
   ]);
-  const provider = providers.find(p => p.id === req.params.id);
-  if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
+  const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (p.email && p.email.toLowerCase() === req.params.id.toLowerCase()));
+  if (!provider || provider.verified !== true) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
   const services = allServices.filter(s => s.providerId === provider.id && s.status !== 'inactive');
   const reviews = allReviews.filter(r => r.providerId === provider.id).map(r => r.aiAnalysis ? r : (enrichReviewWithAI ? enrichReviewWithAI(r) : r));
   res.json({ success: true, provider, services, reviews });
 });
 
 // Thêm các endpoint còn thiếu cho provider
+router.put('/availability', requireProvider, (req, res) => {
+  const { mode, status, schedule, vacation, leadTime, maxProjects, dateExceptions } = req.body || {};
+  const providers = db.getCollection('providers');
+  const provider = getMyProvider(req);
+  const index = providers.findIndex(p => p.id === provider.id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy Provider' });
+  }
+
+  const prov = providers[index];
+  if (mode || status) {
+    prov.availabilityStatus = mode || status;
+  }
+  if (schedule) {
+    if (Array.isArray(schedule)) {
+      prov.schedule = { slots: schedule };
+    } else if (schedule.slots) {
+      prov.schedule = schedule;
+    }
+  }
+  if (vacation) {
+    prov.vacation = vacation;
+  }
+  if (dateExceptions !== undefined) {
+    prov.dateExceptions = dateExceptions;
+  }
+  if (leadTime !== undefined) prov.leadTime = Number(leadTime);
+  if (maxProjects !== undefined) prov.maxProjects = Number(maxProjects);
+
+  db.saveCollection('providers', providers);
+  res.json({
+    success: true,
+    message: 'Cập nhật lịch rảnh & tình trạng làm việc thành công!',
+    provider: prov
+  });
+});
+
 router.put('/hourly-rate', requireProvider, (req, res) => {
   const { hourlyRate } = req.body;
   const providers = db.getCollection('providers');
@@ -434,8 +882,19 @@ router.put('/services/:id', requireProvider, (req, res) => {
   }
 });
 
+router.delete('/services/:id', requireProvider, (req, res) => {
+  const services = db.getCollection('services') || [];
+  const idx = services.findIndex(s => s.id === req.params.id && s.providerId === getMyProvider(req).id);
+  if (idx !== -1) {
+    const deleted = services.splice(idx, 1)[0];
+    db.saveCollection('services', services);
+    res.json({ success: true, message: 'Xóa dịch vụ thành công', service: deleted });
+  } else {
+    res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ' });
+  }
+});
+
 router.put('/services/:id/request-price', requireProvider, (req, res) => {
-  // Mock request price change
   res.json({ success: true, message: 'Yêu cầu thay đổi giá đã được gửi' });
 });
 
@@ -489,7 +948,6 @@ router.post('/packages/purchase', requireProvider, (req, res) => {
 
   const currentBal = Number(users[uidx].balance) || 0;
 
-  // Kiểm tra số dư ví nếu gói có phí
   if (pkg.price > 0) {
     if (currentBal < pkg.price) {
       return res.status(400).json({
@@ -498,11 +956,9 @@ router.post('/packages/purchase', requireProvider, (req, res) => {
       });
     }
 
-    // Khấu trừ số dư ví chuyên gia
     users[uidx].balance = currentBal - pkg.price;
     db.saveCollection('users', users);
     
-    // Ghi log giao dịch ví chuyên gia (tiền vào doanh thu sàn)
     const transactions = db.getCollection('walletTransactions') || [];
     transactions.unshift({
       id: generateId('TXN'),
@@ -518,7 +974,6 @@ router.post('/packages/purchase', requireProvider, (req, res) => {
     db.saveCollection('walletTransactions', transactions);
   }
 
-  // Cập nhật huy hiệu và đặc quyền cho Provider
   const providers = db.getCollection('providers') || [];
   const provIdx = providers.findIndex(p => p.id === provider.id || p.userId === req.authUser.id);
   if (provIdx !== -1) {
@@ -534,7 +989,6 @@ router.post('/packages/purchase', requireProvider, (req, res) => {
     db.saveCollection('providers', providers);
   }
 
-  // Lưu lịch sử đăng ký gói
   purchases.unshift({
     id: generateId('PKG-ORD'),
     providerId: provider.id,
@@ -565,8 +1019,7 @@ router.get('/me/posts', requireProvider, async (req, res) => {
   try {
     const provider = await getMyProviderFresh(req);
     if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
-    const snapshot = await firestore.collection('posts').where('providerId', '==', provider.id).get();
-    const posts = snapshot.docs.map(doc => doc.data())
+    const posts = (await db.getCollectionFresh('posts')).filter(post => post.providerId === provider.id)
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     res.json({ success: true, posts });
   } catch (err) {
@@ -577,8 +1030,8 @@ router.get('/me/posts', requireProvider, async (req, res) => {
 
 router.get('/:id/posts', async (req, res) => {
   try {
-    const snapshot = await firestore.collection('posts').where('providerId', '==', req.params.id).get();
-    const posts = snapshot.docs.map(doc => doc.data())
+    const posts = (await db.getCollectionFresh('posts')).filter(post => post.providerId === req.params.id)
+      .filter(post => post.status !== 'draft')
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     res.json({ success: true, posts });
   } catch (err) {
@@ -609,6 +1062,7 @@ router.post('/posts', requireProvider, async (req, res) => {
     category: String(postData.category || '').trim(),
     summary: String(postData.summary || content.slice(0, 150)).trim(),
     content,
+    status: postData.status === 'draft' ? 'draft' : 'published',
     id,
     providerId: provider.id,
     providerName: provider.name,
@@ -617,11 +1071,66 @@ router.post('/posts', requireProvider, async (req, res) => {
     likes: 0
   };
   try {
-    await firestore.collection('posts').doc(id).create(post);
+    const posts = await db.getCollectionFresh('posts');
+    posts.unshift(post);
+    await db.saveCollectionAndWait('posts', posts);
     res.status(201).json({ success: true, message: 'Đăng bài thành công', post });
   } catch (err) {
     console.error('[providers] Không lưu được bài đăng:', err.message);
     res.status(503).json({ success: false, message: 'Chưa lưu được bài đăng lên hệ thống. Vui lòng thử lại.' });
+  }
+});
+
+router.put('/posts/:id', requireProvider, async (req, res) => {
+  const postData = req.body || {};
+  const title = String(postData.title || '').trim();
+  const content = String(postData.content || '').trim();
+  if (!title || !content) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập tiêu đề và nội dung bài viết.' });
+  }
+
+  try {
+    const provider = await getMyProviderFresh(req);
+    if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+    const posts = await db.getCollectionFresh('posts');
+    const index = posts.findIndex(item => item.id === req.params.id && item.providerId === provider.id);
+    if (index < 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết của bạn.' });
+    }
+
+    const post = {
+      ...posts[index],
+      title,
+      category: String(postData.category || '').trim(),
+      summary: String(postData.summary || content.slice(0, 150)).trim(),
+      content,
+      status: postData.status === 'draft' ? 'draft' : 'published',
+      updatedAt: new Date().toISOString()
+    };
+    posts[index] = post;
+    await db.saveCollectionAndWait('posts', posts);
+    res.json({ success: true, message: 'Đã cập nhật bài viết.', post });
+  } catch (err) {
+    console.error('[providers] Không cập nhật được bài đăng:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa cập nhật được bài viết. Vui lòng thử lại.' });
+  }
+});
+
+router.delete('/posts/:id', requireProvider, async (req, res) => {
+  try {
+    const provider = await getMyProviderFresh(req);
+    if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+    const posts = await db.getCollectionFresh('posts');
+    const index = posts.findIndex(item => item.id === req.params.id && item.providerId === provider.id);
+    if (index < 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết của bạn.' });
+    }
+    posts.splice(index, 1);
+    await db.saveCollectionAndWait('posts', posts);
+    res.json({ success: true, message: 'Đã xóa bài viết.' });
+  } catch (err) {
+    console.error('[providers] Không xóa được bài đăng:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa xóa được bài viết. Vui lòng thử lại.' });
   }
 });
 
@@ -631,7 +1140,6 @@ router.post('/posts', requireProvider, async (req, res) => {
 ============================================================ */
 
 router.get('/', async (req, res) => {
-
   const {
     category,
     search,
@@ -644,158 +1152,37 @@ router.get('/', async (req, res) => {
     limit
   } = req.query;
 
-
-  /* ==========================================================
-     LẤY TOÀN BỘ PROVIDER
-  ========================================================== */
-
   const allProviders = await db.getCollectionFresh('providers');
 
-
-  /* ==========================================================
-     TÍNH KHOẢNG GIÁ THỰC TẾ TỪ DATABASE
-
-     HTML slider sẽ dùng:
-     priceRange.min
-     priceRange.max
-
-     Không hard-code 0 - 2.000.000
-  ========================================================== */
-
   const providerPrices = allProviders
+    .map(provider => Number(provider.hourlyRate))
+    .filter(price => Number.isFinite(price) && price >= 0);
 
-      .map(provider =>
-          Number(provider.hourlyRate)
-      )
-
-      .filter(price =>
-          Number.isFinite(price) &&
-          price >= 0
-      );
-
-
-  let priceRange = {
-    min: 0,
-    max: 0
-  };
-
-
+  let priceRange = { min: 0, max: 0 };
   if (providerPrices.length > 0) {
-
-    priceRange.min =
-        Math.min(...providerPrices);
-
-    priceRange.max =
-        Math.max(...providerPrices);
-
+    priceRange.min = Math.min(...providerPrices);
+    priceRange.max = Math.max(...providerPrices);
   }
 
+  let providers = allProviders.filter(provider => provider.profileCompleted !== false && provider.verified === true);
 
-  /* ==========================================================
-     COPY ARRAY
-
-     Không filter trực tiếp lên collection gốc.
-  ========================================================== */
-
-  let providers =
-      [...allProviders];
-
-
-  /* ==========================================================
-     CATEGORY
-
-     HTML gửi:
-     ?category=IT
-     ?category=Design
-     ?category=Marketing
-     ...
-  ========================================================== */
-
-  if (
-      category &&
-      category !== 'all'
-  ) {
-
-    const categoryLower =
-        category
-            .toLowerCase()
-            .trim();
-
-
-    providers =
-        providers.filter(provider => {
-
-          if (!provider.category) {
-            return false;
-          }
-
-
-          return provider.category
-              .toLowerCase()
-              .includes(categoryLower);
-
-        });
-
+  if (category && category !== 'all') {
+    const categoryLower = category.toLowerCase().trim();
+    providers = providers.filter(provider => {
+      if (!provider.category) return false;
+      return provider.category.toLowerCase().includes(categoryLower);
+    });
   }
-
-
-  /* ==========================================================
-     SKILL
-
-     HTML gửi:
-     ?skill=...
-  ========================================================== */
 
   if (skill) {
-
-    const skillLower =
-        skill
-            .toLowerCase()
-            .trim();
-
-
-    providers =
-        providers.filter(provider => {
-
-          if (
-              !Array.isArray(
-                  provider.skills
-              )
-          ) {
-
-            return false;
-
-          }
-
-
-          return provider.skills.some(
-              item =>
-                  String(item)
-                      .toLowerCase()
-                      .includes(skillLower)
-          );
-
-        });
-
+    const skillLower = skill.toLowerCase().trim();
+    providers = providers.filter(provider => {
+      if (!Array.isArray(provider.skills)) return false;
+      return provider.skills.some(item => String(item).toLowerCase().includes(skillLower));
+    });
   }
 
-
-  /* ==========================================================
-     SEARCH
-
-     HTML gửi:
-     ?search=...
-
-     Tìm trong:
-     name
-     specialty
-     bio
-     location
-     skills
-  ========================================================== */
-
   if (search) {
-
     const normalizeSearchText = value => String(value || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -807,299 +1194,70 @@ router.get('/', async (req, res) => {
 
     const searchTerms = normalizeSearchText(search).split(/\s+/).filter(Boolean);
 
+    providers = providers.filter(provider => {
+      const searchableText = normalizeSearchText([
+        provider.name,
+        provider.specialty,
+        provider.bio,
+        provider.location,
+        provider.category,
+        ...(Array.isArray(provider.skills) ? provider.skills : [])
+      ].join(' '));
 
-    providers =
-        providers.filter(provider => {
-          const searchableText = normalizeSearchText([
-            provider.name,
-            provider.specialty,
-            provider.bio,
-            provider.location,
-            provider.category,
-            ...(Array.isArray(provider.skills) ? provider.skills : [])
-          ].join(' '));
-
-          return searchTerms.length > 0 && searchTerms.every(term => searchableText.includes(term));
-
-        });
-
+      return searchTerms.length > 0 && searchTerms.every(term => searchableText.includes(term));
+    });
   }
 
-
-  /* ==========================================================
-     MIN RATING
-
-     HTML gửi:
-     ?minRating=4.5
-     ?minRating=4.8
-  ========================================================== */
-
-  if (
-      minRating !== undefined &&
-      minRating !== ''
-  ) {
-
-    const ratingValue =
-        Number(minRating);
-
-
-    if (
-        Number.isFinite(ratingValue) &&
-        ratingValue > 0
-    ) {
-
-      providers =
-          providers.filter(provider => {
-
-            const rating =
-                Number(
-                    provider.rating || 0
-                );
-
-
-            return rating >= ratingValue;
-
-          });
-
+  if (minRating !== undefined && minRating !== '') {
+    const ratingValue = Number(minRating);
+    if (Number.isFinite(ratingValue) && ratingValue > 0) {
+      providers = providers.filter(provider => Number(provider.rating || 0) >= ratingValue);
     }
-
   }
 
-
-  /* ==========================================================
-     MIN PRICE
-
-     HTML slider gửi:
-     ?minPrice=...
-  ========================================================== */
-
-  if (
-      minPrice !== undefined &&
-      minPrice !== ''
-  ) {
-
-    const minPriceValue =
-        Number(minPrice);
-
-
-    if (
-        Number.isFinite(
-            minPriceValue
-        )
-    ) {
-
-      providers =
-          providers.filter(provider => {
-
-            const hourlyRate =
-                Number(
-                    provider.hourlyRate || 0
-                );
-
-
-            return (
-                hourlyRate >=
-                minPriceValue
-            );
-
-          });
-
+  if (minPrice !== undefined && minPrice !== '') {
+    const minPriceValue = Number(minPrice);
+    if (Number.isFinite(minPriceValue)) {
+      providers = providers.filter(provider => Number(provider.hourlyRate || 0) >= minPriceValue);
     }
-
   }
 
-
-  /* ==========================================================
-     MAX PRICE
-
-     HTML slider gửi:
-     ?maxPrice=...
-  ========================================================== */
-
-  if (
-      maxPrice !== undefined &&
-      maxPrice !== ''
-  ) {
-
-    const maxPriceValue =
-        Number(maxPrice);
-
-
-    if (
-        Number.isFinite(
-            maxPriceValue
-        )
-    ) {
-
-      providers =
-          providers.filter(provider => {
-
-            const hourlyRate =
-                Number(
-                    provider.hourlyRate || 0
-                );
-
-
-            return (
-                hourlyRate <=
-                maxPriceValue
-            );
-
-          });
-
+  if (maxPrice !== undefined && maxPrice !== '') {
+    const maxPriceValue = Number(maxPrice);
+    if (Number.isFinite(maxPriceValue)) {
+      providers = providers.filter(provider => Number(provider.hourlyRate || 0) <= maxPriceValue);
     }
-
   }
 
-
-  /* ==========================================================
-     VERIFIED
-
-     HTML gửi:
-     ?verified=true
-  ========================================================== */
-
-  if (
-      verified === 'true'
-  ) {
-
-    providers =
-        providers.filter(provider =>
-            provider.verified === true
-        );
-
+  if (verified === 'true') {
+    providers = providers.filter(provider => provider.verified === true);
   }
 
-
-  /* ==========================================================
-     SORT
-
-     HTML có:
-
-     rating
-     price-asc
-     price-desc
-     orders
-  ========================================================== */
-
-  if (
-      sort === 'rating'
-  ) {
-
-    providers.sort(
-        (a, b) =>
-            Number(b.rating || 0) -
-            Number(a.rating || 0)
-    );
-
+  if (sort === 'rating') {
+    providers.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+  } else if (sort === 'price-asc') {
+    providers.sort((a, b) => Number(a.hourlyRate || 0) - Number(b.hourlyRate || 0));
+  } else if (sort === 'price-desc') {
+    providers.sort((a, b) => Number(b.hourlyRate || 0) - Number(a.hourlyRate || 0));
+  } else if (sort === 'orders') {
+    providers.sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0));
   }
 
+  const total = providers.length;
 
-  else if (
-      sort === 'price-asc'
-  ) {
-
-    providers.sort(
-        (a, b) =>
-            Number(a.hourlyRate || 0) -
-            Number(b.hourlyRate || 0)
-    );
-
-  }
-
-
-  else if (
-      sort === 'price-desc'
-  ) {
-
-    providers.sort(
-        (a, b) =>
-            Number(b.hourlyRate || 0) -
-            Number(a.hourlyRate || 0)
-    );
-
-  }
-
-
-  else if (
-      sort === 'orders'
-  ) {
-
-    providers.sort(
-        (a, b) =>
-            Number(b.completedOrders || 0) -
-            Number(a.completedOrders || 0)
-    );
-
-  }
-
-
-  /* ==========================================================
-     TOTAL
-
-     total phải được tính SAU KHI FILTER
-     nhưng TRƯỚC khi limit.
-  ========================================================== */
-
-  const total =
-      providers.length;
-
-
-  /* ==========================================================
-     LIMIT
-
-     Ví dụ:
-     /api/providers?limit=10
-  ========================================================== */
-
-  if (
-      limit &&
-      !isNaN(limit)
-  ) {
-
-    const limitNumber =
-        Number(limit);
-
-
-    if (
-        limitNumber > 0
-    ) {
-
-      providers =
-          providers.slice(
-              0,
-              limitNumber
-          );
-
+  if (limit && !isNaN(limit)) {
+    const limitNumber = Number(limit);
+    if (limitNumber > 0) {
+      providers = providers.slice(0, limitNumber);
     }
-
   }
-
-
-  /* ==========================================================
-     RESPONSE
-
-     HTML cần:
-
-     success
-     total
-     providers
-     priceRange
-  ========================================================== */
 
   res.json({
-
     success: true,
-
     total: total,
-
     providers: providers,
-
     priceRange: priceRange
-
   });
-
 });
-
 
 module.exports = router;

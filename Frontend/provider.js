@@ -24,11 +24,9 @@ const PROVIDER_SESSION_KEY = 'SKILLRENTAL_PROVIDER_USER';
 // 1. SESSION & AUTH
 // ============================================================
 function getCurrentProvider() {
-  const savedAvatar = localStorage.getItem('SKILLRENTAL_PROVIDER_AVATAR');
-  const savedCover = localStorage.getItem('SKILLRENTAL_PROVIDER_COVER');
   let provider = null;
 
-  const pRaw = localStorage.getItem(PROVIDER_SESSION_KEY);
+  const pRaw = sessionStorage.getItem(PROVIDER_SESSION_KEY);
   if (pRaw) {
     try {
       const pUser = JSON.parse(pRaw);
@@ -38,7 +36,7 @@ function getCurrentProvider() {
     } catch (e) {}
   }
   if (!provider) {
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw = sessionStorage.getItem(SESSION_KEY);
     if (raw) {
       try {
         const user = JSON.parse(raw);
@@ -51,27 +49,11 @@ function getCurrentProvider() {
     }
   }
 
-  // Fallback default demo provider (Nguyễn Văn An - PRV001)
-  if (!provider) {
-    provider = {
-      id: 'USR001',
-      providerId: 'PRV001',
-      name: 'Nguyễn Văn An',
-      email: 'an.nguyen@example.com',
-      role: 'Provider',
-      balance: 25000000,
-      avatar: savedAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-    };
-  }
+  // Never substitute a demo identity: profile data must belong to the signed-in account.
+  if (!provider) return null;
 
-  if (savedAvatar) {
-    provider.avatar = savedAvatar;
-  }
-  if (savedCover) {
-    provider.cover = savedCover;
-  }
   if (!provider.providerId) {
-    provider.providerId = provider.id || 'PRV001';
+    provider.providerId = provider.id || '';
   }
   return provider;
 }
@@ -80,7 +62,7 @@ function getAuthHeader() {
   const provider = getCurrentProvider();
   return {
     'Content-Type': 'application/json',
-    'x-user-id': provider ? (provider.providerId || provider.id) : 'USR001'
+    ...(provider ? { 'x-user-id': provider.providerId || provider.id } : {})
   };
 }
 
@@ -102,7 +84,8 @@ window.providerApi = {
 
   uploadAvatar: async (file) => {
     const provider = getCurrentProvider();
-    const providerId = provider ? (provider.providerId || provider.id) : 'PRV001';
+    if (!provider) return { success: false, message: 'Vui lòng đăng nhập tài khoản Provider.' };
+    const providerId = provider.providerId || provider.id;
     let base64Data = null;
 
     try {
@@ -117,12 +100,6 @@ window.providerApi = {
         'Content-Type': 'application/json',
         'x-user-id': providerId
       };
-      try {
-        if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
-          const token = await firebase.auth().currentUser.getIdToken();
-          if (token) headers['Authorization'] = 'Bearer ' + token;
-        }
-      } catch (_) {}
 
       let data = null;
       try {
@@ -154,13 +131,13 @@ window.providerApi = {
 
         ['SKILLRENTAL_CURRENT_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => {
           try {
-            const uRaw = localStorage.getItem(key);
+            const uRaw = sessionStorage.getItem(key);
             const uObj = uRaw ? JSON.parse(uRaw) : {};
             uObj.avatar = newAvatar;
             if (!uObj.role) uObj.role = 'Provider';
             if (!uObj.id) uObj.id = providerId;
             if (!uObj.providerId) uObj.providerId = providerId;
-            localStorage.setItem(key, JSON.stringify(uObj));
+            sessionStorage.setItem(key, JSON.stringify(uObj));
           } catch (_) {}
         });
 
@@ -199,7 +176,8 @@ window.providerApi = {
 
   uploadCover: async (file) => {
     const provider = getCurrentProvider();
-    const providerId = provider ? (provider.providerId || provider.id) : 'PRV001';
+    if (!provider) return { success: false, message: 'Vui lòng đăng nhập tài khoản Provider.' };
+    const providerId = provider.providerId || provider.id;
     let base64Data = null;
 
     try {
@@ -214,12 +192,6 @@ window.providerApi = {
         'Content-Type': 'application/json',
         'x-user-id': providerId
       };
-      try {
-        if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
-          const token = await firebase.auth().currentUser.getIdToken();
-          if (token) headers['Authorization'] = 'Bearer ' + token;
-        }
-      } catch (_) {}
 
       let data = null;
       try {
@@ -251,13 +223,13 @@ window.providerApi = {
 
         ['SKILLRENTAL_CURRENT_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => {
           try {
-            const uRaw = localStorage.getItem(key);
+            const uRaw = sessionStorage.getItem(key);
             const uObj = uRaw ? JSON.parse(uRaw) : {};
             uObj.cover = newCover;
             if (!uObj.role) uObj.role = 'Provider';
             if (!uObj.id) uObj.id = providerId;
             if (!uObj.providerId) uObj.providerId = providerId;
-            localStorage.setItem(key, JSON.stringify(uObj));
+            sessionStorage.setItem(key, JSON.stringify(uObj));
           } catch (_) {}
         });
 
@@ -409,7 +381,7 @@ window.providerApi = {
       method: 'POST',
       headers: getAuthHeader(),
       body: JSON.stringify({
-        providerId: provider.providerId || 'PRV001',
+        providerId: provider.providerId || provider.id,
         providerName: provider.name,
         avatar: provider.avatar,
         ...proposalData
@@ -604,6 +576,23 @@ window.providerApi = {
       body: JSON.stringify(postData)
     });
     return res.json();
+  },
+
+  updatePost: async (id, postData) => {
+    const res = await fetch(`${API_BASE}/api/providers/posts/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: getAuthHeader(),
+      body: JSON.stringify(postData)
+    });
+    return res.json();
+  },
+
+  deletePost: async (id) => {
+    const res = await fetch(`${API_BASE}/api/providers/posts/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    return res.json();
   }
 };
 
@@ -639,8 +628,41 @@ if (typeof window.showToast !== 'function') {
 }
 
 // Update Topbar Profile & Badges
+function setProviderNavBadge(page, count) {
+  const link = Array.from(document.querySelectorAll('.sidebar-nav a[href]')).find(anchor => {
+    try { return new URL(anchor.getAttribute('href'), location.href).pathname.endsWith(`/${page}`); }
+    catch (_) { return false; }
+  });
+  if (!link) return;
+  let badge = link.querySelector('.badge-count');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'badge-count';
+    badge.hidden = true;
+    link.appendChild(badge);
+  }
+  badge.style.backgroundColor = 'var(--primary)';
+  const value = Number(count);
+  if (!Number.isFinite(value) || value <= 0) {
+    badge.textContent = '0';
+    badge.hidden = true;
+    return;
+  }
+  badge.textContent = value > 99 ? '99+' : String(value);
+  badge.hidden = false;
+}
+
+function updateProviderNavBadges(stats = {}) {
+  setProviderNavBadge('jobs.html', stats.submittedProposalsCount);
+  setProviderNavBadge('bookings.html', stats.pendingOrders);
+  // Chat messages do not currently persist read state, so do not show a made-up count.
+  setProviderNavBadge('chat.html', undefined);
+  setProviderNavBadge('complaint.html', stats.unresolvedComplaintsCount);
+}
+
 async function updateProviderHeader() {
   const provider = getCurrentProvider();
+  if (!provider) return;
 
   // Update profile in sidebar
   const sidebarName = document.querySelector('.sidebar-profile .profile-name');
@@ -673,20 +695,10 @@ async function updateProviderHeader() {
     const res = await window.providerApi.getDashboardStats();
     if (res && res.success && res.stats) {
       const stats = res.stats;
-      // Update badge counts in sidebar
-      const badges = document.querySelectorAll('.sidebar-nav .badge-count');
-      if (badges.length >= 3) {
-        // jobs badge
-        if (stats.submittedProposalsCount !== undefined) {
-          badges[0].textContent = stats.submittedProposalsCount || 6;
-        }
-        // bookings badge
-        if (stats.activeProjectsCount !== undefined) {
-          badges[1].textContent = stats.activeProjectsCount || 2;
-        }
-      }
+      updateProviderNavBadges(stats);
     }
   } catch (e) {
+    updateProviderNavBadges();
     console.log('Provider stats: Offline mode');
   }
 }

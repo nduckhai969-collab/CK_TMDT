@@ -1377,10 +1377,7 @@
       }
     }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
 </head>
 
 <body>
@@ -2564,9 +2561,11 @@
     </div>
 
     <div class="footer-bottom">
+
       <div>
         © 2026 SkillRental Platform. Bảo lưu mọi bản quyền. Nền tảng Cho Thuê Kỹ Năng &amp; Ký Quỹ Escrow.
       </div>
+
     </div>
   </div>
 </footer>
@@ -2984,7 +2983,7 @@
   function getStoredUser() {
     try {
 
-      const raw = localStorage.getItem(SESSION_KEY);
+      const raw = sessionStorage.getItem(SESSION_KEY);
 
       if (raw) {
         const user = JSON.parse(raw);
@@ -3208,17 +3207,25 @@
    */
 
   function redirectAfterLogin(user) {
+
     if (!user) {
       return;
     }
 
     if (user.role === 'Admin') {
+
       window.location.href = 'admin.html';
+
     } else if (user.role === 'Provider') {
+
       window.location.href = 'dashboard.html';
+
     } else {
+
       window.location.href = 'customer.html';
+
     }
+
   }
 
 

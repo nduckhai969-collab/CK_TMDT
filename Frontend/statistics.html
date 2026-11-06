@@ -10,10 +10,8 @@
   <link rel="stylesheet" href="admin.css">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
+<script src="js/admin-topbar.js"></script>
 </head>
 <body>
   <div class="app">
@@ -90,10 +88,20 @@
           <span class="badge-count" id="badge-complaint-count">2</span>
         </a>
 
+        <div class="menu-label">MARKETING</div>
+        <a class="menu-item" href="admin_emails.html">
+          <span class="menu-icon">✉</span>
+          <span>Email Marketing</span>
+        </a>
+
         <div class="menu-label">THỐNG KÊ & BÁO CÁO</div>
         <a class="menu-item" href="reports.html">
           <span class="menu-icon">▥</span>
           <span>Báo cáo & Xuất file (UC-66, 67)</span>
+        </a>
+        <a class="menu-item" href="admin_analytics.html">
+          <span class="menu-icon">📊</span>
+          <span>Biểu đồ Doanh số (Chart.js)</span>
         </a>
         <a class="menu-item active" href="statistics.html">
           <span class="menu-icon">◫</span>
@@ -122,21 +130,13 @@
       <header class="topbar">
         <div class="topbar-left">
           <span class="breadcrumb-tag">THỐNG KÊ / CHUYÊN SÂU (UC-68)</span>
-        </div>
-
-        <div class="topbar-right">
-          <button class="icon-badge-btn" onclick="showToast('Thông báo', 'Tỷ lệ hoàn thành đơn đạt 94.2%', 'info')">
-            <span>♢</span>
-            <span class="badge-dot">3</span>
-          </button>
-          <div class="admin-profile">
-            <div class="admin-avatar">A</div>
-            <div class="admin-info">
-              <strong>Nguyễn Văn Admin</strong>
-              <span>Quản trị viên hệ thống</span>
-            </div>
+          <div class="top-search">
+            <span>⌕</span>
+            <input type="text" placeholder="Tìm kiếm nhanh... (Nhấn Enter)" onkeyup="handleQuickSearch(event)">
           </div>
         </div>
+
+        <div class="topbar-right"></div>
       </header>
 
       <div class="content-area">

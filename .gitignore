@@ -6,16 +6,12 @@ uploads/
 .idea/
 .idea_backup/
 .idea_old/
-
-# Python virtual environment & cache
-ml/.venv/
-**/__pycache__/
-*.pyc
-
-# Database local cache — không track, dùng Firestore làm nguồn chính
-data/database.json
-data/database.backup.json
-data/database.json.backup_*
+powershell.cmd
 
 # Scripts tạm
 scripts/_*.js
+
+# Tài liệu nội bộ (không đẩy lên GitHub)
+readme.txt
+ghi-chu-noi-bo.txt
+ke-hoach-email-marketing.txt

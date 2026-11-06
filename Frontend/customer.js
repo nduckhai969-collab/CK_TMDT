@@ -36,31 +36,31 @@ const CUSTOMER_SESSION_KEY = 'SKILLRENTAL_CUSTOMER_USER';
 // ============================================================
 
 function getCurrentCustomer() {
-  const raw = localStorage.getItem(SESSION_KEY);
+  const raw = sessionStorage.getItem(SESSION_KEY);
   if (!raw) {
     // A role-specific cache is only a mirror; it must not resurrect a signed-out user.
-    localStorage.removeItem(CUSTOMER_SESSION_KEY);
+    sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
     return null;
   }
 
   try {
     const user = JSON.parse(raw);
     if (!user || !user.id || ['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(user.id)) {
-      localStorage.removeItem(CUSTOMER_SESSION_KEY);
-      (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
+      sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
+      (window.SkillAuth ? SkillAuth.logout() : sessionStorage.removeItem(SESSION_KEY));
       return null;
     }
     if (user.role !== 'Customer') {
-      localStorage.removeItem(CUSTOMER_SESSION_KEY);
+      sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
       return null;
     }
     // Keep the legacy customer cache aligned with the canonical active session.
-    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+    sessionStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
     return user;
   } catch (error) {
     console.error('Session data không hợp lệ:', error);
-    localStorage.removeItem(CUSTOMER_SESSION_KEY);
-    (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
+    sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
+    (window.SkillAuth ? SkillAuth.logout() : sessionStorage.removeItem(SESSION_KEY));
     return null;
   }
 }
@@ -77,13 +77,12 @@ function setCurrentCustomer(user) {
     return false;
   }
 
-  localStorage.setItem(
-      SESSION_KEY,
-      JSON.stringify(user)
-  );
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
 
   if (user.role === 'Customer') {
-    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+    sessionStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+  } else {
+    sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
   }
   return true;
 }
@@ -91,7 +90,7 @@ function setCurrentCustomer(user) {
 
 function clearCurrentCustomer() {
 
-  (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
+  (window.SkillAuth ? SkillAuth.logout() : sessionStorage.removeItem(SESSION_KEY));
 }
 
 
@@ -132,7 +131,7 @@ function requireCustomerLogin(callback) {
   }
 
   if (user.role === 'Customer') {
-    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+    sessionStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
   }
   return true;
 }
@@ -1391,641 +1390,18 @@ function renderCustomerFooter() {
 
 
 // ============================================================
-// AUTH MODAL
-// ============================================================
-
+// AUTH MODAL — reuse the same modal used by index.html through auth-client.js.
 function injectGlobalAuthModal() {
-
-  if (
-      document.getElementById(
-          'globalAuthModalOverlay'
-      )
-  ) {
-
-    return;
-  }
-
-
-  const modalHtml = `
-
-<div
-    id="globalAuthModalOverlay"
-    style="
-        position:fixed;
-        inset:0;
-        background:rgba(15,23,42,.7);
-        backdrop-filter:blur(5px);
-        z-index:99999;
-        display:none;
-        align-items:center;
-        justify-content:center;
-        padding:20px;
-    "
->
-
-    <div style="
-        background:#FFFFFF;
-        border-radius:16px;
-        width:100%;
-        max-width:480px;
-        max-height:90vh;
-        overflow-y:auto;
-        box-shadow:
-            0 20px 40px -10px
-            rgba(15,23,42,.35);
-        border:1px solid #E2E8F0;
-        position:relative;
-    ">
-
-
-        <!-- CLOSE -->
-
-        <button
-            type="button"
-            onclick="closeAuthModal()"
-            style="
-                position:absolute;
-                top:16px;
-                right:16px;
-                width:32px;
-                height:32px;
-                border-radius:50%;
-                background:#F1F5F9;
-                border:none;
-                cursor:pointer;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                color:#64748B;
-                z-index:10;
-            "
-        >
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-
-
-        <!-- HEADER -->
-
-        <div style="
-            background:
-                linear-gradient(
-                    135deg,
-                    #0F172A 0%,
-                    #15803D 100%
-                );
-            color:#FFF;
-            padding:24px 28px;
-        ">
-
-            <h4
-                id="gamTitle"
-                style="
-                    font-size:20px;
-                    font-weight:800;
-                    margin:0 0 4px;
-                "
-            >
-                Chào Mừng Đến Với SkillRental
-            </h4>
-
-            <p
-                id="gamSubtitle"
-                style="
-                    font-size:13px;
-                    color:#DCFCE7;
-                    margin:0;
-                "
-            >
-                Đăng nhập để thuê kỹ năng
-                hoặc quản lý dịch vụ
-            </p>
-
-        </div>
-
-
-        <!-- TABS -->
-
-        <div style="
-            display:flex;
-            border-bottom:1px solid #E2E8F0;
-            background:#F8FAFC;
-        ">
-
-            <button
-                type="button"
-                id="gamTabLogin"
-                onclick="switchAuthTab('login')"
-                style="
-                    flex:1;
-                    padding:14px;
-                    text-align:center;
-                    font-size:14px;
-                    font-weight:700;
-                    color:#16A34A;
-                    border:none;
-                    background:#FFFFFF;
-                    border-bottom:2px solid #16A34A;
-                    cursor:pointer;
-                "
-            >
-                <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                Đăng Nhập
-            </button>
-
-
-            <button
-                type="button"
-                id="gamTabRegister"
-                onclick="switchAuthTab('register')"
-                style="
-                    flex:1;
-                    padding:14px;
-                    text-align:center;
-                    font-size:14px;
-                    font-weight:700;
-                    color:#64748B;
-                    border:none;
-                    background:transparent;
-                    border-bottom:2px solid transparent;
-                    cursor:pointer;
-                "
-            >
-                <i class="fa-solid fa-user-plus"></i>
-                Đăng Ký
-            </button>
-
-        </div>
-
-
-        <!-- BODY -->
-
-        <div style="
-            padding:24px 28px;
-        ">
-
-
-            <!-- LOGIN -->
-
-            <form
-                id="loginForm"
-                onsubmit="handleModalLogin(event)"
-            >
-
-                <div style="
-                    margin-bottom:16px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Email / Tài khoản
-                    </label>
-
-                    <input
-                        type="email"
-                        id="loginEmail"
-                        required
-                        autocomplete="email"
-                        placeholder="long.le@example.com"
-                        style="
-                            width:100%;
-                            height:42px;
-                            padding:0 14px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            font-size:14px;
-                            box-sizing:border-box;
-                            outline:none;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:16px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Mật khẩu
-                    </label>
-
-                    <input
-                        type="password"
-                        id="loginPassword"
-                        required
-                        autocomplete="current-password"
-                        placeholder="••••••••"
-                        style="
-                            width:100%;
-                            height:42px;
-                            padding:0 14px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            font-size:14px;
-                            box-sizing:border-box;
-                            outline:none;
-                        "
-                    >
-
-                </div>
-
-
-                <button
-                    type="submit"
-                    id="loginSubmitBtn"
-                    style="
-                        width:100%;
-                        height:44px;
-                        background:#16A34A;
-                        color:#FFFFFF;
-                        border:none;
-                        border-radius:8px;
-                        font-weight:700;
-                        font-size:15px;
-                        cursor:pointer;
-                    "
-                >
-                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                    Đăng Nhập Ngay
-                </button>
-
-                <div style="text-align:center; margin:16px 0; font-size:12px; color:#94A3B8; position:relative;">
-                    <hr style="border:none; border-top:1px solid #E2E8F0; position:absolute; top:50%; width:100%; margin:0; z-index:1;">
-                    <span style="background:#FFF; padding:0 12px; position:relative; z-index:2;">HOẶC TIẾP TỤC VỚI</span>
-                </div>
-
-                <button
-                    type="button"
-                    id="loginGoogleBtn"
-                    onclick="handleGoogleLogin(event)"
-                    style="
-                        width:100%;
-                        height:44px;
-                        background:#FFFFFF;
-                        color:#334155;
-                        border:1px solid #CBD5E1;
-                        border-radius:8px;
-                        font-weight:600;
-                        font-size:14px;
-                        cursor:pointer;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        gap:10px;
-                        transition:all .2s ease;
-                        box-sizing:border-box;
-                    "
-                    onmouseover="this.style.background='#F8FAFC';this.style.borderColor='#94A3B8';"
-                    onmouseout="this.style.background='#FFFFFF';this.style.borderColor='#CBD5E1';"
-                >
-                    <i class="fa-brands fa-google" style="color:#DB4437; font-size:16px;"></i>
-                    Đăng Nhập Bằng Google
-                </button>
-
-            </form>
-
-
-            <!-- REGISTER -->
-
-            <form
-                id="registerForm"
-                onsubmit="handleModalRegister(event)"
-                style="display:none;"
-            >
-
-                <div style="
-                    margin-bottom:14px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Họ và tên
-                    </label>
-
-                    <input
-                        type="text"
-                        id="regName"
-                        required
-                        autocomplete="name"
-                        placeholder="Nguyễn Văn A"
-                        style="
-                            width:100%;
-                            height:40px;
-                            padding:0 12px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            box-sizing:border-box;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:14px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Email
-                    </label>
-
-                    <input
-                        type="email"
-                        id="regEmail"
-                        required
-                        autocomplete="email"
-                        placeholder="name@example.com"
-                        style="
-                            width:100%;
-                            height:40px;
-                            padding:0 12px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            box-sizing:border-box;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:14px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Số điện thoại
-                    </label>
-
-                    <input
-                        type="tel"
-                        id="regPhone"
-                        required
-                        autocomplete="tel"
-                        placeholder="0912 345 678"
-                        style="
-                            width:100%;
-                            height:40px;
-                            padding:0 12px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            box-sizing:border-box;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:14px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:6px;
-                    ">
-                        Mật khẩu
-                    </label>
-
-                    <input
-                        type="password"
-                        id="regPassword"
-                        required
-                        minlength="6"
-                        autocomplete="new-password"
-                        placeholder="Ít nhất 6 ký tự"
-                        style="
-                            width:100%;
-                            height:40px;
-                            padding:0 12px;
-                            border:1px solid #E2E8F0;
-                            border-radius:8px;
-                            box-sizing:border-box;
-                        "
-                    >
-
-                </div>
-
-
-                <div style="
-                    margin-bottom:16px;
-                ">
-
-                    <label style="
-                        display:block;
-                        font-size:13px;
-                        font-weight:600;
-                        color:#0F172A;
-                        margin-bottom:8px;
-                    ">
-                        Vai trò tham gia
-                    </label>
-
-
-                    <div style="
-                        display:grid;
-                        grid-template-columns:1fr 1fr;
-                        gap:10px;
-                    ">
-
-                        <label style="
-                            display:flex;
-                            align-items:center;
-                            gap:6px;
-                            font-size:13px;
-                            color:#334155;
-                        ">
-
-                            <input
-                                type="radio"
-                                name="regRole"
-                                value="Customer"
-                                checked
-                            >
-
-                            Khách hàng
-
-                        </label>
-
-
-                        <label style="
-                            display:flex;
-                            align-items:center;
-                            gap:6px;
-                            font-size:13px;
-                            color:#334155;
-                        ">
-
-                            <input
-                                type="radio"
-                                name="regRole"
-                                value="Provider"
-                            >
-
-                            Provider
-
-                        </label>
-
-                    </div>
-
-                </div>
-
-
-                <button
-                    type="submit"
-                    id="registerSubmitBtn"
-                    style="
-                        width:100%;
-                        height:44px;
-                        background:#16A34A;
-                        color:#FFFFFF;
-                        border:none;
-                        border-radius:8px;
-                        font-weight:700;
-                        font-size:15px;
-                        cursor:pointer;
-                    "
-                >
-                    <i class="fa-solid fa-user-plus"></i>
-                    Hoàn Tất Đăng Ký
-                </button>
-
-                <div style="text-align:center; margin:16px 0; font-size:12px; color:#94A3B8; position:relative;">
-                    <hr style="border:none; border-top:1px solid #E2E8F0; position:absolute; top:50%; width:100%; margin:0; z-index:1;">
-                    <span style="background:#FFF; padding:0 12px; position:relative; z-index:2;">HOẶC ĐĂNG KÝ NHANH</span>
-                </div>
-
-                <button
-                    type="button"
-                    id="registerGoogleBtn"
-                    onclick="handleGoogleLogin(event, true)"
-                    style="
-                        width:100%;
-                        height:44px;
-                        background:#FFFFFF;
-                        color:#334155;
-                        border:1px solid #CBD5E1;
-                        border-radius:8px;
-                        font-weight:600;
-                        font-size:14px;
-                        cursor:pointer;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        gap:10px;
-                        transition:all .2s ease;
-                        box-sizing:border-box;
-                    "
-                    onmouseover="this.style.background='#F8FAFC';this.style.borderColor='#94A3B8';"
-                    onmouseout="this.style.background='#FFFFFF';this.style.borderColor='#CBD5E1';"
-                >
-                    <i class="fa-brands fa-google" style="color:#DB4437; font-size:16px;"></i>
-                    Đăng Ký Nhanh Bằng Google
-                </button>
-
-            </form>
-
-        </div>
-
-    </div>
-
-</div>
-
-    `;
-
-
-  document.body.insertAdjacentHTML(
-      'beforeend',
-      modalHtml
-  );
-
-
-  const overlay =
-      document.getElementById(
-          'globalAuthModalOverlay'
-      );
-
-
-  overlay.addEventListener(
-      'click',
-      function(event) {
-
-        if (
-            event.target ===
-            overlay
-        ) {
-
-          closeAuthModal();
-        }
-      }
-  );
+  if (window.SkillRentalAuthModal?.ensure) return window.SkillRentalAuthModal.ensure();
+  throw new Error('Không tải được giao diện đăng nhập dùng chung.');
 }
 
-
-// ============================================================
-// OPEN AUTH MODAL
-// ============================================================
-
-function openAuthModal(
-    tab = 'login'
-) {
-
+// OPEN AUTH MODAL — shared auth UI and behavior.
+function openAuthModal(tab = 'login') {
   injectGlobalAuthModal();
-
-
-  const overlay =
-      document.getElementById(
-          'globalAuthModalOverlay'
-      );
-
-
-  if (!overlay) {
-    return;
-  }
-
-
-  overlay.style.display =
-      'flex';
-
-  document.body.style.overflow =
-      'hidden';
-
-
-  switchAuthTab(tab);
+  window.SkillRentalAuthModal.open(tab);
 }
 
-
-// ============================================================
 // ALIAS CHO CUSTOMER
 // ============================================================
 
@@ -2038,32 +1414,11 @@ function openCustomerAuthModal(
 
 
 // ============================================================
-// CLOSE AUTH MODAL
-// ============================================================
-
+// CLOSE AUTH MODAL — shared auth UI and behavior.
 function closeAuthModal() {
-
-  const overlay =
-      document.getElementById(
-          'globalAuthModalOverlay'
-      );
-
-
-  if (overlay) {
-
-    overlay.style.display =
-        'none';
-  }
-
-  const fbModal = document.getElementById('authModal');
-  if (fbModal) {
-    fbModal.classList.remove('active');
-  }
-
-  document.body.style.overflow =
-      '';
+  if (window.SkillRentalAuthModal?.close) window.SkillRentalAuthModal.close();
+  document.body.style.overflow = '';
 }
-
 
 // Alias cũ
 function closeGlobalAuthModal() {
@@ -2073,140 +1428,10 @@ function closeGlobalAuthModal() {
 
 
 // ============================================================
-// SWITCH LOGIN / REGISTER
-// ============================================================
-
+// SWITCH LOGIN / REGISTER — includes login, register, forgot-password, and verify-email tabs.
 function switchAuthTab(tab) {
-
-  const loginForm =
-      document.getElementById(
-          'loginForm'
-      );
-
-  const registerForm =
-      document.getElementById(
-          'registerForm'
-      );
-
-  const tabLogin =
-      document.getElementById(
-          'gamTabLogin'
-      );
-
-  const tabRegister =
-      document.getElementById(
-          'gamTabRegister'
-      );
-
-  const title =
-      document.getElementById(
-          'gamTitle'
-      );
-
-  const subtitle =
-      document.getElementById(
-          'gamSubtitle'
-      );
-
-
-  if (
-      !loginForm ||
-      !registerForm ||
-      !tabLogin ||
-      !tabRegister
-  ) {
-
-    return;
-  }
-
-
-  if (tab === 'login') {
-
-    loginForm.style.display =
-        'block';
-
-    registerForm.style.display =
-        'none';
-
-
-    tabLogin.style.color =
-        '#16A34A';
-
-    tabLogin.style.background =
-        '#FFFFFF';
-
-    tabLogin.style.borderBottomColor =
-        '#16A34A';
-
-
-    tabRegister.style.color =
-        '#64748B';
-
-    tabRegister.style.background =
-        'transparent';
-
-    tabRegister.style.borderBottomColor =
-        'transparent';
-
-
-    if (title) {
-
-      title.innerText =
-          'Chào Mừng Đến Với SkillRental';
-    }
-
-
-    if (subtitle) {
-
-      subtitle.innerText =
-          'Đăng nhập để thuê kỹ năng hoặc quản lý dịch vụ';
-    }
-
-
-  } else {
-
-    loginForm.style.display =
-        'none';
-
-    registerForm.style.display =
-        'block';
-
-
-    tabLogin.style.color =
-        '#64748B';
-
-    tabLogin.style.background =
-        'transparent';
-
-    tabLogin.style.borderBottomColor =
-        'transparent';
-
-
-    tabRegister.style.color =
-        '#16A34A';
-
-    tabRegister.style.background =
-        '#FFFFFF';
-
-    tabRegister.style.borderBottomColor =
-        '#16A34A';
-
-
-    if (title) {
-
-      title.innerText =
-          'Tạo Tài Khoản Mới';
-    }
-
-
-    if (subtitle) {
-
-      subtitle.innerText =
-          'Bắt đầu sử dụng SkillRental';
-    }
-  }
+  if (window.SkillRentalAuthModal?.switchTab) window.SkillRentalAuthModal.switchTab(tab);
 }
-
 
 // Alias cũ
 function switchGlobalAuthTab(tab) {
@@ -2227,6 +1452,7 @@ function redirectAfterLogin(user) {
     window.location.href = 'admin.html';
   } else {
     // Customer
+    if (typeof syncGuestCartToServer === 'function') syncGuestCartToServer();
     const navbar = document.getElementById('navbar-placeholder');
     if (navbar) {
       navbar.innerHTML = renderCustomerNavbar('home');
@@ -2239,287 +1465,11 @@ function redirectAfterLogin(user) {
 }
 
 // ============================================================
-// LOGIN - ĐỒNG BỘ VỚI INDEX
-// ============================================================
+// The login, registration, Google, forgot-password, and verification handlers are
+// provided by auth-client.js, the same shared implementation used by index.html.
+function handleGlobalLogin(event) { return window.handleModalLogin?.(event); }
+function handleGlobalRegister(event) { return window.handleModalRegister?.(event); }
 
-async function handleModalLogin(e) {
-  e.preventDefault();
-
-  const email =
-      document
-          .getElementById('loginEmail')
-          .value
-          .trim();
-
-  const password =
-      document
-          .getElementById('loginPassword')
-          .value;
-
-  const submitBtn =
-      document.getElementById('loginSubmitBtn');
-
-  if (!email || !password) {
-    showToast(
-        'Đăng Nhập Thất Bại',
-        'Vui lòng nhập đầy đủ email và mật khẩu.',
-        'error'
-    );
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = `
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        Đang xác thực...
-    `;
-
-  try {
-    const response =
-        await fetch(
-            `${API_BASE}/api/auth/login`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                email,
-                password
-              })
-            }
-        );
-
-    const text = await response.text();
-    let data = {};
-
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch (parseError) {
-      console.error('Login API trả về không phải JSON:', text);
-      throw new Error(`Server trả về dữ liệu không hợp lệ (${response.status})`);
-    }
-
-    if (response.ok && data.success && data.user) {
-      const saved = setCurrentCustomer(data.user);
-      if (!saved) {
-        throw new Error('Không thể lưu phiên đăng nhập.');
-      }
-
-      showToast(
-          'Đăng Nhập Thành Công!',
-          `Chào mừng ${data.user.name || 'bạn'} đã quay trở lại.`,
-          'success'
-      );
-
-      closeAuthModal();
-
-      setTimeout(() => {
-        redirectAfterLogin(data.user);
-      }, 300);
-      return;
-    } else {
-      showToast(
-          'Đăng Nhập Thất Bại',
-          data.message || 'Sai email hoặc mật khẩu!',
-          'error'
-      );
-    }
-  } catch (error) {
-    console.error('Không thể kết nối máy chủ đăng nhập:', error);
-    showToast('Không thể đăng nhập', 'Không kết nối được máy chủ. Vui lòng thử lại khi server hoạt động.', 'error');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `
-            <i class="fa-solid fa-arrow-right-to-bracket"></i>
-            Đăng Nhập Ngay
-        `;
-  }
-}
-
-// Alias để tương thích nếu chỗ khác đang gọi
-function handleGlobalLogin(e) {
-  return handleModalLogin(e);
-}
-
-// ============================================================
-// REGISTER - ĐỒNG BỘ VỚI INDEX
-// ============================================================
-
-async function handleModalRegister(e) {
-  e.preventDefault();
-
-  const name =
-      document
-          .getElementById('regName')
-          .value
-          .trim();
-
-  const email =
-      document
-          .getElementById('regEmail')
-          .value
-          .trim();
-
-  const phone =
-      document
-          .getElementById('regPhone')
-          .value
-          .trim();
-
-  const password =
-      document
-          .getElementById('regPassword')
-          .value;
-
-  const role =
-      document.querySelector('input[name="regRole"]:checked')?.value || 'Customer';
-
-  const submitBtn =
-      document.getElementById('registerSubmitBtn');
-
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = `
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        Đang tạo tài khoản...
-    `;
-
-  try {
-    if (!window.SkillAuth) throw new Error('Firebase Authentication chưa sẵn sàng.');
-    const result = await SkillAuth.register({ name, email, phone, password, role });
-    if (!result.success) {
-      showToast('Đăng Ký Thất Bại', result.message || 'Không thể tạo tài khoản!', 'error');
-      return;
-    }
-    if (result.verifyEmail) {
-      const emailLabel = document.getElementById('verifyNoticeEmail');
-      const loginEmail = document.getElementById('loginEmail');
-      const verifyMessage = document.getElementById('verifyNoticeMessage');
-      if (emailLabel) emailLabel.textContent = result.email || email;
-      if (loginEmail) loginEmail.value = result.email || email;
-      if (verifyMessage && !result.verificationSent) {
-        verifyMessage.textContent = 'Firebase chưa gửi được email kích hoạt. Bấm “Gửi Lại Email Xác Nhận” bên dưới; sau khi nhận thư, nhấn liên kết xác minh rồi quay lại đăng nhập.';
-      }
-      showToast(result.verificationSent ? 'Đã gửi email kích hoạt' : 'Chưa gửi được email kích hoạt', result.message || 'Hãy mở email, nhấn liên kết xác minh rồi quay lại đăng nhập.', result.verificationSent ? 'success' : 'warning');
-      switchAuthTab('verify');
-      return;
-    }
-    showToast('Tạo tài khoản thành công', result.message || 'Đăng ký thành công.', 'success');
-    closeAuthModal();
-  } catch (error) {
-    console.error('Không thể đăng ký tài khoản:', error);
-    showToast('Không thể đăng ký', error.message || 'Vui lòng thử lại khi có kết nối.', 'error');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `
-            <i class="fa-solid fa-user-plus"></i>
-            Hoàn Tất Đăng Ký
-        `;
-  }
-}
-
-
-// Alias cũ
-function handleGlobalRegister(e) {
-
-  return handleModalRegister(e);
-}
-
-
-// ============================================================
-// GOOGLE SIGN-IN CHO CUSTOMER MODAL
-// ============================================================
-
-async function handleGoogleLogin(e, isRegister = false) {
-  if (e) e.preventDefault();
-
-  const googleBtn = isRegister
-      ? document.getElementById('registerGoogleBtn')
-      : document.getElementById('loginGoogleBtn');
-
-  const origContent = googleBtn ? googleBtn.innerHTML : '';
-  if (googleBtn) {
-    googleBtn.disabled = true;
-    googleBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kết nối Google...';
-  }
-
-  try {
-    if (!window.SkillAuth || typeof window.SkillAuth.loginWithGoogle !== 'function') {
-      throw new Error('Tính năng đăng nhập Google chưa được kích hoạt hoặc chưa tải xong. Vui lòng tải lại trang.');
-    }
-
-    const selectedRole = isRegister
-      ? (document.querySelector('input[name="regRole"]:checked')?.value || 'Customer')
-      : undefined;
-
-    const data = await window.SkillAuth.loginWithGoogle(selectedRole);
-
-    if (data.success && data.user) {
-      setCurrentCustomer(data.user);
-      showToast('Đăng Nhập Thành Công!', `Chào mừng ${data.user.name || 'bạn'}.`, 'success');
-      closeAuthModal();
-      setTimeout(() => {
-        redirectAfterLogin(data.user);
-      }, 300);
-      return;
-    }
-
-    if (data.code === 'NO_PROFILE' && data.googleUser) {
-      switchAuthTab('register');
-      const regName = document.getElementById('regName');
-      const regEmail = document.getElementById('regEmail');
-      const regPhone = document.getElementById('regPhone');
-      if (regName) regName.value = data.googleUser.name || '';
-      if (regEmail) { regEmail.value = data.googleUser.email || ''; regEmail.readOnly = true; }
-      if (regPhone) regPhone.value = data.googleUser.phone || '';
-
-      const pwdField = document.getElementById('regPassword');
-      if (pwdField) {
-        const pwdGroup = pwdField.closest('div');
-        if (pwdGroup) pwdGroup.style.display = 'none';
-        pwdField.removeAttribute('required');
-      }
-
-      const form = document.getElementById('registerForm');
-      if (form) {
-        form.onsubmit = async (evt) => {
-          evt.preventDefault();
-          const role = document.querySelector('input[name="regRole"]:checked')?.value || 'Customer';
-          data.googleUser.phone = document.getElementById('regPhone')?.value?.trim();
-          data.googleUser.name = document.getElementById('regName')?.value?.trim();
-          const res = await window.SkillAuth.registerGoogleProfile(role, data.googleUser);
-          if (res.success && res.user) {
-            setCurrentCustomer(res.user);
-            showToast('Tạo Tài Khoản Thành Công!', `Chào mừng bạn với vai trò ${role}.`, 'success');
-            closeAuthModal();
-            setTimeout(() => redirectAfterLogin(res.user), 300);
-          } else {
-            showToast('Đăng Ký Thất Bại', res.message || 'Không thể tạo tài khoản!', 'error');
-          }
-        };
-      }
-      showToast('Chọn vai trò', 'Vui lòng chọn vai trò để hoàn tất tài khoản Google.', 'info');
-      return;
-    }
-
-    showToast('Đăng Nhập Thất Bại', data.message || 'Lỗi xác thực Google.', 'error');
-  } catch (err) {
-    console.error('Google Sign-In Error:', err);
-    if (err.code === 'auth/popup-closed-by-user' || (err.message && err.message.includes('popup-closed'))) {
-      showToast('Đã hủy', 'Bạn đã đóng cửa sổ đăng nhập Google.', 'info');
-    } else {
-      showToast('Lỗi Đăng Nhập', err.message || 'Không thể đăng nhập bằng Google. Vui lòng thử lại.', 'error');
-    }
-  } finally {
-    if (googleBtn) {
-      googleBtn.disabled = false;
-      googleBtn.innerHTML = origContent;
-    }
-  }
-}
-
-
-// ============================================================
 // QUICK LOGIN - GIỐNG INDEX
 // ============================================================
 
@@ -2668,20 +1618,11 @@ window.switchAuthTab =
 window.switchGlobalAuthTab =
     switchGlobalAuthTab;
 
-window.handleModalLogin =
-    handleModalLogin;
-
 window.handleGlobalLogin =
     handleGlobalLogin;
 
-window.handleModalRegister =
-    handleModalRegister;
-
 window.handleGlobalRegister =
     handleGlobalRegister;
-
-window.handleGoogleLogin =
-    handleGoogleLogin;
 
 window.quickFillAndLogin =
     quickFillAndLogin;
@@ -2728,7 +1669,7 @@ async function loadFavoriteProviderIds() {
   }
   try {
     // Local storage can retain a stale role or account ID. Ask the authenticated
-    // API which profile the Firebase token actually belongs to before loading
+    // API which profile the MySQL access token actually belongs to before loading
     // customer-only data.
     const session = await apiRequest('/api/auth/me');
     if (!session.success || !session.user) {
@@ -3000,38 +1941,107 @@ window.toggleFloatingChat = toggleFloatingChat;
 window.handleSendFloatingMessage = handleSendFloatingMessage;
 window.openChatWithProvider = openChatWithProvider;
 
+// ============================================================
+// GIỎ HÀNG (TRƯỜNG HỢP 1: KHÁCH VÃNG LAI & TRƯỜNG HỢP 2: ĐÃ ĐĂNG NHẬP)
+// ============================================================
+const GUEST_CART_KEY = 'SKILLRENTAL_GUEST_CART';
 
-// ============================================================
-// AI ASPECT-BASED SENTIMENT BADGE HELPER
-// Hiển thị khung nhỏ phân tích cảm xúc (Tích cực / Tiêu cực / Khen-Chê)
-// ============================================================
-function renderAiBadge(aiAnalysis) {
-  if (!aiAnalysis) return '';
-  const sent = aiAnalysis.overallSentiment || 'neutral';
-  let bg = '#F0FDF4', border = '#BBF7D0', color = '#15803D', label = 'Tích cực', icon = '<i class="fa-solid fa-circle-check" style="color:#16a34a;margin-right:5px;"></i>';
-  if (sent === 'neg') {
-    bg = '#FEF2F2'; border = '#FECACA'; color = '#B91C1C'; label = 'Tiêu cực'; icon = '<i class="fa-solid fa-circle-xmark" style="color:#dc2626;margin-right:5px;"></i>';
-  } else if (sent === 'mixed') {
-    bg = '#FFFBEB'; border = '#FDE68A'; color = '#B45309'; label = 'Khen - Chê đan xen'; icon = '<i class="fa-solid fa-circle-half-stroke" style="color:#d97706;margin-right:5px;"></i>';
-  } else if (sent === 'neutral') {
-    bg = '#F1F5F9'; border = '#CBD5E1'; color = '#475569'; label = 'Trung tính'; icon = '<i class="fa-solid fa-circle-info" style="color:#64748b;margin-right:5px;"></i>';
+function getGuestCart() {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
   }
-
-  const aspects = Array.isArray(aiAnalysis.aspects) ? aiAnalysis.aspects : [];
-  const aspectChips = aspects.map(a => {
-    const isP = a.sentiment === 'pos', isN = a.sentiment === 'neg';
-    const cColor = isP ? '#15803D' : isN ? '#B91C1C' : '#64748B';
-    const cBg = isP ? '#DCFCE7' : isN ? '#FEE2E2' : '#F1F5F9';
-    const sign = isP ? 'Khen' : isN ? 'Chê' : '~';
-    const name = a.aspectName || a.aspect;
-    return '<span style="display:inline-flex;align-items:center;padding:2px 7px;border-radius:9999px;font-size:11px;font-weight:600;color:' + cColor + ';background:' + cBg + ';margin-left:4px;border:1px solid rgba(0,0,0,0.05);">' + name + ': ' + sign + '</span>';
-  }).join('');
-
-  return '<div class="ai-sentiment-box" style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;padding:4px 10px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;font-size:12px;font-weight:700;color:' + color + ';margin-top:6px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">' +
-    icon +
-    '<span>' + label + '</span>' +
-    aspectChips +
-  '</div>';
 }
 
-window.renderAiBadge = renderAiBadge;
+function saveGuestCart(items) {
+  try {
+    localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+  } catch (e) {
+    console.warn('Lỗi lưu giỏ hàng khách vãng lai:', e);
+  }
+  refreshCustomerCartBadge();
+}
+
+async function addToCart(productId, quantity = 1, productData = {}) {
+  const qty = Math.max(1, Math.min(99, Number(quantity) || 1));
+  const user = getCurrentCustomer();
+
+  // Trường hợp 1: Khách vãng lai (Chưa đăng nhập) -> Lưu vào LocalStorage
+  if (!user || user.role !== 'Customer') {
+    const guestItems = getGuestCart();
+    const existing = guestItems.find(i => (i.product_id === productId || i.serviceId === productId));
+    if (existing) {
+      existing.quantity = Math.min(99, (Number(existing.quantity) || 1) + qty);
+      existing.hours = existing.quantity;
+    } else {
+      guestItems.push({
+        id: `GUEST_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        product_id: productId,
+        serviceId: productId,
+        quantity: qty,
+        hours: qty,
+        serviceTitle: productData.name || productData.title || 'Dịch vụ',
+        price: Number(productData.price) || 0,
+        providerId: productData.providerId || '',
+        providerName: productData.providerName || '',
+        thumbnail: productData.thumbnail || ''
+      });
+    }
+    saveGuestCart(guestItems);
+    showToast('Đã thêm vào giỏ hàng!', 'Sản phẩm đã được lưu vào giỏ hàng trên trình duyệt của bạn.', 'success');
+    return { success: true, guest: true };
+  }
+
+  // Trường hợp 2: Đã đăng nhập -> Gửi request lên Server Database (cart_items / booking-list)
+  try {
+    const res = await apiRequest('/api/cart', {
+      method: 'POST',
+      body: {
+        product_id: productId,
+        serviceId: productId,
+        quantity: qty,
+        hours: qty
+      }
+    });
+    if (res.success) {
+      showToast('Đã thêm vào giỏ hàng!', res.message || 'Sản phẩm đã được lưu vào CSDL của bạn.', 'success');
+      refreshCustomerCartBadge();
+      return res;
+    } else {
+      showToast('Không thể thêm', res.message || 'Vui lòng thử lại.', 'error');
+      return res;
+    }
+  } catch (err) {
+    showToast('Lỗi', err.message || 'Không kết nối được server.', 'error');
+    return { success: false };
+  }
+}
+
+// Đồng bộ giỏ hàng tạm từ LocalStorage lên Server sau khi đăng nhập thành công
+async function syncGuestCartToServer() {
+  const user = getCurrentCustomer();
+  if (!user || user.role !== 'Customer') return;
+  const guestItems = getGuestCart();
+  if (!guestItems.length) return;
+
+  try {
+    const res = await apiRequest('/api/cart/sync', {
+      method: 'POST',
+      body: { items: guestItems }
+    });
+    if (res.success) {
+      localStorage.removeItem(GUEST_CART_KEY);
+      refreshCustomerCartBadge();
+      console.log('[Cart] Đã hợp nhất giỏ hàng tạm lên server thành công.');
+    }
+  } catch (err) {
+    console.warn('[Cart] Chưa thể đồng bộ giỏ hàng tạm:', err.message);
+  }
+}
+
+window.getGuestCart = getGuestCart;
+window.saveGuestCart = saveGuestCart;
+window.addToCart = addToCart;
+window.syncGuestCartToServer = syncGuestCartToServer;

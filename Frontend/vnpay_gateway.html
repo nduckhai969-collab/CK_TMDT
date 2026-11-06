@@ -460,7 +460,10 @@
         </div>
 
         <button type="button" class="btn-action-vnpay" onclick="completePayment('VNBANK')">
-          <i class="fa-solid fa-lock"></i> Xác Nhận Thanh Toán Thẻ ATM
+          <i class="fa-solid fa-lock"></i> Xác Nhận Thanh Toán Thẻ ATM (Thành công - Mã 00)
+        </button>
+        <button type="button" class="btn-cancel" style="margin-top:8px; border-color:#EF4444; color:#DC2626;" onclick="completePaymentWithCode('51', 'VNBANK')">
+          <i class="fa-solid fa-triangle-exclamation"></i> Thử nghiệm Thẻ Lỗi: 9704191333333333 (Không đủ số dư - Test Rollback kho)
         </button>
       </div>
 
@@ -565,6 +568,32 @@
       selectedBank = code;
       document.querySelectorAll('.bank-card').forEach(c => c.classList.remove('selected'));
       el.classList.add('selected');
+    }
+
+    async function completePaymentWithCode(code = '00', channel = 'VNBANK') {
+      const btn = event.currentTarget;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang xử lý...';
+      try {
+        const res = await fetch('/api/payments/vnpay/simulate-complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            txnRef: txnRef,
+            responseCode: code,
+            bankCode: channel === 'VNBANK' ? selectedBank : channel
+          })
+        });
+        const data = await res.json();
+        if (data.redirectUrl) {
+          window.location.href = data.redirectUrl;
+        } else {
+          window.location.href = `/customer_orders.html?payment=${code === '00' ? 'success' : 'failed'}`;
+        }
+      } catch (err) {
+        alert('Lỗi kết nối cổng thanh toán: ' + err.message);
+        btn.disabled = false;
+      }
     }
 
     async function completePayment(channel) {

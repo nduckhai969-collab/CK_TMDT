@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancelRequest, processArbitrateCancel, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
 const { createNotification, notifyProvider } = require('../services/notificationService');
 const vnpay = require('../services/vnpayService');
 const { startGatewayCheckout, startGatewayRetry, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
@@ -137,6 +137,104 @@ router.get('/', requireCustomer, (req, res) => {
     success: true,
     total: orders.length,
     orders
+  });
+});
+
+// ============================================================================
+// CHỨC NĂNG 9: XEM LỊCH SỬ MUA HÀNG (GET /orders/history)
+// SQL TƯƠNG ĐƯƠNG:
+// SELECT o.id, o.total_price, o.status, o.created_at, p.name as product_name, p.image
+// FROM orders o
+// JOIN order_items oi ON o.id = oi.order_id
+// JOIN products p ON oi.product_id = p.id
+// WHERE o.user_id = ?
+// ORDER BY o.created_at DESC;
+// ============================================================================
+router.get('/history', requireSignedIn, (req, res) => {
+  const userId = req.session?.userId || req.authUser?.id || req.authUser?.uid;
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để xem lịch sử mua hàng.' });
+  }
+
+  // Tự động đồng bộ các đơn yêu cầu (job) nếu có
+  syncPendingJobOrders(userId, req.authUser?.uid);
+
+  const ordersCol = db.getCollection('orders') || [];
+  const orderItemsCol = db.getCollection('order_items') || [];
+  const servicesCol = db.getCollection('services') || [];
+  const productsCol = db.getCollection('products') || [];
+
+  const isOwner = (cid) => cid === userId || (req.authUser?.uid && cid === req.authUser.uid) || (req.authUser?.id && cid === req.authUser.id);
+
+  // Lọc danh sách đơn hàng của người dùng hiện tại
+  const userOrders = ordersCol.filter(o => isOwner(o.user_id) || isOwner(o.customerId));
+
+  // Chuỗi trạng thái chuẩn Enum:
+  // PENDING_PAYMENT -> PAID -> PROCESSING -> SHIPPED -> DELIVERED -> CANCELLED
+  const normalizeStatus = (o) => {
+    const raw = String(o.status || o.orderStatus || '').toUpperCase();
+    if (raw === 'CANCELLED' || raw === 'CANCEL' || o.orderStatus === 'cancelled') return 'CANCELLED';
+    if (raw === 'DELIVERED' || raw === 'COMPLETED' || o.orderStatus === 'completed' || o.escrowStatus === 'escrow_released') return 'DELIVERED';
+    if (raw === 'SHIPPED' || o.orderStatus === 'delivered' || o.orderStatus === 'shipped') return 'SHIPPED';
+    if (raw === 'PROCESSING' || o.orderStatus === 'in_progress') return 'PROCESSING';
+    if (raw === 'PAID' || o.paymentStatus === 'paid' || o.escrowStatus === 'escrow_held') return 'PAID';
+    return 'PENDING_PAYMENT';
+  };
+
+  // Thực hiện JOIN: orders -> order_items -> products / services
+  const history = userOrders.map(o => {
+    const oId = o.id;
+    const items = orderItemsCol.filter(oi => String(oi.order_id) === String(oId));
+
+    let itemsJoined = [];
+    if (items.length > 0) {
+      itemsJoined = items.map(oi => {
+        const prod = servicesCol.find(p => p.id === oi.product_id) || productsCol.find(p => p.id === oi.product_id) || {};
+        return {
+          product_id: oi.product_id,
+          product_name: prod.title || prod.name || oi.product_name || 'Dịch vụ / Sản phẩm',
+          price: Number(oi.price_at_purchase || prod.price || 0),
+          quantity: Number(oi.quantity || 1),
+          image: prod.thumbnail || prod.image || prod.cover || prod.avatar || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300'
+        };
+      });
+    } else {
+      const prod = servicesCol.find(p => p.id === o.serviceId) || productsCol.find(p => p.id === o.serviceId) || {};
+      itemsJoined = [{
+        product_id: o.serviceId || 'SVC_GENERAL',
+        product_name: o.serviceTitle || prod.title || prod.name || 'Dịch vụ cung cấp',
+        price: Number(o.price || o.totalPrice || o.total_price || 0),
+        quantity: 1,
+        image: prod.thumbnail || prod.image || o.serviceThumbnail || 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300'
+      }];
+    }
+
+    const firstItem = itemsJoined[0] || {};
+    const createdAt = o.created_at || o.createdAt || o.date || new Date().toISOString();
+
+    return {
+      id: o.id,
+      user_id: o.user_id || o.customerId || userId,
+      total_price: Number(o.total_price || o.totalPrice || o.price || 0),
+      status: normalizeStatus(o),
+      created_at: createdAt,
+      product_name: firstItem.product_name || 'Dịch vụ',
+      image: firstItem.image || '',
+      items: itemsJoined,
+      shipping_address: o.shipping_address || o.customerAddress || 'Hồ Chí Minh, Việt Nam',
+      provider_id: o.providerId || '',
+      provider_name: o.providerName || '',
+      escrow_status: o.escrowStatus || ''
+    };
+  });
+
+  // ORDER BY o.created_at DESC
+  history.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  res.json({
+    success: true,
+    total: history.length,
+    orders: history
   });
 });
 
@@ -344,7 +442,7 @@ router.post('/', requireCustomer, (req, res) => {
     .filter(t => t.type === 'deposit' || t.type === 'refund')
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
   const totalDeductions = userTxns
-    .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+    .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw' || t.type === 'refund_reversal')
     .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
   const ledgerBalance = Math.max(0, totalDeposits - totalDeductions);
   const realBalance = Math.max(userBalance, ledgerBalance);
@@ -542,13 +640,47 @@ router.put('/:id/cancel', requireSignedIn, (req, res) => {
     const order = processCancelOrder(req.params.id, req.authUser.id, req.authUser.role, req.body.reason);
     res.json({
       success: true,
-      message: order.orderStatus === 'disputed'
+      message: order.cancellationRequest?.status === 'pending'
+        ? 'Đã gửi yêu cầu hủy. Đơn chỉ được hủy và hoàn tiền sau khi bên còn lại chấp thuận.'
+        : order.orderStatus === 'disputed'
         ? 'Đơn hàng đã chuyển sang tranh chấp. Tiền ký quỹ được tạm khóa chờ Admin xử lý.'
         : order.paymentStatus === 'cancelled'
           ? 'Đơn hàng chờ thanh toán đã được hủy. Không có khoản tiền nào bị trừ.'
           : 'Đơn hàng đã được hủy. Tiền ký quỹ đã hoàn vào ví khách hàng.',
       order
     });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+// Provider phản hồi yêu cầu hủy: chấp thuận (hoàn 100%) hoặc từ chối (→ Admin phân xử)
+// Body: { decision: 'approve' | 'reject', note: string }
+router.put('/:id/cancel-respond', requireRole('Provider'), (req, res) => {
+  const { decision, note } = req.body;
+  if (!decision) {
+    return res.status(400).json({ success: false, message: 'Thiếu trường "decision" (approve | reject).' });
+  }
+  try {
+    const order = processRespondCancelRequest(req.params.id, req.authUser.id, decision, note);
+    const message = decision === 'approve'
+      ? 'Đã chấp thuận yêu cầu hủy. Đơn hàng kết thúc và tiền ký quỹ hoàn 100% cho khách.'
+      : 'Đã từ chối yêu cầu hủy. Đơn hàng chuyển Admin phân xử — tiền ký quỹ vẫn được giữ nguyên.';
+    res.json({ success: true, message, order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/:id/cancellation-response', requireSignedIn, (req, res) => {
+  const decision = req.body.approve === true ? 'approve' : 'reject';
+  const note = req.body.reason || req.body.note || '';
+  try {
+    const order = processRespondCancelRequest(req.params.id, req.authUser.id, decision, note);
+    const message = decision === 'approve'
+      ? 'Đã chấp thuận yêu cầu hủy. Đơn hàng kết thúc và tiền ký quỹ hoàn 100% cho khách.'
+      : 'Đã từ chối yêu cầu hủy. Đơn hàng chuyển Admin phân xử — tiền ký quỹ vẫn được giữ nguyên.';
+    res.json({ success: true, message, order });
   } catch (err) {
     res.status(err.status || 400).json({ success: false, message: err.message });
   }

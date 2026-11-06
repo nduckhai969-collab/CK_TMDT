@@ -1,7 +1,8 @@
-// Xác thực bằng Firebase ID token (header: Authorization: Bearer <token>)
+// Xác thực bằng Session Cookie (session_id) hoặc Firebase ID token (Authorization: Bearer <token>)
 // và phân quyền theo role lưu trong collection "users".
 const db = require('../data/db');
 const { auth } = require('../firebase');
+const sessionStore = require('../data/sessionStore');
 
 function nextUserId(users) {
   const max = users.reduce((m, u) => {
@@ -18,12 +19,60 @@ function bearerToken(req) {
 
 /**
  * Middleware xác thực.
+ * - Hỗ trợ cả 2 cơ chế:
+ *   1. Traditional Session Cookie (session_id) từ req.cookies
+ *   2. Token Bearer / devUserId (cho tương thích các client hiện có)
  * - allowNoProfile: cho phép token hợp lệ nhưng chưa có hồ sơ (dùng cho /register)
  * - allowUnverified: cho phép email chưa xác nhận (dùng cho /register)
- * Thành công: req.firebaseUser (token đã giải mã), req.authUser (hồ sơ trong Firestore)
+ * Thành công: req.authUser (hồ sơ trong DB), req.session (dữ liệu session)
  */
 function authenticate({ allowNoProfile = false, allowUnverified = false } = {}) {
   return async (req, res, next) => {
+    // ------------------------------------------------------------------------
+    // 1. KIỂM TRA SESSION COOKIE TRUYỀN THỐNG (HttpOnly Cookie: session_id)
+    // ------------------------------------------------------------------------
+    const sessionId = (req.cookies && req.cookies.session_id) || (req.headers && req.headers['x-session-id']);
+    if (sessionId) {
+      const session = sessionStore.getSession(sessionId);
+      if (session && session.userId) {
+        const users = db.getCollection('users') || [];
+        const profile = users.find(u => u.id === session.userId || (u.email && u.email.toLowerCase() === String(session.email).toLowerCase()));
+
+        if (profile) {
+          if (profile.status === 'locked') {
+            return res.status(403).json({
+              success: false,
+              code: 'ACCOUNT_LOCKED',
+              message: `Tài khoản đã bị tạm khóa: ${profile.lockReason || 'Liên hệ Admin'}`
+            });
+          }
+
+          if (!allowUnverified && profile.is_active === false) {
+            return res.status(403).json({
+              success: false,
+              code: 'EMAIL_NOT_VERIFIED',
+              message: 'Tài khoản chưa được kích hoạt email. Vui lòng kiểm tra hộp thư kích hoạt.'
+            });
+          }
+
+          req.authUser = profile;
+          req.session = session;
+          req.session.userId = session.userId || profile.id;
+          req.session.userRole = (session.role || profile.role || '').toLowerCase();
+          req.firebaseUser = {
+            uid: profile.uid || profile.id,
+            email: profile.email,
+            email_verified: profile.is_active !== false,
+            name: profile.name
+          };
+          return next();
+        }
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // 2. FALLBACK: BEARER TOKEN HOẶC DEV USER ID (Cho client Firebase / scripts)
+    // ------------------------------------------------------------------------
     const token = bearerToken(req);
     if (!token) {
       const devUserId = req.headers['x-user-id'] || req.query.userId;
@@ -123,6 +172,7 @@ function authenticate({ allowNoProfile = false, allowUnverified = false } = {}) 
         spentOrEarned: '0đ',
         balance: 0,
         status: 'active',
+        is_active: true,
         avatar: decoded.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
       };
       users.push(newProf);
@@ -202,7 +252,6 @@ function authenticate({ allowNoProfile = false, allowUnverified = false } = {}) 
           return next();
         }
       }
-      // Nếu người dùng đang thao tác trong kênh Provider và gửi x-user-id hợp lệ, cho phép quyền Provider
       if (devUserId) {
         req.authUser = { ...profile, role: 'Provider' };
         return next();
@@ -240,8 +289,18 @@ function compose(first, second) {
 
 function checkRole(roles, message) {
   return (req, res, next) => {
-    if (!roles.includes(req.authUser && req.authUser.role)) {
-      return res.status(403).json({ success: false, message });
+    const roleList = roles.map(r => String(r).toLowerCase());
+    const currentRole = String(
+      (req.session && (req.session.userRole || req.session.role)) || 
+      (req.authUser && req.authUser.role) || 
+      ''
+    ).toLowerCase();
+
+    if (!roleList.includes(currentRole)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: message || "Từ chối truy cập! Bạn không có quyền truy cập khu vực này." 
+      });
     }
     next();
   };

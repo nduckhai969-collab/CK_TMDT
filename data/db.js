@@ -685,7 +685,7 @@ const { firestore } = require('../firebase');
 
 // Collection ngoài INITIAL_DATABASE (tạo trong lúc chạy) cũng phải khai báo ở đây,
 // nếu không server sẽ không nạp lại chúng từ Firestore sau khi khởi động.
-const EXTRA_COLLECTIONS = ['favoriteProviders', 'comments', 'notifications', 'walletTransactions', 'bookingLists'];
+const EXTRA_COLLECTIONS = ['favoriteProviders', 'comments', 'notifications', 'walletTransactions', 'bookingLists', 'order_items', 'payment_transactions', 'cart_items'];
 const COLLECTIONS = Array.from(new Set([...Object.keys(INITIAL_DATABASE), ...EXTRA_COLLECTIONS]));
 
 function stable(value) {

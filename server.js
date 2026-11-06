@@ -1,4 +1,5 @@
 require('dotenv').config();
+const mysqlDb = require('./data/mysql');
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -16,6 +17,8 @@ const adminRoutes = require('./routes/adminRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const bookingListRoutes = require('./routes/bookingListRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const { requireAdmin } = require('./routes/customerAuth');
 const db = require('./data/db');
 
@@ -25,20 +28,47 @@ const PORT = process.env.PORT || 3000;
 // Khai báo biến server ở đây để hàm shutdown có thể truy cập được (Sửa lỗi Scope)
 let server; 
 
-// 1. CORS Middleware - BẮT BUỘC ĐẶT TRƯỚC TẤT CẢ ROUTES để hỗ trợ WebStorm (port 63342), Live Server (port 5500)
+// 1. CORS Middleware - Hỗ trợ Cookie Credentials cho Session truyền thống và các cổng dev (Live Server, WebStorm)
 const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
 app.use(cors({
-  // Không cấu hình CORS_ORIGINS => cho phép tất cả (chỉ nên dùng khi dev)
-  origin: allowedOrigins.length ? allowedOrigins : '*',
+  origin: function (origin, callback) {
+    if (!origin || !allowedOrigins.length || allowedOrigins.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      callback(null, true);
+    } else {
+      callback(null, origin);
+    }
+  },
+  credentials: true, // Bắt buộc để trình duyệt nhận và gửi Cookie session_id
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id']
 }));
 
-// 2. Body Parser
+// 2. Cookie Parser Middleware (Thuần Node.js - Tự động bóc tách req.cookies)
+app.use((req, res, next) => {
+  req.cookies = {};
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    cookieHeader.split(';').forEach(c => {
+      const idx = c.indexOf('=');
+      if (idx !== -1) {
+        const key = c.slice(0, idx).trim();
+        const val = c.slice(idx + 1).trim();
+        try {
+          req.cookies[key] = decodeURIComponent(val);
+        } catch (_) {
+          req.cookies[key] = val;
+        }
+      }
+    });
+  }
+  next();
+});
+
+// 3. Body Parser
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// 3. Avatar là file riêng trên backend; Firestore chỉ lưu URL của file.
+// 4. Avatar là file riêng trên backend; Firestore chỉ lưu URL của file.
 const avatarStorageDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'));
 app.use('/uploads', express.static(avatarStorageDir, {
   fallthrough: false,
@@ -50,23 +80,132 @@ app.use('/uploads', express.static(avatarStorageDir, {
   }
 }));
 
-// 4. Phục vụ tĩnh toàn bộ thư mục Frontend (HTML, CSS, JS, Images)
+// 5. Phục vụ tĩnh toàn bộ thư mục Frontend (HTML, CSS, JS, Images)
 app.use(express.static(path.join(__dirname, 'Frontend')));
 
-// 5. API Routes
+// Điều hướng xem chi tiết sản phẩm / dịch vụ: /products/:id
+app.get('/products/:id', (req, res) => {
+  res.redirect(`/customer_service_detail.html?id=${encodeURIComponent(req.params.id)}`);
+});
+
+// 6. API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', requireAdmin, adminRoutes);
+app.use('/admin', requireAdmin, adminRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/orders', orderRoutes);
+app.use('/order', orderRoutes);
 app.use('/api/booking-list', bookingListRoutes);
+app.use('/api/cart', bookingListRoutes);
+app.use('/api/products', serviceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/analytics', analyticsRoutes);
+app.use('/api/email', emailRoutes);
+
+// ============================================================================
+// CHỨC NĂNG 7: TÍCH HỢP CỔNG THANH TOÁN VNPAY & CHECKOUT TRUYỀN THỐNG
+// ============================================================================
+const sessionStore = require('./data/sessionStore');
+const vnpayService = require('./services/vnpayService');
+const crypto = require('crypto');
+
+// Hàm bổ trợ sắp xếp tham số A-Z theo yêu cầu của VNPay
+function sortObject(obj) {
+  let sorted = {};
+  let str = [];
+  let key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      str.push(encodeURIComponent(key));
+    }
+  }
+  str.sort();
+  for (key = 0; key < str.length; key++) {
+    sorted[str[key]] = encodeURIComponent(obj[decodeURIComponent(str[key])]).replace(/%20/g, "+");
+  }
+  return sorted;
+}
+
+// ROUTE 1: TẠO URL THANH TOÁN (REDIRECT SANG VNPAY)
+app.post(['/order/create-vnpay-url', '/api/orders/create-vnpay-url', '/api/payment/create-vnpay-url'], (req, res) => {
+  // 1. Kiểm tra session xem người dùng đã đăng nhập chưa
+  const sessionId = (req.cookies && req.cookies.session_id) || (req.headers && req.headers['x-session-id']);
+  const session = sessionId ? sessionStore.getSession(sessionId) : null;
+  const userId = (session && session.userId) || req.session?.userId || req.headers['x-user-id'];
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: "Chưa đăng nhập" });
+  }
+
+  const { orderId, amount } = req.body;
+  const orders = db.getCollection('orders') || [];
+  const order = orders.find(o => o.id === orderId);
+
+  let finalAmount = Number(amount);
+  if (!finalAmount && order) {
+    finalAmount = Number(order.total_price || order.escrowDeposit || order.price || 0);
+  }
+  if (!finalAmount || finalAmount <= 0) {
+    finalAmount = 50000;
+  }
+
+  const cfg = vnpayService.getConfig();
+  const tmnCode = cfg.tmnCode || 'COCOS001';
+  const secretKey = cfg.hashSecret || 'RAIQUIVYHUANZVOMLMWUNYGUMGNHUZZE';
+  const returnUrl = cfg.returnUrl || `http://localhost:${PORT}/vnpay-return`;
+  const ipAddr = vnpayService.normalizeIp(req.headers['x-forwarded-for'] || req.socket.remoteAddress);
+  const createDate = vnpayService.formatVnpDate(new Date());
+
+  const txnRef = orderId || `DH${Date.now()}`;
+  let vnp_Params = {
+    'vnp_Version': '2.1.0',
+    'vnp_Command': 'pay',
+    'vnp_TmnCode': tmnCode,
+    'vnp_Locale': 'vn',
+    'vnp_CurrCode': 'VND',
+    'vnp_TxnRef': txnRef,
+    'vnp_OrderInfo': 'Thanh toan don hang #' + txnRef,
+    'vnp_OrderType': 'other',
+    'vnp_Amount': Math.round(finalAmount) * 100, // Nhân 100 theo quy định VNPay
+    'vnp_ReturnUrl': returnUrl,
+    'vnp_IpAddr': ipAddr,
+    'vnp_CreateDate': createDate
+  };
+
+  vnp_Params = sortObject(vnp_Params);
+  const signData = Object.keys(vnp_Params).map(k => `${k}=${vnp_Params[k]}`).join('&');
+  let hmac = crypto.createHmac("sha512", secretKey);
+  let signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
+  vnp_Params['vnp_SecureHash'] = signed;
+
+  let finalUrl = cfg.url + '?' + Object.keys(vnp_Params).map(k => `${k}=${vnp_Params[k]}`).join('&');
+  return res.status(200).json({ success: true, paymentUrl: finalUrl });
+});
+
+// ROUTE 2: ĐÓN NHẬN KẾT QUẢ NGẦM (API IPN) - PUBLIC (Không check auth session)
+app.all(['/api/payment/vnpay-ipn', '/api/payments/vnpay-ipn', '/api/payment/vnpay/ipn'], (req, res) => {
+  const queryData = req.method === 'POST' ? req.body : req.query;
+  const result = paymentRoutes.processGatewayResult(queryData);
+  return res.status(200).json({ RspCode: result.code, Message: result.message });
+});
+
+// ROUTE 3: RETURN URL ĐIỀU HƯỚNG NGƯỜI DÙNG QUAY VỀ
+app.get(['/vnpay-return', '/order/vnpay-return'], (req, res) => {
+  const queryStr = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(`/api/payments/vnpay/return${queryStr}`);
+});
+
+app.use('/order', orderRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // ============================================================================
 // PUBLIC SEED ENDPOINT — No auth required
@@ -169,7 +308,7 @@ db.init().then(() => {
     console.log(`  - Khám Phá Kỹ Năng:    http://localhost:${PORT}/customer.html`);
     console.log(`  - Kênh Provider:       http://localhost:${PORT}/dashboard.html`);
     console.log(`  - Cổng Quản Trị:       http://localhost:${PORT}/admin.html`);
-    console.log(`  - Hỗ trợ CORS:         WebStorm, LiveServer, Fetch All Origins`);
+    console.log(`  - Xác thực Session:    Cookie session_id (HttpOnly, SameSite=Lax)`);
     console.log(`====================================================`);
   });
 

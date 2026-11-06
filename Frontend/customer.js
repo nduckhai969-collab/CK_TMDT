@@ -36,30 +36,30 @@ const CUSTOMER_SESSION_KEY = 'SKILLRENTAL_CUSTOMER_USER';
 // ============================================================
 
 function getCurrentCustomer() {
-  const cRaw = localStorage.getItem(CUSTOMER_SESSION_KEY);
-  if (cRaw) {
-    try {
-      const cUser = JSON.parse(cRaw);
-      if (cUser && cUser.id && !['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(cUser.id) && cUser.role === 'Customer') {
-        return cUser;
-      }
-    } catch (_) {}
-  }
   const raw = localStorage.getItem(SESSION_KEY);
-
   if (!raw) {
+    // A role-specific cache is only a mirror; it must not resurrect a signed-out user.
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
     return null;
   }
 
   try {
     const user = JSON.parse(raw);
     if (!user || !user.id || ['USR100', 'USR_CUSTOMER_LOCAL', 'USR_PROVIDER_LOCAL'].includes(user.id)) {
+      localStorage.removeItem(CUSTOMER_SESSION_KEY);
       (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
       return null;
     }
+    if (user.role !== 'Customer') {
+      localStorage.removeItem(CUSTOMER_SESSION_KEY);
+      return null;
+    }
+    // Keep the legacy customer cache aligned with the canonical active session.
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
     return user;
   } catch (error) {
     console.error('Session data không hợp lệ:', error);
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
     (window.SkillAuth ? SkillAuth.logout() : localStorage.removeItem(SESSION_KEY));
     return null;
   }
@@ -187,7 +187,7 @@ async function apiRequest(
     }
 
 
-    const requestOptions = { ...options, headers };
+    const requestOptions = { credentials: 'include', ...options, headers };
     const body = requestOptions.body;
     if (body && typeof body === 'object') {
       const prototype = Object.getPrototypeOf(body);
@@ -708,7 +708,19 @@ async function refreshCustomerCartBadge() {
   const badge = document.getElementById('customerCartCount');
   if (!badge) return;
   const customer = getCurrentCustomer();
+  let count = 0;
   if (!customer || customer.role !== 'Customer') {
+    try {
+      const raw = localStorage.getItem('SKILLRENTAL_GUEST_CART');
+      const items = raw ? JSON.parse(raw) : [];
+      count = items.reduce((sum, item) => sum + (Number(item.quantity || item.hours) || 1), 0);
+    } catch (_) {}
+    if (!badge.isConnected) return;
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.style.display = count > 0 ? 'flex' : 'none';
+    badge.setAttribute('aria-label', `${count} dịch vụ trong giỏ`);
+    return;
+  }
     badge.style.display = 'none';
     return;
   }
@@ -749,7 +761,21 @@ async function refreshCustomerAccountSummary() {
   }
   const freshUser = { ...cachedUser, ...result.user };
   setCurrentCustomer(freshUser);
+  syncCustomerNavbarIdentity(freshUser);
   balanceLabel.textContent = `Số dư: ${formatVND(Number(freshUser.balance) || 0)}`;
+}
+
+function syncCustomerNavbarIdentity(user) {
+  const accountButton = document.getElementById('customerAccountButton');
+  if (accountButton) {
+    const avatar = accountButton.children[0];
+    const name = accountButton.children[1];
+    if (avatar) avatar.outerHTML = renderCustomerNavbarAvatar(user, 28);
+    if (name) name.textContent = user.name || 'Tài khoản';
+  }
+  const accountMenu = document.getElementById('customerAccountMenu');
+  const menuName = accountMenu?.firstElementChild?.firstElementChild;
+  if (menuName) menuName.textContent = user.name || 'Tài khoản';
 }
 
 async function toggleCustomerNotifications() {
@@ -2213,6 +2239,7 @@ function redirectAfterLogin(user) {
     window.location.href = 'admin.html';
   } else {
     // Customer
+    if (typeof syncGuestCartToServer === 'function') syncGuestCartToServer();
     const navbar = document.getElementById('navbar-placeholder');
     if (navbar) {
       navbar.innerHTML = renderCustomerNavbar('home');
@@ -2266,6 +2293,7 @@ async function handleModalLogin(e) {
             `${API_BASE}/api/auth/login`,
             {
               method: 'POST',
+              credentials: 'include',
               headers: {
                 'Content-Type': 'application/json'
               },
@@ -2284,6 +2312,16 @@ async function handleModalLogin(e) {
     } catch (parseError) {
       console.error('Login API trả về không phải JSON:', text);
       throw new Error(`Server trả về dữ liệu không hợp lệ (${response.status})`);
+    }
+
+    if (data.code === 'EMAIL_NOT_VERIFIED') {
+      const emailLabel = document.getElementById('verifyNoticeEmail');
+      const loginEmail = document.getElementById('loginEmail');
+      if (emailLabel) emailLabel.textContent = email;
+      if (loginEmail) loginEmail.value = email;
+      showToast('Chưa Kích Hoạt', data.message || 'Vui lòng kiểm tra email hoặc terminal server để kích hoạt.', 'warning');
+      if (typeof switchAuthTab === 'function') switchAuthTab('verify');
+      return;
     }
 
     if (response.ok && data.success && data.user) {
@@ -2953,3 +2991,108 @@ window.initFloatingChat = initFloatingChat;
 window.toggleFloatingChat = toggleFloatingChat;
 window.handleSendFloatingMessage = handleSendFloatingMessage;
 window.openChatWithProvider = openChatWithProvider;
+
+// ============================================================
+// GIỎ HÀNG (TRƯỜNG HỢP 1: KHÁCH VÃNG LAI & TRƯỜNG HỢP 2: ĐÃ ĐĂNG NHẬP)
+// ============================================================
+const GUEST_CART_KEY = 'SKILLRENTAL_GUEST_CART';
+
+function getGuestCart() {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveGuestCart(items) {
+  try {
+    localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+  } catch (e) {
+    console.warn('Lỗi lưu giỏ hàng khách vãng lai:', e);
+  }
+  refreshCustomerCartBadge();
+}
+
+async function addToCart(productId, quantity = 1, productData = {}) {
+  const qty = Math.max(1, Math.min(99, Number(quantity) || 1));
+  const user = getCurrentCustomer();
+
+  // Trường hợp 1: Khách vãng lai (Chưa đăng nhập) -> Lưu vào LocalStorage
+  if (!user || user.role !== 'Customer') {
+    const guestItems = getGuestCart();
+    const existing = guestItems.find(i => (i.product_id === productId || i.serviceId === productId));
+    if (existing) {
+      existing.quantity = Math.min(99, (Number(existing.quantity) || 1) + qty);
+      existing.hours = existing.quantity;
+    } else {
+      guestItems.push({
+        id: `GUEST_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        product_id: productId,
+        serviceId: productId,
+        quantity: qty,
+        hours: qty,
+        serviceTitle: productData.name || productData.title || 'Dịch vụ',
+        price: Number(productData.price) || 0,
+        providerId: productData.providerId || '',
+        providerName: productData.providerName || '',
+        thumbnail: productData.thumbnail || ''
+      });
+    }
+    saveGuestCart(guestItems);
+    showToast('Đã thêm vào giỏ hàng!', 'Sản phẩm đã được lưu vào giỏ hàng trên trình duyệt của bạn.', 'success');
+    return { success: true, guest: true };
+  }
+
+  // Trường hợp 2: Đã đăng nhập -> Gửi request lên Server Database (cart_items / booking-list)
+  try {
+    const res = await apiRequest('/api/cart', {
+      method: 'POST',
+      body: {
+        product_id: productId,
+        serviceId: productId,
+        quantity: qty,
+        hours: qty
+      }
+    });
+    if (res.success) {
+      showToast('Đã thêm vào giỏ hàng!', res.message || 'Sản phẩm đã được lưu vào CSDL của bạn.', 'success');
+      refreshCustomerCartBadge();
+      return res;
+    } else {
+      showToast('Không thể thêm', res.message || 'Vui lòng thử lại.', 'error');
+      return res;
+    }
+  } catch (err) {
+    showToast('Lỗi', err.message || 'Không kết nối được server.', 'error');
+    return { success: false };
+  }
+}
+
+// Đồng bộ giỏ hàng tạm từ LocalStorage lên Server sau khi đăng nhập thành công
+async function syncGuestCartToServer() {
+  const user = getCurrentCustomer();
+  if (!user || user.role !== 'Customer') return;
+  const guestItems = getGuestCart();
+  if (!guestItems.length) return;
+
+  try {
+    const res = await apiRequest('/api/cart/sync', {
+      method: 'POST',
+      body: { items: guestItems }
+    });
+    if (res.success) {
+      localStorage.removeItem(GUEST_CART_KEY);
+      refreshCustomerCartBadge();
+      console.log('[Cart] Đã hợp nhất giỏ hàng tạm lên server thành công.');
+    }
+  } catch (err) {
+    console.warn('[Cart] Chưa thể đồng bộ giỏ hàng tạm:', err.message);
+  }
+}
+
+window.getGuestCart = getGuestCart;
+window.saveGuestCart = saveGuestCart;
+window.addToCart = addToCart;
+window.syncGuestCartToServer = syncGuestCartToServer;

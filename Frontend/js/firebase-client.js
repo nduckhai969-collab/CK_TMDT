@@ -47,7 +47,7 @@
     if (!url.includes('/api/')) return nativeFetch(input, init);
 
     await authReady;
-    const options = { ...(init || {}) };
+    const options = { credentials: 'include', ...(init || {}) };
     const headers = new Headers(options.headers || {});
     const user = fbAuth.currentUser;
     if (user && !headers.has('Authorization') && localStorage.getItem(SESSION_KEY)) {
@@ -92,6 +92,7 @@
       const res = await nativeFetch(path, {
         method,
         headers,
+        credentials: 'include',
         body: body ? JSON.stringify(body) : undefined
       });
       return await res.json();
@@ -284,8 +285,42 @@
         return { success: false, message: 'Email này đã được sử dụng trên hệ thống! Vui lòng chọn Đăng Nhập hoặc Lấy Lại Mật Khẩu.' };
       }
 
-      let cred = null;
-      let fbUser = null;
+      // 1. Gọi backend API đăng ký theo mô hình truyền thống (băm mật khẩu, is_active = false, sinh verification_token)
+      const res = await callApi('/api/auth/register', 'POST', null, {
+        name: name.trim(),
+        email: cleanEmail,
+        phone: phone ? phone.trim() : '',
+        password: password,
+        role: role === 'Provider' ? 'Provider' : 'Customer'
+      });
+
+      if (!res || !res.success) {
+        return {
+          success: false,
+          message: res?.message || 'Đăng ký thất bại. Vui lòng thử lại!'
+        };
+      }
+
+      const userToSync = (res && res.user) ? res.user : {
+        name: name.trim(),
+        email: cleanEmail,
+        phone: phone ? phone.trim() : '',
+        role: role === 'Provider' ? 'Provider' : 'Customer',
+        authProvider: 'email'
+      };
+
+      const syncedUser = syncUserToAdminState(userToSync);
+
+      return {
+        success: true,
+        verifyEmail: true,
+        verificationSent: true,
+        email: cleanEmail,
+        verifyUrl: res.verifyUrl,
+        user: syncedUser,
+        message: res.message || `Đăng ký thành công! Hệ thống đã gửi liên kết kích hoạt tới ${cleanEmail}. Vui lòng mở email hoặc terminal server để kích hoạt tài khoản.`
+      };
+      /*
       try {
         cred = await fbAuth.createUserWithEmailAndPassword(email.trim(), password);
         fbUser = cred.user;
@@ -349,17 +384,54 @@
           ? `Firebase đã gửi liên kết kích hoạt tới ${email.trim()}. Hãy mở email, nhấn liên kết xác minh rồi quay lại đăng nhập.`
           : fbUser
             ? `Tài khoản đã được tạo nhưng chưa gửi được email kích hoạt tới ${email.trim()}. Hãy dùng nút Gửi lại email xác nhận.`
-            : `Tài khoản demo đã được tạo cho ${email.trim()}; Firebase không khả dụng nên không có email kích hoạt.`
+            : 'demo' */ {
       };
     },
 
-    // B. ĐĂNG NHẬP (Kiểm tra emailVerified -> Lấy token -> Đồng bộ hồ sơ -> Cập nhật Admin)
+
+    // B. ĐĂNG NHẬP (Mô hình truyền thống: Khởi tạo Session ID & Cookie)
     async login(email, password) {
       if (!email || !password) {
         return { success: false, message: 'Vui lòng nhập đầy đủ email và mật khẩu!' };
       }
 
-      let cred;
+      const cleanEmail = String(email).trim().toLowerCase();
+
+      // 1. Gửi request Đăng Nhập truyền thống lên Backend API
+      const res = await callApi('/api/auth/login', 'POST', null, {
+        email: cleanEmail,
+        password: password
+      });
+
+      if (!res || !res.success) {
+        if (res && res.code === 'EMAIL_NOT_VERIFIED') {
+          return {
+            success: false,
+            code: 'EMAIL_NOT_VERIFIED',
+            email: cleanEmail,
+            message: res.message || ('Tài khoản chưa được kích hoạt! Hãy bấm vào liên kết trong email xác nhận đã gửi tới ' + cleanEmail + '.')
+          };
+        }
+        return {
+          success: false,
+          code: res?.code,
+          message: res?.message || 'Email hoặc mật khẩu không chính xác!'
+        };
+      }
+
+      // 2. Nhận thông tin user & session_id cookie đã được Server đính kèm Set-Cookie
+      const userToSync = res.user;
+      const finalUser = syncUserToAdminState(userToSync);
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(finalUser));
+      if (finalUser.role === 'Provider') {
+        localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(finalUser));
+      } else if (finalUser.role === 'Customer') {
+        localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(finalUser));
+      }
+
+      window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: finalUser } }));
+      return { success: true, user: finalUser, sessionId: res.session_id };
       try {
         cred = await fbAuth.signInWithEmailAndPassword(email.trim(), password);
         await cred.user.reload();
@@ -412,7 +484,8 @@
         return { success: false, message: 'Vui lòng nhập email cần gửi lại xác nhận!' };
       }
 
-      // Cách 1: Nếu có mật khẩu -> đăng nhập tạm rồi gửi qua Client SDK
+      // Gọi endpoint server tạo verification link theo chuẩn truyền thống
+      return await callApi('/api/auth/resend-verification', 'POST', null, { email: cleanEmail });
       if (password) {
         try {
           const cred = await fbAuth.signInWithEmailAndPassword(cleanEmail, password);
@@ -507,9 +580,14 @@
       }
     },
 
-    // G. ĐĂNG XUẤT TOÀN DIỆN
+    // G. ĐĂNG XUẤT TOÀN DIỆN (Hủy Session Server & Xóa Cookie)
     async logout() {
+      try {
+        await callApi('/api/auth/logout', 'POST');
+      } catch (_) {}
       localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem('SKILLRENTAL_CUSTOMER_USER');
+      localStorage.removeItem('SKILLRENTAL_PROVIDER_USER');
       try { await fbAuth.signOut(); } catch (_) {}
       window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: null } }));
       window.dispatchEvent(new CustomEvent('skillrental:logout'));
@@ -618,6 +696,11 @@
       const res = await callApi('/api/auth/profile', 'PUT', token, { name, phone, address, avatar, role });
       if (res.success && res.user) {
         localStorage.setItem(SESSION_KEY, JSON.stringify(res.user));
+        if (res.user.role === 'Customer') {
+          localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(res.user));
+        } else if (res.user.role === 'Provider') {
+          localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(res.user));
+        }
         window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: res.user } }));
       }
       return res;

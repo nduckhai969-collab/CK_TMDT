@@ -5,12 +5,11 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 
 const db = require('../data/db');
-const { auth, firestore } = require('../firebase');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireProvider, requireSignedIn } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, checkAutoReleaseOrders } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancellation, checkAutoReleaseOrders } = require('../services/orderService');
 const { isVisibleToProvider } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 
@@ -24,16 +23,6 @@ function getMyProvider(req) {
       db.saveCollection('providers', providers);
     }
   }
-
-  const defaultSlots = [
-    { day: 'T2', morning: true, afternoon: true, evening: true },
-    { day: 'T3', morning: true, afternoon: true, evening: true },
-    { day: 'T4', morning: true, afternoon: true, evening: true },
-    { day: 'T5', morning: true, afternoon: true, evening: true },
-    { day: 'T6', morning: true, afternoon: true, evening: true },
-    { day: 'T7', morning: true, afternoon: true, evening: false },
-    { day: 'CN', morning: false, afternoon: false, evening: false }
-  ];
 
   if (!p) {
     p = {
@@ -49,29 +38,39 @@ function getMyProvider(req) {
       completedOrders: 0,
       createdAt: formatDateTime(new Date()),
       verified: false,
-      hourlyRate: 200000,
-      specialty: 'Chuyên gia kỹ năng & Tư vấn',
-      category: 'IT',
-      skills: ['Chuyên môn', 'Làm việc chuyên nghiệp'],
-      availabilityStatus: 'ready',
-      workingHours: 'T2-T7, 08:00-20:00',
-      schedule: { mode: 'ready', slots: defaultSlots },
+      hourlyRate: null,
+      specialty: '',
+      category: '',
+      skills: [],
+      availabilityStatus: 'inactive',
+      profileCompleted: false,
+      workingHours: '',
+      schedule: { mode: 'inactive', slots: [] },
       dateExceptions: {}
     };
     providers.unshift(p);
     db.saveCollection('providers', providers);
   } else {
     let changed = false;
+    const templateSkills = Array.isArray(p.skills) && p.skills.length === 2 && p.skills[0] === 'Chuyên môn' && p.skills[1] === 'Làm việc chuyên nghiệp';
+    if (!p.profileCompleted && p.specialty === 'Chuyên gia kỹ năng & Tư vấn' && p.category === 'IT' && templateSkills && Number(p.hourlyRate) === 200000) {
+      p.specialty = '';
+      p.category = '';
+      p.skills = [];
+      p.hourlyRate = null;
+      p.availabilityStatus = 'inactive';
+      changed = true;
+    }
     if (!p.schedule || !Array.isArray(p.schedule.slots) || p.schedule.slots.length === 0) {
-      p.schedule = { mode: p.availabilityStatus || 'ready', slots: defaultSlots };
+      p.schedule = { mode: p.availabilityStatus || 'inactive', slots: [] };
       changed = true;
     }
     if (!p.availabilityStatus) {
       p.availabilityStatus = 'ready';
       changed = true;
     }
-    if (!p.workingHours) {
-      p.workingHours = 'T2-T7, 08:00-20:00';
+    if (p.workingHours === undefined || p.workingHours === null) {
+      p.workingHours = '';
       changed = true;
     }
     if (changed) {
@@ -97,7 +96,7 @@ router.get('/stats', async (req, res) => {
   res.json({
     success: true,
     stats: {
-      activeProviders: providers.length,
+      activeProviders: providers.filter(provider => provider.verified === true).length,
       skillsCount: skills.size + services.length,
       requestsCreated: jobs.length,
       avgRating: ratings.length ? `${(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)}/5` : '0/5'
@@ -107,6 +106,7 @@ router.get('/stats', async (req, res) => {
 
 router.get('/featured', async (req, res) => {
   const providers = [...(await db.getCollectionFresh('providers'))]
+    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
     .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
@@ -114,6 +114,7 @@ router.get('/featured', async (req, res) => {
 
 router.get('/newest', async (req, res) => {
   const providers = [...(await db.getCollectionFresh('providers'))]
+    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
     .sort((a, b) => new Date(b.createdAt || b.joinDate || 0) - new Date(a.createdAt || a.joinDate || 0));
   if (providers.every(p => !p.createdAt && !p.joinDate)) providers.reverse();
   res.json({ success: true, providers: providers.slice(0, 6) });
@@ -131,7 +132,7 @@ function detectImageType(buffer) {
    PROVIDER DASHBOARD APIs
 ========================================================== */
 
-router.get('/me', requireProvider, (req, res) => {
+router.get('/me', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
   const providers = db.getCollection('providers') || [];
   const pIdx = providers.findIndex(p => p.id === provider.id);
@@ -154,7 +155,7 @@ router.get('/me', requireProvider, (req, res) => {
       db.saveCollection('providers', providers);
     }
   }
-  const services = (db.getCollection('services') || []).filter(s => s.providerId === provider.id);
+  const services = ((await db.getCollectionFresh('services')) || []).filter(s => s.providerId === provider.id);
   return res.json({ success: true, provider, services });
 });
 
@@ -164,7 +165,14 @@ router.put('/profile', requireProvider, async (req, res) => {
   const index = providers.findIndex(p => p.id === provider.id);
   
   if (index !== -1) {
-    const { name, phone, avatar, cover, bio, specialty, category, location, skills, hourlyRate, bankAccount, bankName } = req.body || {};
+    const { name, phone, avatar, cover, bio, specialty, category, location, skills, hourlyRate, hourlyEnabled, minWeeklyHours, bankAccount, bankName, profileCompleted, experiences, education, certifications, portfolioLinks, languages, responseRate, onTimeRate, maxProjects, leadTime } = req.body || {};
+    const cleanSkills = Array.isArray(skills) ? skills.map(skill => String(skill).trim()).filter(Boolean) : (typeof skills === 'string' ? skills.split(',').map(skill => skill.trim()).filter(Boolean) : null);
+    if (profileCompleted) {
+      const price = Number(hourlyRate);
+      if (!String(specialty || '').trim() || !String(category || '').trim() || !String(location || '').trim() || !Number.isFinite(price) || price < 50000 || !cleanSkills?.length || !String(bio || '').trim()) {
+        return res.status(400).json({ success: false, message: 'Vui lòng nhập chức danh, lĩnh vực, khu vực, giá giờ, kỹ năng và phần giới thiệu trước khi hoàn tất hồ sơ.' });
+      }
+    }
     if (name !== undefined && String(name).trim()) providers[index].name = String(name).trim();
     if (phone !== undefined) providers[index].phone = String(phone).trim();
     if (avatar !== undefined && avatar) providers[index].avatar = avatar;
@@ -173,10 +181,31 @@ router.put('/profile', requireProvider, async (req, res) => {
     if (specialty !== undefined) providers[index].specialty = specialty;
     if (category !== undefined) providers[index].category = category;
     if (location !== undefined) providers[index].location = location;
-    if (skills !== undefined) providers[index].skills = Array.isArray(skills) ? skills : skills.split(',').map(s => s.trim());
+    if (skills !== undefined) providers[index].skills = cleanSkills || [];
     if (hourlyRate !== undefined) providers[index].hourlyRate = Number(hourlyRate);
+    if (hourlyEnabled !== undefined) providers[index].hourlyEnabled = Boolean(hourlyEnabled);
+    if (minWeeklyHours !== undefined) providers[index].minWeeklyHours = Number(minWeeklyHours) || null;
+    if (experiences !== undefined) providers[index].experiences = Array.isArray(experiences) ? experiences : [];
+    if (education !== undefined) providers[index].education = Array.isArray(education) ? education : [];
+    if (certifications !== undefined) providers[index].certifications = Array.isArray(certifications) ? certifications : [];
+    if (portfolioLinks !== undefined) providers[index].portfolioLinks = portfolioLinks && typeof portfolioLinks === 'object' ? portfolioLinks : {};
+    if (languages !== undefined) providers[index].languages = languages;
+    if (responseRate !== undefined) providers[index].responseRate = Number(responseRate);
+    if (onTimeRate !== undefined) providers[index].onTimeRate = Number(onTimeRate);
+    if (maxProjects !== undefined) providers[index].maxProjects = Number(maxProjects);
+    if (leadTime !== undefined) providers[index].leadTime = Number(leadTime);
     if (bankAccount !== undefined) providers[index].bankAccount = bankAccount;
     if (bankName !== undefined) providers[index].bankName = bankName;
+    if (profileCompleted === true) {
+      providers[index].profileCompleted = true;
+      if (providers[index].verified !== true) {
+        providers[index].availabilityStatus = 'inactive';
+        providers[index].reviewStatus = 'pending';
+        delete providers[index].rejectReason;
+      } else {
+        providers[index].availabilityStatus = 'ready';
+      }
+    }
     
     db.saveCollection('providers', providers);
 
@@ -191,22 +220,6 @@ router.put('/profile', requireProvider, async (req, res) => {
       if (location !== undefined) users[uIndex].address = location;
       if (bio !== undefined) users[uIndex].bio = bio;
       db.saveCollection('users', users);
-    }
-
-    // Đồng bộ lên Firebase Auth
-    if (req.firebaseUser && req.firebaseUser.uid) {
-      try {
-        const fbUpdate = {};
-        if (name && String(name).trim()) fbUpdate.displayName = String(name).trim();
-        if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
-          fbUpdate.photoURL = avatar;
-        }
-        if (Object.keys(fbUpdate).length > 0) {
-          await auth.updateUser(req.firebaseUser.uid, fbUpdate);
-        }
-      } catch (err) {
-        console.warn('[provider] Cập nhật Firebase Auth profile thất bại:', err.message);
-      }
     }
 
     res.json({ success: true, message: 'Cập nhật hồ sơ thành công!', provider: providers[index] });
@@ -252,7 +265,7 @@ const handleProviderAvatarUpload = async (req, res) => {
       index = 0;
     }
 
-    const uid = String(req.firebaseUser?.uid || req.authUser?.id || provider.id).replace(/[^a-zA-Z0-9_-]/g, '');
+    const uid = String(req.authUser?.id || provider.id).replace(/[^a-zA-Z0-9_-]/g, '');
     let avatar = customUrl;
     if (fileBuffer) {
       if (!extension) {
@@ -279,13 +292,6 @@ const handleProviderAvatarUpload = async (req, res) => {
     if (uIndex !== -1) {
       users[uIndex].avatar = avatar;
       db.saveCollection('users', users);
-    }
-
-    // Đồng bộ lên Firebase Auth
-    if (req.firebaseUser && req.firebaseUser.uid) {
-      try {
-        await auth.updateUser(req.firebaseUser.uid, { photoURL: avatar });
-      } catch (_) {}
     }
 
     // Xóa file cũ
@@ -349,7 +355,7 @@ const handleProviderCoverUpload = async (req, res) => {
       index = 0;
     }
 
-    const uid = String(req.firebaseUser?.uid || req.authUser?.id || provider.id).replace(/[^a-zA-Z0-9_-]/g, '');
+    const uid = String(req.authUser?.id || provider.id).replace(/[^a-zA-Z0-9_-]/g, '');
     let cover = customUrl;
 
     if (fileBuffer) {
@@ -404,37 +410,44 @@ const handleProviderCoverUpload = async (req, res) => {
 router.put(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
 router.post(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
 
-router.get('/dashboard/stats', requireProvider, (req, res) => {
+router.get('/dashboard/stats', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
   const orders = db.getCollection('orders') || [];
-  
   const myOrders = orders.filter(o => o.providerId === provider.id && isVisibleToProvider(o));
-  
+  const jobRequests = (await db.getCollectionFresh('jobRequests')) || [];
+  const myApplications = jobRequests.flatMap(job => (job.applicants || []).filter(applicant =>
+    applicant.providerId === provider.id || applicant.providerUserId === req.authUser.id
+  ));
+  const complaints = (db.getCollection('complaints') || []).filter(complaint => complaint.defendantId === provider.id);
+
   const pending = myOrders.filter(o => o.orderStatus === 'pending').length;
   const processing = myOrders.filter(o => o.orderStatus === 'processing').length;
   const completed = myOrders.filter(o => o.orderStatus === 'completed').length;
-  
-  // Tổng doanh thu từ các đơn completed
   const totalRevenue = myOrders
     .filter(o => o.orderStatus === 'completed')
     .reduce((sum, o) => sum + Number(o.price || 0), 0);
-    
+
   res.json({
     success: true,
     stats: {
       pendingOrders: pending,
       processingOrders: processing,
       completedOrders: completed,
+      activeProjectsCount: processing,
+      submittedProposalsCount: myApplications.length,
+      unresolvedComplaintsCount: complaints.filter(complaint => complaint.status !== 'resolved').length,
       totalRevenue,
+      totalRevenueFormatted: `${totalRevenue.toLocaleString('vi-VN')}đ`,
       rating: provider.rating || 5.0,
+      averageRating: provider.rating || 5.0,
       balance: req.authUser.balance || 0
     }
   });
 });
 
-router.get('/me/services', requireProvider, (req, res) => {
+router.get('/me/services', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
-  const services = (db.getCollection('services') || []).filter(s => s.providerId === provider.id);
+  const services = ((await db.getCollectionFresh('services')) || []).filter(s => s.providerId === provider.id);
   res.json({ success: true, services });
 });
 
@@ -507,8 +520,9 @@ function orderAction(handler) {
 router.post('/orders/:id/accept', requireProvider, orderAction(req => processAcceptOrder(req.params.id, req.authUser.id)));
 router.post('/orders/:id/deliver', requireProvider, orderAction(req => processDeliverOrder(req.params.id, req.authUser.id, req.body)));
 router.post('/orders/:id/progress', requireProvider, orderAction(req => processProgressOrder(req.params.id, req.authUser.id, req.body)));
-router.post('/orders/:id/reject', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason || 'Provider từ chối nhận việc')));
-router.post('/orders/:id/cancel', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason || 'Provider hủy đơn hàng')));
+router.post('/orders/:id/reject', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason)));
+router.post('/orders/:id/cancel', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason)));
+router.post('/orders/:id/cancellation-response', requireProvider, orderAction(req => processRespondCancellation(req.params.id, req.authUser.id, 'Provider', req.body.approve === true, req.body.reason)));
 
 // ---- Đánh giá của tôi + trả lời đánh giá ----
 router.get('/me/reviews', requireProvider, (req, res) => {
@@ -564,7 +578,7 @@ router.delete('/:id/favorite', requireCustomer, (req, res) => {
 router.get('/:id/availability', async (req, res) => {
   const providers = await db.getCollectionFresh('providers');
   const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (p.email && p.email.toLowerCase() === req.params.id.toLowerCase()));
-  if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
+  if (!provider || provider.verified !== true) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
   const monthMatch = String(req.query.month || '').match(/^(\d{4})-(\d{2})$/);
   if (!monthMatch) return res.status(400).json({ success: false, message: 'Tháng không hợp lệ.' });
   const year = Number(monthMatch[1]);
@@ -611,7 +625,7 @@ router.get('/:id', async (req, res) => {
     db.getCollectionFresh('providers'), db.getCollectionFresh('services'), db.getCollectionFresh('reviews')
   ]);
   const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (p.email && p.email.toLowerCase() === req.params.id.toLowerCase()));
-  if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
+  if (!provider || provider.verified !== true) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
   const services = allServices.filter(s => s.providerId === provider.id && s.status !== 'inactive');
   const reviews = allReviews.filter(r => r.providerId === provider.id);
   res.json({ success: true, provider, services, reviews });
@@ -886,8 +900,7 @@ router.get('/me/posts', requireProvider, async (req, res) => {
   try {
     const provider = await getMyProviderFresh(req);
     if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
-    const snapshot = await firestore.collection('posts').where('providerId', '==', provider.id).get();
-    const posts = snapshot.docs.map(doc => doc.data())
+    const posts = (await db.getCollectionFresh('posts')).filter(post => post.providerId === provider.id)
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     res.json({ success: true, posts });
   } catch (err) {
@@ -898,8 +911,8 @@ router.get('/me/posts', requireProvider, async (req, res) => {
 
 router.get('/:id/posts', async (req, res) => {
   try {
-    const snapshot = await firestore.collection('posts').where('providerId', '==', req.params.id).get();
-    const posts = snapshot.docs.map(doc => doc.data())
+    const posts = (await db.getCollectionFresh('posts')).filter(post => post.providerId === req.params.id)
+      .filter(post => post.status !== 'draft')
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
     res.json({ success: true, posts });
   } catch (err) {
@@ -930,6 +943,7 @@ router.post('/posts', requireProvider, async (req, res) => {
     category: String(postData.category || '').trim(),
     summary: String(postData.summary || content.slice(0, 150)).trim(),
     content,
+    status: postData.status === 'draft' ? 'draft' : 'published',
     id,
     providerId: provider.id,
     providerName: provider.name,
@@ -938,11 +952,66 @@ router.post('/posts', requireProvider, async (req, res) => {
     likes: 0
   };
   try {
-    await firestore.collection('posts').doc(id).create(post);
+    const posts = await db.getCollectionFresh('posts');
+    posts.unshift(post);
+    await db.saveCollectionAndWait('posts', posts);
     res.status(201).json({ success: true, message: 'Đăng bài thành công', post });
   } catch (err) {
     console.error('[providers] Không lưu được bài đăng:', err.message);
     res.status(503).json({ success: false, message: 'Chưa lưu được bài đăng lên hệ thống. Vui lòng thử lại.' });
+  }
+});
+
+router.put('/posts/:id', requireProvider, async (req, res) => {
+  const postData = req.body || {};
+  const title = String(postData.title || '').trim();
+  const content = String(postData.content || '').trim();
+  if (!title || !content) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập tiêu đề và nội dung bài viết.' });
+  }
+
+  try {
+    const provider = await getMyProviderFresh(req);
+    if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+    const posts = await db.getCollectionFresh('posts');
+    const index = posts.findIndex(item => item.id === req.params.id && item.providerId === provider.id);
+    if (index < 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết của bạn.' });
+    }
+
+    const post = {
+      ...posts[index],
+      title,
+      category: String(postData.category || '').trim(),
+      summary: String(postData.summary || content.slice(0, 150)).trim(),
+      content,
+      status: postData.status === 'draft' ? 'draft' : 'published',
+      updatedAt: new Date().toISOString()
+    };
+    posts[index] = post;
+    await db.saveCollectionAndWait('posts', posts);
+    res.json({ success: true, message: 'Đã cập nhật bài viết.', post });
+  } catch (err) {
+    console.error('[providers] Không cập nhật được bài đăng:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa cập nhật được bài viết. Vui lòng thử lại.' });
+  }
+});
+
+router.delete('/posts/:id', requireProvider, async (req, res) => {
+  try {
+    const provider = await getMyProviderFresh(req);
+    if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+    const posts = await db.getCollectionFresh('posts');
+    const index = posts.findIndex(item => item.id === req.params.id && item.providerId === provider.id);
+    if (index < 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết của bạn.' });
+    }
+    posts.splice(index, 1);
+    await db.saveCollectionAndWait('posts', posts);
+    res.json({ success: true, message: 'Đã xóa bài viết.' });
+  } catch (err) {
+    console.error('[providers] Không xóa được bài đăng:', err.message);
+    res.status(503).json({ success: false, message: 'Chưa xóa được bài viết. Vui lòng thử lại.' });
   }
 });
 
@@ -976,7 +1045,7 @@ router.get('/', async (req, res) => {
     priceRange.max = Math.max(...providerPrices);
   }
 
-  let providers = [...allProviders];
+  let providers = allProviders.filter(provider => provider.profileCompleted !== false && provider.verified === true);
 
   if (category && category !== 'all') {
     const categoryLower = category.toLowerCase().trim();

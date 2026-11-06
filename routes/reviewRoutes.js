@@ -5,7 +5,7 @@ const { requireCustomer, requireProvider } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { replyToReview } = require('../services/reviewService');
 const { predictAspects } = require('../services/aspectInference');
-const REVIEW_ANALYSIS_VERSION = 3;
+const REVIEW_ANALYSIS_VERSION = 4;
 
 const ASPECT_VN = {
   quality: 'Chất lượng',
@@ -37,9 +37,9 @@ function analyzeReviewContent(content, rating) {
 
     // Domain booster cho ngữ cảnh thực tế tiếng Việt
     // 1. Quality
-    if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(xấu|tệ|kém|dở|hỏng|lỗi|sơ sài)/iu.test(lower)) {
+    if (/(web|giao diện|sản phẩm|chất lượng|dịch vụ|thiết kế|code|ảnh)(?:\s+(?!(?:nhưng|tuy nhiên|song|còn|mà)(?:\s|$))[\p{L}\p{N}_]+){0,3}\s+(xấu|tệ|kém|dở|hỏng|lỗi|sơ sài|thất vọng|như hạch)/iu.test(lower)) {
       aspectMap.quality = { aspect: 'quality', sentiment: 'neg', confidence: 92 };
-    } else if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh|dịch vụ)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(đẹp|tốt|chuẩn|xịn|chuyên nghiệp|ưng ý|xuất sắc|rất tốt)/iu.test(lower)) {
+    } else if (/(web|giao diện|sản phẩm|chất lượng|thiết kế|code|ảnh|dịch vụ)(?:\s+(?!(?:nhưng|tuy nhiên|song|còn|mà)(?:\s|$))[\p{L}\p{N}_]+){0,4}\s+(đẹp|tốt|chuẩn|xịn|chuyên nghiệp|ưng ý|xuất sắc|tuyệt vời|hoàn hảo|chất lượng cao|rất tốt)/iu.test(lower)) {
       aspectMap.quality = { aspect: 'quality', sentiment: 'pos', confidence: 92 };
     }
 
@@ -74,22 +74,27 @@ function analyzeReviewContent(content, rating) {
     const aspectList = Object.values(aspectMap);
     const numPos = aspectList.filter(a => a.sentiment === 'pos').length;
     const numNeg = aspectList.filter(a => a.sentiment === 'neg').length;
-    const hasUncertain = aspectList.some(a => a.sentiment === 'uncertain');
 
     // Lời khuyên phủ định mạnh (VETO)
     const hasStrongNegVeto = /(đừng|không nên|k nên|chớ|tẩy chay|tránh xa)\s*(thuê|tuyển|dùng|mua|hợp tác)/i.test(lower) ||
-      /lừa đảo|thất vọng hoàn toàn|quá tệ hại|cạch mặt/i.test(lower);
+      /lừa đảo|thất vọng hoàn toàn|quá tệ hại|cạch mặt|như hạch|bịp/i.test(lower);
+
+    // Cảm xúc tổng thể dự phòng cho lời khen/chê không nhắc rõ một khía cạnh.
+    const globalPositive = /(tốt|hài lòng|tuyệt vời|xuất sắc|ưng ý|đáng tiền|đúng giờ|đúng hẹn|nhiệt tình|chuyên nghiệp|nhanh chóng|recommend|sẽ quay lại)/iu.test(lower);
+    const globalNegative = /(không hài lòng|thất vọng|tệ|kém|dở|xấu|đắt|chậm|như hạch|bịp|lừa đảo|không đáng|cẩu thả|thô lỗ)/iu.test(lower);
+    const negatedPositive = /(?:không|chẳng|chưa)\s+(?:rất\s+)?(?:tốt|hài lòng|đẹp|ưng ý|nhiệt tình|chuyên nghiệp)/iu.test(lower);
+    const negatedNegative = /(?:không|chẳng|chưa)\s+(?:rất\s+)?(?:tệ|xấu|kém|dở|chậm|đắt)/iu.test(lower);
+    const hasPositiveEvidence = numPos > 0 || (globalPositive && !negatedPositive) || negatedNegative;
+    const hasNegativeEvidence = numNeg > 0 || (globalNegative && !negatedNegative) || negatedPositive;
 
     let overallSentiment = 'neutral';
     if (hasStrongNegVeto) {
       overallSentiment = 'neg';
-    } else if (hasUncertain || aspectList.length === 0) {
+    } else if (hasPositiveEvidence && hasNegativeEvidence) {
       overallSentiment = 'neutral';
-    } else if (numPos > 0 && numNeg > 0) {
-      overallSentiment = 'neutral';
-    } else if (numPos > 0) {
+    } else if (hasPositiveEvidence) {
       overallSentiment = 'pos';
-    } else if (numNeg > 0) {
+    } else if (hasNegativeEvidence && !negatedNegative) {
       overallSentiment = 'neg';
     }
 

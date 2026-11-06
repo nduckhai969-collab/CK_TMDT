@@ -5,7 +5,7 @@ const { requireCustomer, requireProvider } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { replyToReview } = require('../services/reviewService');
 const { predictAspects } = require('../services/aspectInference');
-const REVIEW_ANALYSIS_VERSION = 2;
+const REVIEW_ANALYSIS_VERSION = 3;
 
 const ASPECT_VN = {
   quality: 'Chất lượng',
@@ -51,16 +51,16 @@ function analyzeReviewContent(content, rating) {
     }
 
     // 3. Speed
-    if (/(giao hàng|giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(đúng hẹn|nhanh|đúng giờ|sớm|siêu nhanh|cực nhanh)/iu.test(lower)) {
+    if (/(giao hàng|giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi|thực hiện)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(đúng tiến độ|đúng hẹn|nhanh|đúng giờ|sớm|siêu nhanh|cực nhanh)/iu.test(lower)) {
       aspectMap.speed = { aspect: 'speed', sentiment: 'pos', confidence: 91 };
-    } else if (/(giao hàng|giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(chậm|trễ|muộn|chậm trễ|lề mề|delay)/iu.test(lower) || /đến muộn|trễ hẹn/i.test(lower)) {
+    } else if (/(giao hàng|giao|hoàn thành|bàn giao|tiến độ|làm việc|làm|rep|phản hồi|thực hiện)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(chậm|trễ|muộn|chậm trễ|lề mề|delay)/iu.test(lower) || /đến muộn|trễ hẹn/i.test(lower)) {
       aspectMap.speed = { aspect: 'speed', sentiment: 'neg', confidence: 91 };
     }
 
     // 4. Attitude
     if (/(thái độ|phục vụ|hỗ trợ|thợ|chuyên gia|anh|chị|bạn)(?:\s+(?:với khách|rất|quá|khá|cực kỳ|thật sự)){0,2}\s*(kém|tệ|lồi lõm|cáu|khó chịu|bất lịch sự|xúc phạm|coi thường|ngang ngược)/iu.test(lower)) {
       aspectMap.attitude = { aspect: 'attitude', sentiment: 'neg', confidence: 93 };
-    } else if (/(thái độ|phục vụ|hỗ trợ|thợ|chuyên gia|anh|chị|bạn)(?:\s+(?:rất|quá|khá|cực kỳ|thật sự)){0,2}\s*(tốt|nhiệt tình|lịch sự|chu đáo|thân thiện|dễ thương)/iu.test(lower)) {
+    } else if (/(thái độ|phục vụ|hỗ trợ|thợ|chuyên gia|anh|chị|bạn)(?:\s+(?:rất|quá|khá|cực kỳ|thật sự)){0,2}\s*(tốt|tích cực|nhiệt tình|lịch sự|chu đáo|thân thiện|dễ thương)/iu.test(lower)) {
       aspectMap.attitude = { aspect: 'attitude', sentiment: 'pos', confidence: 93 };
     }
 
@@ -84,9 +84,9 @@ function analyzeReviewContent(content, rating) {
     if (hasStrongNegVeto) {
       overallSentiment = 'neg';
     } else if (hasUncertain || aspectList.length === 0) {
-      overallSentiment = 'uncertain';
+      overallSentiment = 'neutral';
     } else if (numPos > 0 && numNeg > 0) {
-      overallSentiment = numNeg > numPos ? 'neg' : 'mixed';
+      overallSentiment = 'neutral';
     } else if (numPos > 0) {
       overallSentiment = 'pos';
     } else if (numNeg > 0) {

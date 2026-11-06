@@ -115,8 +115,8 @@
             Điểm Nổi Bật Của Chuyên Gia:
           </label>
           <div style="display:flex; flex-wrap:wrap; gap:10px;">
-            <span class="tag-choice selected" onclick="toggleTag(this)">Đúng hẹn & đúng cam kết</span>
-            <span class="tag-choice selected" onclick="toggleTag(this)">Chuyên môn cao, sản phẩm chất lượng</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Đúng hẹn & đúng cam kết</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Chuyên môn cao, sản phẩm chất lượng</span>
             <span class="tag-choice" onclick="toggleTag(this)">Giao tiếp lịch thiệp, phản hồi nhanh</span>
             <span class="tag-choice" onclick="toggleTag(this)">Giá cả minh bạch, không phát sinh</span>
             <span class="tag-choice" onclick="toggleTag(this)">Sẵn sàng thuê lại lần sau</span>
@@ -349,7 +349,7 @@
 
         if (res.success) {
           const sent = res.review?.aiAnalysis?.overallSentiment;
-          const sentText = sent === 'pos' ? 'Tích cực (Khen)' : sent === 'neg' ? 'Tiêu cực (Chê)' : sent === 'mixed' ? 'Khen - Chê đan xen' : 'Ghi nhận thành công';
+          const sentText = sent === 'pos' ? 'Tích cực' : sent === 'neg' ? 'Tiêu cực' : 'Trung tính';
           showToast('Đánh Giá Thành Công!', `Mô hình AI: ${sentText}`, 'success');
           setTimeout(() => {
             window.location.href = 'customer_reviews.html';

@@ -256,8 +256,7 @@
         saveSession(user, data.accessToken);
         return { ...data, user };
       } catch (error) {
-        window.location.href = '/api/auth/google';
-        return { success: true, redirecting: true };
+        return { success: false, message: error.message || 'Đăng nhập Google thất bại.' };
       }
     },
     async registerGoogleProfile(role) { return this.loginWithGoogle(role); },

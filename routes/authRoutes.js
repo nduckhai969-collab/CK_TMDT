@@ -4,15 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { randomUUID } = crypto;
+const nodemailer = require('nodemailer');
 const db = require('../data/db');
-const { auth } = require('../firebase');
-const { authenticate, requireSignedIn, requireAdmin } = require('./customerAuth');
-const sessionStore = require('../data/sessionStore');
-const { hashPassword, comparePassword } = require('../utils/password');
-const { passport, findOrCreateGoogleUser, createGoogleSessionAndRedirect } = require('../config/passport');
+const { signToken, hashPassword, verifyPassword } = require('../utils/authTokens');
+const { requireSignedIn, requireAdmin } = require('./customerAuth');
+
+// Đăng ký và đăng nhập bằng tài khoản lưu trong MySQL.
 
 function publicUser(user) {
-  if (!user) return null;
   let bal = user.balance;
   if (user && user.role === 'Customer') {
     const txns = db.getCollection('walletTransactions') || [];
@@ -67,9 +66,7 @@ function publicUser(user) {
     balance: typeof bal === 'number' ? bal : (Number(user.balance) || 0),
     avatar: user.avatar,
     cover: user.cover || '',
-    joinDate: user.joinDate,
-    is_active: user.is_active !== false,
-    status: user.status || 'active'
+    joinDate: user.joinDate
   };
 }
 
@@ -81,6 +78,67 @@ function nextUserId(users) {
   return `USR${String(max + 1).padStart(3, '0')}`;
 }
 
+function dateLabel(date = new Date()) {
+  return String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0') + '/' + date.getFullYear();
+}
+
+async function createProviderProfile(user, dateStr = dateLabel()) {
+  const providers = db.getCollection('providers') || [];
+  const existing = providers.find(item => item.userId === user.id || item.email?.toLowerCase() === user.email?.toLowerCase());
+  if (existing) return;
+  const maxId = providers.reduce((max, item) => Math.max(max, Number((/^PRV(\d+)$/.exec(item.id || '') || [])[1]) || 0), 0);
+  const days = ['T2', 'T3', 'T4', 'T5', 'T6'];
+  providers.unshift({
+    id: 'PRV' + String(maxId + 1).padStart(3, '0'), userId: user.id, name: user.name, email: user.email,
+    phone: user.phone || '', avatar: user.avatar || '', rating: 5, reviews: 0, completedOrders: 0,
+    createdAt: dateStr, verified: false, hourlyRate: null, specialty: '',
+    category: '', skills: [], availabilityStatus: 'inactive', profileCompleted: false,
+    workingHours: 'T2-T7, 08:00-20:00',
+    schedule: { mode: 'ready', slots: days.map(day => ({ day, morning: true, afternoon: true, evening: true })).concat([{ day: 'T7', morning: true, afternoon: true, evening: false }, { day: 'CN', morning: false, afternoon: false, evening: false }]) },
+    dateExceptions: {}
+  });
+  await db.saveCollectionAndWait('providers', providers);
+}
+
+function getMailTransporter() {
+  const smtpUser = String(process.env.SMTP_USER || '').trim();
+  const smtpPassword = String(process.env.SMTP_APP_PASSWORD || '').replace(/\s/g, '');
+  if (!smtpUser || !smtpPassword) throw new Error('SMTP_NOT_CONFIGURED');
+  const port = Number(process.env.SMTP_PORT || 465);
+  return { smtpUser, transporter: nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com', port,
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
+    auth: { user: smtpUser, pass: smtpPassword }
+  }) };
+}
+
+async function sendAccountEmail(to, subject, text, html) {
+  const { smtpUser, transporter } = getMailTransporter();
+  await transporter.sendMail({ from: process.env.SMTP_FROM || `SkillRental <${smtpUser}>`, to, subject, text, html });
+}
+
+async function issueEmailVerification(user) {
+  const existing = db.getCollection('emailVerifications') || [];
+  if (existing.some(item => item.userId === user.id && Date.now() - Date.parse(item.createdAt) < 60000)) return { sent: false, throttled: true };
+  const token = crypto.randomBytes(32).toString('base64url');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const ttlHours = Math.min(Math.max(Number(process.env.EMAIL_VERIFICATION_TTL_HOURS) || 24, 1), 72);
+  const records = existing.filter(item => item.userId !== user.id && Date.parse(item.expiresAt) > Date.now());
+  records.push({ id: tokenHash, userId: user.id, tokenHash, expiresAt: new Date(Date.now() + ttlHours * 3600000).toISOString(), createdAt: new Date().toISOString() });
+  await db.saveCollectionAndWait('emailVerifications', records);
+  const baseUrl = String(process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '');
+  const link = `${baseUrl}/verify.html?mode=verifyEmail&oobCode=${encodeURIComponent(token)}`;
+  try {
+    await sendAccountEmail(user.email, 'Xác nhận email SkillRental',
+      `Xin chào ${user.name},\n\nXác nhận địa chỉ email để kích hoạt tài khoản SkillRental:\n${link}\n\nLiên kết có hiệu lực ${ttlHours} giờ.`,
+      `<p>Xin chào ${String(user.name || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))},</p><p>Nhấn liên kết bên dưới để xác nhận email và kích hoạt tài khoản SkillRental. Liên kết có hiệu lực ${ttlHours} giờ.</p><p><a href="${link}">Xác nhận email</a></p>`);
+    return { sent: true };
+  } catch (error) {
+    await db.saveCollectionAndWait('emailVerifications', records.filter(item => item.tokenHash !== tokenHash)).catch(() => {});
+    throw error;
+  }
+}
+
 function detectImageType(buffer) {
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
   if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'png';
@@ -88,455 +146,184 @@ function detectImageType(buffer) {
   return null;
 }
 
-// ============================================================================
-// 1. ĐĂNG KÝ (GỬI EMAIL XÁC NHẬN) - MÔ HÌNH TRUYỀN THỐNG
-// ============================================================================
+let googleJwksCache = { keys: [], expiresAt: 0 };
+async function verifyGoogleCredential(token, clientId) {
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return null;
+  let header, claims;
+  try {
+    header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+  } catch (_) { return null; }
+  if (header.alg !== 'RS256' || !header.kid) return null;
+
+  if (Date.now() >= googleJwksCache.expiresAt) {
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+    if (!response.ok) throw new Error('Google public signing keys are unavailable.');
+    const body = await response.json();
+    const cacheControl = response.headers.get('cache-control') || '';
+    const maxAge = Number((/max-age=(\d+)/i.exec(cacheControl) || [])[1] || 300);
+    googleJwksCache = { keys: body.keys || [], expiresAt: Date.now() + Math.min(Math.max(maxAge, 60), 3600) * 1000 };
+  }
+
+  let jwk = googleJwksCache.keys.find(key => key.kid === header.kid && key.use === 'sig');
+  if (!jwk) {
+    googleJwksCache.expiresAt = 0;
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+    if (!response.ok) throw new Error('Google public signing keys are unavailable.');
+    const body = await response.json();
+    googleJwksCache = { keys: body.keys || [], expiresAt: Date.now() + 300000 };
+    jwk = googleJwksCache.keys.find(key => key.kid === header.kid && key.use === 'sig');
+  }
+  if (!jwk) return null;
+
+  const signingInput = Buffer.from(`${parts[0]}.${parts[1]}`);
+  const signature = Buffer.from(parts[2], 'base64url');
+  const publicKey = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  if (!crypto.verify('RSA-SHA256', signingInput, publicKey, signature)) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (!['accounts.google.com', 'https://accounts.google.com'].includes(claims.iss) || claims.aud !== clientId ||
+      !claims.sub || !claims.email || claims.email_verified !== true || !claims.exp || claims.exp <= now ||
+      (claims.iat && claims.iat > now + 60)) return null;
+  return claims;
+}
+
+// Đăng ký tài khoản trong MySQL.
 router.post('/register', async (req, res) => {
+  const { name, email, phone, password, role } = req.body || {};
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!name || !String(name).trim() || !cleanEmail || !password) return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ họ tên, email và mật khẩu!' });
+  if (String(name).trim().length > 100 || cleanEmail.length > 100) return res.status(400).json({ success: false, message: 'Họ tên tối đa 100 ký tự và email tối đa 100 ký tự.' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ success: false, message: 'Địa chỉ email không hợp lệ.' });
+  if (String(password).length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+  if (phone && !/^[0-9+\s().-]{8,16}$/.test(String(phone).trim())) return res.status(400).json({ success: false, message: 'Số điện thoại không hợp lệ!' });
+  const users = db.getCollection('users') || [];
+  if (users.some(user => String(user.email || '').trim().toLowerCase() === cleanEmail)) return res.status(409).json({ success: false, message: 'Email này đã được sử dụng trên hệ thống!' });
+  const safeRole = String(role || '').trim().toLowerCase() === 'provider' ? 'Provider' : 'Customer';
+  const now = new Date();
+  const dateStr = String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear();
+  const user = { id: nextUserId(users), name: String(name).trim(), email: cleanEmail, phone: phone ? String(phone).trim() : '', role: safeRole, passwordHash: await hashPassword(password), joinDate: dateStr, spentOrEarned: '0đ', balance: 0, status: 'pending_verification', emailVerified: false, avatar: '', bio: '' };
+  users.push(user); await db.saveCollectionAndWait('users', users);
   try {
-    const { name, email, password, phone, role } = req.body || {};
-
-    if (!name || !String(name).trim() || !email || !String(email).trim()) {
-      return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ họ tên và email!' });
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const users = db.getCollection('users') || [];
-
-    // Kiểm tra xem email đã tồn tại chưa
-    const existingUser = users.find(u => String(u.email || '').toLowerCase() === normalizedEmail);
-    if (existingUser) {
-      if (existingUser.is_active === false && existingUser.verification_token) {
-        // Cho phép gửi lại email kích hoạt nếu tài khoản cũ chưa kích hoạt
-        const verifyUrl = `${req.protocol}://${req.get('host')}/api/auth/verify-email?token=${existingUser.verification_token}`;
-        console.log('====================================================');
-        console.log(`📧 [GỬI LẠI EMAIL KÍCH HOẠT TỚI]: ${normalizedEmail}`);
-        console.log(`🔗 [LINK XÁC NHẬN TÀI KHOẢN]: ${verifyUrl}`);
-        console.log('====================================================');
-
-        return res.status(200).json({
-          success: true,
-          verifyEmail: true,
-          verificationSent: true,
-          email: normalizedEmail,
-          verifyUrl: process.env.NODE_ENV !== 'production' ? verifyUrl : undefined,
-          message: `Email này đã đăng ký nhưng chưa kích hoạt. Chúng tôi đã gửi lại liên kết kích hoạt tới ${normalizedEmail}.`
-        });
-      }
-      return res.status(409).json({ success: false, message: 'Email này đã được sử dụng trên hệ thống!' });
-    }
-
-    // 1. Băm mật khẩu bằng PBKDF2 (hoặc bcrypt)
-    const rawPassword = password || '123456';
-    const passwordHash = hashPassword(rawPassword);
-
-    // 2. Tạo mã verification_token ngẫu nhiên kèm thời gian hết hạn 24 giờ
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-    const safeRole = role === 'Provider' ? 'Provider' : 'Customer';
-    const now = new Date();
-    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-
-    const newId = nextUserId(users);
-    const newUser = {
-      id: newId,
-      name: String(name).trim(),
-      email: normalizedEmail,
-      phone: phone ? String(phone).trim() : '',
-      role: safeRole,
-      password: rawPassword, // Giữ để tương thích dữ liệu cũ
-      password_hash: passwordHash, // Băm mật khẩu theo chuẩn mới
-      is_active: false, // MẶC ĐỊNH LÀ FALSE theo mô hình truyền thống
-      status: 'pending_verification',
-      verification_token: verificationToken,
-      verification_token_expires: tokenExpires,
-      joinDate: dateStr,
-      spentOrEarned: '0đ',
-      balance: 0,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      bio: ''
-    };
-
-    users.push(newUser);
-    db.saveCollection('users', users);
-
-    // Khởi tạo hồ sơ Provider sẵn sàng nếu đăng ký làm Provider
-    if (safeRole === 'Provider') {
-      const providers = db.getCollection('providers') || [];
-      const defaultSlots = [
-        { day: 'T2', morning: true, afternoon: true, evening: true },
-        { day: 'T3', morning: true, afternoon: true, evening: true },
-        { day: 'T4', morning: true, afternoon: true, evening: true },
-        { day: 'T5', morning: true, afternoon: true, evening: true },
-        { day: 'T6', morning: true, afternoon: true, evening: true },
-        { day: 'T7', morning: true, afternoon: true, evening: true },
-        { day: 'CN', morning: true, afternoon: true, evening: false }
-      ];
-      providers.unshift({
-        id: `PRV${newId.slice(3)}`,
-        userId: newId,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        avatar: newUser.avatar,
-        rating: 5.0,
-        reviews: 0,
-        completedOrders: 0,
-        createdAt: dateStr,
-        verified: false,
-        hourlyRate: 200000,
-        specialty: 'Chuyên gia dịch vụ mới',
-        category: 'IT',
-        skills: ['Chuyên môn', 'Làm việc chuyên nghiệp'],
-        availabilityStatus: 'ready',
-        workingHours: 'T2-T7, 08:00-20:00',
-        schedule: { mode: 'ready', slots: defaultSlots },
-        dateExceptions: {}
-      });
-      db.saveCollection('providers', providers);
-    }
-
-    // 3. Hệ thống tạo đường link xác thực kèm token
-    const verifyUrl = `${req.protocol}://${req.get('host')}/api/auth/verify-email?token=${verificationToken}`;
-
-    // In đường dẫn xác thực trực quan ra Terminal để kiểm thử ngay lập tức
-    console.log('====================================================');
-    console.log(`📧 [EMAIL XÁC THỰC SKILLRENTAL]`);
-    console.log(`   - Gửi đến: ${normalizedEmail}`);
-    console.log(`   - Họ tên:  ${newUser.name}`);
-    console.log(`   - Vai trò: ${newUser.role}`);
-    console.log(`   - Link kích hoạt: ${verifyUrl}`);
-    console.log('====================================================');
-
-    return res.status(201).json({
-      success: true,
-      verifyEmail: true,
-      verificationSent: true,
-      email: normalizedEmail,
-      message: `Đăng ký thành công! Chúng tôi đã gửi liên kết kích hoạt đến ${normalizedEmail}. Vui lòng mở email để kích hoạt tài khoản.`,
-      verifyUrl: process.env.NODE_ENV !== 'production' ? verifyUrl : undefined,
-      user: publicUser(newUser)
-    });
-  } catch (err) {
-    console.error('[auth] Lỗi đăng ký:', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đăng ký tài khoản.' });
+    await issueEmailVerification(user);
+  } catch (error) {
+    console.error('[auth] Không gửi được email xác nhận:', error.message);
+    return res.status(503).json({ success: false, code: 'EMAIL_SEND_FAILED', message: 'Tài khoản đang chờ xác nhận nhưng chưa gửi được email. Kiểm tra Gmail SMTP rồi dùng chức năng gửi lại email xác nhận.' });
   }
+  return res.status(201).json({ success: true, verifyEmail: true, verificationSent: true, email: cleanEmail, role: safeRole, message: `Đã gửi email xác nhận tới ${cleanEmail}. Hãy mở email để kích hoạt tài khoản.` });
 });
 
-// Alias: /register-traditional
-router.post('/register-traditional', (req, res, next) => {
-  req.url = '/register';
-  router.handle(req, res, next);
+router.post('/verify-email', async (req, res) => {
+  const token = String(req.body?.token || '');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const records = db.getCollection('emailVerifications') || [];
+  const record = records.find(item => item.tokenHash === tokenHash && Date.parse(item.expiresAt) > Date.now());
+  if (!record) return res.status(400).json({ success: false, message: 'Liên kết xác nhận không hợp lệ hoặc đã hết hạn. Hãy yêu cầu gửi lại email.' });
+  const users = db.getCollection('users') || [];
+  const user = users.find(item => item.id === record.userId);
+  if (!user) return res.status(400).json({ success: false, message: 'Không tìm thấy tài khoản cần xác nhận.' });
+  user.status = 'active';
+  user.emailVerified = true;
+  await db.saveCollectionAndWait('users', users);
+  await db.saveCollectionAndWait('emailVerifications', records.filter(item => item.tokenHash !== tokenHash));
+  if (user.role === 'Provider') await createProviderProfile(user, user.joinDate || dateLabel());
+  return res.json({ success: true, message: 'Email đã được xác nhận. Bạn có thể đăng nhập.' });
 });
 
-// ============================================================================
-// 1.1 XÁC THỰC EMAIL & TỰ ĐỘNG CẤP SESSION (Click Link Email)
-// ============================================================================
-router.get('/verify-email', (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!token || typeof token !== 'string') {
-      return res.status(400).send(`
-        <!DOCTYPE html>
-        <html><head><meta charset="utf-8"><title>Lỗi kích hoạt - SkillRental</title></head>
-        <body style="font-family:sans-serif;text-align:center;padding:50px;">
-          <h2 style="color:#DC2626;">❌ Liên kết kích hoạt không hợp lệ!</h2>
-          <p>Mã xác thực bị thiếu hoặc không chính xác.</p>
-          <a href="/index.html?auth=login" style="color:#16A34A;font-weight:bold;">Quay lại Trang Chủ</a>
-        </body></html>
-      `);
-    }
-
-    const users = db.getCollection('users') || [];
-    const user = users.find(u => u.verification_token === token.trim());
-
-    if (!user) {
-      return res.status(400).send(`
-        <!DOCTYPE html>
-        <html><head><meta charset="utf-8"><title>Lỗi kích hoạt - SkillRental</title></head>
-        <body style="font-family:sans-serif;text-align:center;padding:50px;">
-          <h2 style="color:#DC2626;">❌ Liên kết kích hoạt không tồn tại hoặc đã được kích hoạt trước đó!</h2>
-          <p>Bạn có thể thử đăng nhập ngay vào hệ thống.</p>
-          <a href="/index.html?auth=login" style="display:inline-block;margin-top:15px;background:#16A34A;color:#fff;padding:10px 20px;text-decoration:none;border-radius:8px;font-weight:bold;">Đến Trang Đăng Nhập</a>
-        </body></html>
-      `);
-    }
-
-    // Kiểm tra thời gian hết hạn token (24h)
-    if (user.verification_token_expires && new Date(user.verification_token_expires) < new Date()) {
-      return res.status(400).send(`
-        <!DOCTYPE html>
-        <html><head><meta charset="utf-8"><title>Liên kết hết hạn - SkillRental</title></head>
-        <body style="font-family:sans-serif;text-align:center;padding:50px;">
-          <h2 style="color:#D97706;">⚠️ Liên kết kích hoạt đã hết hạn!</h2>
-          <p>Mã xác nhận chỉ có hiệu lực trong vòng 24 giờ. Vui lòng yêu cầu gửi lại email mới.</p>
-          <a href="/index.html?auth=login" style="color:#16A34A;font-weight:bold;">Đến trang Đăng Nhập để gửi lại</a>
-        </body></html>
-      `);
-    }
-
-    // 1. Cập nhật is_active = true, xóa token
-    user.is_active = true;
-    user.status = 'active';
-    delete user.verification_token;
-    delete user.verification_token_expires;
-    db.saveCollection('users', users);
-
-    // 2. ĐẶC TRƯNG TRUYỀN THỐNG: Tự động khởi tạo Session ID mới
-    const sessionId = sessionStore.createSession(user);
-
-    // Gửi Set-Cookie về trình duyệt: session_id=sess_...; HttpOnly; SameSite=Lax
-    res.cookie('session_id', sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/'
-    });
-
-    const redirectTarget = user.role === 'Provider' ? '/dashboard.html' : '/customer.html';
-    const userJson = JSON.stringify(publicUser(user)).replace(/'/g, "\\'");
-
-    // Trả về trang HTML thông báo kích hoạt thành công, tự động lưu session vào localStorage và chuyển hướng
-    return res.send(`
-      <!DOCTYPE html>
-      <html lang="vi">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Kích hoạt thành công - SkillRental</title>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <style>
-          body { font-family: 'Inter', sans-serif; background: #F8FAFC; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
-          .card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 36px 32px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 10px 25px -5px rgba(15,23,42,.08); }
-          .icon-box { width: 68px; height: 68px; background: #DCFCE7; color: #16A34A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 20px; }
-          h2 { color: #0F172A; font-size: 22px; font-weight: 800; margin: 0 0 10px; }
-          p { color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 24px; }
-          .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #16A34A; color: #FFFFFF; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none; transition: background .15s; }
-          .btn:hover { background: #15803D; }
-          .note { font-size: 12px; color: #94A3B8; margin-top: 16px; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="icon-box"><i class="fa-solid fa-check"></i></div>
-          <h2>Kích Hoạt Tài Khoản Thành Công!</h2>
-          <p>Xin chào <strong>${user.name}</strong>, tài khoản của bạn đã được xác thực thành công. Hệ thống đã tự động khởi tạo phiên đăng nhập an toàn.</p>
-          <a href="${redirectTarget}" class="btn" id="btnRedirect"><i class="fa-solid fa-house"></i> Vào Trang Chính Ngay</a>
-          <div class="note">Đang tự động chuyển hướng sau <span id="countdown">2</span> giây...</div>
-        </div>
-        <script>
-          try {
-            const user = JSON.parse('${userJson}');
-            localStorage.setItem('SKILLRENTAL_CURRENT_USER', JSON.stringify(user));
-            if ('${user.role}' === 'Provider') {
-              localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(user));
-            } else {
-              localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(user));
-            }
-          } catch (e) {}
-
-          let sec = 2;
-          const timer = setInterval(() => {
-            sec--;
-            const el = document.getElementById('countdown');
-            if (el) el.textContent = sec;
-            if (sec <= 0) {
-              clearInterval(timer);
-              window.location.href = '${redirectTarget}';
-            }
-          }, 1000);
-        </script>
-      </body>
-      </html>
-    `);
-  } catch (err) {
-    console.error('[auth] Lỗi verify-email:', err.message);
-    return res.status(500).send('<h1>Lỗi máy chủ khi xác nhận email.</h1>');
-  }
-});
-
-// ============================================================================
-// 2. ĐĂNG NHẬP (KHỞI TẠO SESSION) - MÔ HÌNH TRUYỀN THỐNG
-// ============================================================================
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body || {};
-
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ email và mật khẩu!' });
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const users = db.getCollection('users') || [];
-    const user = users.find(u => String(u.email || '').toLowerCase() === normalizedEmail);
-
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác!' });
-    }
-
-    // 1. Kiểm tra tài khoản đã kích hoạt chưa
-    if (user.is_active === false) {
-      return res.status(403).json({
-        success: false,
-        code: 'EMAIL_NOT_VERIFIED',
-        email: user.email,
-        message: 'Tài khoản chưa được kích hoạt! Vui lòng kiểm tra hộp thư kích hoạt hoặc yêu cầu gửi lại email xác nhận.'
-      });
-    }
-
-    // 2. Kiểm tra tài khoản có bị khóa không
-    if (user.status === 'locked') {
-      return res.status(403).json({
-        success: false,
-        code: 'ACCOUNT_LOCKED',
-        message: `Tài khoản đã bị tạm khóa: ${user.lockReason || 'Liên hệ Admin'}`
-      });
-    }
-
-    // 3. So khớp mật khẩu an toàn (Bcrypt / PBKDF2)
-    const storedSecret = user.password_hash || user.password;
-    const isValid = comparePassword(String(password), storedSecret);
-
-    if (!isValid) {
-      return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác!' });
-    }
-
-    // 4. KHỞI TẠO SESSION TRUYỀN THỐNG TRONG RAM (Memory Store)
-    const sessionId = sessionStore.createSession(user);
-
-    // 5. GỬI RESPONSE KÈM TIÊU ĐỀ: Set-Cookie: session_id=sess_...; HttpOnly; SameSite=Lax
-    res.cookie('session_id', sessionId, {
-      httpOnly: true,                               // Chống mã độc JavaScript đánh cắp cookie (XSS Protection)
-      secure: process.env.NODE_ENV === 'production',// Bật HTTPS khi lên production
-      sameSite: 'lax',                              // Chống tấn công CSRF
-      maxAge: 24 * 60 * 60 * 1000,                  // 24 giờ
-      path: '/'
-    });
-
-    console.log(`[auth] ✅ Đăng nhập thành công: ${user.email} -> Session: ${sessionId}`);
-
-    return res.json({
-      success: true,
-      message: 'Đăng nhập thành công!',
-      session_id: sessionId,
-      user: publicUser(user)
-    });
-  } catch (err) {
-    console.error('[auth] Lỗi đăng nhập:', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đăng nhập.' });
-  }
-});
-
-// ============================================================================
-// 3. ĐĂNG XUẤT (HỦY SESSION) - MÔ HÌNH TRUYỀN THỐNG
-// ============================================================================
-const handleLogout = (req, res) => {
-  try {
-    // 1. Backend đọc Cookie để lấy ra session_id đang gửi lên
-    const sessionId = (req.cookies && req.cookies.session_id) || req.body?.session_id || req.headers['x-session-id'];
-
-    if (sessionId) {
-      // 2. Thực hiện Xóa (Delete) bản ghi của session_id đó trong Memory Store (RAM)
-      sessionStore.destroySession(sessionId);
-    }
-
-    // 3. Gửi phản hồi về trình duyệt kèm tiêu đề xóa cookie
-    res.clearCookie('session_id', {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'lax'
-    });
-
-    return res.json({
-      success: true,
-      message: 'Đăng xuất thành công! Phiên làm việc đã bị hủy hoàn toàn trên máy chủ.'
-    });
-  } catch (err) {
-    console.error('[auth] Lỗi đăng xuất:', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đăng xuất.' });
-  }
-};
-
-router.post('/logout', handleLogout);
-router.get('/logout', handleLogout);
-
-// ============================================================================
-// 4. KIỂM TRA PHIÊN LÀM VIỆC HIỆN TẠI (GET /api/auth/me)
-// ============================================================================
-router.get('/me', requireSignedIn, (req, res) => {
-  res.json({
-    success: true,
-    user: publicUser(req.authUser),
-    session: req.session || null
-  });
-});
-
-// ============================================================================
-// 5. GỬI LẠI EMAIL KÍCH HOẠT (Resend Verification Token)
-// ============================================================================
 router.post('/resend-verification', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ success: false, message: 'Vui lòng nhập email cần xác nhận.' });
+  const user = (db.getCollection('users') || []).find(item => String(item.email || '').trim().toLowerCase() === email);
+  if (!user || user.emailVerified || user.status !== 'pending_verification') return res.json({ success: true, message: 'Nếu tài khoản cần xác nhận, email sẽ được gửi lại.' });
   try {
-    const { email } = req.body || {};
-    if (!email || !String(email).trim()) {
-      return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email!' });
-    }
-
-    const cleanEmail = String(email).trim().toLowerCase();
-    const users = db.getCollection('users') || [];
-    const user = users.find(u => String(u.email || '').toLowerCase() === cleanEmail);
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản với email này.' });
-    }
-
-    if (user.is_active === true) {
-      return res.json({
-        success: true,
-        alreadyVerified: true,
-        message: 'Tài khoản này đã được kích hoạt trước đó. Bạn có thể đăng nhập ngay!'
-      });
-    }
-
-    // Sinh token mới và gia hạn 24h
-    user.verification_token = crypto.randomBytes(32).toString('hex');
-    user.verification_token_expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-    db.saveCollection('users', users);
-
-    const verifyUrl = `${req.protocol}://${req.get('host')}/api/auth/verify-email?token=${user.verification_token}`;
-
-    console.log('====================================================');
-    console.log(`📧 [GỬI LẠI EMAIL XÁC THỰC SKILLRENTAL]`);
-    console.log(`   - Gửi đến: ${cleanEmail}`);
-    console.log(`   - Link kích hoạt: ${verifyUrl}`);
-    console.log('====================================================');
-
-    return res.json({
-      success: true,
-      message: `Đã gửi lại liên kết kích hoạt tới ${cleanEmail}. Vui lòng kiểm tra hộp thư!`,
-      verifyUrl: process.env.NODE_ENV !== 'production' ? verifyUrl : undefined
-    });
-  } catch (err) {
-    console.error('[auth] Lỗi gửi lại email xác nhận:', err.message);
-    return res.status(500).json({ success: false, message: 'Không thể gửi lại email xác nhận lúc này.' });
+    const result = await issueEmailVerification(user);
+    return res.json({ success: true, message: result.throttled ? 'Hãy chờ một phút trước khi yêu cầu gửi lại.' : `Đã gửi lại email xác nhận tới ${email}.` });
+  } catch (error) {
+    console.error('[auth] Gửi lại email xác nhận thất bại:', error.message);
+    return res.status(503).json({ success: false, message: 'Gửi email thất bại. Kiểm tra Gmail SMTP trong .env.' });
   }
 });
 
-// ============================================================================
-// 6. CÁC API PHỤ TRỢ (Quên mật khẩu, Danh sách User Admin, Upload Avatar)
-// ============================================================================
+// Google proves identity; the account profile and app session remain in MySQL.
+router.get('/google/config', (_req, res) => {
+  res.json({ success: true, clientId: process.env.GOOGLE_CLIENT_ID || '' });
+});
+
+router.post('/google', async (req, res) => {
+  const credential = String(req.body?.credential || '');
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || '');
+  if (!clientId) return res.status(503).json({ success: false, message: 'Chưa cấu hình GOOGLE_CLIENT_ID trong .env.' });
+  if (!credential || credential.length > 10000) return res.status(400).json({ success: false, message: 'Thông tin đăng nhập Google không hợp lệ.' });
+
+  let identity;
+  try {
+    identity = await verifyGoogleCredential(credential, clientId);
+  } catch (_) {
+    return res.status(502).json({ success: false, message: 'Không thể xác minh tài khoản với Google lúc này.' });
+  }
+  if (!identity) {
+    return res.status(401).json({ success: false, message: 'Thông tin xác thực Google không hợp lệ hoặc email chưa được xác minh.' });
+  }
+
+  const cleanEmail = String(identity.email).trim().toLowerCase();
+  const users = db.getCollection('users') || [];
+  let user = users.find(item => String(item.googleSub || '') === String(identity.sub));
+  if (!user) user = users.find(item => String(item.email || '').trim().toLowerCase() === cleanEmail);
+  if (user?.status === 'locked') return res.status(403).json({ success: false, code: 'ACCOUNT_LOCKED', message: `Tài khoản đã bị tạm khóa: ${user.lockReason || 'Liên hệ Admin'}` });
+
+  if (user) {
+    user.googleSub = String(identity.sub);
+    user.emailVerified = true;
+    if (user.status === 'pending_verification') user.status = 'active';
+    if (!user.avatar && identity.picture) user.avatar = String(identity.picture);
+    await db.saveCollectionAndWait('users', users);
+    if (user.role === 'Provider') await createProviderProfile(user, user.joinDate || dateLabel());
+  } else {
+    const role = String(req.body?.role || '').trim().toLowerCase() === 'provider' ? 'Provider' : 'Customer';
+    const dateStr = dateLabel();
+    user = {
+      id: nextUserId(users), googleSub: String(identity.sub), name: String(identity.name || cleanEmail.split('@')[0]).trim(),
+      email: cleanEmail, phone: '', role, authProvider: 'google', joinDate: dateStr,
+      spentOrEarned: '0đ', balance: 0, status: 'active', avatar: String(identity.picture || ''), bio: ''
+    };
+    users.push(user);
+    await db.saveCollectionAndWait('users', users);
+    if (role === 'Provider') await createProviderProfile(user, dateStr);
+  }
+
+  return res.json({ success: true, message: 'Đăng nhập Google thành công.', user: publicUser(user), accessToken: signToken(user.id) });
+});
+
+router.post('/login', async (req,res) => {
+  const email=String(req.body?.email||'').trim().toLowerCase();const password=String(req.body?.password||'');
+  const user=(db.getCollection('users')||[]).find(item=>String(item.email||'').trim().toLowerCase()===email);
+  let valid=user && await verifyPassword(password,user.passwordHash);
+  // Hỗ trợ mật khẩu mẫu cũ được lưu trực tiếp để đăng nhập lần đầu, sau đó chuyển sang hash.
+  if(user&&!valid&&typeof user.password==='string'&&user.password===password){user.passwordHash=await hashPassword(password);delete user.password;await db.saveCollectionAndWait('users',(db.getCollection('users')||[]).map(item=>item.id===user.id?user:item));valid=true;}
+  if(!valid)return res.status(401).json({success:false,message:'Email hoặc mật khẩu không chính xác.'});
+  if(user.status==='pending_verification'||user.emailVerified===false)return res.status(403).json({success:false,code:'EMAIL_NOT_VERIFIED',email:user.email,message:'Tài khoản chưa được xác nhận. Hãy mở email xác nhận hoặc yêu cầu gửi lại.'});
+  if(user.status==='locked')return res.status(403).json({success:false,code:'ACCOUNT_LOCKED',message:'Tài khoản đã bị tạm khóa: '+(user.lockReason||'Liên hệ Admin')});
+  return res.json({success:true,message:'Đăng nhập thành công!',user:publicUser(user),accessToken:signToken(user.id)});
+});
+
+// Hồ sơ hiện tại
+router.get('/me', requireSignedIn, (req, res) => {
+  res.json({ success: true, user: publicUser(req.authUser) });
+});
+
+// Danh sách user (chỉ Admin)
 router.get('/users', requireAdmin, (req, res) => {
   const users = db.getCollection('users');
   res.json({
     success: true,
     users: users.map(u => ({
       id: u.id, name: u.name, email: u.email, role: u.role,
-      balance: u.balance, avatar: u.avatar, status: u.status, is_active: u.is_active !== false
+      balance: u.balance, avatar: u.avatar, status: u.status
     }))
   });
 });
 
+// Upload file avatar lên backend; MySQL chỉ lưu URL, không lưu nội dung ảnh.
 router.put('/profile/avatar', requireSignedIn, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '10mb' }), async (req, res) => {
   if (!Buffer.isBuffer(req.body) || !req.body.length) {
     return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh JPG, PNG hoặc WebP.' });
@@ -553,24 +340,43 @@ router.put('/profile/avatar', requireSignedIn, express.raw({ type: ['image/*', '
     return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
   }
 
-  const uid = String(req.authUser.id).replace(/[^a-zA-Z0-9_-]/g, '');
+  const uid = String(req.authUser?.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!uid) return res.status(400).json({ success: false, message: 'Không xác định được tài khoản.' });
+
   const fileName = `${randomUUID()}.${extension}`;
   const relativePath = path.posix.join('avatars', uid, fileName);
   const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
   const absolutePath = path.resolve(uploadRoot, ...relativePath.split('/'));
+  if (!absolutePath.startsWith(uploadRoot + path.sep)) {
+    return res.status(400).json({ success: false, message: 'Đường dẫn lưu ảnh không hợp lệ.' });
+  }
 
   try {
     await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true });
     await fs.promises.writeFile(absolutePath, req.body, { flag: 'wx', mode: 0o640 });
     const avatar = `${req.protocol}://${req.get('host')}/uploads/${relativePath.split('/').map(encodeURIComponent).join('/')}`;
+    const previousAvatar = users[index].avatar;
     users[index].avatar = avatar;
     db.saveCollection('users', users);
 
+    // Đồng bộ sang collection 'providers' nếu người dùng là Provider
     const providers = db.getCollection('providers') || [];
-    const pIndex = providers.findIndex(p => p.userId === req.authUser.id || p.id === req.authUser.id);
+    const pIndex = providers.findIndex(p => p.userId === req.authUser.id || p.id === req.authUser.id || (p.email && p.email.toLowerCase() === (req.authUser.email || '').toLowerCase()));
     if (pIndex !== -1) {
       providers[pIndex].avatar = avatar;
       db.saveCollection('providers', providers);
+    }
+
+    // Xóa file cũ chỉ khi nó nằm trong thư mục upload do ứng dụng quản lý.
+    if (previousAvatar) {
+      try {
+        const previousUrl = new URL(previousAvatar, avatar);
+        const previousPath = decodeURIComponent(previousUrl.pathname);
+        if (previousUrl.origin === new URL(avatar).origin && previousPath.startsWith('/uploads/avatars/')) {
+          const oldFile = path.resolve(uploadRoot, ...previousPath.slice('/uploads/'.length).split('/'));
+          if (oldFile.startsWith(uploadRoot + path.sep) && oldFile !== absolutePath) await fs.promises.unlink(oldFile).catch(() => {});
+        }
+      } catch (_) { /* URL cũ có thể thuộc dịch vụ lưu trữ khác */ }
     }
 
     return res.json({ success: true, message: 'Đã cập nhật ảnh đại diện.', user: publicUser(users[index]) });
@@ -580,331 +386,190 @@ router.put('/profile/avatar', requireSignedIn, express.raw({ type: ['image/*', '
   }
 });
 
-router.put('/change-password', requireSignedIn, async (req, res) => {
-  const { currentPassword, newPassword } = req.body || {};
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới!' });
-  }
-  if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự!' });
+// Upload file ảnh bìa (cover) lên backend
+router.put('/profile/cover', requireSignedIn, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), async (req, res) => {
+  if (!Buffer.isBuffer(req.body) || !req.body.length) {
+    return res.status(400).json({ success: false, message: 'Vui lòng chọn ảnh JPG, PNG hoặc WebP.' });
   }
 
-  const users = db.getCollection('users') || [];
-  const user = users.find(u => u.id === req.authUser.id);
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
+  const extension = detectImageType(req.body);
+  if (!extension) {
+    return res.status(415).json({ success: false, message: 'File không phải ảnh JPG, PNG hoặc WebP hợp lệ.' });
   }
 
-  const storedSecret = user.password_hash || user.password;
-  if (!comparePassword(currentPassword, storedSecret)) {
-    return res.status(401).json({ success: false, message: 'Mật khẩu hiện tại không chính xác!' });
+  const users = db.getCollection('users');
+  const index = users.findIndex(u => u.id === req.authUser.id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
   }
 
-  user.password_hash = hashPassword(newPassword);
-  user.password = newPassword;
-  db.saveCollection('users', users);
+  const uid = String(req.authUser?.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!uid) return res.status(400).json({ success: false, message: 'Không xác định được tài khoản.' });
 
-  res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
-});
-
-// ============================================================================
-// 4. LẤY LẠI MẬT KHẨU (FORGOT & RESET PASSWORD - MÔ HÌNH TRUYỀN THỐNG)
-// ============================================================================
-
-// 4.1 Gửi yêu cầu lấy lại mật khẩu (sinh reset_token ngắn hạn 30 phút)
-router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body || {};
-  if (!email || !String(email).trim()) {
-    return res.status(400).json({ success: false, message: 'Vui lòng nhập địa chỉ email!' });
-  }
-  const cleanEmail = String(email).trim().toLowerCase();
-  const users = db.getCollection('users') || [];
-  const user = users.find(u => String(u.email || '').toLowerCase() === cleanEmail);
-
-  if (!user) {
-    return res.json({ success: true, message: `Nếu email ${cleanEmail} tồn tại trong hệ thống, liên kết khôi phục đã được tạo.` });
+  const fileName = `${randomUUID()}.${extension}`;
+  const relativePath = path.posix.join('covers', uid, fileName);
+  const uploadRoot = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
+  const absolutePath = path.resolve(uploadRoot, ...relativePath.split('/'));
+  if (!absolutePath.startsWith(uploadRoot + path.sep)) {
+    return res.status(400).json({ success: false, message: 'Đường dẫn lưu ảnh không hợp lệ.' });
   }
 
-  // Sinh reset_token ngẫu nhiên an toàn, có thời hạn ngắn (30 phút)
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  user.reset_password_token = resetToken;
-  user.reset_password_expires = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-  db.saveCollection('users', users);
-
-  const resetUrl = `${req.protocol}://${req.get('host')}/reset_password.html?token=${resetToken}`;
-  console.log('====================================================');
-  console.log(`🔑 [YÊU CẦU ĐẶT LẠI MẬT KHẨU - SKILLRENTAL]`);
-  console.log(`   - Gửi đến email:  ${cleanEmail}`);
-  console.log(`   - Họ tên user:    ${user.name}`);
-  console.log(`   - Token ngắn hạn: ${resetToken} (Hiệu lực: 30 phút)`);
-  console.log(`   - Link đặt lại:   ${resetUrl}`);
-  console.log('====================================================');
-
-  res.json({
-    success: true,
-    message: `Liên kết khôi phục mật khẩu đã được tạo cho ${cleanEmail}. Vui lòng kiểm tra email hoặc terminal server.`,
-    resetLink: process.env.NODE_ENV !== 'production' ? resetUrl : undefined
-  });
-});
-
-// 4.2 Kiểm tra tính hợp lệ của reset_token
-router.get('/verify-reset-token', (req, res) => {
-  const { token } = req.query || {};
-  if (!token || typeof token !== 'string') {
-    return res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ!' });
-  }
-
-  const users = db.getCollection('users') || [];
-  const user = users.find(u => u.reset_password_token === token.trim());
-
-  if (!user) {
-    return res.status(404).json({ success: false, message: 'Liên kết đặt lại mật khẩu không tồn tại hoặc đã được sử dụng.' });
-  }
-
-  if (user.reset_password_expires && new Date(user.reset_password_expires) < new Date()) {
-    return res.status(410).json({ success: false, message: 'Liên kết đặt lại mật khẩu đã hết hạn (chỉ có hiệu lực trong 30 phút).' });
-  }
-
-  return res.json({
-    success: true,
-    email: user.email,
-    name: user.name
-  });
-});
-
-// 4.3 Đặt lại mật khẩu mới & Quét xóa toàn bộ Session cũ của User
-router.post('/reset-password', async (req, res) => {
   try {
-    const { token, newPassword } = req.body || {};
-
-    if (!token || typeof token !== 'string') {
-      return res.status(400).json({ success: false, message: 'Mã xác thực không hợp lệ hoặc bị thiếu!' });
-    }
-
-    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
-      return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự!' });
-    }
-
-    const users = db.getCollection('users') || [];
-    const user = users.find(u => u.reset_password_token === token.trim());
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Liên kết đặt lại mật khẩu không tồn tại hoặc đã được sử dụng.' });
-    }
-
-    // Kiểm tra thời gian hết hạn
-    if (user.reset_password_expires && new Date(user.reset_password_expires) < new Date()) {
-      return res.status(410).json({ success: false, message: 'Liên kết đặt lại mật khẩu đã hết hạn. Vui lòng yêu cầu liên kết mới.' });
-    }
-
-    // 1. Băm mật khẩu mới bằng PBKDF2
-    const passwordHash = hashPassword(newPassword);
-    user.password_hash = passwordHash;
-    user.password = newPassword;
-
-    // 2. Xóa token đặt lại mật khẩu
-    delete user.reset_password_token;
-    delete user.reset_password_expires;
+    await fs.promises.mkdir(path.dirname(absolutePath), { recursive: true });
+    await fs.promises.writeFile(absolutePath, req.body, { flag: 'wx', mode: 0o640 });
+    const cover = `${req.protocol}://${req.get('host')}/uploads/${relativePath.split('/').map(encodeURIComponent).join('/')}`;
+    const previousCover = users[index].cover;
+    users[index].cover = cover;
     db.saveCollection('users', users);
 
-    // 3. ĐẶC TRƯNG BẢO MẬT TRUYỀN THỐNG:
-    // Quét và xóa toàn bộ các Session hiện có của người dùng trong bộ nhớ RAM
-    // để ép tất cả các thiết bị/trình duyệt phải đăng nhập lại với mật khẩu mới.
-    const destroyedCount = sessionStore.destroyAllUserSessions(user.id);
-    console.log(`[auth] 🔒 Đã đổi mật khẩu cho user: ${user.email}. Đã hủy ${destroyedCount} phiên làm việc (Session) trong RAM.`);
-
-    // 4. Xóa cookie của request hiện tại nếu có
-    res.clearCookie('session_id', { path: '/' });
-
-    return res.json({
-      success: true,
-      message: 'Đặt lại mật khẩu thành công! Toàn bộ phiên làm việc cũ đã được hủy an toàn. Bạn có thể đăng nhập ngay với mật khẩu mới.'
-    });
-  } catch (err) {
-    console.error('[auth] Lỗi reset-password:', err.message);
-    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đặt lại mật khẩu.' });
-  }
-});
-
-// ============================================================================
-// 13. ĐĂNG NHẬP BẰNG GOOGLE (PASSPORT & PASSPORT-GOOGLE-OAUTH20)
-// ============================================================================
-
-// 13.1 Lấy thông tin cấu hình Google OAuth Client ID cho Frontend
-router.get('/google/config', (req, res) => {
-  res.json({
-    success: true,
-    clientId: process.env.GOOGLE_CLIENT_ID || ''
-  });
-});
-
-// 13.2 Luồng đi: Người dùng bấm "Đăng nhập với Google" -> Chuyển hướng sang Google
-router.get('/google', (req, res, next) => {
-  // Mock login hỗ trợ dev khi chưa cấu hình Google Client Credentials thực tế
-  if (req.query.mock === '1' || req.query.test === '1') {
-    const mockProfile = {
-      id: `google_${Date.now()}`,
-      displayName: req.query.name || 'Người dùng Google Mẫu',
-      emails: [{ value: req.query.email || `google.user.${Date.now().toString().slice(-4)}@gmail.com` }],
-      photos: [{ value: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80' }]
-    };
-    try {
-      const user = findOrCreateGoogleUser(mockProfile);
-      return createGoogleSessionAndRedirect(req, res, user);
-    } catch (e) {
-      return res.status(500).json({ success: false, message: e.message });
-    }
-  }
-
-  passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    prompt: 'select_account'
-  })(req, res, next);
-});
-
-// 13.3 Luồng về (Callback): Google trả về profile chứa Email, Tên, ID Google
-router.get('/google/callback', (req, res, next) => {
-  passport.authenticate('google', { session: false }, (err, user, info) => {
-    if (err || !user) {
-      console.error('[Google OAuth Callback] Lỗi:', err || info);
-      return res.redirect('/index.html?error=google_auth_failed');
-    }
-    // Lấy user_id, tạo Session truyền thống rồi chuyển hướng về trang chủ
-    return createGoogleSessionAndRedirect(req, res, user, '/index.html?login=google_success');
-  })(req, res, next);
-});
-
-// 13.4 Tiếp nhận Google credential token từ popup Google Identity Services (Web GIS)
-router.post('/google', async (req, res) => {
-  try {
-    const { credential, profile, role } = req.body || {};
-    let googleProfile = profile;
-
-    if (!googleProfile && credential) {
-      try {
-        const parts = String(credential).split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-          googleProfile = {
-            id: payload.sub,
-            displayName: payload.name || payload.given_name,
-            emails: [{ value: payload.email }],
-            photos: [{ value: payload.picture }]
-          };
-        }
-      } catch (e) {
-        console.warn('[Google OAuth] Lỗi decode credential:', e.message);
-      }
-    }
-
-    if (!googleProfile || (!googleProfile.emails && !googleProfile.id)) {
-      return res.status(400).json({ success: false, message: 'Dữ liệu xác thực Google không hợp lệ!' });
-    }
-
-    const user = findOrCreateGoogleUser(googleProfile);
-    if (role && (role === 'Provider' || role === 'Customer') && user.role !== role) {
-      user.role = role;
-      const users = db.getCollection('users') || [];
-      const idx = users.findIndex(u => u.id === user.id);
-      if (idx !== -1) { users[idx].role = role; db.saveCollection('users', users); }
-    }
-
-    // Tạo Session truyền thống lưu vào RAM (Memory Store)
-    const sessionId = sessionStore.createSession(user);
-    res.cookie('session_id', sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/'
-    });
-
-    if (req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = (user.role || 'Customer').toLowerCase();
-    }
-
-    return res.json({
-      success: true,
-      message: 'Đăng nhập Google thành công!',
-      sessionId,
-      user: publicUser(user)
-    });
-  } catch (err) {
-    console.error('[Google OAuth API] Lỗi:', err);
-    return res.status(500).json({ success: false, message: err.message || 'Lỗi đăng nhập Google.' });
-  }
-});
-
-// ============================================================================
-// 14. CẬP NHẬT THÔNG TIN CÁ NHÂN (GET & PUT /api/auth/profile)
-// ============================================================================
-
-router.get('/profile', requireSignedIn, (req, res) => {
-  res.json({
-    success: true,
-    user: publicUser(req.authUser)
-  });
-});
-
-router.put('/profile', requireSignedIn, (req, res) => {
-  try {
-    const { name, phone, address, bio, avatar, cover } = req.body || {};
-
-    if (name !== undefined && !String(name).trim()) {
-      return res.status(400).json({ success: false, message: 'Họ và tên không được để trống!' });
-    }
-
-    const users = db.getCollection('users') || [];
-    const index = users.findIndex(u => u.id === req.authUser.id);
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng!' });
-    }
-
-    const user = users[index];
-
-    if (name !== undefined) user.name = String(name).trim();
-    if (phone !== undefined) user.phone = String(phone).trim();
-    if (address !== undefined) user.address = String(address).trim();
-    if (bio !== undefined) user.bio = String(bio).trim();
-    if (avatar) user.avatar = String(avatar).trim();
-    if (cover) user.cover = String(cover).trim();
-    user.updatedAt = new Date().toISOString();
-
-    db.saveCollection('users', users);
-
-    // Đồng bộ sang bảng providers nếu user này là Provider
+    // Đồng bộ sang collection 'providers' nếu người dùng là Provider
     const providers = db.getCollection('providers') || [];
-    const pIndex = providers.findIndex(p => p.userId === user.id || p.id === user.id);
+    const pIndex = providers.findIndex(p => p.userId === req.authUser.id || p.id === req.authUser.id || (p.email && p.email.toLowerCase() === (req.authUser.email || '').toLowerCase()));
     if (pIndex !== -1) {
-      if (name !== undefined) providers[pIndex].name = user.name;
-      if (phone !== undefined) providers[pIndex].phone = user.phone;
-      if (avatar) providers[pIndex].avatar = user.avatar;
-      if (cover) providers[pIndex].cover = user.cover;
-      if (address !== undefined) providers[pIndex].location = user.address;
+      providers[pIndex].cover = cover;
       db.saveCollection('providers', providers);
     }
 
-    // Cập nhật session hiện tại nếu sessionStore có lưu
-    const sessionId = (req.cookies && req.cookies.session_id) || (req.headers && req.headers['x-session-id']);
-    if (sessionId) {
-      const sess = sessionStore.getSession(sessionId);
-      if (sess) {
-        sess.name = user.name;
-        sess.avatar = user.avatar;
-      }
+    // Xóa file cũ nếu có
+    if (previousCover) {
+      try {
+        const previousUrl = new URL(previousCover, cover);
+        const previousPath = decodeURIComponent(previousUrl.pathname);
+        if (previousUrl.origin === new URL(cover).origin && previousPath.startsWith('/uploads/covers/')) {
+          const oldFile = path.resolve(uploadRoot, ...previousPath.slice('/uploads/'.length).split('/'));
+          if (oldFile.startsWith(uploadRoot + path.sep) && oldFile !== absolutePath) await fs.promises.unlink(oldFile).catch(() => {});
+        }
+      } catch (_) {}
     }
 
-    console.log(`[auth] ✅ Đã cập nhật thông tin cá nhân cho: ${user.email} (${user.id})`);
-    return res.json({
-      success: true,
-      message: 'Cập nhật thông tin cá nhân thành công!',
-      user: publicUser(user)
-    });
+    return res.json({ success: true, message: 'Đã cập nhật ảnh bìa thành công!', cover, user: publicUser(users[index]) });
   } catch (err) {
-    console.error('[auth] Lỗi cập nhật profile:', err);
-    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi cập nhật thông tin cá nhân.' });
+    console.error('[auth] Upload cover:', err.message);
+    return res.status(500).json({ success: false, message: 'Không thể lưu ảnh bìa lúc này.' });
   }
 });
+
+// Cập nhật hồ sơ
+router.put('/profile', requireSignedIn, async (req, res) => {
+  const { name, phone, address, avatar, cover, bio } = req.body || {};
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, message: 'Họ tên không được để trống!' });
+  }
+
+  const users = db.getCollection('users');
+  const index = users.findIndex(u => u.id === req.authUser.id);
+  if (index === -1) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng!' });
+  }
+
+  users[index].name = name.trim();
+  users[index].phone = phone ? phone.trim() : '';
+  users[index].address = address ? address.trim() : '';
+  if (avatar) users[index].avatar = avatar;
+  if (cover !== undefined) users[index].cover = cover;
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, 'bio')) {
+    const trimmedBio = String(bio || '').trim();
+    if (trimmedBio.length > 1000) {
+      return res.status(400).json({ success: false, message: 'Giới thiệu bản thân không được vượt quá 1000 ký tự.' });
+    }
+    users[index].bio = trimmedBio;
+  }
+  db.saveCollection('users', users);
+
+  // Đồng bộ sang collection 'providers' nếu là provider
+  const providers = db.getCollection('providers') || [];
+  const pIndex = providers.findIndex(p => p.userId === req.authUser.id || p.id === req.authUser.id || (p.email && p.email.toLowerCase() === (req.authUser.email || '').toLowerCase()));
+  if (pIndex !== -1) {
+    if (name) providers[pIndex].name = name.trim();
+    if (phone !== undefined) providers[pIndex].phone = phone.trim();
+    if (avatar) providers[pIndex].avatar = avatar;
+    if (cover !== undefined) providers[pIndex].cover = cover;
+    if (address !== undefined) providers[pIndex].location = address.trim();
+    if (bio !== undefined) providers[pIndex].bio = bio.trim();
+    db.saveCollection('providers', providers);
+  }
+  res.json({ success: true, message: 'Cập nhật thông tin thành công!', user: publicUser(users[index]) });
+});
+
+// Đổi mật khẩu trong MySQL.
+router.put('/change-password', requireSignedIn, async (req,res) => {
+ const {currentPassword,newPassword}=req.body||{};if(!currentPassword||!newPassword||String(newPassword).length<8)return res.status(400).json({success:false,message:'Nhập mật khẩu hiện tại và mật khẩu mới (ít nhất 8 ký tự).'});
+ const users=db.getCollection('users')||[];const index=users.findIndex(user=>user.id===req.authUser.id);if(index<0||!await verifyPassword(currentPassword,users[index].passwordHash))return res.status(401).json({success:false,message:'Mật khẩu hiện tại không chính xác.'});
+ users[index].passwordHash=await hashPassword(newPassword);delete users[index].password;await db.saveCollectionAndWait('users',users);res.json({success:true,message:'Đổi mật khẩu thành công.'});
+});
+router.post('/forgot-password', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ email không hợp lệ.' });
+  const smtpUser = String(process.env.SMTP_USER || '').trim();
+  const smtpPassword = String(process.env.SMTP_APP_PASSWORD || '').replace(/\s/g, '');
+  if (!smtpUser || !smtpPassword) return res.status(503).json({ success: false, message: 'Chưa cấu hình Gmail SMTP. Hãy điền SMTP_USER và SMTP_APP_PASSWORD trong .env.' });
+
+  const user = (db.getCollection('users') || []).find(item => String(item.email || '').trim().toLowerCase() === email);
+  // Always return the same result for known and unknown addresses.
+  const accepted = { success: true, message: 'Nếu email này có tài khoản, liên kết đặt lại mật khẩu sẽ được gửi trong ít phút.' };
+  if (!user) return res.json(accepted);
+
+  const token = crypto.randomBytes(32).toString('base64url');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const ttlMinutes = Math.min(Math.max(Number(process.env.PASSWORD_RESET_TTL_MINUTES) || 30, 5), 120);
+  const existingResets = db.getCollection('passwordResets') || [];
+  if (existingResets.some(item => item.userId === user.id && Date.now() - Date.parse(item.createdAt) < 60000)) return res.json(accepted);
+  const resets = existingResets.filter(item => item.userId !== user.id && Date.parse(item.expiresAt) > Date.now());
+  resets.push({ id: tokenHash, userId: user.id, tokenHash, expiresAt: new Date(Date.now() + ttlMinutes * 60000).toISOString(), createdAt: new Date().toISOString() });
+  await db.saveCollectionAndWait('passwordResets', resets);
+
+  const port = Number(process.env.SMTP_PORT || 465);
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com', port,
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
+    auth: { user: smtpUser, pass: smtpPassword }
+  });
+  const baseUrl = String(process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '');
+  const resetLink = `${baseUrl}/index.html?mode=resetPassword&oobCode=${encodeURIComponent(token)}`;
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || `SkillRental <${smtpUser}>`, to: user.email,
+      subject: 'Đặt lại mật khẩu SkillRental',
+      text: `Xin chào ${user.name || ''},\n\nMở liên kết sau để đặt mật khẩu mới (hiệu lực ${ttlMinutes} phút):\n${resetLink}\n\nNếu bạn không yêu cầu, hãy bỏ qua email này.`,
+      html: `<p>Xin chào ${String(user.name || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))},</p><p>Liên kết đặt lại mật khẩu có hiệu lực ${ttlMinutes} phút:</p><p><a href="${resetLink}">Đặt lại mật khẩu</a></p><p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>`
+    });
+    return res.json(accepted);
+  } catch (error) {
+    await db.saveCollectionAndWait('passwordResets', resets.filter(item => item.tokenHash !== tokenHash)).catch(() => {});
+    console.error('[auth] Không gửi được email khôi phục:', error.message);
+    return res.status(502).json({ success: false, message: 'Gửi email thất bại. Kiểm tra cấu hình Gmail SMTP trong .env.' });
+  }
+});
+
+// Kiểm tra liên kết đặt lại mật khẩu (dùng cho trang reset_password.html)
+router.get('/verify-reset-token', (req, res) => {
+  const token = String(req.query?.token || '');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const reset = (db.getCollection('passwordResets') || []).find(item => item.tokenHash === tokenHash && Date.parse(item.expiresAt) > Date.now());
+  if (!reset) return res.status(404).json({ success: false, message: 'Liên kết đặt lại mật khẩu không tồn tại hoặc đã hết hạn.' });
+  const user = (db.getCollection('users') || []).find(item => item.id === reset.userId);
+  if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản cần đặt lại mật khẩu.' });
+  return res.json({ success: true, email: user.email, name: user.name });
+});
+
+router.post('/reset-password', async (req, res) => {
+  const token = String(req.body?.token || '');
+  const newPassword = String(req.body?.newPassword || '');
+  if (newPassword.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const resets = db.getCollection('passwordResets') || [];
+  const reset = resets.find(item => item.tokenHash === tokenHash && Date.parse(item.expiresAt) > Date.now());
+  if (!reset) return res.status(400).json({ success: false, message: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.' });
+  const users = db.getCollection('users') || [];
+  const index = users.findIndex(item => item.id === reset.userId);
+  if (index < 0) return res.status(400).json({ success: false, message: 'Không tìm thấy tài khoản cần đặt lại mật khẩu.' });
+  users[index].passwordHash = await hashPassword(newPassword);
+  delete users[index].password;
+  await db.saveCollectionAndWait('users', users);
+  await db.saveCollectionAndWait('passwordResets', resets.filter(item => item.tokenHash !== tokenHash));
+  return res.json({ success: true, message: 'Đổi mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.' });
+});
+router.post('/resend-verification',(_req,res)=>res.status(410).json({success:false,message:'Tài khoản MySQL không yêu cầu xác nhận email.'}));
 
 module.exports = router;

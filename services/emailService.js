@@ -1,11 +1,6 @@
 // Render + gửi email marketing. Tái dùng cấu hình SMTP đã có cho email tài khoản.
 // Nếu chưa cấu hình SMTP thì chạy dry-run: chỉ ghi log ra console.
-let nodemailer;
-try {
-  nodemailer = require('nodemailer');
-} catch (e) {
-  nodemailer = null;
-}
+const nodemailer = require('nodemailer');
 const { formatDateTime } = require('../utils/dates');
 
 const BASE_URL = String(process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '');
@@ -16,7 +11,7 @@ function getTransporter() {
   if (cachedTransporter !== undefined) return cachedTransporter;
   const user = String(process.env.SMTP_USER || '').trim();
   const pass = String(process.env.SMTP_APP_PASSWORD || '').replace(/\s/g, '');
-  if (!user || !pass || !nodemailer) {
+  if (!user || !pass) {
     cachedTransporter = null;
     return null;
   }

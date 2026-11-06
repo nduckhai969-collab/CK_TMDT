@@ -426,7 +426,7 @@ router.get(['/profile', '/me/profile'], requireSignedIn, (req, res) => {
   });
 });
 
-router.put(['/profile', '/me/profile'], requireSignedIn, (req, res) => {
+router.put(['/me/profile'], requireSignedIn, (req, res) => {
   try {
     const {
       name,

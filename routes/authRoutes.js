@@ -301,7 +301,7 @@ router.post('/login', async (req,res) => {
   // Hỗ trợ mật khẩu mẫu cũ được lưu trực tiếp để đăng nhập lần đầu, sau đó chuyển sang hash.
   if(user&&!valid&&typeof user.password==='string'&&user.password===password){user.passwordHash=await hashPassword(password);delete user.password;await db.saveCollectionAndWait('users',(db.getCollection('users')||[]).map(item=>item.id===user.id?user:item));valid=true;}
   if(!valid)return res.status(401).json({success:false,message:'Email hoặc mật khẩu không chính xác.'});
-  if(user.status==='pending_verification'||user.emailVerified===false)return res.status(403).json({success:false,code:'EMAIL_NOT_VERIFIED',email:user.email,message:'Tài khoản chưa được xác nhận. Hãy mở email xác nhận hoặc yêu cầu gửi lại.'});
+  if(user.status==='pending_verification'||(user.emailVerified===false && user.role !== 'Admin'))return res.status(403).json({success:false,code:'EMAIL_NOT_VERIFIED',email:user.email,message:'Tài khoản chưa được xác nhận. Hãy mở email xác nhận hoặc yêu cầu gửi lại.'});
   if(user.status==='locked')return res.status(403).json({success:false,code:'ACCOUNT_LOCKED',message:'Tài khoản đã bị tạm khóa: '+(user.lockReason||'Liên hệ Admin')});
   return res.json({success:true,message:'Đăng nhập thành công!',user:publicUser(user),accessToken:signToken(user.id)});
 });

@@ -18,6 +18,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const bookingListRoutes = require('./routes/bookingListRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const { requireAdmin } = require('./routes/customerAuth');
 const db = require('./data/db');
 
@@ -108,6 +109,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/analytics', analyticsRoutes);
+app.use('/api/email', emailRoutes);
 
 // ============================================================================
 // CHỨC NĂNG 7: TÍCH HỢP CỔNG THANH TOÁN VNPAY & CHECKOUT TRUYỀN THỐNG

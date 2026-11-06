@@ -61,10 +61,8 @@
       gap: 10px;
     }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-client.js"></script>
+<script src="js/auth-client.js"></script>
+<script src="js/admin-topbar.js"></script>
 </head>
 <body>
   <div class="app">
@@ -134,6 +132,9 @@
           <span class="badge-count">2</span>
         </a>
 
+        <div class="menu-label">MARKETING</div>
+        <a class="menu-item" href="admin_emails.html"><span class="menu-icon">✉</span><span>Email Marketing</span></a>
+
         <div class="menu-label">THỐNG KÊ & BÁO CÁO</div>
         <a class="menu-item" href="reports.html"><span class="menu-icon">▥</span><span>Báo cáo & Xuất file</span></a>
         <a class="menu-item" href="statistics.html"><span class="menu-icon">◫</span><span>Thống kê hệ thống</span></a>
@@ -156,22 +157,11 @@
           <span class="breadcrumb-tag" id="breadcrumb-title">QUẢN LÝ / NGƯỜI DÙNG</span>
           <div class="top-search">
             <span>⌕</span>
-            <input type="text" id="top-search-input" placeholder="Tìm kiếm nhanh người dùng, email, SĐT...">
+            <input type="text" id="top-search-input" placeholder="Tìm kiếm nhanh người dùng, email, SĐT... (Nhấn Enter)" onkeyup="handleQuickSearch(event)">
           </div>
         </div>
 
-        <div class="topbar-right">
-          <button class="icon-badge-btn" onclick="showToast('Thông báo hệ thống', 'Bạn có các tác vụ người dùng cần kiểm tra', 'info')">
-            <span>♢</span><span class="badge-dot">3</span>
-          </button>
-          <div class="admin-profile">
-            <div class="admin-avatar">A</div>
-            <div class="admin-info">
-              <strong>Nguyễn Văn Admin</strong>
-              <span>Quản trị viên hệ thống</span>
-            </div>
-          </div>
-        </div>
+        <div class="topbar-right"></div>
       </header>
 
       <div class="content-area">

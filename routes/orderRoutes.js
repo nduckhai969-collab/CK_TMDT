@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancellation, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancelRequest, processArbitrateCancel, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
 const { createNotification, notifyProvider } = require('../services/notificationService');
 const vnpay = require('../services/vnpayService');
 const { startGatewayCheckout, startGatewayRetry, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
@@ -442,7 +442,7 @@ router.post('/', requireCustomer, (req, res) => {
     .filter(t => t.type === 'deposit' || t.type === 'refund')
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
   const totalDeductions = userTxns
-    .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw')
+    .filter(t => t.type === 'escrow' || t.type === 'order_payment' || t.type === 'withdraw' || t.type === 'refund_reversal')
     .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
   const ledgerBalance = Math.max(0, totalDeposits - totalDeductions);
   const realBalance = Math.max(userBalance, ledgerBalance);
@@ -654,16 +654,33 @@ router.put('/:id/cancel', requireSignedIn, (req, res) => {
   }
 });
 
-router.put('/:id/cancellation-response', requireSignedIn, (req, res) => {
+// Provider phản hồi yêu cầu hủy: chấp thuận (hoàn 100%) hoặc từ chối (→ Admin phân xử)
+// Body: { decision: 'approve' | 'reject', note: string }
+router.put('/:id/cancel-respond', requireRole('Provider'), (req, res) => {
+  const { decision, note } = req.body;
+  if (!decision) {
+    return res.status(400).json({ success: false, message: 'Thiếu trường "decision" (approve | reject).' });
+  }
   try {
-    const order = processRespondCancellation(req.params.id, req.authUser.id, req.authUser.role, req.body.approve === true, req.body.reason);
-    res.json({
-      success: true,
-      message: order.cancellationRequest.status === 'approved'
-        ? 'Yêu cầu hủy đã được chấp thuận; tiền ký quỹ được hoàn vào ví khách hàng.'
-        : 'Đã từ chối yêu cầu hủy; đơn hàng tiếp tục theo trạng thái trước đó.',
-      order
-    });
+    const order = processRespondCancelRequest(req.params.id, req.authUser.id, decision, note);
+    const message = decision === 'approve'
+      ? 'Đã chấp thuận yêu cầu hủy. Đơn hàng kết thúc và tiền ký quỹ hoàn 100% cho khách.'
+      : 'Đã từ chối yêu cầu hủy. Đơn hàng chuyển Admin phân xử — tiền ký quỹ vẫn được giữ nguyên.';
+    res.json({ success: true, message, order });
+  } catch (err) {
+    res.status(err.status || 400).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/:id/cancellation-response', requireSignedIn, (req, res) => {
+  const decision = req.body.approve === true ? 'approve' : 'reject';
+  const note = req.body.reason || req.body.note || '';
+  try {
+    const order = processRespondCancelRequest(req.params.id, req.authUser.id, decision, note);
+    const message = decision === 'approve'
+      ? 'Đã chấp thuận yêu cầu hủy. Đơn hàng kết thúc và tiền ký quỹ hoàn 100% cho khách.'
+      : 'Đã từ chối yêu cầu hủy. Đơn hàng chuyển Admin phân xử — tiền ký quỹ vẫn được giữ nguyên.';
+    res.json({ success: true, message, order });
   } catch (err) {
     res.status(err.status || 400).json({ success: false, message: err.message });
   }

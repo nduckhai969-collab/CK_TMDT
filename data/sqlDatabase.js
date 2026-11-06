@@ -42,11 +42,54 @@ class SqlDatabase {
       }
     }
     for (const name of this.collections) await this.getCollectionFresh(name);
+    await this.ensureSeedUserCredentials();
     // Keep the relational users table visible to SQL clients as well as the
     // app_records collection used by the existing application routes.
     await this.syncRelationalUsers(this.pool, this.cache.users || []);
     this.ready = true;
     console.log(`[db] Đã nạp MySQL: ${this.collections.length} collection, ${(this.cache.users || []).length} user.`);
+  }
+
+  async ensureSeedUserCredentials() {
+    const users = this.cache.users || [];
+    const seedUsers = this.initialData.users || [];
+    let changed = false;
+    let hashPassword;
+
+    for (const seedUser of seedUsers) {
+      const seedEmail = String(seedUser.email || '').trim().toLowerCase();
+      const user = users.find(item => String(item.id) === String(seedUser.id) &&
+        String(item.email || '').trim().toLowerCase() === seedEmail);
+      if (!user) continue;
+
+      if (!user.passwordHash && typeof user.password === 'string' && user.password) {
+        if (user.password.startsWith('scrypt:')) {
+          user.passwordHash = user.password;
+        } else {
+          if (!hashPassword) hashPassword = require('../utils/authTokens').hashPassword;
+          user.passwordHash = await hashPassword(user.password);
+        }
+        delete user.password;
+        changed = true;
+      }
+
+      if (!user.passwordHash && !user.password && (seedUser.passwordHash || seedUser.password)) {
+        if (seedUser.passwordHash) {
+          user.passwordHash = seedUser.passwordHash;
+        } else {
+          if (!hashPassword) hashPassword = require('../utils/authTokens').hashPassword;
+          user.passwordHash = await hashPassword(seedUser.password);
+        }
+        changed = true;
+      }
+
+      if (user.emailVerified == null && seedUser.emailVerified != null) {
+        user.emailVerified = Boolean(seedUser.emailVerified);
+        changed = true;
+      }
+    }
+
+    if (changed) await this.saveCollectionAndWait('users', users);
   }
 
   async readRelationalSeed() {
@@ -59,7 +102,12 @@ class SqlDatabase {
     const dateValue = value => value instanceof Date ? value.toISOString() : value;
     const camel = (row, map) => Object.fromEntries(Object.entries(map).map(([key, column]) => [key, row[column]]));
     return {
-      users: users.map(row => ({ id: row.id, uid: row.uid || '', name: row.name, email: row.email, phone: row.phone, role: row.role, password: row.password, balance: Number(row.balance), avatar: row.avatar, address: row.address, bio: row.bio, status: row.status, joinDate: dateValue(row.created_at) })),
+      users: users.map(row => {
+        const user = { id: row.id, uid: row.uid || '', name: row.name, email: row.email, phone: row.phone, role: row.role, balance: Number(row.balance), avatar: row.avatar, address: row.address, bio: row.bio, status: row.status, joinDate: dateValue(row.created_at) };
+        if (typeof row.password === 'string' && row.password.startsWith('scrypt:')) user.passwordHash = row.password;
+        else if (row.password) user.password = row.password;
+        return user;
+      }),
       providers: providerRows.map(row => ({ ...camel(row, { id: 'id', userId: 'user_id', specialty: 'specialty', category: 'category', hourlyRate: 'hourly_rate', rating: 'rating', reviewCount: 'review_count', completedOrders: 'completed_orders', location: 'location', verified: 'verified', badge: 'badge', availabilityStatus: 'availability_status', bio: 'bio' }), hourlyRate: Number(row.hourly_rate), rating: Number(row.rating), name: row.name, email: row.email, phone: row.phone, avatar: row.avatar })),
       services: serviceRows.map(row => ({ ...camel(row, { id: 'id', providerId: 'provider_id', title: 'title', price: 'price', duration: 'duration', category: 'category', description: 'description', status: 'status' }), price: Number(row.price) })),
       orders: orders.map(row => ({ ...camel(row, { id: 'id', customerId: 'customer_id', providerId: 'provider_id', serviceId: 'service_id', serviceTitle: 'service_title', price: 'price', platformFee: 'platform_fee', escrowDeposit: 'escrow_deposit', escrowStatus: 'escrow_status', orderStatus: 'order_status', paymentStatus: 'payment_status', paymentExpireAt: 'payment_expire_at', deadline: 'deadline', note: 'note', createdAt: 'created_at' }), price: Number(row.price), platformFee: Number(row.platform_fee), escrowDeposit: Number(row.escrow_deposit), paymentExpireAt: dateValue(row.payment_expire_at), deadline: dateValue(row.deadline), createdAt: dateValue(row.created_at) })),

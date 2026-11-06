@@ -2220,6 +2220,7 @@
                         <input
                                 type="password"
                                 id="newPassword"
+                                minlength="8"
                                 class="form-input"
                                 placeholder="Nhập mật khẩu mới"
                         >
@@ -2235,7 +2236,7 @@
                     </div>
 
                     <div class="form-note">
-                        Mật khẩu mới phải có ít nhất 6 ký tự.
+                        Mật khẩu mới phải có ít nhất 8 ký tự.
                     </div>
 
                 </div>
@@ -3144,11 +3145,11 @@
                 }
 
                 if (
-                    newPassword.length < 6
+                    newPassword.length < 8
                 ) {
 
                     showToast(
-                        'Mật khẩu mới phải có ít nhất 6 ký tự.',
+                        'Mật khẩu mới phải có ít nhất 8 ký tự.',
                         true
                     );
 
@@ -3195,6 +3196,10 @@
                         );
 
                         return;
+                    }
+
+                    if (response.accessToken) {
+                        window.SkillAuth?.replaceAccessToken(response.accessToken);
                     }
 
                     closePasswordModal();

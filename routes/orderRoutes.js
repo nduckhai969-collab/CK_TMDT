@@ -69,6 +69,7 @@ function syncPendingJobOrders(customerId, customerUid = null) {
       providerPhone: provider.phone || '',
       serviceId: null,
       serviceTitle: job.title || 'Hợp đồng dịch vụ theo yêu cầu',
+      category: job.category || '',
       jobId: job.id,
       price: priceNum,
       priceFormatted: priceNum.toLocaleString('vi-VN') + 'đ',

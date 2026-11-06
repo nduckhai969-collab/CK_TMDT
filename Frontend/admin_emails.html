@@ -123,12 +123,49 @@
           <span class="breadcrumb-tag">B4 ADMIN / EMAIL MARKETING / M3 - GỢI Ý THEO SỞ THÍCH</span>
         </div>
         <div class="topbar-right">
-          <button class="icon-badge-btn" type="button" id="topbar-extra" onclick="loadEmails()" title="Tải lại">↻</button>
+          <span id="topbar-extra" style="display:inline-flex;align-items:center;gap:8px">
+            <button class="btn btn-secondary" style="background:#2563EB;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px" onclick="previewEmailContent()">Xem nội dung email</button>
+            <button class="btn btn-secondary" style="background:#0F172A;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px" onclick="previewCampaign()">Xem trước chiến dịch</button>
+            <button class="icon-badge-btn" type="button" onclick="loadEmails()" title="Tải lại">↻</button>
+          </span>
         </div>
       </header>
 
       <section style="padding:20px">
         <div id="stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px"></div>
+
+        <!-- Section Xem trước (mặc định ẩn) -->
+        <div id="preview-section" style="display:none;background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:20px;border:1px solid #E2E8F0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="margin:0;font-size:15px;color:#0F172A">Xem trước khách hàng đủ điều kiện</h3>
+            <div>
+              <button class="btn" style="background:#F1F5F9;color:#475569;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:8px" onclick="hidePreview()">Đóng</button>
+              <button class="btn" style="background:#16A34A;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600" onclick="runCampaign()">Gửi chiến dịch ngay</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="text-align:left;color:#64748B;border-bottom:1px solid #E2E8F0">
+                  <th style="padding:8px">Khách hàng</th>
+                  <th style="padding:8px">Email</th>
+                  <th style="padding:8px">Ngày từ đơn cuối</th>
+                  <th style="padding:8px">Gợi ý</th>
+                </tr>
+              </thead>
+              <tbody id="preview-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section Xem nội dung email thực tế sẽ gửi (mặc định ẩn) -->
+        <div id="content-section" style="display:none;background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:20px;border:1px solid #E2E8F0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="margin:0;font-size:15px;color:#0F172A">Nội dung email sẽ gửi cho khách</h3>
+            <button class="btn" style="background:#F1F5F9;color:#475569;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px" onclick="hideContent()">Đóng</button>
+          </div>
+          <div id="content-list" style="display:grid;gap:16px"></div>
+        </div>
 
         <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
           <h3 style="margin:0 0 12px;font-size:15px;color:#0F172A">Log email đã gửi</h3>
@@ -205,6 +242,105 @@
       } catch (error) {
         document.getElementById('rows').innerHTML =
           `<tr><td colspan="7" style="padding:16px;color:#DC2626">${error.message}</td></tr>`;
+      }
+    }
+
+    async function previewCampaign() {
+      const tbody = document.getElementById('preview-rows');
+      const section = document.getElementById('preview-section');
+      section.style.display = 'block';
+      tbody.innerHTML = '<tr><td colspan="4" style="padding:16px;color:#94A3B8">Đang phân tích dữ liệu và tính toán gợi ý...</td></tr>';
+      
+      try {
+        const res = await fetch('/api/email/preview');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Lỗi khi tải bản xem trước');
+        
+        if (!data.preview.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="padding:16px;color:#94A3B8">Hiện tại không có khách hàng nào đủ điều kiện nhận email marketing (M3).</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = data.preview.map(p => {
+          const items = p.items.map(i => `• ${i.title}`).join('<br>');
+          return `<tr style="border-bottom:1px solid #F1F5F9">
+            <td style="padding:8px">${p.name}</td>
+            <td style="padding:8px">${p.email}</td>
+            <td style="padding:8px">${p.daysSinceLastOrder} ngày</td>
+            <td style="padding:8px;line-height:1.4">${items}</td>
+          </tr>`;
+        }).join('');
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="4" style="padding:16px;color:#DC2626">${error.message}</td></tr>`;
+      }
+    }
+
+    function hidePreview() {
+      document.getElementById('preview-section').style.display = 'none';
+    }
+
+    function hideContent() {
+      document.getElementById('content-section').style.display = 'none';
+    }
+
+    async function previewEmailContent() {
+      const list = document.getElementById('content-list');
+      const section = document.getElementById('content-section');
+      section.style.display = 'block';
+      list.innerHTML = '<div style="color:#94A3B8;font-size:13px">Đang dựng nội dung email...</div>';
+
+      try {
+        const res = await fetch('/api/email/preview-content');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Lỗi khi tải nội dung email');
+
+        if (!data.preview.length) {
+          list.innerHTML = '<div style="color:#94A3B8;font-size:13px">Hiện tại không có khách hàng nào đủ điều kiện nhận email marketing (M3).</div>';
+          return;
+        }
+
+        list.innerHTML = '';
+        data.preview.forEach(p => {
+          const box = document.createElement('div');
+          box.style.cssText = 'border:1px solid #E2E8F0;border-radius:8px;overflow:hidden';
+
+          const head = document.createElement('div');
+          head.style.cssText = 'padding:8px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:12px;color:#475569';
+          head.textContent = `Tới: ${p.name} <${p.email}> — Tiêu đề: ${p.subject}`;
+
+          const frame = document.createElement('iframe');
+          frame.style.cssText = 'width:100%;height:420px;border:none;background:#fff';
+          frame.setAttribute('sandbox', '');
+          frame.srcdoc = p.html;
+
+          box.appendChild(head);
+          box.appendChild(frame);
+          list.appendChild(box);
+        });
+      } catch (error) {
+        list.innerHTML = `<div style="color:#DC2626;font-size:13px">${error.message}</div>`;
+      }
+    }
+
+    async function runCampaign() {
+      if (!confirm('Bạn có chắc chắn muốn gửi email marketing cho tất cả khách hàng đủ điều kiện hiện tại?')) return;
+      
+      const btn = event.target;
+      const originalText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = 'Đang gửi...';
+      
+      try {
+        const res = await fetch('/api/email/send-campaign', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+        hidePreview();
+        loadEmails();
+      } catch (error) {
+        alert('Lỗi: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
       }
     }
 

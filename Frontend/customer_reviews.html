@@ -51,7 +51,7 @@
       submittedReviews = reviewResult.reviews || [];
       const orders = orderResult.orders || [];
       const reviewedOrders = new Set(submittedReviews.map(review => review.orderId));
-      const pending = orders.filter(order => order.orderStatus === 'completed' && !reviewedOrders.has(order.id));
+      const pending = orders.filter(order => ['completed', 'delivered'].includes(String(order.orderStatus || order.status || '').trim().toLowerCase()) && !reviewedOrders.has(order.id));
       const avg = submittedReviews.length ? (submittedReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / submittedReviews.length).toFixed(1) : '—';
       document.getElementById('reviewCount').textContent = submittedReviews.length;
       document.getElementById('reviewAverage').textContent = avg === '—' ? avg : `${avg} / 5`;

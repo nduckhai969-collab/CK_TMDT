@@ -196,7 +196,7 @@ router.post('/', requireCustomer, async (req, res) => {
   if (order.customerId !== req.authUser.id && (!req.authUser.uid || order.customerId !== req.authUser.uid)) {
     return res.status(403).json({ success: false, message: 'Bạn chỉ có thể đánh giá đơn hàng của mình.' });
   }
-  if (!['completed', 'delivered'].includes(String(order.orderStatus || '').toLowerCase())) {
+  if (!['completed', 'delivered'].includes(String(order.orderStatus || order.status || '').trim().toLowerCase())) {
     return res.status(400).json({ success: false, message: 'Chỉ có thể đánh giá đơn hàng đã hoàn tất.' });
   }
 

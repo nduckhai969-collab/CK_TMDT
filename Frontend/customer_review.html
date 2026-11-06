@@ -176,24 +176,45 @@
       loadOrderInfo(orderId);
     });
 
+    function isOrderReviewable(order) {
+      return ['completed', 'delivered'].includes(String(order?.orderStatus || order?.status || '').trim().toLowerCase());
+    }
+
+    function showOrderUnavailable(message) {
+      targetOrder = null;
+      document.getElementById('orderIdText').textContent = 'Chưa thể đánh giá đơn này';
+      document.getElementById('orderServiceTitle').textContent = message;
+      document.getElementById('orderProviderName').textContent = '';
+      const btn = document.getElementById('btnSubmitReview');
+      if (btn) btn.disabled = true;
+      const form = document.getElementById('reviewForm');
+      if (form) form.hidden = true;
+    }
+
     async function loadOrderInfo(orderId) {
       if (orderId) {
         try {
           const res = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}`);
           if (res.success && res.order) {
+            if (!isOrderReviewable(res.order)) {
+              showOrderUnavailable('Đơn hàng chưa hoàn tất. Bạn có thể gửi đánh giá sau khi đơn chuyển sang Đã giao hoặc Hoàn tất.');
+              return;
+            }
             applyOrder(res.order);
             return;
           }
         } catch (e) {
           console.warn('Lỗi tải đơn hàng theo ID:', e);
         }
+        showOrderUnavailable('Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập đơn này.');
+        return;
       }
 
       // Nếu không có orderId trên URL hoặc không tìm thấy, tự động lấy đơn hoàn tất của khách
       try {
         const ordersRes = await apiRequest('/api/orders');
-        if (ordersRes.success && Array.isArray(ordersRes.orders) && ordersRes.orders.length > 0) {
-          const completed = ordersRes.orders.find(o => o.orderStatus === 'completed');
+        if (ordersRes.success && Array.isArray(ordersRes.orders)) {
+          const completed = ordersRes.orders.find(isOrderReviewable);
           if (completed) {
             applyOrder(completed);
             return;
@@ -203,14 +224,7 @@
         console.warn('Không lấy được danh sách orders:', e);
       }
 
-      targetOrder = null;
-      document.getElementById('orderIdText').textContent = 'Không tìm thấy đơn hàng';
-      document.getElementById('orderServiceTitle').textContent = 'Bạn cần đơn hàng đã hoàn tất để gửi đánh giá.';
-      document.getElementById('orderProviderName').textContent = '';
-      const btn = document.getElementById('btnSubmitReview');
-      if (btn) btn.disabled = true;
-      const form = document.getElementById('reviewForm');
-      if (form) form.hidden = true;
+      showOrderUnavailable('Bạn cần đơn hàng đã giao hoặc hoàn tất để gửi đánh giá.');
     }
 
     async function applyOrder(ord) {

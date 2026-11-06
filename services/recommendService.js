@@ -10,7 +10,7 @@ const CFG = {
   MIN_SCORE: 0.01,   // ngưỡng điểm tối thiểu; hiệu chỉnh theo dữ liệu nhỏ (6 dịch vụ)
   TOP_K: 3,          // số gợi ý tối đa mỗi email
   MIN_ORDERS: 2,     // cần tối thiểu bao nhiêu đơn hoàn tất mới dựng hồ sơ
-  TRIGGER_DAYS: 14   // số ngày sau đơn hoàn tất gần nhất mới kích hoạt
+  TRIGGER_DAYS: 0    // số ngày sau đơn hoàn tất gần nhất mới kích hoạt (tạm hạ để test)
 };
 
 // Từ chức năng tiếng Việt. IDF chỉ hạ được trọng số khi corpus đủ lớn; với dữ liệu
@@ -90,8 +90,10 @@ function buildProfile(index, orders) {
     const at = parseDateTime(order.date);
     if (at && (!lastOrderAt || at > lastOrderAt)) lastOrderAt = at;
 
-    const service = index.servicesById.get(order.serviceId);
-    if (!service) continue; // ví dụ SVC_CUSTOM: không tra được thì bỏ qua đơn đó
+    const service = index.servicesById.get(order.serviceId)
+      // Đơn từ yêu cầu (job) không gắn dịch vụ danh mục: dựng "dịch vụ ảo" từ tiêu đề + lĩnh vực.
+      || { title: order.serviceTitle || '', category: order.category || '', desc: '' };
+    if (!service.title) continue;
 
     const days = daysBetween(order.date);
     const weight = 1 / (1 + Math.max(days == null ? 0 : days, 0) / CFG.DECAY_DAYS);

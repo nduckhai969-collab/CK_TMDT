@@ -43,7 +43,7 @@ function trackedLink(emailId, target) {
 
 function renderRecommendation(user, items, emailId) {
   const name = String(user.name || '').split(' ').slice(-1)[0] || 'bạn';
-  const subject = 'Gợi ý dịch vụ dành riêng cho bạn - SkillRental';
+  const subject = `[SkillRental] Gợi ý dịch vụ dành riêng cho ${user.name || 'bạn'}`;
 
   const cards = items.map(item => {
     const url = trackedLink(emailId, `${BASE_URL}/customer.html`);
@@ -99,9 +99,9 @@ async function deliver(record, content) {
       to: record.to,
       subject: content.subject,
       html: content.html,
-      text: content.text,
-      headers: { 'List-Unsubscribe': `<${BASE_URL}/api/email/unsubscribe?e=${encodeURIComponent(record.id)}>` }
+      text: content.text
     });
+    console.log(`[email] Sent to ${record.to}: messageId=${info?.messageId}, response=${info?.response}`);
     record.status = 'sent';
     record.providerMessageId = info && info.messageId ? info.messageId : '';
     record.sentAt = formatDateTime(new Date());

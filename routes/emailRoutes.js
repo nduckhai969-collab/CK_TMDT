@@ -17,10 +17,21 @@ function collectRecipients() {
   for (const user of customers) {
     if (isSuppressed(user.email)) continue;
     const result = recommendForUser(user.id);
-    if (!result.eligible || result.profileOrders < MIN_ORDERS) continue;
+    if (!result.eligible) {
+      console.log(`[marketing] User ${user.email} not eligible: ${result.reason}`);
+      continue;
+    }
+    if (result.profileOrders < MIN_ORDERS) {
+      console.log(`[marketing] User ${user.email} not enough orders: ${result.profileOrders} < ${MIN_ORDERS}`);
+      continue;
+    }
     const elapsed = result.lastOrderAt ? daysBetween(result.lastOrderAt) : null;
-    if (elapsed == null || elapsed < TRIGGER_DAYS) continue;
+    if (elapsed == null || elapsed < TRIGGER_DAYS) {
+      console.log(`[marketing] User ${user.email} too recent: elapsed=${elapsed}, trigger=${TRIGGER_DAYS}`);
+      continue;
+    }
     list.push({ user, result, daysSinceLastOrder: Math.floor(elapsed) });
+    console.log(`[marketing] User ${user.email} added to campaign`);
   }
   return list;
 }

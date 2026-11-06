@@ -148,7 +148,7 @@ async function apiRequest(
 ) {
 
   const method = String(options.method || 'GET').toUpperCase();
-  const isMutation = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+  const isMutation = !['GET', 'HEAD', 'OPTIONS'].includes(method) && !endpoint.startsWith('/api/reviews/analyze');
   const isPrivateRead = method === 'GET' && (
     /^\/api\/(orders|chat|complaints|reviews)(\/|\?|$)/.test(endpoint) ||
     /^\/api\/auth\/me(\?|$)/.test(endpoint) ||
@@ -2999,3 +2999,39 @@ window.initFloatingChat = initFloatingChat;
 window.toggleFloatingChat = toggleFloatingChat;
 window.handleSendFloatingMessage = handleSendFloatingMessage;
 window.openChatWithProvider = openChatWithProvider;
+
+
+// ============================================================
+// AI ASPECT-BASED SENTIMENT BADGE HELPER
+// Hiển thị khung nhỏ phân tích cảm xúc (Tích cực / Tiêu cực / Khen-Chê)
+// ============================================================
+function renderAiBadge(aiAnalysis) {
+  if (!aiAnalysis) return '';
+  const sent = aiAnalysis.overallSentiment || 'neutral';
+  let bg = '#F0FDF4', border = '#BBF7D0', color = '#15803D', label = 'Tích cực', icon = '<i class="fa-solid fa-circle-check" style="color:#16a34a;margin-right:5px;"></i>';
+  if (sent === 'neg') {
+    bg = '#FEF2F2'; border = '#FECACA'; color = '#B91C1C'; label = 'Tiêu cực'; icon = '<i class="fa-solid fa-circle-xmark" style="color:#dc2626;margin-right:5px;"></i>';
+  } else if (sent === 'mixed') {
+    bg = '#FFFBEB'; border = '#FDE68A'; color = '#B45309'; label = 'Khen - Chê đan xen'; icon = '<i class="fa-solid fa-circle-half-stroke" style="color:#d97706;margin-right:5px;"></i>';
+  } else if (sent === 'neutral') {
+    bg = '#F1F5F9'; border = '#CBD5E1'; color = '#475569'; label = 'Trung tính'; icon = '<i class="fa-solid fa-circle-info" style="color:#64748b;margin-right:5px;"></i>';
+  }
+
+  const aspects = Array.isArray(aiAnalysis.aspects) ? aiAnalysis.aspects : [];
+  const aspectChips = aspects.map(a => {
+    const isP = a.sentiment === 'pos', isN = a.sentiment === 'neg';
+    const cColor = isP ? '#15803D' : isN ? '#B91C1C' : '#64748B';
+    const cBg = isP ? '#DCFCE7' : isN ? '#FEE2E2' : '#F1F5F9';
+    const sign = isP ? 'Khen' : isN ? 'Chê' : '~';
+    const name = a.aspectName || a.aspect;
+    return '<span style="display:inline-flex;align-items:center;padding:2px 7px;border-radius:9999px;font-size:11px;font-weight:600;color:' + cColor + ';background:' + cBg + ';margin-left:4px;border:1px solid rgba(0,0,0,0.05);">' + name + ': ' + sign + '</span>';
+  }).join('');
+
+  return '<div class="ai-sentiment-box" style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;padding:4px 10px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;font-size:12px;font-weight:700;color:' + color + ';margin-top:6px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">' +
+    icon +
+    '<span>' + label + '</span>' +
+    aspectChips +
+  '</div>';
+}
+
+window.renderAiBadge = renderAiBadge;

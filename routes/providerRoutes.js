@@ -10,6 +10,7 @@ const { formatDateTime } = require('../utils/dates');
 const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancellation, checkAutoReleaseOrders } = require('../services/orderService');
 const { isVisibleToProvider } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
+const { enrichReviewWithAI } = require('./reviewRoutes');
 
 function getMyProvider(req) {
   const providers = db.getCollection('providers') || [];
@@ -334,7 +335,7 @@ router.get('/:id', async (req, res) => {
   const provider = providers.find(p => p.id === req.params.id);
   if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
   const services = allServices.filter(s => s.providerId === provider.id && s.status !== 'inactive');
-  const reviews = allReviews.filter(r => r.providerId === provider.id);
+  const reviews = allReviews.filter(r => r.providerId === provider.id).map(r => r.aiAnalysis ? r : (enrichReviewWithAI ? enrichReviewWithAI(r) : r));
   res.json({ success: true, provider, services, reviews });
 });
 

@@ -111,11 +111,11 @@ const DEFAULT_STATE = {
 
   // UC-62, UC-63: Reviews
   reviews: [
-    { id: 'REV001', customer: 'Trần Thị Mai', provider: 'Nguyễn Văn An', service: 'Thiết kế website', rating: 5, content: 'Anh An làm việc rất chuyên nghiệp, code chuẩn tối ưu, website chạy rất nhanh!', date: '28/04/2025', status: 'published' },
-    { id: 'REV002', customer: 'Lê Minh Hoàng', provider: 'Trần Thị Lan', service: 'Thiết kế logo', rating: 5, content: 'Bản thiết kế rất sáng tạo, đúng gu thẩm mỹ hiện đại, phản hồi chỉnh sửa siêu nhanh.', date: '27/04/2025', status: 'published' },
-    { id: 'REV003', customer: 'Đặng Hữu Tài', provider: 'Phạm Hữu Cường', service: 'Gia sư IELTS', rating: 4, content: 'Thầy dạy nhiệt tình, tài liệu phong phú, Speaking của mình cải thiện rõ rệt.', date: '26/04/2025', status: 'published' },
-    { id: 'REV004', customer: 'Vũ Quang Huy', provider: 'Đặng Quốc Huy', service: 'Cài đặt phần mềm', rating: 1, content: 'Thằng lừa đảo, nhận tiền xong cài lung tung làm hỏng cả máy tính của tao! Đừng ai thuê nó!', date: '25/04/2025', status: 'hidden', note: 'Chứa từ ngữ thô tục, đã được ẩn bởi Admin' },
-    { id: 'REV005', customer: 'Hoàng Văn Nam', provider: 'Trần Đình Trọng', service: 'Sửa chữa điện', rating: 2, content: 'Đến muộn 1 tiếng so với hẹn, giá báo ban đầu khác lúc thanh toán.', date: '24/04/2025', status: 'published' }
+    { id: 'REV001', customer: 'Trần Thị Mai', provider: 'Nguyễn Văn An', service: 'Thiết kế website', rating: 5, content: 'Anh An làm việc rất chuyên nghiệp, code chuẩn tối ưu, website chạy rất nhanh!', date: '28/04/2025', status: 'published', aiAnalysis: { overallSentiment: 'pos', aspects: [{ aspect: 'quality', aspectName: 'Chất lượng', sentiment: 'pos', confidence: 95 }, { aspect: 'speed', aspectName: 'Tiến độ', sentiment: 'pos', confidence: 92 }] } },
+    { id: 'REV002', customer: 'Lê Minh Hoàng', provider: 'Trần Thị Lan', service: 'Thiết kế logo', rating: 5, content: 'Bản thiết kế rất sáng tạo, đúng gu thẩm mỹ hiện đại, phản hồi chỉnh sửa siêu nhanh.', date: '27/04/2025', status: 'published', aiAnalysis: { overallSentiment: 'pos', aspects: [{ aspect: 'quality', aspectName: 'Chất lượng', sentiment: 'pos', confidence: 94 }, { aspect: 'speed', aspectName: 'Tiến độ', sentiment: 'pos', confidence: 91 }] } },
+    { id: 'REV003', customer: 'Đặng Hữu Tài', provider: 'Phạm Hữu Cường', service: 'Gia sư IELTS', rating: 4, content: 'Thầy dạy nhiệt tình, tài liệu phong phú, Speaking của mình cải thiện rõ rệt.', date: '26/04/2025', status: 'published', aiAnalysis: { overallSentiment: 'pos', aspects: [{ aspect: 'attitude', aspectName: 'Thái độ', sentiment: 'pos', confidence: 90 }, { aspect: 'quality', aspectName: 'Chất lượng', sentiment: 'pos', confidence: 88 }] } },
+    { id: 'REV004', customer: 'Vũ Quang Huy', provider: 'Đặng Quốc Huy', service: 'Cài đặt phần mềm', rating: 1, content: 'Thằng lừa đảo, nhận tiền xong cài lung tung làm hỏng cả máy tính của tao! Đừng ai thuê nó!', date: '25/04/2025', status: 'hidden', note: 'Chứa từ ngữ thô tục, đã được ẩn bởi Admin', aiAnalysis: { overallSentiment: 'neg', aspects: [{ aspect: 'quality', aspectName: 'Chất lượng', sentiment: 'neg', confidence: 96 }, { aspect: 'attitude', aspectName: 'Thái độ', sentiment: 'neg', confidence: 93 }] } },
+    { id: 'REV005', customer: 'Hoàng Văn Nam', provider: 'Trần Đình Trọng', service: 'Sửa chữa điện', rating: 2, content: 'Đến muộn 1 tiếng so với hẹn, giá báo ban đầu khác lúc thanh toán.', date: '24/04/2025', status: 'published', aiAnalysis: { overallSentiment: 'neg', aspects: [{ aspect: 'speed', aspectName: 'Tiến độ', sentiment: 'neg', confidence: 92 }, { aspect: 'price', aspectName: 'Giá cả', sentiment: 'neg', confidence: 89 }] } }
   ],
 
   // UC-64, UC-65: Complaints & Disputes
@@ -848,6 +848,44 @@ function exportDataSimulation(filename) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    showToast('Xuất dữ liệu thành công', `Đã xuất ${recordCount} bản ghi vào tệp ${filename}.csv`, 'success');
+  }, 600);
+}
+
+// ============================================================
+// AI ASPECT-BASED SENTIMENT BADGE HELPER
+// ============================================================
+function renderAiBadge(aiAnalysis) {
+  if (!aiAnalysis) return '';
+  const sent = aiAnalysis.overallSentiment || 'neutral';
+  let bg = '#F0FDF4', border = '#BBF7D0', color = '#15803D', label = 'Tích cực', icon = '<i class="fa-solid fa-circle-check" style="color:#16a34a;margin-right:5px;"></i>';
+  if (sent === 'neg') {
+    bg = '#FEF2F2'; border = '#FECACA'; color = '#B91C1C'; label = 'Tiêu cực'; icon = '<i class="fa-solid fa-circle-xmark" style="color:#dc2626;margin-right:5px;"></i>';
+  } else if (sent === 'mixed') {
+    bg = '#FFFBEB'; border = '#FDE68A'; color = '#B45309'; label = 'Khen - Chê đan xen'; icon = '<i class="fa-solid fa-circle-half-stroke" style="color:#d97706;margin-right:5px;"></i>';
+  } else if (sent === 'neutral') {
+    bg = '#F1F5F9'; border = '#CBD5E1'; color = '#475569'; label = 'Trung tính'; icon = '<i class="fa-solid fa-circle-info" style="color:#64748b;margin-right:5px;"></i>';
+  }
+
+  const aspects = Array.isArray(aiAnalysis.aspects) ? aiAnalysis.aspects : [];
+  const aspectChips = aspects.map(a => {
+    const isP = a.sentiment === 'pos', isN = a.sentiment === 'neg';
+    const cColor = isP ? '#15803D' : isN ? '#B91C1C' : '#64748B';
+    const cBg = isP ? '#DCFCE7' : isN ? '#FEE2E2' : '#F1F5F9';
+    const sign = isP ? 'Khen' : isN ? 'Chê' : '~';
+    const name = a.aspectName || a.aspect;
+    return '<span style="display:inline-flex;align-items:center;padding:2px 7px;border-radius:9999px;font-size:11px;font-weight:600;color:' + cColor + ';background:' + cBg + ';margin-left:4px;border:1px solid rgba(0,0,0,0.05);">' + name + ': ' + sign + '</span>';
+  }).join('');
+
+  return '<div class="ai-sentiment-box" style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;padding:4px 10px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;font-size:12px;font-weight:700;color:' + color + ';margin-top:6px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">' +
+    icon +
+    '<span>' + label + '</span>' +
+    aspectChips +
+  '</div>';
+}
+
+window.renderAiBadge = renderAiBadge;
 
     showToast('Xuất dữ liệu thành công', `Đã xuất ${recordCount} bản ghi vào tệp ${filename}.csv`, 'success');
   }, 600);

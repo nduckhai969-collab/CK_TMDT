@@ -410,6 +410,124 @@ const handleProviderCoverUpload = async (req, res) => {
 router.put(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
 router.post(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
 
+// ============================================================================
+// 14. CẬP NHẬT THÔNG TIN HỒ SƠ NGƯỜI BÁN (PROVIDER PROFILE)
+// GET & PUT /api/providers/profile
+// Đối với Người bán (Provider), ngoài họ tên/số điện thoại, họ sẽ cần cập nhật thêm
+// các trường đặc thù vào bảng providers như: Tên thương hiệu/Kỹ năng, Mô tả dịch vụ,
+// Giá thuê theo giờ/ngày, và Ảnh đại diện/Ảnh bìa.
+// ============================================================================
+router.get(['/profile', '/me/profile'], requireSignedIn, (req, res) => {
+  const provider = getMyProvider(req);
+  res.json({
+    success: true,
+    provider,
+    user: req.authUser
+  });
+});
+
+router.put(['/profile', '/me/profile'], requireSignedIn, (req, res) => {
+  try {
+    const {
+      name,
+      phone,
+      specialty,
+      brandName,
+      headline,
+      category,
+      skills,
+      bio,
+      description,
+      hourlyRate,
+      dailyRate,
+      location,
+      address,
+      avatar,
+      cover,
+      availabilityStatus,
+      workingHours
+    } = req.body || {};
+
+    const provider = getMyProvider(req);
+    const providers = db.getCollection('providers') || [];
+    let pIndex = providers.findIndex(p => p.id === provider.id);
+    if (pIndex === -1) {
+      providers.unshift(provider);
+      pIndex = 0;
+    }
+    const prov = providers[pIndex];
+
+    // Cập nhật các trường đặc thù của Provider vào bảng providers
+    const effectiveSpecialty = specialty !== undefined ? specialty : (brandName !== undefined ? brandName : headline);
+    if (effectiveSpecialty !== undefined) prov.specialty = String(effectiveSpecialty).trim();
+
+    if (category !== undefined) prov.category = String(category).trim();
+
+    const effectiveBio = bio !== undefined ? bio : description;
+    if (effectiveBio !== undefined) prov.bio = String(effectiveBio).trim();
+
+    if (hourlyRate !== undefined && hourlyRate !== null && hourlyRate !== '') {
+      prov.hourlyRate = Number(String(hourlyRate).replace(/[^0-9]/g, '')) || 0;
+    }
+
+    if (dailyRate !== undefined && dailyRate !== null && dailyRate !== '') {
+      prov.dailyRate = Number(String(dailyRate).replace(/[^0-9]/g, '')) || 0;
+    } else if (prov.hourlyRate > 0 && !prov.dailyRate) {
+      prov.dailyRate = prov.hourlyRate * 8; // Ước tính 8h/ngày
+    }
+
+    if (skills !== undefined) {
+      if (Array.isArray(skills)) {
+        prov.skills = skills.map(s => String(s).trim()).filter(Boolean);
+      } else if (typeof skills === 'string') {
+        prov.skills = skills.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+
+    const effectiveLocation = location !== undefined ? location : address;
+    if (effectiveLocation !== undefined) prov.location = String(effectiveLocation).trim();
+
+    if (name !== undefined && String(name).trim()) prov.name = String(name).trim();
+    if (phone !== undefined) prov.phone = String(phone).trim();
+    if (avatar) prov.avatar = String(avatar).trim();
+    if (cover) prov.cover = String(cover).trim();
+    if (availabilityStatus) prov.availabilityStatus = availabilityStatus;
+    if (workingHours !== undefined) prov.workingHours = String(workingHours).trim();
+
+    prov.profileCompleted = true;
+    prov.updatedAt = new Date().toISOString();
+    db.saveCollection('providers', providers);
+
+    // Đồng bộ các trường thông tin cơ bản sang bảng users
+    const users = db.getCollection('users') || [];
+    const uIndex = users.findIndex(u => u.id === req.authUser.id || u.id === prov.userId);
+    let updatedUser = null;
+    if (uIndex !== -1) {
+      const u = users[uIndex];
+      if (prov.name) u.name = prov.name;
+      if (prov.phone) u.phone = prov.phone;
+      if (prov.avatar) u.avatar = prov.avatar;
+      if (prov.cover) u.cover = prov.cover;
+      if (prov.location) u.address = prov.location;
+      if (prov.bio) u.bio = prov.bio;
+      u.updatedAt = new Date().toISOString();
+      db.saveCollection('users', users);
+      updatedUser = u;
+    }
+
+    console.log(`[provider] ✅ Đã cập nhật hồ sơ Người bán: ${prov.name} (${prov.id})`);
+    return res.json({
+      success: true,
+      message: 'Cập nhật thông tin hồ sơ Người bán thành công!',
+      provider: prov,
+      user: updatedUser
+    });
+  } catch (err) {
+    console.error('[provider] Lỗi cập nhật profile:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi cập nhật hồ sơ người bán: ' + err.message });
+  }
+});
+
 router.get('/dashboard/stats', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
   const orders = db.getCollection('orders') || [];

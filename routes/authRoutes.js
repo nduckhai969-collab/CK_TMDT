@@ -9,6 +9,7 @@ const { auth } = require('../firebase');
 const { authenticate, requireSignedIn, requireAdmin } = require('./customerAuth');
 const sessionStore = require('../data/sessionStore');
 const { hashPassword, comparePassword } = require('../utils/password');
+const { passport, findOrCreateGoogleUser, createGoogleSessionAndRedirect } = require('../config/passport');
 
 function publicUser(user) {
   if (!user) return null;
@@ -722,6 +723,187 @@ router.post('/reset-password', async (req, res) => {
   } catch (err) {
     console.error('[auth] Lỗi reset-password:', err.message);
     return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi đặt lại mật khẩu.' });
+  }
+});
+
+// ============================================================================
+// 13. ĐĂNG NHẬP BẰNG GOOGLE (PASSPORT & PASSPORT-GOOGLE-OAUTH20)
+// ============================================================================
+
+// 13.1 Lấy thông tin cấu hình Google OAuth Client ID cho Frontend
+router.get('/google/config', (req, res) => {
+  res.json({
+    success: true,
+    clientId: process.env.GOOGLE_CLIENT_ID || ''
+  });
+});
+
+// 13.2 Luồng đi: Người dùng bấm "Đăng nhập với Google" -> Chuyển hướng sang Google
+router.get('/google', (req, res, next) => {
+  // Mock login hỗ trợ dev khi chưa cấu hình Google Client Credentials thực tế
+  if (req.query.mock === '1' || req.query.test === '1') {
+    const mockProfile = {
+      id: `google_${Date.now()}`,
+      displayName: req.query.name || 'Người dùng Google Mẫu',
+      emails: [{ value: req.query.email || `google.user.${Date.now().toString().slice(-4)}@gmail.com` }],
+      photos: [{ value: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80' }]
+    };
+    try {
+      const user = findOrCreateGoogleUser(mockProfile);
+      return createGoogleSessionAndRedirect(req, res, user);
+    } catch (e) {
+      return res.status(500).json({ success: false, message: e.message });
+    }
+  }
+
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    prompt: 'select_account'
+  })(req, res, next);
+});
+
+// 13.3 Luồng về (Callback): Google trả về profile chứa Email, Tên, ID Google
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err || !user) {
+      console.error('[Google OAuth Callback] Lỗi:', err || info);
+      return res.redirect('/index.html?error=google_auth_failed');
+    }
+    // Lấy user_id, tạo Session truyền thống rồi chuyển hướng về trang chủ
+    return createGoogleSessionAndRedirect(req, res, user, '/index.html?login=google_success');
+  })(req, res, next);
+});
+
+// 13.4 Tiếp nhận Google credential token từ popup Google Identity Services (Web GIS)
+router.post('/google', async (req, res) => {
+  try {
+    const { credential, profile, role } = req.body || {};
+    let googleProfile = profile;
+
+    if (!googleProfile && credential) {
+      try {
+        const parts = String(credential).split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+          googleProfile = {
+            id: payload.sub,
+            displayName: payload.name || payload.given_name,
+            emails: [{ value: payload.email }],
+            photos: [{ value: payload.picture }]
+          };
+        }
+      } catch (e) {
+        console.warn('[Google OAuth] Lỗi decode credential:', e.message);
+      }
+    }
+
+    if (!googleProfile || (!googleProfile.emails && !googleProfile.id)) {
+      return res.status(400).json({ success: false, message: 'Dữ liệu xác thực Google không hợp lệ!' });
+    }
+
+    const user = findOrCreateGoogleUser(googleProfile);
+    if (role && (role === 'Provider' || role === 'Customer') && user.role !== role) {
+      user.role = role;
+      const users = db.getCollection('users') || [];
+      const idx = users.findIndex(u => u.id === user.id);
+      if (idx !== -1) { users[idx].role = role; db.saveCollection('users', users); }
+    }
+
+    // Tạo Session truyền thống lưu vào RAM (Memory Store)
+    const sessionId = sessionStore.createSession(user);
+    res.cookie('session_id', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/'
+    });
+
+    if (req.session) {
+      req.session.userId = user.id;
+      req.session.userRole = (user.role || 'Customer').toLowerCase();
+    }
+
+    return res.json({
+      success: true,
+      message: 'Đăng nhập Google thành công!',
+      sessionId,
+      user: publicUser(user)
+    });
+  } catch (err) {
+    console.error('[Google OAuth API] Lỗi:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Lỗi đăng nhập Google.' });
+  }
+});
+
+// ============================================================================
+// 14. CẬP NHẬT THÔNG TIN CÁ NHÂN (GET & PUT /api/auth/profile)
+// ============================================================================
+
+router.get('/profile', requireSignedIn, (req, res) => {
+  res.json({
+    success: true,
+    user: publicUser(req.authUser)
+  });
+});
+
+router.put('/profile', requireSignedIn, (req, res) => {
+  try {
+    const { name, phone, address, bio, avatar, cover } = req.body || {};
+
+    if (name !== undefined && !String(name).trim()) {
+      return res.status(400).json({ success: false, message: 'Họ và tên không được để trống!' });
+    }
+
+    const users = db.getCollection('users') || [];
+    const index = users.findIndex(u => u.id === req.authUser.id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng!' });
+    }
+
+    const user = users[index];
+
+    if (name !== undefined) user.name = String(name).trim();
+    if (phone !== undefined) user.phone = String(phone).trim();
+    if (address !== undefined) user.address = String(address).trim();
+    if (bio !== undefined) user.bio = String(bio).trim();
+    if (avatar) user.avatar = String(avatar).trim();
+    if (cover) user.cover = String(cover).trim();
+    user.updatedAt = new Date().toISOString();
+
+    db.saveCollection('users', users);
+
+    // Đồng bộ sang bảng providers nếu user này là Provider
+    const providers = db.getCollection('providers') || [];
+    const pIndex = providers.findIndex(p => p.userId === user.id || p.id === user.id);
+    if (pIndex !== -1) {
+      if (name !== undefined) providers[pIndex].name = user.name;
+      if (phone !== undefined) providers[pIndex].phone = user.phone;
+      if (avatar) providers[pIndex].avatar = user.avatar;
+      if (cover) providers[pIndex].cover = user.cover;
+      if (address !== undefined) providers[pIndex].location = user.address;
+      db.saveCollection('providers', providers);
+    }
+
+    // Cập nhật session hiện tại nếu sessionStore có lưu
+    const sessionId = (req.cookies && req.cookies.session_id) || (req.headers && req.headers['x-session-id']);
+    if (sessionId) {
+      const sess = sessionStore.getSession(sessionId);
+      if (sess) {
+        sess.name = user.name;
+        sess.avatar = user.avatar;
+      }
+    }
+
+    console.log(`[auth] ✅ Đã cập nhật thông tin cá nhân cho: ${user.email} (${user.id})`);
+    return res.json({
+      success: true,
+      message: 'Cập nhật thông tin cá nhân thành công!',
+      user: publicUser(user)
+    });
+  } catch (err) {
+    console.error('[auth] Lỗi cập nhật profile:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi cập nhật thông tin cá nhân.' });
   }
 });
 

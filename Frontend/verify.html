@@ -714,7 +714,7 @@
       }
 
       if (mode === 'resetPassword' && token) {
-        box.innerHTML = `<div class="hero-icon-container"><div class="hero-icon-box state-prompt"><i class="fa-solid fa-key"></i></div></div><h1 class="card-title">Đặt Mật Khẩu Mới</h1><p class="card-subtitle">Tạo mật khẩu mới cho tài khoản SkillRental của bạn.</p><form id="resetPasswordForm"><div class="input-group"><label class="input-label" for="newPassword">Mật khẩu mới</label><div class="input-box"><i class="fa-solid fa-lock input-icon"></i><input class="form-control-sr" id="newPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Ít nhất 6 ký tự" required></div></div><div class="input-group"><label class="input-label" for="confirmPassword">Nhập lại mật khẩu</label><div class="input-box"><i class="fa-solid fa-lock input-icon"></i><input class="form-control-sr" id="confirmPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Nhập lại mật khẩu mới" required></div></div><div id="resetMessage" role="status" style="display:none;margin-bottom:14px;padding:11px 13px;border-radius:10px;font-size:13px;"></div><div class="btn-group"><button class="btn-primary-action" id="resetSubmit" type="submit"><span>Lưu Mật Khẩu Mới</span><i class="fa-solid fa-check"></i></button></div></form>`;
+        box.innerHTML = `<div class="hero-icon-container"><div class="hero-icon-box state-prompt"><i class="fa-solid fa-key"></i></div></div><h1 class="card-title">Đặt Mật Khẩu Mới</h1><p class="card-subtitle">Tạo mật khẩu mới cho tài khoản SkillRental của bạn.</p><form id="resetPasswordForm"><div class="input-group"><label class="input-label" for="newPassword">Mật khẩu mới</label><div class="input-box"><i class="fa-solid fa-lock input-icon"></i><input class="form-control-sr" id="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Ít nhất 8 ký tự" required></div></div><div class="input-group"><label class="input-label" for="confirmPassword">Nhập lại mật khẩu</label><div class="input-box"><i class="fa-solid fa-lock input-icon"></i><input class="form-control-sr" id="confirmPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Nhập lại mật khẩu mới" required></div></div><div id="resetMessage" role="status" style="display:none;margin-bottom:14px;padding:11px 13px;border-radius:10px;font-size:13px;"></div><div class="btn-group"><button class="btn-primary-action" id="resetSubmit" type="submit"><span>Lưu Mật Khẩu Mới</span><i class="fa-solid fa-check"></i></button></div></form>`;
         const form = document.getElementById('resetPasswordForm');
         form.addEventListener('submit', async event => {
           event.preventDefault();
@@ -722,7 +722,7 @@
           const confirmation = document.getElementById('confirmPassword').value;
           const message = document.getElementById('resetMessage');
           const button = document.getElementById('resetSubmit');
-          if (password.length < 6) return showMessage('Mật khẩu cần ít nhất 6 ký tự.', true);
+          if (password.length < 8) return showMessage('Mật khẩu cần ít nhất 8 ký tự.', true);
           if (password !== confirmation) return showMessage('Hai mật khẩu chưa khớp nhau.', true);
           button.disabled = true;
           button.innerHTML = '<span>Đang lưu...</span><i class="fa-solid fa-spinner fa-spin"></i>';
@@ -730,6 +730,7 @@
             const response = await fetch(apiBase + '/api/auth/reset-password', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token, newPassword:password}) });
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.message || 'Không thể đặt lại mật khẩu.');
+            ['SKILLRENTAL_ACCESS_TOKEN', 'SKILLRENTAL_CURRENT_USER', 'SKILLRENTAL_CUSTOMER_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => { sessionStorage.removeItem(key); localStorage.removeItem(key); });
             if (window.confetti) window.confetti({ particleCount: 90, spread: 65, origin: { y: 0.65 } });
             box.innerHTML = '<div class="hero-icon-container"><div class="hero-icon-box state-prompt"><i class="fa-solid fa-circle-check"></i></div></div><h1 class="card-title">Đã Đổi Mật Khẩu</h1><p class="card-subtitle">Mật khẩu mới đã được lưu. Bạn có thể đăng nhập bằng email và mật khẩu mới.</p><div class="btn-group"><a href="index.html?auth=login" class="btn-primary-action"><span>Đăng Nhập Ngay</span><i class="fa-solid fa-right-to-bracket"></i></a></div>';
           } catch (error) {

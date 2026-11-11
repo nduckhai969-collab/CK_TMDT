@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
+<head>gi
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkillRental - Đánh Giá & Chấm Điểm Chuyên Gia</title>
+  <title>SkillRental - Đánh Giá & Chấm Điểm Chuyên Gia (Customer Review)</title>
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,21 +16,19 @@
     body { background-color: #F8FAFC; color: #1E293B; font-family: 'Inter', sans-serif; }
     .star-rating {
       display: inline-flex;
-      gap: 12px;
-      font-size: 38px;
+      gap: 10px;
+      font-size: 36px;
       color: #CBD5E1;
       cursor: pointer;
-      user-select: none;
     }
     .star-rating .star {
       transition: color 0.15s ease, transform 0.15s ease;
-      display: inline-block;
     }
     .star-rating .star:hover,
     .star-rating .star.hovered,
     .star-rating .star.selected {
       color: #F59E0B;
-      transform: scale(1.18);
+      transform: scale(1.15);
     }
     .tag-choice {
       padding: 8px 14px;
@@ -43,36 +41,11 @@
       cursor: pointer;
       transition: all 0.15s ease;
       user-select: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .tag-choice:hover {
-      border-color: #CBD5E1;
-      background: #F8FAFC;
     }
     .tag-choice.selected {
       border-color: #16A34A;
       background: #DCFCE7;
       color: #15803D;
-      box-shadow: 0 1px 4px rgba(22, 163, 74, 0.15);
-    }
-    .unreviewed-order-item {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 12px;
-      padding: 16px 18px;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 14px;
-      transition: all 0.2s ease;
-    }
-    .unreviewed-order-item:hover {
-      border-color: #16A34A;
-      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.08);
-      transform: translateY(-1px);
     }
   </style>
 <script src="js/auth-client.js"></script>
@@ -82,190 +55,94 @@
   <!-- Top Navbar -->
   <div id="navbar-placeholder"></div>
 
-  <main style="max-width: 820px; margin: 36px auto 70px; padding: 0 20px;">
+  <main style="max-width: 800px; margin: 40px auto 70px; padding: 0 24px;">
 
-    <!-- Card Wrapper -->
-    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:18px; padding:36px 32px; box-shadow:0 6px 24px -4px rgba(15,23,42,0.06);">
+    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:36px; box-shadow:0 4px 20px -2px rgba(15,23,42,0.06);">
       
-      <!-- Top Header -->
+      <!-- Header -->
       <div style="text-align:center; margin-bottom:28px;">
-        <div style="width:58px; height:58px; border-radius:50%; background:#FEF3C7; color:#D97706; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 14px; box-shadow: 0 4px 12px rgba(217,119,6,0.18);">
+        <div style="width:58px; height:58px; border-radius:50%; background:#FEF3C7; color:#D97706; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 14px;">
           <i class="fa-solid fa-star"></i>
         </div>
-        <h1 style="font-size:23px; font-weight:800; color:#0F172A; margin:0 0 6px;">
+        <h1 style="font-size:22px; font-weight:800; color:#0F172A; margin-bottom:6px;">
           Đánh Giá Dịch Vụ & Chuyên Gia
         </h1>
-        <p style="font-size:13.5px; color:#64748B; margin:0; line-height:1.5;">
+        <p style="font-size:14px; color:#64748B;">
           Ý kiến đánh giá công tâm của bạn giúp duy trì cộng đồng chuyên gia uy tín và bảo vệ các khách hàng khác.
         </p>
       </div>
 
-      <!-- Loading State -->
-      <div id="loadingBox" style="text-align:center; padding:40px; color:#64748B;">
-        <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color:#16A34A;"></i>
-        <div style="margin-top:12px; font-weight:600; font-size:14px;">Đang nạp thông tin đơn hàng...</div>
-      </div>
-
-      <!-- Fallback / No Orders Box (Hiển thị khi thiếu orderId hoặc orderId=null) -->
-      <div id="fallbackSelectBox" style="display:none;">
-        <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:14px; padding:18px 20px; margin-bottom:22px; display:flex; align-items:center; gap:12px;">
-          <i class="fa-solid fa-clipboard-check" style="font-size:24px; color:#16A34A;"></i>
+      <!-- Target Order Card -->
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:18px 20px; margin-bottom:28px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <img id="orderProviderAvatar" src="" alt="Provider" style="display:none;width:48px;height:48px;border-radius:12px;object-fit:cover;border:2px solid #E2E8F0;">
           <div>
-            <strong style="color:#15803D; font-size:14px; display:block;">Đơn hàng đã hoàn tất chờ đánh giá</strong>
-            <span style="color:#475569; font-size:12.5px;">Chọn một đơn hàng bên dưới để gửi phản hồi và chấm điểm cho chuyên gia.</span>
+            <div style="font-weight:800; font-size:15px; color:#0F172A;" id="orderServiceTitle">—</div>
+            <div style="font-size:12.5px; color:#64748B; margin-top:2px;">
+              Chuyên gia: <strong id="orderProviderName" style="color:#0F172A;">—</strong> • Mã đơn: <strong id="orderIdText">—</strong>
+            </div>
           </div>
         </div>
-
-        <div id="unreviewedOrdersList"></div>
-
-        <div style="text-align:center; margin-top:20px;">
-          <a href="customer_orders.html" class="btn btn-outline" style="font-weight:600;">
-            <i class="fa-solid fa-arrow-left"></i> Về danh sách đơn hàng
-          </a>
+        <div>
+          <span style="background:#DCFCE7; color:#15803D; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:9999px;">
+            <i class="fa-solid fa-circle-check"></i> Đã Nghiệm Thu
+          </span>
         </div>
       </div>
 
-      <!-- All Caught Up Box (Không có đơn nào cần đánh giá) -->
-      <div id="allCaughtUpBox" style="display:none; text-align:center; padding:32px 20px;">
-        <div style="width:68px; height:68px; border-radius:50%; background:#DCFCE7; color:#16A34A; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px;">
-          <i class="fa-solid fa-circle-check"></i>
+      <!-- Rating Section -->
+      <form id="reviewForm" onsubmit="submitReview(event)">
+        
+        <div style="text-align:center; margin-bottom:28px;">
+          <label style="display:block; font-size:14px; font-weight:700; color:#0F172A; margin-bottom:10px;">
+            Mức Độ Hài Lòng Chung Về Chất Lượng Dịch Vụ:
+          </label>
+          <div class="star-rating" id="starContainer">
+            <span class="star" data-value="1" onclick="setRating(1)">★</span>
+            <span class="star" data-value="2" onclick="setRating(2)">★</span>
+            <span class="star" data-value="3" onclick="setRating(3)">★</span>
+            <span class="star" data-value="4" onclick="setRating(4)">★</span>
+            <span class="star" data-value="5" onclick="setRating(5)">★</span>
+          </div>
+          <div id="ratingLabel" style="font-size:13.5px; font-weight:700; color:#F59E0B; margin-top:8px;">
+            Rất Tuyệt Vời (5/5 Sao)
+          </div>
         </div>
-        <h3 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">
-          Bạn không có đơn hàng nào cần đánh giá!
-        </h3>
-        <p style="font-size:13.5px; color:#64748B; max-width:460px; margin:0 auto 24px; line-height:1.6;">
-          Tất cả các dịch vụ đã nghiệm thu đều đã được bạn gửi đánh giá. Cảm ơn sự đóng góp quý báu của bạn cho cộng đồng SkillRental!
-        </p>
-        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-          <a href="customer_reviews.html" class="btn btn-primary" style="font-weight:700;">
-            <i class="fa-solid fa-star"></i> Xem đánh giá của tôi
+
+        <!-- Tags Criteria -->
+        <div style="margin-bottom:24px;">
+          <label style="display:block; font-size:13.5px; font-weight:700; color:#0F172A; margin-bottom:10px;">
+            Điểm Nổi Bật Của Chuyên Gia:
+          </label>
+          <div style="display:flex; flex-wrap:wrap; gap:10px;">
+            <span class="tag-choice" onclick="toggleTag(this)">Đúng hẹn & đúng cam kết</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Chuyên môn cao, sản phẩm chất lượng</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Giao tiếp lịch thiệp, phản hồi nhanh</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Giá cả minh bạch, không phát sinh</span>
+            <span class="tag-choice" onclick="toggleTag(this)">Sẵn sàng thuê lại lần sau</span>
+          </div>
+        </div>
+
+        <!-- Review Content -->
+        <div style="margin-bottom:28px;">
+          <label style="display:block; font-size:13.5px; font-weight:700; color:#0F172A; margin-bottom:8px;">
+            Nhận Xét Chi Tiết Của Bạn: <span style="color:#EF4444;">*</span>
+          </label>
+          <textarea id="reviewText" rows="4" required placeholder="Chia sẻ cảm nhận của bạn về tiến độ, chất lượng bàn giao hoặc thái độ làm việc của chuyên gia..." style="width:100%; padding:12px 14px; border:1px solid #CBD5E1; border-radius:10px; font-size:13.5px; font-family:inherit; outline:none; resize:vertical;"></textarea>
+          <div id="aiLivePreviewBox" style="margin-top:10px; display:none;"></div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <a href="customer_orders.html" class="btn btn-outline" style="font-weight:600; padding:11px 20px;">
+            Để Sau
           </a>
-          <a href="customer_orders.html" class="btn btn-outline" style="font-weight:700;">
-            <i class="fa-solid fa-receipt"></i> Quản lý đơn hàng
-          </a>
-        </div>
-      </div>
-
-      <!-- Already Reviewed Box (Đơn này đã được đánh giá trước đó) -->
-      <div id="alreadyReviewedBox" style="display:none;">
-        <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:14px; padding:20px; margin-bottom:24px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-            <span style="background:#FEF3C7; color:#B45309; font-weight:800; font-size:12px; padding:4px 12px; border-radius:999px;">
-              <i class="fa-solid fa-circle-check"></i> Đã Gửi Đánh Giá
-            </span>
-            <span id="existingReviewDate" style="font-size:12px; color:#92400E;">—</span>
-          </div>
-
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-            <div id="existingReviewStars" style="color:#F59E0B; font-size:20px; letter-spacing:2px;">★★★★★</div>
-            <strong id="existingReviewRatingNum" style="font-size:14px; color:#0F172A;">5 / 5 Sao</strong>
-          </div>
-
-          <div id="existingReviewCriteria" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;"></div>
-
-          <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px; padding:14px; font-size:13.5px; color:#334155; line-height:1.6;" id="existingReviewContent">
-            —
-          </div>
-
-          <!-- Phản hồi từ Provider nếu có -->
-          <div id="existingProviderReplyBox" style="display:none; margin-top:14px; background:#F0FDF4; border-left:4px solid #16A34A; border-radius:0 10px 10px 0; padding:12px 14px;">
-            <div style="font-size:12px; font-weight:800; color:#15803D; margin-bottom:4px;">
-              <i class="fa-solid fa-reply"></i> Phản hồi từ chuyên gia:
-            </div>
-            <div id="existingProviderReplyText" style="font-size:13px; color:#1F2937; line-height:1.5;"></div>
-          </div>
+          <button type="submit" id="btnSubmitReview" class="btn btn-primary btn-lg" disabled style="font-weight:700; padding:12px 32px; box-shadow:0 4px 14px rgba(22,163,74,0.3);">
+            <i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay
+          </button>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-          <a href="customer_orders.html" class="btn btn-outline" style="font-weight:600;">
-            <i class="fa-solid fa-arrow-left"></i> Về danh sách đơn hàng
-          </a>
-          <a href="customer_reviews.html" class="btn btn-primary" style="font-weight:700;">
-            <i class="fa-solid fa-star"></i> Xem tất cả đánh giá của tôi →
-          </a>
-        </div>
-      </div>
-
-      <!-- Main Form Wrapper (Chỉ hiển thị khi có đơn hợp lệ sẵn sàng đánh giá) -->
-      <div id="mainReviewContainer" style="display:none;">
-
-        <!-- Target Order Card -->
-        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:14px; padding:18px 20px; margin-bottom:28px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
-          <div style="display:flex; align-items:center; gap:14px; min-width:0; flex:1;">
-            <img id="orderProviderAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" alt="Provider" style="width:48px; height:48px; border-radius:12px; object-fit:cover; border:2px solid #E2E8F0; flex-shrink:0;">
-            <div style="min-width:0;">
-              <div style="font-weight:800; font-size:15px; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="orderServiceTitle">—</div>
-              <div style="font-size:12.5px; color:#64748B; margin-top:2px;">
-                Chuyên gia: <strong id="orderProviderName" style="color:#0F172A;">—</strong> • Mã đơn: <strong id="orderIdText" style="color:#16A34A;">—</strong>
-              </div>
-            </div>
-          </div>
-          <div style="flex-shrink:0;">
-            <span style="background:#DCFCE7; color:#15803D; font-size:11.5px; font-weight:700; padding:6px 12px; border-radius:9999px; display:inline-flex; align-items:center; gap:6px;">
-              <i class="fa-solid fa-circle-check"></i> Đã Nghiệm Thu & Giải Ngân
-            </span>
-          </div>
-        </div>
-
-        <!-- Rating Section -->
-        <form id="reviewForm" onsubmit="submitReview(event)">
-          
-          <!-- Stars -->
-          <div style="text-align:center; margin-bottom:28px;">
-            <label style="display:block; font-size:14px; font-weight:700; color:#0F172A; margin-bottom:12px;">
-              Mức Độ Hài Lòng Chung Về Chất Lượng Dịch Vụ:
-            </label>
-            <div class="star-rating" id="starContainer" onmouseleave="restoreCurrentRating()">
-              <span class="star selected" data-value="1" onmouseover="previewRating(1)" onclick="setRating(1)">★</span>
-              <span class="star selected" data-value="2" onmouseover="previewRating(2)" onclick="setRating(2)">★</span>
-              <span class="star selected" data-value="3" onmouseover="previewRating(3)" onclick="setRating(3)">★</span>
-              <span class="star selected" data-value="4" onmouseover="previewRating(4)" onclick="setRating(4)">★</span>
-              <span class="star selected" data-value="5" onmouseover="previewRating(5)" onclick="setRating(5)">★</span>
-            </div>
-            <div id="ratingLabel" style="font-size:14px; font-weight:800; color:#F59E0B; margin-top:8px;">
-              Rất Tuyệt Vời (5/5 Sao)
-            </div>
-          </div>
-
-          <!-- Tags Criteria -->
-          <div style="margin-bottom:24px;">
-            <label style="display:block; font-size:13.5px; font-weight:700; color:#0F172A; margin-bottom:10px;">
-              Điểm Nổi Bật Của Chuyên Gia (Chọn một hoặc nhiều tiêu chí):
-            </label>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
-              <span class="tag-choice selected" onclick="toggleTag(this)"><i class="fa-solid fa-check"></i> Đúng hẹn & đúng cam kết</span>
-              <span class="tag-choice selected" onclick="toggleTag(this)"><i class="fa-solid fa-check"></i> Chuyên môn cao, sản phẩm chất lượng</span>
-              <span class="tag-choice selected" onclick="toggleTag(this)"><i class="fa-solid fa-check"></i> Giao tiếp lịch thiệp, phản hồi nhanh</span>
-              <span class="tag-choice" onclick="toggleTag(this)"><i class="fa-solid fa-check"></i> Giá cả minh bạch, không phát sinh</span>
-              <span class="tag-choice" onclick="toggleTag(this)"><i class="fa-solid fa-check"></i> Nhiệt tình hỗ trợ & chu đáo</span>
-              <span class="tag-choice" onclick="toggleTag(this)"><i class="fa-solid fa-check"></i> Sẵn sàng thuê lại lần sau</span>
-            </div>
-          </div>
-
-          <!-- Review Content -->
-          <div style="margin-bottom:26px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <label style="font-size:13.5px; font-weight:700; color:#0F172A;">
-                Nhận Xét Chi Tiết Của Bạn: <span style="color:#EF4444;">*</span>
-              </label>
-              <span id="charCount" style="font-size:11.5px; color:#64748B;">Đã nhập 0 ký tự</span>
-            </div>
-            <textarea id="reviewText" rows="4" required oninput="updateCharCount()" placeholder="Chia sẻ cảm nhận của bạn về tiến độ, chất lượng bàn giao hoặc thái độ làm việc của chuyên gia..." style="width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid #CBD5E1; border-radius:10px; font-size:13.5px; font-family:inherit; outline:none; resize:vertical; transition:border-color 0.15s;"></textarea>
-          </div>
-
-          <!-- Submit Buttons -->
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <a href="customer_orders.html" class="btn btn-outline" style="font-weight:600; padding:11px 20px;">
-              Để Sau
-            </a>
-            <button type="submit" id="btnSubmitReview" class="btn btn-primary btn-lg" style="font-weight:700; padding:12px 32px; box-shadow:0 4px 14px rgba(22,163,74,0.3);">
-              <i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay
-            </button>
-          </div>
-
-        </form>
-
-      </div>
+      </form>
 
     </div>
 
@@ -273,6 +150,7 @@
 
   <div id="footer-placeholder"></div>
 
+  <script src="reviewBadge.js"></script>
   <script src="customer.js"></script>
   <script>
     let currentRating = 5;
@@ -290,207 +168,137 @@
       document.getElementById('navbar-placeholder').innerHTML = renderCustomerNavbar('orders');
       document.getElementById('footer-placeholder').innerHTML = renderCustomerFooter();
 
-      const user = getCurrentCustomer();
-      if (!user || user.role !== 'Customer') {
-        document.getElementById('loadingBox').style.display = 'none';
-        document.getElementById('allCaughtUpBox').style.display = 'block';
-        document.getElementById('allCaughtUpBox').innerHTML = `
-          <div style="width:68px; height:68px; border-radius:50%; background:#FEE2E2; color:#DC2626; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px;">
-            <i class="fa-solid fa-lock"></i>
-          </div>
-          <h3 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">Vui lòng đăng nhập</h3>
-          <p style="font-size:13.5px; color:#64748B; margin-bottom:20px;">Bạn cần đăng nhập tài khoản khách hàng để thực hiện đánh giá dịch vụ.</p>
-          <button class="btn btn-primary" onclick="openAuthModal('login')">Đăng nhập</button>
-        `;
-        return;
-      }
+      setRating(5);
+      initAiRealtimePreview();
 
       const urlParams = new URLSearchParams(window.location.search);
-      let orderId = urlParams.get('orderId');
-
-      // Nếu orderId không hợp lệ (trống, undefined hoặc chuỗi 'null')
-      if (!orderId || orderId === 'null' || orderId === 'undefined') {
-        handleMissingOrInvalidOrder();
-        return;
-      }
-
+      const orderId = urlParams.get('orderId');
       loadOrderInfo(orderId);
     });
 
-    async function handleMissingOrInvalidOrder() {
-      document.getElementById('loadingBox').style.display = 'none';
-      const user = getCurrentCustomer();
-      if (!user) return;
-
-      try {
-        const [ordersRes, reviewsRes] = await Promise.all([
-          apiRequest(`/api/orders?customerId=${encodeURIComponent(user.id)}`),
-          apiRequest(`/api/reviews?customerId=${encodeURIComponent(user.id)}`)
-        ]);
-
-        const orders = ordersRes.success ? (ordersRes.orders || []) : [];
-        const reviews = reviewsRes.success ? (reviewsRes.reviews || []) : [];
-        const reviewedOrderIds = new Set(reviews.map(r => r.orderId));
-
-        // Lọc các đơn hoàn tất (completed) mà chưa đánh giá
-        const unreviewed = orders.filter(o => o.orderStatus === 'completed' && !reviewedOrderIds.has(o.id) && !o.hasReviewed);
-
-        if (unreviewed.length > 0) {
-          document.getElementById('fallbackSelectBox').style.display = 'block';
-          const listEl = document.getElementById('unreviewedOrdersList');
-          listEl.innerHTML = unreviewed.map(order => `
-            <div class="unreviewed-order-item">
-              <div>
-                <span style="font-size:11px; font-weight:800; color:#16A34A; text-transform:uppercase;">Đơn ${order.id}</span>
-                <div style="font-weight:800; font-size:14.5px; color:#0F172A; margin:3px 0;">${order.serviceTitle || 'Dịch vụ hoàn tất'}</div>
-                <div style="font-size:12px; color:#64748B;">Chuyên gia: <strong>${order.providerName || 'Chuyên gia'}</strong> · Giá trị: <strong>${formatVND(order.escrowDeposit || order.price)}</strong></div>
-              </div>
-              <button onclick="selectOrderToReview('${order.id}')" class="btn btn-primary btn-sm" style="font-weight:700; white-space:nowrap;">
-                <i class="fa-solid fa-star"></i> Đánh giá ngay →
-              </button>
-            </div>
-          `).join('');
-        } else {
-          document.getElementById('allCaughtUpBox').style.display = 'block';
-        }
-      } catch (err) {
-        document.getElementById('allCaughtUpBox').style.display = 'block';
-      }
+    function isOrderReviewable(order) {
+      return ['completed', 'delivered'].includes(String(order?.orderStatus || order?.status || '').trim().toLowerCase());
     }
 
-    function selectOrderToReview(orderId) {
-      window.history.replaceState({}, '', `customer_review.html?orderId=${encodeURIComponent(orderId)}`);
-      document.getElementById('fallbackSelectBox').style.display = 'none';
-      document.getElementById('loadingBox').style.display = 'block';
-      loadOrderInfo(orderId);
+    function showOrderUnavailable(message) {
+      targetOrder = null;
+      document.getElementById('orderIdText').textContent = 'Chưa thể đánh giá đơn này';
+      document.getElementById('orderServiceTitle').textContent = message;
+      document.getElementById('orderProviderName').textContent = '';
+      const btn = document.getElementById('btnSubmitReview');
+      if (btn) btn.disabled = true;
+      const form = document.getElementById('reviewForm');
+      if (form) form.hidden = true;
     }
 
     async function loadOrderInfo(orderId) {
-      try {
-        const [orderRes, reviewCheckRes] = await Promise.all([
-          apiRequest(`/api/orders/${encodeURIComponent(orderId)}`),
-          apiRequest(`/api/reviews?orderId=${encodeURIComponent(orderId)}`)
-        ]);
-
-        document.getElementById('loadingBox').style.display = 'none';
-
-        if (!orderRes.success || !orderRes.order) {
-          showToast('Không tìm thấy đơn hàng', orderRes.message || 'Mã đơn hàng không tồn tại hoặc đã bị hủy.', 'error');
-          handleMissingOrInvalidOrder();
-          return;
-        }
-
-        targetOrder = orderRes.order;
-
-        // 1. Kiểm tra nếu đơn hàng này đã được đánh giá trước đó
-        const existingReview = (reviewCheckRes.success && reviewCheckRes.reviews) 
-          ? reviewCheckRes.reviews.find(r => r.orderId === targetOrder.id) 
-          : null;
-
-        if (existingReview || targetOrder.hasReviewed) {
-          showAlreadyReviewed(existingReview || {
-            rating: 5,
-            date: targetOrder.reviewedAt ? new Date(targetOrder.reviewedAt).toLocaleDateString('vi-VN') : 'Gần đây',
-            criteria: ['Đúng hẹn', 'Chuyên nghiệp'],
-            content: 'Đơn hàng này đã được bạn gửi đánh giá thành công.'
-          });
-          return;
-        }
-
-        // 2. Kiểm tra điều kiện hoàn tất
-        if (targetOrder.orderStatus !== 'completed') {
-          showToast('Chưa thể đánh giá', 'Đơn hàng cần được Nghiệm thu & Giải ngân hoàn tất trước khi đánh giá.', 'warning');
-          document.getElementById('allCaughtUpBox').style.display = 'block';
-          document.getElementById('allCaughtUpBox').innerHTML = `
-            <div style="width:68px; height:68px; border-radius:50%; background:#FEF3C7; color:#D97706; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px;">
-              <i class="fa-solid fa-clock"></i>
-            </div>
-            <h3 style="font-size:18px; font-weight:800; color:#0F172A; margin:0 0 8px;">Đơn hàng chưa hoàn tất</h3>
-            <p style="font-size:13.5px; color:#64748B; max-width:460px; margin:0 auto 24px; line-height:1.6;">
-              Đơn hàng <strong>${targetOrder.id}</strong> đang ở trạng thái <em>${targetOrder.orderStatus}</em>. Bạn chỉ có thể đánh giá sau khi đã bấm Nghiệm thu &amp; giải ngân.
-            </p>
-            <a href="customer_orders.html?orderId=${encodeURIComponent(targetOrder.id)}" class="btn btn-primary" style="font-weight:700;">
-              <i class="fa-solid fa-receipt"></i> Xem đơn hàng này
-            </a>
-          `;
-          return;
-        }
-
-        // 3. Đơn hợp lệ: Hiển thị form đánh giá
-        document.getElementById('mainReviewContainer').style.display = 'block';
-        document.getElementById('orderIdText').textContent = targetOrder.id;
-        document.getElementById('orderServiceTitle').textContent = targetOrder.serviceTitle || 'Hợp đồng dịch vụ';
-        document.getElementById('orderProviderName').textContent = targetOrder.providerName || 'Chuyên gia SkillRental';
-
-        // Lấy avatar chuyên gia
-        if (targetOrder.providerId) {
-          try {
-            const providerResult = await apiRequest(`/api/providers/${encodeURIComponent(targetOrder.providerId)}`);
-            if (providerResult.success && providerResult.provider?.avatar) {
-              const avatar = document.getElementById('orderProviderAvatar');
-              avatar.src = providerResult.provider.avatar;
+      if (orderId) {
+        try {
+          const res = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}`);
+          if (res.success && res.order) {
+            if (!isOrderReviewable(res.order)) {
+              showOrderUnavailable('Đơn hàng chưa hoàn tất. Bạn có thể gửi đánh giá sau khi đơn chuyển sang Đã giao hoặc Hoàn tất.');
+              return;
             }
-          } catch (e) {}
+            applyOrder(res.order);
+            return;
+          }
+        } catch (e) {
+          console.warn('Lỗi tải đơn hàng theo ID:', e);
         }
+        showOrderUnavailable('Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập đơn này.');
+        return;
+      }
 
-        setRating(5); // Mặc định 5 sao
-      } catch (err) {
-        document.getElementById('loadingBox').style.display = 'none';
-        handleMissingOrInvalidOrder();
+      // Nếu không có orderId trên URL hoặc không tìm thấy, tự động lấy đơn hoàn tất của khách
+      try {
+        const ordersRes = await apiRequest('/api/orders');
+        if (ordersRes.success && Array.isArray(ordersRes.orders)) {
+          const completed = ordersRes.orders.find(isOrderReviewable);
+          if (completed) {
+            applyOrder(completed);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Không lấy được danh sách orders:', e);
+      }
+
+      showOrderUnavailable('Bạn cần đơn hàng đã giao hoặc hoàn tất để gửi đánh giá.');
+    }
+
+    async function applyOrder(ord) {
+      targetOrder = ord;
+      document.getElementById('orderIdText').textContent = ord.id || 'DH001231';
+      document.getElementById('orderServiceTitle').textContent = ord.serviceTitle || 'Dịch vụ đã hoàn tất';
+      document.getElementById('orderProviderName').textContent = ord.providerName || 'Chuyên gia SkillRental';
+      const btn = document.getElementById('btnSubmitReview');
+      if (btn) btn.disabled = false;
+      const form = document.getElementById('reviewForm');
+      if (form) form.hidden = false;
+
+      if (ord.providerId) {
+        try {
+          const providerResult = await apiRequest(`/api/providers/${encodeURIComponent(ord.providerId)}`);
+          if (providerResult.success && providerResult.provider?.avatar) {
+            const avatar = document.getElementById('orderProviderAvatar');
+            if (avatar) {
+              avatar.src = providerResult.provider.avatar;
+              avatar.style.display = 'block';
+            }
+          }
+        } catch (e) {}
       }
     }
 
-    function showAlreadyReviewed(review) {
-      document.getElementById('alreadyReviewedBox').style.display = 'block';
-      document.getElementById('existingReviewDate').textContent = `Đánh giá ngày: ${review.date || 'Gần đây'}`;
-      const rating = Number(review.rating) || 5;
-      document.getElementById('existingReviewStars').textContent = '★'.repeat(rating) + '☆'.repeat(5 - rating);
-      document.getElementById('existingReviewRatingNum').textContent = `${rating} / 5 Sao (${ratingTexts[rating] || ''})`;
-      document.getElementById('existingReviewContent').textContent = review.content || 'Đánh giá không kèm nội dung viết.';
+    function initAiRealtimePreview() {
+      const reviewTextEl = document.getElementById('reviewText');
+      const aiPreviewBox = document.getElementById('aiLivePreviewBox');
+      let aiDebounceTimer = null;
+      let latestRequestId = 0;
 
-      const criteriaEl = document.getElementById('existingReviewCriteria');
-      const criteriaList = Array.isArray(review.criteria) ? review.criteria : [];
-      if (criteriaList.length > 0) {
-        criteriaEl.innerHTML = criteriaList.map(c => `
-          <span style="background:#DCFCE7; color:#15803D; font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px;">
-            <i class="fa-solid fa-check"></i> ${c}
-          </span>
-        `).join('');
-      } else {
-        criteriaEl.style.display = 'none';
-      }
+      if (!reviewTextEl || !aiPreviewBox) return;
 
-      if (review.reply) {
-        document.getElementById('existingProviderReplyBox').style.display = 'block';
-        document.getElementById('existingProviderReplyText').textContent = typeof review.reply === 'string' ? review.reply : (review.reply.content || '');
-      }
-    }
-
-    function previewRating(val) {
-      const stars = document.querySelectorAll('.star-rating .star');
-      stars.forEach(s => {
-        const starVal = Number(s.dataset.value);
-        if (starVal <= val) {
-          s.classList.add('hovered');
-        } else {
-          s.classList.remove('hovered');
+      const runAnalysis = () => {
+        clearTimeout(aiDebounceTimer);
+        const text = reviewTextEl.value.trim();
+        if (text.length < 3) {
+          aiPreviewBox.style.display = 'none';
+          aiPreviewBox.innerHTML = '';
+          return;
         }
-      });
-      document.getElementById('ratingLabel').textContent = ratingTexts[val];
-    }
 
-    function restoreCurrentRating() {
-      const stars = document.querySelectorAll('.star-rating .star');
-      stars.forEach(s => {
-        s.classList.remove('hovered');
-        const starVal = Number(s.dataset.value);
-        if (starVal <= currentRating) {
-          s.classList.add('selected');
-        } else {
-          s.classList.remove('selected');
-        }
-      });
-      document.getElementById('ratingLabel').textContent = ratingTexts[currentRating];
+        const requestId = ++latestRequestId;
+        aiPreviewBox.style.display = 'block';
+        aiPreviewBox.textContent = 'Đang phân tích bình luận…';
+
+        aiDebounceTimer = setTimeout(async () => {
+          try {
+            const res = await apiRequest('/api/reviews/analyze', {
+              method: 'POST',
+              body: { content: text }
+            });
+            if (requestId !== latestRequestId) return;
+            if (res.success && res.analysis) {
+              aiPreviewBox.style.display = 'block';
+              aiPreviewBox.innerHTML = `
+                ${typeof renderAiBadge === 'function' ? renderAiBadge(res.analysis) : ''}
+              `;
+            } else {
+              aiPreviewBox.textContent = res.message || 'Chưa phân tích được bình luận.';
+            }
+          } catch (err) {
+            if (requestId !== latestRequestId) return;
+            aiPreviewBox.textContent = 'Không kết nối được dịch vụ phân tích.';
+            console.warn('AI analysis error:', err);
+          }
+        }, 150);
+      };
+
+      reviewTextEl.addEventListener('input', runAnalysis);
+      if (reviewTextEl.value.trim().length >= 3) {
+        runAnalysis();
+      }
     }
 
     function setRating(val) {
@@ -504,45 +312,36 @@
           s.classList.remove('selected');
         }
       });
-      document.getElementById('ratingLabel').textContent = ratingTexts[val];
+      document.getElementById('ratingLabel').textContent = ratingTexts[val] || `${val}/5 Sao`;
     }
 
     function toggleTag(el) {
       el.classList.toggle('selected');
     }
 
-    function updateCharCount() {
-      const text = document.getElementById('reviewText').value;
-      const countEl = document.getElementById('charCount');
-      if (text.length < 10) {
-        countEl.textContent = `Đã nhập ${text.length} ký tự (tối thiểu 10 ký tự)`;
-        countEl.style.color = '#EF4444';
-      } else {
-        countEl.textContent = `Đã nhập ${text.length} ký tự`;
-        countEl.style.color = '#15803D';
-      }
-    }
-
     async function submitReview(e) {
       e.preventDefault();
-      if (!requireCustomerLogin()) return;
-      if (!targetOrder || targetOrder.orderStatus !== 'completed' || !currentRating) {
-        showToast('Thiếu thông tin đánh giá', 'Chọn đơn hàng đã hoàn tất và mức đánh giá từ 1 đến 5 sao.', 'error');
-        return;
-      }
-
-      const reviewContent = document.getElementById('reviewText').value.trim();
-      if (reviewContent.length < 10) {
-        showToast('Nhận xét quá ngắn', 'Vui lòng nhập nhận xét chi tiết tối thiểu 10 ký tự.', 'warning');
-        document.getElementById('reviewText').focus();
-        return;
-      }
-
       const btn = document.getElementById('btnSubmitReview');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi Đánh Giá...`;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Đang Gửi...`;
 
       const user = getCurrentCustomer();
+      if (!user || !targetOrder) {
+        showToast('Chưa thể gửi đánh giá', 'Đăng nhập và chọn một đơn hàng thật đã hoàn tất.', 'warning');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay`;
+        return;
+      }
+
+      const ratingVal = currentRating || 5;
+      const reviewContent = document.getElementById('reviewText').value.trim();
+      if (reviewContent.length < 3) {
+        showToast('Nội dung quá ngắn', 'Vui lòng nhập nhận xét ít nhất 3 ký tự.', 'warning');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay`;
+        return;
+      }
+
       const selectedTags = Array.from(document.querySelectorAll('.tag-choice.selected')).map(t => t.textContent.trim());
 
       const payload = {
@@ -552,7 +351,7 @@
         customerId: user.id,
         customerName: user.name,
         serviceTitle: targetOrder.serviceTitle,
-        rating: currentRating,
+        rating: ratingVal,
         content: reviewContent,
         criteria: selectedTags
       };
@@ -564,17 +363,19 @@
         });
 
         if (res.success) {
-          showToast('Cảm Ơn Đánh Giá!', 'Đánh giá của bạn đã được công khai trên hồ sơ chuyên gia.', 'success');
+          const sent = res.review?.aiAnalysis?.overallSentiment;
+          const sentText = sent === 'pos' ? 'Tích cực' : sent === 'neg' ? 'Tiêu cực' : 'Trung tính';
+          showToast('Đánh Giá Thành Công!', `Mô hình AI: ${sentText}`, 'success');
           setTimeout(() => {
             window.location.href = 'customer_reviews.html';
-          }, 1000);
+          }, 1200);
         } else {
           showToast('Lỗi', res.message || 'Không thể gửi đánh giá', 'error');
           btn.disabled = false;
           btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay`;
         }
       } catch (err) {
-        showToast('Lỗi', err.message || 'Có lỗi xảy ra khi gửi đánh giá.', 'error');
+        showToast('Lỗi', err.message || 'Lỗi gửi đánh giá', 'error');
         btn.disabled = false;
         btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Đánh Giá Ngay`;
       }

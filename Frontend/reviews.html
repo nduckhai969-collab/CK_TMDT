@@ -224,6 +224,7 @@
           <td><span style="color:#F59E0B; font-weight:700;">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span></td>
           <td style="max-width:320px;">
             <p style="font-size:12.5px;">${r.content}</p>
+            ${typeof renderAiBadge === 'function' ? renderAiBadge(r.aiAnalysis) : ''}
             ${r.note ? `<small style="color:var(--error);">${r.note}</small>` : ''}
           </td>
           <td>${r.date}</td>

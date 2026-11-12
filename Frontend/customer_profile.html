@@ -1643,7 +1643,7 @@
                                 >
 
                                 <div class="form-note">
-                                    Email đăng nhập không thể thay đổi tại đây.
+                                    <button type="button" onclick="openEmailModal()" style="background:none;border:none;padding:0;color:#15803D;font-weight:700;cursor:pointer;text-decoration:underline;font-family:inherit;font-size:inherit;">Đổi Email đăng nhập</button> (nhập đúng mật khẩu hiện tại, vẫn giữ nguyên lịch sử đơn hàng).
                                 </div>
 
                             </div>
@@ -1962,11 +1962,12 @@
 
                             </div>
 
-                            <div
-                                    class="info-value"
-                                    id="accountEmail"
-                            >
-                                -
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div class="info-value" id="accountEmail">-</div>
+                                <button type="button" class="btn-profile btn-outline-profile" style="padding:6px 10px;font-size:11px;" onclick="openEmailModal()">
+                                    <i class="fa-solid fa-pen"></i>
+                                    Đổi
+                                </button>
                             </div>
 
                         </div>
@@ -2298,6 +2299,48 @@
     </div>
 
 
+</div>
+
+<!-- =========================================
+     CHANGE EMAIL MODAL
+========================================= -->
+
+<div class="modal-overlay" id="emailModal" onclick="if(event.target.id==='emailModal')closeEmailModal()">
+    <div class="password-modal">
+        <div class="modal-header">
+            <div class="modal-title">
+                <i class="fa-solid fa-envelope"></i>
+                Đổi Email Đăng Nhập
+            </div>
+            <button type="button" class="modal-close" onclick="closeEmailModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="emailForm">
+            <div class="modal-body">
+                <div class="password-form-group">
+                    <label class="form-label" for="newEmailInput">Email mới</label>
+                    <input type="email" id="newEmailInput" class="form-input" placeholder="nhap-email-moi@gmail.com" required>
+                    <div class="form-note">Cập nhật trực tiếp và vẫn giữ nguyên toàn bộ đơn hàng cũ.</div>
+                </div>
+                <div class="password-form-group">
+                    <label class="form-label" for="emailConfirmPassword">Mật khẩu hiện tại</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="emailConfirmPassword" class="form-input" placeholder="Nhập mật khẩu hiện tại để xác nhận">
+                        <button type="button" class="toggle-password" onclick="togglePassword('emailConfirmPassword', this)">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-profile btn-outline-profile" onclick="closeEmailModal()">Hủy</button>
+                <button type="submit" class="btn-profile btn-primary-profile" id="btnSubmitChangeEmail">
+                    <i class="fa-solid fa-check"></i> Lưu Email Mới
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- =========================================
@@ -3224,26 +3267,6 @@
 
             }
         );
-
-    /* =========================================
-       SCROLL
-    ========================================= */
-
-    function scrollToSection(id) {
-
-        const element =
-            document.getElementById(id);
-
-        if (!element) {
-            return;
-        }
-
-        element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-        });
-
-    }
 
     /* =========================================
        TOAST

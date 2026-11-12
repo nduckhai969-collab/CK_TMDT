@@ -131,7 +131,7 @@
     const existingIndex = state.users.findIndex(u => {
       const uEmail = String(u.email || '').trim().toLowerCase();
       const uUid = u.uid ? String(u.uid) : null;
-      return (cleanEmail && uEmail === cleanEmail) || (uid && uUid === uid);
+      return (userData.id && String(u.id) === String(userData.id)) || (cleanEmail && uEmail === cleanEmail) || (uid && uUid === uid);
     });
 
     let targetUser;
@@ -147,6 +147,7 @@
         existing.role = userData.role;
       }
       if (userData.id) existing.id = userData.id;
+      if (cleanEmail) existing.email = cleanEmail;
       if (uid && (!existing.uid || existing.uid !== uid)) {
         existing.uid = uid;
       }
@@ -274,6 +275,14 @@
       if (!name || !String(name).trim()) return { success: false, message: 'Vui lòng nhập họ và tên!' };
       const res = await callApi('/api/auth/profile', 'PUT', null, { name, phone, address, avatar, cover, bio });
       if (res.success && res.user) saveSession(res.user, currentToken);
+      return res;
+    },
+    async changeEmail({ currentPassword, newEmail }) {
+      const res = await callApi('/api/auth/change-email', 'PUT', null, { currentPassword, newEmail });
+      if (res.success && res.user) {
+        const synced = syncUserToAdminState(res.user);
+        saveSession(synced || res.user, currentToken);
+      }
       return res;
     },
     getCurrentUser() { try { const raw = sessionStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : null; } catch (_) { return null; } }

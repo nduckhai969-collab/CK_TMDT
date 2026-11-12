@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -64,26 +64,40 @@
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
                 <div class="balance-title">SỐ DƯ KHẢ DỤNG CÓ THỂ RÚT</div>
-                <div class="balance-amount" id="walletBalance">25.000.000 VNĐ</div>
+                <div class="balance-amount" id="walletBalance">Đang tải...</div>
               </div>
               <button class="btn btn-sm" onclick="openProviderDepositModal()" style="background:#FFFFFF; color:#15803D; font-weight:800; border:none; padding:10px 18px; border-radius:10px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.15); display:inline-flex; align-items:center; gap:8px;">
                 <i class="fa-solid fa-circle-plus" style="font-size:16px;"></i> Nạp Tiền Vào Ví
               </button>
             </div>
             <div style="display:flex; gap:24px; font-size: 13px; color: #CBD5E1; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 14px; margin-top:14px;">
-              <div>Tiền cọc giữ chỗ (Đang thực hiện): <strong style="color: #FFF;" id="escrowHeldAmount">4.500.000đ</strong></div>
-              <div>Tổng thu nhập lũy kế: <strong style="color: #FFF;" id="cumulativeEarnings">112.500.000đ</strong></div>
+              <div>Tiền đang giữ trong ký quỹ: <strong style="color: #FFF;" id="escrowHeldAmount">Đang tải...</strong></div>
+              <div>Tổng thu nhập lũy kế: <strong style="color: #FFF;" id="cumulativeEarnings">Đang tải...</strong></div>
+              <div>Đang chờ xử lý rút: <strong style="color: #FFF;" id="pendingWithdrawals">Đang tải...</strong></div>
             </div>
+            <div style="font-size:11px;color:#CBD5E1;margin-top:8px;line-height:1.5;">Yêu cầu rút đang chờ đã được giữ và trừ khỏi số dư khả dụng. Tiền ký quỹ chưa phải thu nhập; thu nhập lũy kế là tiền đã giải ngân trừ khoản phạt đã thu, không giảm khi bạn rút tiền.</div>
           </div>
 
           <div class="card" style="margin-bottom: 0;">
             <div class="card-title" style="margin-bottom: 12px;"><i class="fa-solid fa-building-columns" style="color: var(--primary-accent);"></i> Tài Khoản Ngân Hàng</div>
             <div style="background-color: var(--bg-subtle); padding: 14px; border-radius: 8px;" id="bankInfoBox">
-              <div style="font-weight: 700; color: var(--text-main);" id="bankNameDisplay">MB BANK (Ngân hàng Quân Đội)</div>
-              <div style="font-size: 14px; font-weight: 600; margin: 4px 0;" id="bankAccountDisplay">0987.654.321</div>
-              <div style="font-size: 12px; color: var(--text-muted);" id="bankHolderDisplay">Chủ tài khoản: NGUYEN VAN PRO</div>
+              <div style="font-weight: 700; color: var(--text-main);" id="bankNameDisplay">Chưa cập nhật</div>
+              <div style="font-size: 14px; font-weight: 600; margin: 4px 0;" id="bankAccountDisplay">Chưa cập nhật</div>
+              <div style="font-size: 12px; color: var(--text-muted);" id="bankHolderDisplay">Chủ tài khoản: Chưa cập nhật</div>
             </div>
             <button class="btn btn-outline btn-sm" style="width: 100%; margin-top: 12px;" onclick="promptUpdateBank()">Cập Nhật Tài Khoản</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Lịch sử thu nhập và biến động ví</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead><tr><th>Thời gian</th><th>Nội dung</th><th>Số tiền</th><th>Trạng thái</th></tr></thead>
+              <tbody id="walletTransactionsBody"><tr><td colspan="4" style="text-align:center;color:#64748B;">Đang tải...</td></tr></tbody>
+            </table>
           </div>
         </div>
 
@@ -95,19 +109,13 @@
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label">Số tiền cần rút (VNĐ)</label>
-              <input type="text" class="form-control" id="withdrawAmount" data-thousands inputmode="numeric" placeholder="Ví dụ: 5.000.000" value="5.000.000" autocomplete="off">
+              <input type="text" class="form-control" id="withdrawAmount" data-thousands inputmode="numeric" placeholder="Ví dụ: 5.000.000" value="" autocomplete="off">
               <div style="display:flex; gap:8px; margin-top: 8px;">
                 <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawVal(2000000)">2.000.000đ</button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawVal(5000000)">5.000.000đ</button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawVal(10000000)">10.000.000đ</button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="setWithdrawAll()">Rút Toàn Bộ</button>
               </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Mật khẩu xác thực giao dịch</label>
-              <input type="password" class="form-control" id="withdrawPassword" placeholder="••••••••" value="123456">
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Tiền sẽ xử lý về tài khoản ngân hàng trong từ 5 - 15 phút.</div>
             </div>
           </div>
 
@@ -130,22 +138,7 @@
                 <th>Trạng Thái</th>
               </tr>
             </thead>
-            <tbody id="payoutTableBody">
-              <tr>
-                <td>#WD-0912</td>
-                <td>28/04/2025 09:15</td>
-                <td>25.000.000đ</td>
-                <td>Vietcombank (0071001234567)</td>
-                <td><span class="badge badge-warning"><span class="badge-dot"></span> Đang chờ duyệt</span></td>
-              </tr>
-              <tr>
-                <td>#WD-88412</td>
-                <td>12/09/2026 14:20</td>
-                <td>10.000.000đ</td>
-                <td>MB Bank (0987***321)</td>
-                <td><span class="badge badge-success"><span class="badge-dot"></span> Đã hoàn tất</span></td>
-              </tr>
-            </tbody>
+            <tbody id="payoutTableBody"><tr><td colspan="5" style="text-align:center;color:#64748B;">Đang tải...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -155,7 +148,11 @@
   <script src="js/number-format.js"></script>
   <script src="provider.js"></script>
   <script>
-    let currentAvailableBalance = 25000000;
+    let currentAvailableBalance = 0;
+
+    function escapeWalletHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+    }
 
     function setWithdrawVal(val) {
       setFormattedNumber('withdrawAmount', val);
@@ -173,30 +170,41 @@
           currentAvailableBalance = w.balance;
           document.getElementById('walletBalance').textContent = w.balanceFormatted;
           if (w.escrowHeldFormatted) document.getElementById('escrowHeldAmount').textContent = w.escrowHeldFormatted;
-          if (w.cumulativeEarnings) document.getElementById('cumulativeEarnings').textContent = w.cumulativeEarnings;
+          document.getElementById('cumulativeEarnings').textContent = w.cumulativeEarningsFormatted || '0đ';
+          document.getElementById('pendingWithdrawals').textContent = w.pendingWithdrawalsFormatted || '0đ';
 
-          if (w.bankAccount) {
-            document.getElementById('bankNameDisplay').textContent = w.bankAccount.bank;
-            document.getElementById('bankAccountDisplay').textContent = w.bankAccount.account;
-            document.getElementById('bankHolderDisplay').textContent = 'Chủ tài khoản: ' + w.bankAccount.holder;
+          if (w.bankAccount && typeof w.bankAccount === 'object') {
+            document.getElementById('bankNameDisplay').textContent = w.bankAccount.bank || 'Chưa cập nhật';
+            document.getElementById('bankAccountDisplay').textContent = w.bankAccount.account || 'Chưa cập nhật';
+            document.getElementById('bankHolderDisplay').textContent = 'Chủ tài khoản: ' + (w.bankAccount.holder || 'Chưa cập nhật');
           }
 
+          const tbody = document.getElementById('payoutTableBody');
           if (w.payoutHistory && w.payoutHistory.length > 0) {
-            const tbody = document.getElementById('payoutTableBody');
             tbody.innerHTML = w.payoutHistory.map(p => `
               <tr>
-                <td>#${p.id}</td>
-                <td>${p.date}</td>
-                <td><strong>${p.amount}</strong></td>
-                <td>${p.bank} (${p.account})</td>
+                <td>#${escapeWalletHtml(p.id)}</td>
+                <td>${escapeWalletHtml(p.date)}</td>
+                <td><strong>${escapeWalletHtml(p.amount)}</strong></td>
+                <td>${escapeWalletHtml(p.bank)} (${escapeWalletHtml(p.account)})</td>
                 <td>
                   ${p.status === 'paid'
-                    ? '<span class="badge badge-success"><span class="badge-dot"></span> Đã hoàn tất</span>'
-                    : '<span class="badge badge-warning"><span class="badge-dot"></span> Chờ Admin duyệt</span>'}
+                    ? '<span class="badge badge-success"><span class="badge-dot"></span> Đã chi</span>'
+                    : p.status === 'rejected'
+                      ? `<span class="badge badge-danger" title="${escapeWalletHtml(p.rejectReason)}"><span class="badge-dot"></span> Đã từ chối</span>`
+                      : '<span class="badge badge-warning"><span class="badge-dot"></span> Chờ Admin duyệt</span>'}
                 </td>
               </tr>
             `).join('');
-          }
+          } else tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748B;">Chưa có yêu cầu rút tiền</td></tr>';
+          const ledger = document.getElementById('walletTransactionsBody');
+          ledger.innerHTML = (w.transactions || []).length ? w.transactions.map(t => `
+            <tr>
+              <td>${escapeWalletHtml(t.createdAt || '')}</td>
+              <td>${escapeWalletHtml(t.description || t.type || 'Giao dịch ví')}</td>
+              <td style="font-weight:700;color:${Number(t.amount) >= 0 ? '#15803D' : '#B91C1C'}">${Number(t.amount) >= 0 ? '+' : ''}${Number(t.amount || 0).toLocaleString('vi-VN')}đ</td>
+              <td>${t.status === 'completed' || t.status === 'paid' ? 'Hoàn tất' : t.status === 'rejected' ? 'Từ chối' : 'Đang xử lý'}</td>
+            </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:#64748B;">Chưa có giao dịch ví</td></tr>';
         }
       } catch (err) {
         console.warn('Load wallet error:', err);
@@ -205,8 +213,6 @@
 
     async function handleWithdrawSubmit() {
       const amount = readFormattedNumber('withdrawAmount');
-      const pwd = document.getElementById('withdrawPassword').value;
-
       if (!amount || amount <= 0) {
         showToast('Vui lòng nhập số tiền cần rút hợp lệ!');
         return;
@@ -218,10 +224,10 @@
 
       showToast('Đang gửi lệnh rút tiền...', 'info');
       try {
-        const res = await window.providerApi.withdraw(amount, pwd);
+        const res = await window.providerApi.withdraw(amount);
         if (res && res.success) {
           showToast(res.message);
-          loadWallet();
+          await loadWallet();
         } else {
           showToast(res.message || 'Lỗi xử lý rút tiền');
         }
@@ -231,11 +237,11 @@
     }
 
     async function promptUpdateBank() {
-      const bank = prompt('Nhập tên ngân hàng:', 'MB Bank');
+      const bank = prompt('Nhập tên ngân hàng:');
       if (!bank) return;
-      const account = prompt('Nhập số tài khoản:', '0987654321');
+      const account = prompt('Nhập số tài khoản:');
       if (!account) return;
-      const holder = prompt('Nhập tên chủ tài khoản:', 'NGUYEN VAN AN');
+      const holder = prompt('Nhập tên chủ tài khoản:');
       if (!holder) return;
 
       const res = await window.providerApi.updateBankAccount(bank, account, holder);
@@ -378,3 +384,4 @@
   </div>
 </body>
 </html>
+

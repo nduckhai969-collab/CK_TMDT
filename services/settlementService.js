@@ -42,7 +42,11 @@ async function executeMonthlySettlement(options = {}) {
   let totalSettledAmount = 0;
 
   for (const provider of providers) {
-    let currentBalance = Number(provider.balance) || 0;
+    const providerUserIndex = users.findIndex(u => u.id === provider.userId || u.id === provider.id);
+    let currentBalance = providerUserIndex >= 0
+      ? (Number(users[providerUserIndex].balance) || 0)
+      : (Number(provider.balance) || 0);
+    provider.balance = currentBalance;
 
     // Kiểm tra số dư ví phải >= 50,000 VND mới đủ điều kiện rút tự động
     if (currentBalance < 50000) {
@@ -97,6 +101,7 @@ async function executeMonthlySettlement(options = {}) {
       id: `TXN-STMT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       userId: provider.userId || provider.id,
       providerId: provider.id,
+      payoutId: statementId,
       type: 'payout_settlement',
       amount: -settleableAmount,
       balanceAfter: newBalance,
@@ -266,6 +271,11 @@ async function updatePayoutBulkStatus(statementIds, newStatus, reason = '') {
     stmt.status = targetStatus === 'SUCCESS' ? 'COMPLETED' : targetStatus;
     stmt.updatedAt = now;
     if (reason) stmt.failureReason = reason;
+    const settlementTxn = walletTransactions.find(t => t.type === 'payout_settlement' && (t.payoutId === stmt.id || String(t.description || '').includes(stmt.id)));
+    if (settlementTxn) {
+      settlementTxn.status = stmt.status === 'COMPLETED' ? 'completed' : stmt.status === 'FAILED' ? 'failed' : 'pending';
+      settlementTxn.updatedAt = now;
+    }
 
     // NẾU CHUYỂN KHOẢN THẤT BẠI (FAILED) -> HOÀN TIỀN LẠI VÀO VÍ CỦA PROVIDER
     if (stmt.status === 'FAILED' && oldStatus !== 'FAILED') {

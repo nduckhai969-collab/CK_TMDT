@@ -144,9 +144,9 @@
       <ul style="margin:0;padding-left:19px">
         <li><strong>Thời hạn ký quỹ:</strong> Đơn hàng chờ thanh toán được bảo lưu báo giá trong <strong>24 giờ</strong>. Quá 24 giờ chưa thanh toán, đơn tự động hủy và yêu cầu được mở lại để bạn chọn chuyên gia khác.</li>
         <li><strong>Đơn chưa thanh toán:</strong> bạn có thể hủy bất kỳ lúc nào, không bị trừ tiền; yêu cầu tuyển dụng sẽ mở lại ngay.</li>
-        <li><strong>Đơn đã thanh toán nhưng chưa bàn giao:</strong> bạn có thể hủy; tiền ký quỹ được hoàn vào ví SkillRental.</li>
+        <li><strong>Đơn đã thanh toán nhưng chưa bàn giao:</strong> khoản hoàn và chi trả được tính theo thời điểm hủy trong chính sách; tiền được ghi vào ví SkillRental.</li>
         <li><strong>Đơn đã bàn giao:</strong> chọn “Khiếu nại đơn”; đơn chuyển sang tranh chấp và tiền ký quỹ được giữ nguyên để Admin xem xét, chưa hoàn ngay.</li>
-        <li><strong>Hoàn tác:</strong> chỉ thực hiện được trong 5 phút sau khi bạn hủy đơn đã thanh toán.</li>
+        <li><strong>Hoàn tác:</strong> chỉ thực hiện được trong 5 phút nếu khoản hoàn chưa được chia cho Provider hoặc phát sinh khoản phạt.</li>
       </ul>
     </section>
 
@@ -485,9 +485,12 @@
         const isDelivered         = o.orderStatus === 'delivered';
         const isDisputed          = o.orderStatus === 'disputed';
         const isCancelled         = o.orderStatus === 'cancelled';
-        const isCancelRequested   = o.orderStatus === 'cancel_requested';
-        const isCancelRejected    = o.orderStatus === 'cancel_rejected';
-        const canUndoCancellation = isCancelled && o.cancelledBy === 'Customer' && Number.isFinite(Date.parse(o.cancellationUndoUntil || '')) && Date.parse(o.cancellationUndoUntil) > Date.now();
+        const isCancelRequested   = false;
+        const isCancelRejected    = false;
+        const isLegacyCancellation = ['cancel_requested', 'cancel_rejected'].includes(o.orderStatus);
+        const cancellationDeadline = Date.parse(o.cancellationDeadlineAt || '');
+        const cancellationWindowOpen = Number.isFinite(cancellationDeadline) && Date.now() <= cancellationDeadline && !isCompleted && !isCancelled;
+        const canUndoCancellation = false;
 
         let badgeStatus = '';
         if (o.paymentStatus === 'pending') {
@@ -500,6 +503,8 @@
           badgeStatus = `<span style="background:#FEF3C7; color:#92400E; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-clock-rotate-left"></i> Chờ Provider phản hồi hủy</span>`;
         } else if (isCancelRejected) {
           badgeStatus = `<span style="background:#FEE2E2; color:#DC2626; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-scale-balanced"></i> Chờ Admin phân xử</span>`;
+        } else if (isLegacyCancellation) {
+          badgeStatus = `<span style="background:#FEF3C7;color:#92400E;font-weight:700;font-size:11px;padding:6px 10px;border-radius:9999px;"><i class="fa-solid fa-circle-info"></i> Luồng hủy cũ đã đóng</span>`;
         } else if (isDisputed) {
           badgeStatus = `<span style="background:#FEE2E2; color:#B91C1C; font-weight:700; font-size:11px; padding:6px 10px; border-radius:9999px;"><i class="fa-solid fa-scale-balanced"></i> Đang tranh chấp</span>`;
         } else if (isCancelled) {
@@ -521,6 +526,7 @@
                 <div class="order-meta">
                   <span><i class="fa-regular fa-calendar"></i> Tạo ngày ${o.date || '—'}</span>
                   <span><i class="fa-regular fa-clock"></i> Hạn ${o.deadline || 'Thỏa thuận'}</span>
+                  ${cancellationWindowOpen ? `<span style="background:#ECFDF5;color:#047857;border-color:#A7F3D0;font-weight:700;">Hạn hủy: ${new Date(cancellationDeadline).toLocaleString('vi-VN')}</span>` : ''}
                   ${o.paymentStatus === 'pending' ? `<span style="background:#FFFBEB;color:#D97706;border:1px solid #FDE68A;font-weight:700;"><i class="fa-solid fa-hourglass-half" style="color:#D97706"></i> Hạn ký quỹ còn: <strong style="color:#B45309">${formatRemainingTime(o.paymentExpiresAt)}</strong></span>` : ''}
                 </div>
               </div>
@@ -573,11 +579,17 @@
                   </button>
                 ` : ''}
 
-                ${(o.orderStatus === 'pending' || o.orderStatus === 'pending_payment' || o.orderStatus === 'processing') && !isCancelRequested && !isCancelRejected ? `
+                ${cancellationWindowOpen ? `
                   <button onclick="cancelCustomerOrder('${o.id}', ${o.paymentStatus === 'pending'})" class="btn btn-outline btn-sm" style="border-color:#94a3b8;color:#475569;font-weight:700">
                     <i class="fa-solid fa-xmark"></i> Hủy đơn
                   </button>
                 ` : ''}
+                ${!cancellationWindowOpen && !isCompleted && !isCancelled ? `
+                  <span style="font-size:12px;color:#B91C1C;background:#FEF2F2;border:1px solid #FECACA;padding:7px 10px;border-radius:8px;font-weight:600;">
+                    <i class="fa-solid fa-ban"></i> Đã quá 24 giờ từ lúc tạo đơn; không thể hủy. Admin không can thiệp.
+                  </span>
+                ` : ''}
+                ${isLegacyCancellation ? `<span style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;padding:7px 10px;border-radius:8px;font-weight:600;">Yêu cầu hủy cũ không còn chờ duyệt. Admin không can thiệp.</span>` : ''}
 
                 ${isCancelRequested ? `
                   <span style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;padding:6px 12px;border-radius:8px;font-weight:600;">
@@ -885,8 +897,10 @@
     let pendingCustomerCancellation = null;
 
     function cancelCustomerOrder(orderId, paymentPending = false, isDelivered = false) {
-      if (isDelivered) {
-        window.location.href = `customer_complaint.html?orderId=${encodeURIComponent(orderId)}`;
+      const order = myOrders.find(item => String(item.id) === String(orderId));
+      const deadline = Date.parse(order?.cancellationDeadlineAt || '');
+      if (!Number.isFinite(deadline) || Date.now() > deadline || ['completed', 'cancelled'].includes(order?.orderStatus)) {
+        showToast('Không thể hủy đơn', 'Đơn chỉ được hủy trong 24 giờ từ lúc tạo. Sau thời hạn, Admin không can thiệp.', 'error');
         return;
       }
       pendingCustomerCancellation = { orderId, paymentPending };
@@ -898,12 +912,10 @@
       const error = document.getElementById('cancelOrderError');
       if (label) label.textContent = `Đơn hàng: ${orderId}`;
       if (policy) policy.textContent = paymentPending
-        ? 'Đơn chưa được thanh toán. Khi hủy, yêu cầu dịch vụ sẽ được mở lại và không có khoản tiền nào bị trừ. Hãy nêu rõ lý do để hệ thống lưu lại yêu cầu.'
-        : 'Đơn đã ký quỹ. Nếu Provider chưa tiếp nhận, đơn sẽ được hủy và tiền ký quỹ hoàn về ví. Nếu đơn đang thực hiện, yêu cầu sẽ chờ Provider phản hồi; tiền vẫn được giữ an toàn.';
+        ? 'Chỉ được hủy trong 24 giờ kể từ lúc tạo đơn. Đơn chưa thanh toán nên không phát sinh hoàn tiền. Admin không tham gia xử lý hủy.'
+        : 'Chỉ được hủy trong 24 giờ kể từ lúc tạo đơn. Tiền ký quỹ được hoàn theo chính sách hiện hành khi xác nhận hủy. Sau 24 giờ đơn không thể hủy và Admin không can thiệp.';
       if (reason) reason.value = '';
-      if (button) button.innerHTML = paymentPending
-        ? '<i class="fa-solid fa-xmark"></i> Xác nhận hủy đơn'
-        : '<i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu hủy';
+      if (button) button.innerHTML = '<i class="fa-solid fa-xmark"></i> Xác nhận hủy đơn';
       if (error) { error.textContent = ''; error.style.display = 'none'; }
       updateCancelReasonCount();
       if (modal) modal.style.display = 'flex';
@@ -946,14 +958,12 @@
         });
         if (!res.success) throw new Error(res.message || 'Không thể gửi yêu cầu hủy đơn.');
         closeCancelOrderModal();
-        showToast('Đã gửi yêu cầu', res.message || 'Lý do hủy đã được lưu cùng đơn hàng.', 'success');
+        showToast('Đã hủy đơn', res.message || 'Đơn hàng đã được hủy.', 'success');
         await loadCustomerOrders();
       } catch (err) {
         if (error) { error.textContent = err.message || 'Không thể gửi yêu cầu hủy đơn.'; error.style.display = 'block'; }
       } finally {
-        if (submit) { submit.disabled = false; submit.innerHTML = cancellation.paymentPending
-          ? '<i class="fa-solid fa-xmark"></i> Xác nhận hủy đơn'
-          : '<i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu hủy'; }
+        if (submit) { submit.disabled = false; submit.innerHTML = '<i class="fa-solid fa-xmark"></i> Xác nhận hủy đơn'; }
       }
     }
 

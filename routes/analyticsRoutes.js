@@ -36,6 +36,30 @@ function toDateLabel(dateInput) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Count only paid, non-cancelled, non-refunded orders in both charts. Some
+// legacy rows keep status="PAID" after cancellation, so terminal states win.
+function isCountableOrder(order) {
+  const orderStatus = String(order.orderStatus || '').toLowerCase();
+  const escrowStatus = String(order.escrowStatus || '').toLowerCase();
+  const paymentStatus = String(order.paymentStatus || '').toLowerCase();
+  const genericStatus = String(order.status || '').toLowerCase();
+  if (['cancelled', 'canceled', 'refunded', 'disputed'].includes(orderStatus) ||
+      ['refunded', 'partial_refunded', 'partially_refunded', 'partially_settled', 'payment_cancelled', 'disputed'].includes(escrowStatus) ||
+      ['cancelled', 'canceled', 'failed', 'pending'].includes(paymentStatus) || order.cancelledAt) return false;
+  return paymentStatus === 'paid' || ['paid', 'delivered', 'completed', 'processing', 'escrow_held'].includes(genericStatus) ||
+    ['escrow_held', 'completed'].includes(escrowStatus) || ['delivered', 'completed', 'processing'].includes(orderStatus);
+}
+
+function orderDateInRange(order, startDateStr, endDateStr) {
+  const dateLabel = toDateLabel(order.created_at || order.date || order.createdAt);
+  return !dateLabel || (dateLabel >= startDateStr && dateLabel <= endDateStr);
+}
+
+function platformFeeRevenue(order) {
+  const price = Math.max(0, Number(order.price) || 0);
+  return Math.max(0, Number(order.platformFee) || Math.round(price * 0.05));
+}
+
 // ============================================================================
 // 10. THỐNG KÊ BIỂU ĐỒ CỘT DOANH THU THEO KHOẢNG THỜI GIAN (FROMDATE - TODATE)
 // ============================================================================
@@ -45,32 +69,24 @@ router.get('/revenue', (req, res) => {
     const { fromDate, toDate } = req.query;
     const orders = db.getCollection('orders') || [];
 
-    // Chỉ lấy các đơn đã thanh toán hoặc đã giao hàng thành công: status IN ('PAID', 'DELIVERED', ...)
-    const paidOrders = orders.filter(o => {
-      const st = String(o.status || o.orderStatus || o.paymentStatus || '').toUpperCase();
-      return ['PAID', 'DELIVERED', 'COMPLETED', 'PROCESSING', 'ESCROW_HELD'].includes(st) && st !== 'CANCELLED' && st !== 'PENDING_PAYMENT';
-    });
+    // "Doanh thu" in this chart means platform fees on paid, non-cancelled orders;
+    // customer/provider order value is exposed separately as total_order_value.
+    const paidOrders = orders.filter(isCountableOrder);
 
     // Lọc theo khoảng ngày (fromDate -> toDate)
     const startDateStr = fromDate ? toDateLabel(fromDate) : '2020-01-01';
     const endDateStr = toDate ? toDateLabel(toDate) : '2099-12-31';
 
-    const filtered = paidOrders.filter(o => {
-      const dLabel = toDateLabel(o.created_at || o.date || o.createdAt);
-      if (!dLabel) return true;
-      return dLabel >= startDateStr && dLabel <= endDateStr;
-    });
+    const filtered = paidOrders.filter(o => orderDateInRange(o, startDateStr, endDateStr));
 
     // SQL GROUP BY DATE(created_at)
-    // Tính tổng doanh thu: SUM(total_price)
+    // Sum platform fees, not gross escrow deposits.
     const revenueMap = {};
+    const orderValueMap = {};
     filtered.forEach(o => {
       const dateLabel = toDateLabel(o.created_at || o.date || o.createdAt) || toDateLabel(new Date());
-      const amount = Number(o.total_price || o.price || o.escrowDeposit || 0);
-      if (!revenueMap[dateLabel]) {
-        revenueMap[dateLabel] = 0;
-      }
-      revenueMap[dateLabel] += amount;
+      revenueMap[dateLabel] = (revenueMap[dateLabel] || 0) + platformFeeRevenue(o);
+      orderValueMap[dateLabel] = (orderValueMap[dateLabel] || 0) + (Number(o.price) || Number(o.total_price) || 0);
     });
 
     // Format kết quả theo chuẩn yêu cầu:
@@ -78,7 +94,8 @@ router.get('/revenue', (req, res) => {
     const dateKeys = Object.keys(revenueMap).sort();
     const result = dateKeys.map(date_label => ({
       date_label,
-      total_revenue: revenueMap[date_label]
+      total_revenue: revenueMap[date_label],
+      total_order_value: orderValueMap[date_label]
     }));
 
     return res.json(result);
@@ -103,15 +120,7 @@ router.get('/top-categories', (req, res) => {
     const endDateStr = toDate ? toDateLabel(toDate) : '2099-12-31';
 
     // Chỉ tính các đơn đã thanh toán / thành công và nằm trong khoảng thời gian
-    const validOrders = orders.filter(o => {
-      const st = String(o.status || o.orderStatus || o.paymentStatus || '').toUpperCase();
-      const isValidStatus = ['PAID', 'DELIVERED', 'COMPLETED', 'PROCESSING', 'ESCROW_HELD'].includes(st) && st !== 'CANCELLED' && st !== 'PENDING_PAYMENT';
-      if (!isValidStatus) return false;
-
-      const dLabel = toDateLabel(o.created_at || o.date || o.createdAt);
-      if (!dLabel) return true;
-      return dLabel >= startDateStr && dLabel <= endDateStr;
-    });
+    const validOrders = orders.filter(o => isCountableOrder(o) && orderDateInRange(o, startDateStr, endDateStr));
     const validOrderIds = new Set(validOrders.map(o => o.id));
 
     // Gom nhóm số lượng bán ra theo danh mục (c.name as category_name, SUM(oi.quantity) as total_sold)

@@ -196,6 +196,7 @@
                 <option value="all">Tất cả trạng thái</option>
                 <option value="active">Đang hoạt động</option>
                 <option value="locked">Đã bị khóa</option>
+                <option value="pending_verification">Chờ xác thực email</option>
               </select>
             </div>
 
@@ -285,6 +286,56 @@
       </div>
       <div class="modal-footer" id="user-detail-footer">
         <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-user-detail')">Đóng</button>
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-user-detail'); triggerEditUser('${u.id}')">Sửa Email / MK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Sửa Email / Mật khẩu / Quyền Marketing -->
+  <div class="modal-overlay" id="modal-edit-user">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Chỉnh sửa tài khoản &amp; Email Marketing</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-edit-user')">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom:12px; font-size:12.5px; color:var(--text-secondary);">
+          Đổi Email hoặc Mật khẩu vẫn giữ nguyên ID (<strong id="edit-user-id-label">...</strong>) và toàn bộ lịch sử đơn hàng của tài khoản.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Họ và tên <span style="color:var(--danger)">*</span></label>
+          <input type="text" class="form-control" id="edit-user-name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email đăng nhập <span style="color:var(--danger)">*</span></label>
+          <input type="email" class="form-control" id="edit-user-email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Số điện thoại</label>
+          <input type="text" class="form-control" id="edit-user-phone" placeholder="09xx xxx xxx">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Đặt mật khẩu mới (Để trống nếu giữ nguyên)</label>
+          <input type="password" class="form-control" id="edit-user-password" placeholder="Tối thiểu 8 ký tự nếu muốn đổi mật khẩu">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Trạng thái tài khoản</label>
+          <select class="form-control" id="edit-user-status">
+            <option value="active">Đang hoạt động (active)</option>
+            <option value="pending_verification">Chờ xác thực email (pending_verification)</option>
+            <option value="locked">Đã bị khóa (locked)</option>
+          </select>
+        </div>
+        <div class="form-group" id="edit-user-marketing-wrap">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600; color:var(--secondary);">
+            <input type="checkbox" id="edit-user-marketing">
+            Admin chấp thuận gửi Email Marketing (chu kỳ 14 ngày)
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-edit-user')">Hủy</button>
+        <button class="btn btn-primary btn-sm" id="confirm-edit-user-btn" onclick="saveEditedUser()">Lưu thay đổi</button>
       </div>
     </div>
   </div>
@@ -327,6 +378,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       initPageRoute();
+      syncUsersFromServer();
     });
 
     function initPageRoute() {
@@ -520,13 +572,16 @@
           <td>${u.joinDate || 'N/A'}</td>
           <td><strong>${u.spentOrEarned || '0đ'}</strong></td>
           <td>
-            ${u.status === 'active' 
-              ? '<span class="badge badge-success"><span class="badge-dot-indicator"></span> Hoạt động</span>' 
-              : `<span class="badge badge-danger"><span class="badge-dot-indicator"></span> Đã khóa (${u.lockDuration || 'Vi phạm'})</span>`}
+            ${u.status === 'active'
+              ? '<span class="badge badge-success"><span class="badge-dot-indicator"></span> Hoạt động</span>' + (u.role === 'Customer' && u.marketingApproved === true ? ' <span class="badge badge-info" style="font-size:10px;margin-left:4px;">Đã duyệt M3</span>' : '')
+              : u.status === 'pending_verification'
+                ? '<span class="badge badge-warning"><span class="badge-dot-indicator"></span> Chờ xác thực</span>'
+                : `<span class="badge badge-danger"><span class="badge-dot-indicator"></span> Đã khóa (${u.lockDuration || 'Vi phạm'})</span>`}
           </td>
           <td style="text-align:right">
             <div class="table-actions" style="justify-content:flex-end; gap:6px;">
               <button class="btn btn-secondary btn-xs" onclick="viewUserDetail('${u.id}')">Chi tiết</button>
+              <button class="btn btn-secondary btn-xs" onclick="triggerEditUser('${u.id}')">Sửa TK</button>
               ${isAdmin
                 ? '<span class="badge badge-neutral" style="font-size:11px;">Quản trị</span>'
                 : (u.status === 'active'
@@ -563,7 +618,9 @@
             <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
               <span class="badge ${u.role === 'Provider' ? 'badge-success' : 'badge-info'}">${u.role}</span>
               ${u.status === 'active'
-                ? '<span class="badge badge-success"><span class="badge-dot-indicator"></span> Đang hoạt động</span>'
+              ? '<span class="badge badge-success"><span class="badge-dot-indicator"></span> Hoạt động</span>' + (u.role === 'Customer' && u.marketingApproved === true ? ' <span class="badge badge-info" style="font-size:10px;margin-left:4px;">Đã duyệt M3</span>' : '')
+              : u.status === 'pending_verification'
+                ? '<span class="badge badge-warning"><span class="badge-dot-indicator"></span> Chờ xác thực</span>'
                 : `<span class="badge badge-danger"><span class="badge-dot-indicator"></span> Đã khóa (${u.lockDuration || 'Vi phạm'})</span>`}
             </div>
           </div>
@@ -605,6 +662,99 @@
       `;
 
       openModal('modal-user-detail');
+    }
+
+    let editingUserId = null;
+
+    async function syncUsersFromServer() {
+      if (!window.adminApi || typeof window.adminApi.getUsers !== 'function') return;
+      try {
+        const res = await window.adminApi.getUsers();
+        if (res && res.success && Array.isArray(res.users)) {
+          const state = getAppState();
+          state.users = res.users;
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          } catch (_) {}
+          renderUsersTable();
+        }
+      } catch (err) {
+        console.warn('Không đồng bộ được danh sách user từ server:', err);
+      }
+    }
+
+    function triggerEditUser(id) {
+      const state = getAppState();
+      const user = (state.users || []).find(u => u.id === id);
+      if (!user) return;
+
+      editingUserId = user.id;
+      document.getElementById('edit-user-id-label').textContent = `${user.id} (${user.role || 'Customer'})`;
+      document.getElementById('edit-user-name').value = user.name || '';
+      document.getElementById('edit-user-email').value = user.email || '';
+      document.getElementById('edit-user-phone').value = user.phone || '';
+      document.getElementById('edit-user-password').value = '';
+      document.getElementById('edit-user-status').value = user.status || 'active';
+
+      const mWrap = document.getElementById('edit-user-marketing-wrap');
+      const mCheck = document.getElementById('edit-user-marketing');
+      if (mWrap && mCheck) {
+        mWrap.style.display = user.role === 'Customer' ? 'block' : 'none';
+        mCheck.checked = user.marketingApproved === true;
+      }
+
+      openModal('modal-edit-user');
+    }
+
+    async function saveEditedUser() {
+      if (!editingUserId) return;
+      const name = document.getElementById('edit-user-name').value.trim();
+      const email = document.getElementById('edit-user-email').value.trim().toLowerCase();
+      const phone = document.getElementById('edit-user-phone').value.trim();
+      const newPassword = document.getElementById('edit-user-password').value;
+      const status = document.getElementById('edit-user-status').value;
+      const marketingApproved = document.getElementById('edit-user-marketing').checked;
+
+      if (!name || !email) {
+        showToast('Thiếu thông tin', 'Họ tên và Email không được để trống.', 'error');
+        return;
+      }
+      if (newPassword && newPassword.length < 8) {
+        showToast('Mật khẩu yếu', 'Mật khẩu mới phải có ít nhất 8 ký tự.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('confirm-edit-user-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Đang lưu...'; }
+
+      try {
+        const payload = { name, email, phone, status };
+        if (document.getElementById('edit-user-marketing-wrap').style.display !== 'none') {
+          payload.marketingApproved = marketingApproved;
+        }
+        if (newPassword) payload.newPassword = newPassword;
+
+        const res = await window.adminApi.updateUser(editingUserId, payload);
+        if (!res || !res.success) {
+          showToast('Cập nhật thất bại', res?.message || 'Không thể lưu thông tin tài khoản.', 'error');
+          return;
+        }
+
+        const state = getAppState();
+        const idx = (state.users || []).findIndex(u => u.id === editingUserId);
+        if (idx !== -1 && res.user) {
+          state.users[idx] = res.user;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+        }
+
+        closeModal('modal-edit-user');
+        renderUsersTable();
+        showToast('Cập nhật thành công', res.message || 'Đã cập nhật thông tin người dùng.', 'success');
+      } catch (err) {
+        showToast('Lỗi kết nối', err.message || 'Không thể kết nối máy chủ.', 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Lưu thay đổi'; }
+      }
     }
 
     // Mở khóa tài khoản

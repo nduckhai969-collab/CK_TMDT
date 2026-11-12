@@ -146,6 +146,7 @@ function buildOrderDocument(spec, ctx) {
     paymentStatus: gateway ? 'pending' : 'paid',
     orderStatus: spec.jobId ? (gateway ? 'pending' : 'processing') : 'pending',
     paymentMethod: ctx.paymentMethod,
+    createdAt: ctx.now.toISOString(),
     date: dateStr,
     deadline: spec.deadline || '7 ngày sau đặt cọc',
     scheduledDate: spec.scheduledDate || '',

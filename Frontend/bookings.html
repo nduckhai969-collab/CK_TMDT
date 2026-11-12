@@ -385,7 +385,7 @@
                   <span class="k">Bạn thực nhận</span><span class="v" style="color:var(--primary); font-size:16px;">${formatVND(net)}</span>
                 </div>
 
-                ${order.cancellationRequest?.status === 'pending' && order.cancellationRequest.requester === 'Customer' ? `
+                ${false && order.cancellationRequest?.status === 'pending' && order.cancellationRequest.requester === 'Customer' ? `
                   <div style="margin-top:14px;padding:12px;border:1px solid #fed7aa;border-radius:9px;background:#fff7ed;color:#9a3412;font-size:12px">
                     <strong>Khách yêu cầu hủy</strong><div style="margin-top:5px">${escapeHtml(order.cancellationRequest.reason || '')}</div>
                     <div style="display:flex;gap:8px;margin-top:10px">
@@ -583,7 +583,7 @@
                 </span>
               </div>
 
-              ${curOrder.cancellationRequest?.status === 'pending' && curOrder.cancellationRequest.requester === 'Customer' ? `
+              ${false && curOrder.cancellationRequest?.status === 'pending' && curOrder.cancellationRequest.requester === 'Customer' ? `
                 <div style="margin:12px 0;padding:13px;border:1px solid #fed7aa;border-radius:10px;background:#fff7ed;color:#9a3412">
                   <strong>Khách yêu cầu hủy đơn</strong>
                   <div style="font-size:13px;margin-top:5px">Lý do: ${escapeHtml(curOrder.cancellationRequest.reason || '—')}</div>
@@ -810,6 +810,13 @@
     function renderCancelRequestsTab(orders) {
       const container = document.getElementById('cancelRequestsContainer');
       if (!container) return;
+
+      container.innerHTML = `<div class="card" style="text-align:center;padding:32px 20px;color:var(--text-muted)">
+        <i class="fa-solid fa-circle-info" style="font-size:24px;color:var(--primary);margin-bottom:10px"></i>
+        <h3>Luồng duyệt hủy cũ đã đóng</h3>
+        <p>Provider không cần duyệt yêu cầu hủy. Đơn chỉ được hủy trong 24 giờ đầu; sau thời hạn không thể hủy và Admin không can thiệp.</p>
+      </div>`;
+      return;
 
       if (!orders || orders.length === 0) {
         container.innerHTML = `

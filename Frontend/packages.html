@@ -241,7 +241,19 @@
   <script src="js/number-format.js"></script>
   <script src="common.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/packages`);
+        const result = await response.json();
+        if (result.success && Array.isArray(result.packages)) {
+          const key = 'SKILL_RENTAL_ADMIN_STATE_V1';
+          const state = JSON.parse(localStorage.getItem(key) || '{}');
+          state.packages = result.packages;
+          localStorage.setItem(key, JSON.stringify(state));
+        }
+      } catch (error) {
+        console.warn('Không tải được danh sách gói mới nhất từ máy chủ.', error);
+      }
       renderPackagesGrid();
       renderPurchasesTable();
       setupPackageEvents();

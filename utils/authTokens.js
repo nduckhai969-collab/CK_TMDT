@@ -4,7 +4,7 @@ const secret = String(process.env.AUTH_SECRET || '').trim();
 if (secret.length < 32 || /^(replace-with|your-)/i.test(secret)) {
   throw new Error('AUTH_SECRET must be configured in .env with a stable value of at least 32 characters.');
 }
-const ttlSeconds = 12 * 60 * 60;
+const ttlSeconds = 30 * 24 * 60 * 60; // 30 ngày
 
 function signToken(userId, tokenVersion = 0) {
   const payload = Buffer.from(JSON.stringify({ sub: String(userId), ver: Number(tokenVersion) || 0, exp: Math.floor(Date.now() / 1000) + ttlSeconds })).toString('base64url');
@@ -20,7 +20,7 @@ function verifyToken(token) {
   if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) return null;
   try {
     const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return decoded.sub && decoded.exp > Date.now() / 1000 ? decoded : null;
+    return decoded && decoded.sub ? decoded : null;
   } catch (_) { return null; }
 }
 

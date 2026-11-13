@@ -18,6 +18,24 @@ const { attachProviderReputation, addReviewSentimentPoints } = require('../servi
 const providerPackageService = require('../services/providerPackageService');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
+const DEFAULT_SUBSCRIPTION_PLANS = [{
+  id: 'PLAN_VIP_MONTHLY',
+  name: 'Gói VIP Partner hàng tháng',
+  price: 299000,
+  durationDays: 30,
+  active: true
+}];
+
+async function getSubscriptionPlans() {
+  let plans = db.getCollection('subscription_plans') || [];
+  if (!plans.length) {
+    plans = DEFAULT_SUBSCRIPTION_PLANS;
+    if (typeof db.saveCollectionAndWait === 'function') await db.saveCollectionAndWait('subscription_plans', plans);
+    else db.saveCollection('subscription_plans', plans);
+  }
+  return plans.filter(plan => plan.active !== false);
+}
+
 function getMyProvider(req) {
   const providers = db.getCollection('providers') || [];
   let p = providers.find(p => p.userId === req.authUser.id || p.id === req.authUser.id);
@@ -789,6 +807,28 @@ router.get('/me/wallet', requireProvider, (req, res) => {
   res.json({ success: true, wallet: walletService.getWallet(user) });
 });
 
+router.get('/subscription-plans', async (req, res) => {
+  try {
+    res.json({ success: true, plans: await getSubscriptionPlans() });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Không tải được danh sách gói đăng ký.' });
+  }
+});
+
+router.post('/me/subscription/purchase', requireProvider, async (req, res) => {
+  try {
+    const planId = String(req.body?.plan_id || '').trim();
+    if (!planId) return res.status(400).json({ success: false, message: 'Thiếu mã gói đăng ký.' });
+    const plans = await getSubscriptionPlans();
+    const plan = plans.find(row => String(row.id) === planId);
+    if (!plan) return res.status(404).json({ success: false, message: 'Gói đăng ký không tồn tại hoặc đã ngừng bán.' });
+    const result = await walletService.purchaseSubscription(req.authUser.id, planId, plan);
+    res.json({ success: true, message: 'Đã thanh toán và kích hoạt gói thành công.', ...result });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể hoàn tất giao dịch. Số dư chưa bị trừ.' });
+  }
+});
+
 router.post('/wallet/deposit', requireProvider, (req, res) => {
   try {
     const amount = Number(req.body?.amount);
@@ -815,9 +855,13 @@ router.post('/wallet/deposit', requireProvider, (req, res) => {
 router.post('/wallet/withdraw', requireProvider, async (req, res) => {
   try {
     const payout = await walletService.requestWithdrawal(req.authUser.id, req.body?.amount);
-    res.json({ success: true, message: 'Đã gửi yêu cầu rút tiền. Số tiền được giữ trong lúc chờ Admin xử lý.', payout });
+    res.json({
+      success: true,
+      message: `Rút tiền thành công ${payout.amount} về tài khoản ${payout.bank} (${payout.account}).`,
+      payout
+    });
   } catch (error) {
-    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể lưu yêu cầu rút tiền lúc này.' });
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể thực hiện rút tiền lúc này.' });
   }
 });
 // ---- Thao tác đơn hàng của người bán (đường dẫn mà provider.js đang gọi) ----
@@ -1115,6 +1159,50 @@ router.put('/services/:id', requireProvider, (req, res) => {
   }
 });
 
+router.post('/services/:id/boost', requireProvider, async (req, res) => {
+  try {
+    const provider = await getMyProviderFresh(req) || getMyProvider(req);
+    if (!provider) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ chuyên gia.' });
+
+    const entitlement = providerPackageService.getPlan(provider);
+    if (entitlement.boostLimit <= 0) {
+      return res.status(400).json({ success: false, message: 'Gói hiện tại không có quyền đẩy tin. Vui lòng nâng cấp gói Pro hoặc VIP.' });
+    }
+    if (entitlement.boostsUsed >= entitlement.boostLimit) {
+      return res.status(400).json({ success: false, message: `Bạn đã dùng hết ${entitlement.boostLimit} lượt đẩy dịch vụ tháng này.` });
+    }
+
+    const services = await db.getCollectionFresh('services');
+    const svc = services.find(s => String(s.id) === String(req.params.id) && String(s.providerId) === String(provider.id));
+    if (!svc) return res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ hoặc dịch vụ không thuộc về bạn.' });
+    if (svc.status !== 'active') return res.status(400).json({ success: false, message: 'Chỉ có thể đẩy dịch vụ đã được duyệt (active).' });
+
+    svc.isBoosted = true;
+    svc.boostedAt = new Date().toISOString();
+    svc.boostExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const providers = db.getCollection('providers') || [];
+    const pIdx = providers.findIndex(p => p.id === provider.id);
+    if (pIdx !== -1) {
+      providers[pIdx].boostsUsed = (providers[pIdx].boostsUsed || 0) + 1;
+      db.saveCollection('providers', providers);
+    }
+    if (typeof db.saveCollectionAndWait === 'function') {
+      await db.saveCollectionAndWait('services', services);
+    } else {
+      db.saveCollection('services', services);
+    }
+
+    res.json({
+      success: true,
+      message: `Đã đẩy dịch vụ "${svc.title || svc.name || svc.id}" lên Top tìm kiếm thành công (hiệu lực 7 ngày)!`,
+      service: svc
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi khi đẩy dịch vụ: ' + err.message });
+  }
+});
+
 router.delete('/services/:id', requireProvider, (req, res) => {
   const services = db.getCollection('services') || [];
   const idx = services.findIndex(s => s.id === req.params.id && s.providerId === getMyProvider(req).id);
@@ -1214,6 +1302,7 @@ router.post('/packages/purchase', requireProvider, (req, res) => {
   const packages = db.getCollection('packages') || [];
   const pkg = packages.find(p => p.id === packageId);
   if (!pkg) return res.status(404).json({ success: false, message: 'Gói dịch vụ không tồn tại.' });
+  if (pkg.status === 'inactive') return res.status(409).json({ success: false, message: 'Gói này đã được Admin tạm ngưng.' });
   const result = activatePackagePurchase(req, pkg, { method: 'Số dư ví', notificationPath: '/package.html' });
   res.status(result.status).json(result.body);
 });

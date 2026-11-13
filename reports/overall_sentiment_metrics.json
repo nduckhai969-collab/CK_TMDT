@@ -24,39 +24,39 @@
     ]
   },
   "splitCounts": {
-    "training": 400,
+    "training": 658,
     "validation": 100,
-    "test": 100,
+    "test": 181,
     "testNewDataset": 100
   },
   "classCounts": {
-    "positive": 136,
-    "negative": 136,
-    "neutral": 128
+    "positive": 283,
+    "negative": 206,
+    "neutral": 169
   },
   "calibration": {
     "temperature": 6,
-    "validationLogLoss": 0.12165880367222677
+    "validationLogLoss": 0.12463901369118599
   },
   "validation": {
     "count": 100,
-    "accuracy": 0.95,
-    "macroF1": 0.9508847959552185,
+    "accuracy": 0.96,
+    "macroF1": 0.9604395604395605,
     "f1": {
-      "positive": 0.9230769230769231,
-      "negative": 0.9295774647887324,
-      "neutral": 1
+      "positive": 0.9538461538461539,
+      "negative": 0.9428571428571428,
+      "neutral": 0.9846153846153847
     },
     "confusionMatrix": {
       "positive": {
-        "positive": 30,
-        "negative": 4,
+        "positive": 31,
+        "negative": 3,
         "neutral": 0
       },
       "negative": {
-        "positive": 1,
+        "positive": 0,
         "negative": 33,
-        "neutral": 0
+        "neutral": 1
       },
       "neutral": {
         "positive": 0,
@@ -66,57 +66,84 @@
     }
   },
   "test": {
-    "count": 100,
-    "accuracy": 0.88,
-    "macroF1": 0.8802385470317159,
+    "count": 181,
+    "accuracy": 0.850828729281768,
+    "macroF1": 0.8347079037800688,
     "f1": {
-      "positive": 0.9411764705882353,
-      "negative": 0.8285714285714286,
-      "neutral": 0.8709677419354839
+      "positive": 0.9,
+      "negative": 0.8041237113402062,
+      "neutral": 0.8
     },
     "confusionMatrix": {
       "positive": {
-        "positive": 32,
-        "negative": 2,
-        "neutral": 0
+        "positive": 81,
+        "negative": 1,
+        "neutral": 2
       },
       "negative": {
-        "positive": 2,
-        "negative": 29,
-        "neutral": 3
+        "positive": 9,
+        "negative": 39,
+        "neutral": 5
       },
       "neutral": {
-        "positive": 0,
-        "negative": 5,
-        "neutral": 27
+        "positive": 6,
+        "negative": 4,
+        "neutral": 34
       }
     }
   },
   "testBySource": {
+    "reviews_labeled.json": {
+      "count": 81,
+      "accuracy": 0.7901234567901234,
+      "macroF1": 0.6535714285714286,
+      "f1": {
+        "positive": 0.875,
+        "negative": 0.6857142857142857,
+        "neutral": 0.4
+      },
+      "confusionMatrix": {
+        "positive": {
+          "positive": 49,
+          "negative": 1,
+          "neutral": 0
+        },
+        "negative": {
+          "positive": 7,
+          "negative": 12,
+          "neutral": 0
+        },
+        "neutral": {
+          "positive": 6,
+          "negative": 3,
+          "neutral": 3
+        }
+      }
+    },
     "binh_luan_dich_vu_600_aspect.csv": {
       "count": 100,
-      "accuracy": 0.88,
-      "macroF1": 0.8802385470317159,
+      "accuracy": 0.9,
+      "macroF1": 0.8992861660793349,
       "f1": {
         "positive": 0.9411764705882353,
-        "negative": 0.8285714285714286,
-        "neutral": 0.8709677419354839
+        "negative": 0.8709677419354839,
+        "neutral": 0.8857142857142857
       },
       "confusionMatrix": {
         "positive": {
           "positive": 32,
-          "negative": 2,
-          "neutral": 0
+          "negative": 0,
+          "neutral": 2
         },
         "negative": {
           "positive": 2,
-          "negative": 29,
-          "neutral": 3
+          "negative": 27,
+          "neutral": 5
         },
         "neutral": {
           "positive": 0,
-          "negative": 5,
-          "neutral": 27
+          "negative": 1,
+          "neutral": 31
         }
       }
     }

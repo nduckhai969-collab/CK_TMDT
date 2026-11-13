@@ -10,10 +10,11 @@ const { requireCustomer, requireProvider, requireSignedIn } = require('./custome
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
 const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, checkAutoReleaseOrders } = require('../services/orderService');
-const { isVisibleToProvider } = require('../services/checkoutService');
+const { isVisibleToProvider, createGatewayTransaction, MIN_PAYMENT, MAX_PAYMENT } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 const walletService = require('../services/walletService');
 const { attachProviderReputation, addReviewSentimentPoints } = require('../services/providerReputation');
+const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
 function getMyProvider(req) {
   const providers = db.getCollection('providers') || [];
@@ -593,6 +594,29 @@ router.get('/me/wallet', requireProvider, (req, res) => {
   res.json({ success: true, wallet: walletService.getWallet(user) });
 });
 
+router.post('/wallet/deposit', requireProvider, (req, res) => {
+  try {
+    const amount = Number(req.body?.amount);
+    if (!Number.isSafeInteger(amount) || amount < MIN_PAYMENT || amount > MAX_PAYMENT) {
+      return res.status(400).json({ success: false, message: `Số tiền nạp phải từ ${MIN_PAYMENT.toLocaleString('vi-VN')}đ đến ${MAX_PAYMENT.toLocaleString('vi-VN')}đ.` });
+    }
+    const { txn, paymentUrl } = createGatewayTransaction({
+      userId: req.authUser.id,
+      type: 'deposit',
+      amount,
+      description: 'Nạp tiền ví Provider qua VNPay',
+      bankCode: req.body?.bankCode,
+      returnOrigin: allowedFrontendOrigin(req.headers.origin),
+      ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      orderInfo: `Nap tien Provider ${String(req.authUser.id).replace(/[^a-zA-Z0-9]/g, '').slice(-20)}`,
+      orderType: 'other'
+    });
+    res.json({ success: true, paymentUrl, txnRef: txn.id });
+  } catch (error) {
+    res.status(error.status || 400).json({ success: false, message: error.message || 'Không thể tạo giao dịch nạp tiền.' });
+  }
+});
+
 router.post('/wallet/withdraw', requireProvider, async (req, res) => {
   try {
     const payout = await walletService.requestWithdrawal(req.authUser.id, req.body?.amount);
@@ -840,11 +864,13 @@ router.post('/services', requireProvider, (req, res) => {
     providerId: p.id,
     providerName: p.name,
     providerAvatar: p.avatar,
-    status: 'active'
+    // Dịch vụ mới của Provider phải chờ Admin duyệt mới hiển thị công khai.
+    status: 'pending',
+    dateSubmitted: formatDateTime(new Date())
   };
   services.unshift(newSvc);
   db.saveCollection('services', services);
-  res.json({ success: true, message: 'Thêm dịch vụ thành công', service: newSvc });
+  res.json({ success: true, message: 'Đã gửi dịch vụ, vui lòng chờ Admin duyệt trước khi hiển thị công khai.', service: newSvc });
 });
 
 router.put('/services/:id', requireProvider, (req, res) => {

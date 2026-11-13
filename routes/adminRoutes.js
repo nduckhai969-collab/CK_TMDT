@@ -131,8 +131,12 @@ router.post('/state', (req, res) => {
   }
 
   // Update collections passed
+  // LƯU Ý: KHÔNG đồng bộ collection 'orders' từ state localStorage.
+  // Đơn hàng thật do khách/Provider tạo được lưu thẳng trong DB; nếu ghi đè bằng
+  // state demo (localStorage) sẽ làm mất đơn thật. Đơn hàng chỉ thay đổi qua API
+  // nghiệp vụ (PUT /orders/:id/status, force-release, arbitrate-cancel...).
   const allowedKeys = [
-    'users', 'pendingProviders', 'skillApprovals', 'services', 'orders',
+    'users', 'pendingProviders', 'skillApprovals', 'services',
     'reviews', 'complaints', 'reports', 'payouts', 'packages', 'packagePurchases', 'unlockRequests'
   ];
 
@@ -458,6 +462,42 @@ router.get('/providers/pending', async (req, res) => {
   res.json({ success: true, total: allPending.length, pendingProviders: allPending });
 });
 
+// Danh sách TẤT CẢ Provider (đã duyệt và chưa duyệt) đọc trực tiếp từ DB.
+// Dùng cho tab "Danh sách tất cả Provider" để không hiển thị dữ liệu demo/localStorage.
+router.get('/providers', async (req, res) => {
+  const [providers, users, orders] = await Promise.all([
+    db.getCollectionFresh('providers'),
+    db.getCollectionFresh('users'),
+    db.getCollectionFresh('orders')
+  ]);
+  const list = providers.map(provider => {
+    const user = users.find(item =>
+      item.id === provider.userId ||
+      (provider.email && item.email && item.email.toLowerCase() === String(provider.email).toLowerCase())
+    );
+    const completedOrders = orders.filter(order => order.providerId === provider.id && order.orderStatus === 'completed');
+    const earnings = completedOrders.reduce((sum, order) => sum + (Number(order.price) || 0), 0);
+    return {
+      id: provider.id,
+      userId: provider.userId || '',
+      name: provider.name || user?.name || 'Provider',
+      email: provider.email || user?.email || '',
+      phone: provider.phone || user?.phone || '',
+      specialty: provider.specialty || '',
+      category: provider.category || '',
+      location: provider.location || '',
+      rating: Number(provider.rating) || 0,
+      reviewCount: Number(provider.reviewCount) || 0,
+      completedOrders: Number(provider.completedOrders) || completedOrders.length,
+      earnings,
+      verified: provider.verified === true,
+      reviewStatus: provider.reviewStatus || '',
+      availabilityStatus: provider.availabilityStatus || ''
+    };
+  });
+  res.json({ success: true, total: list.length, providers: list });
+});
+
 router.post('/providers/:id/approve', async (req, res) => {
   const pending = await db.getCollectionFresh('pendingProviders');
   const item = pending.find(p => p.id === req.params.id);
@@ -593,26 +633,48 @@ router.post('/skills/:id/reject', (req, res) => {
 // ============================================================================
 // 5. SERVICE MODERATION & PRICE APPROVALS (UC-57, UC-58, UC-59)
 // ============================================================================
-router.get('/services', (req, res) => {
+// Danh sách dịch vụ đọc trực tiếp từ DB (làm giàu tên Provider + đánh giá thật),
+// dùng cho trang quản lý dịch vụ thay cho dữ liệu demo localStorage.
+router.get('/services', async (req, res) => {
   const { status, category, q } = req.query;
-  let services = db.getCollection('services');
+
+  const [services, providers, users, reviews] = await Promise.all([
+    db.getCollectionFresh('services'),
+    db.getCollectionFresh('providers'),
+    db.getCollectionFresh('users'),
+    db.getCollectionFresh('reviews')
+  ]);
+
+  let list = services.map(service => {
+    const provider = providers.find(item => item.id === service.providerId);
+    const owner = provider ? users.find(item => item.id === provider.userId) : null;
+    const providerName = service.providerName || provider?.name || owner?.name || 'Provider';
+    const serviceReviews = reviews.filter(review =>
+      review.serviceId === service.id || review.providerId === service.providerId
+    );
+    const reviewCount = Number(service.reviewCount) || serviceReviews.length;
+    const rating = Number(service.rating) || (serviceReviews.length
+      ? Number((serviceReviews.reduce((sum, review) => sum + (Number(review.rating) || 0), 0) / serviceReviews.length).toFixed(1))
+      : 0);
+    return { ...service, providerName, rating, reviewCount };
+  });
 
   if (status && status !== 'all') {
-    services = services.filter(s => s.status === status);
+    list = list.filter(service => service.status === status);
   }
   if (category && category !== 'all') {
-    services = services.filter(s => s.category.toLowerCase() === category.toLowerCase());
+    list = list.filter(service => String(service.category || '').toLowerCase() === category.toLowerCase());
   }
   if (q) {
-    const keyword = q.toLowerCase().trim();
-    services = services.filter(s =>
-      s.title.toLowerCase().includes(keyword) ||
-      s.providerName.toLowerCase().includes(keyword) ||
-      s.id.toLowerCase().includes(keyword)
+    const keyword = String(q).toLowerCase().trim();
+    list = list.filter(service =>
+      String(service.title || '').toLowerCase().includes(keyword) ||
+      String(service.providerName || '').toLowerCase().includes(keyword) ||
+      String(service.id || '').toLowerCase().includes(keyword)
     );
   }
 
-  res.json({ success: true, total: services.length, services });
+  res.json({ success: true, total: list.length, services: list });
 });
 
 router.post('/services/:id/approve', (req, res) => {
@@ -652,6 +714,48 @@ router.post('/services/:id/approve-price', (req, res) => {
   res.json({
     success: true,
     message: `Đã phê duyệt điều chỉnh giá cho dịch vụ [${service.title}]. Đơn giá mới: ${Number(service.price).toLocaleString('vi-VN')}đ.`,
+    service
+  });
+});
+
+// Từ chối bài đăng dịch vụ mới: ghi thẳng trạng thái rejected vào DB.
+router.post('/services/:id/reject', (req, res) => {
+  const reason = String(req.body?.reason || '').trim();
+  const services = db.getCollection('services');
+  const service = services.find(s => s.id === req.params.id);
+
+  if (!service) {
+    return res.status(404).json({ success: false, message: 'Dịch vụ không tồn tại!' });
+  }
+
+  service.status = 'rejected';
+  if (reason) service.rejectReason = reason;
+  db.saveCollection('services', services);
+
+  res.json({
+    success: true,
+    message: `Đã từ chối bài đăng dịch vụ [${service.title}].`,
+    service
+  });
+});
+
+// Từ chối điều chỉnh giá: giữ nguyên đơn giá hiện tại và đưa dịch vụ về active.
+router.post('/services/:id/reject-price', (req, res) => {
+  const services = db.getCollection('services');
+  const service = services.find(s => s.id === req.params.id);
+
+  if (!service) {
+    return res.status(404).json({ success: false, message: 'Dịch vụ không tồn tại!' });
+  }
+
+  delete service.newPrice;
+  delete service.reason;
+  service.status = 'active';
+  db.saveCollection('services', services);
+
+  res.json({
+    success: true,
+    message: `Đã từ chối điều chỉnh giá, giữ nguyên đơn giá hiện tại cho dịch vụ [${service.title}].`,
     service
   });
 });
@@ -953,11 +1057,19 @@ router.put('/orders/:id/status', (req, res) => {
 
   const prevStatus = order.status || order.orderStatus;
   const normalized = String(status).toUpperCase();
+  const statusLower = status.toLowerCase();
 
   order.status = normalized;
-  order.orderStatus = status.toLowerCase();
+  order.orderStatus = statusLower;
   if (note) order.adminNote = note;
   order.updatedAt = new Date().toISOString();
+
+  // Đồng bộ trạng thái ký quỹ Escrow theo trạng thái đơn mới (khớp quy trình hiển thị của Admin).
+  if (statusLower === 'completed') order.escrowStatus = 'Đã giải ngân';
+  else if (statusLower === 'disputed') order.escrowStatus = 'Tạm giữ tranh chấp';
+  else if (statusLower === 'pending') order.escrowStatus = 'Chờ thanh toán';
+  else if (['confirmed', 'processing', 'delivered'].includes(statusLower)) order.escrowStatus = 'Đã giữ ký quỹ';
+
 
   if ((normalized === 'CANCELLED' || status.toLowerCase() === 'cancelled') && prevStatus !== 'CANCELLED' && prevStatus !== 'cancelled') {
     const orderItems = db.getCollection('order_items') || [];

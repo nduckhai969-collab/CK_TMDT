@@ -278,7 +278,9 @@
     }
 
     function getOrdersList() {
-      return liveOrders || getAppState().orders || [];
+      // Đơn hàng là dữ liệu THẬT đọc từ máy chủ; không fallback về state demo localStorage
+      // để tránh hiển thị/thao tác trên đơn ảo.
+      return liveOrders || [];
     }
 
     function renderOrdersTable() {
@@ -367,10 +369,9 @@
         });
       }
 
-      // Can thiệp hủy đơn cưỡng chế
-      document.getElementById('btn-cancel-order-intervene').addEventListener('click', () => {
+      // Can thiệp hủy đơn (máy chủ chặn: Admin không được tự ý hủy đơn)
+      document.getElementById('btn-cancel-order-intervene').addEventListener('click', async () => {
         if (!activeOrderId) return;
-        const state = getAppState();
         const order = getOrdersList().find(o => o.id === activeOrderId);
         if (!order) return;
 
@@ -383,13 +384,16 @@
           return;
         }
 
-        order.orderStatus = 'cancelled';
-        order.escrowStatus = 'Đã hoàn tiền';
+        const result = await window.adminApi.updateOrderStatus(order.id, 'cancelled');
+        if (!result || !result.success) {
+          showToast('Không thể hủy đơn', (result && result.message) || 'Vui lòng thử lại.', 'error');
+          return;
+        }
 
-        saveAppState(state);
+        await loadLiveOrders();
         closeModal('modal-order-detail');
         renderOrdersTable();
-        showToast('Can thiệp thành công', `Đơn hàng ${order.id} đã bị hủy cưỡng chế và hoàn 100% tiền Escrow cho khách.`, 'warning');
+        showToast('Can thiệp thành công', `Đơn hàng ${order.id} đã bị hủy cưỡng chế.`, 'warning');
       });
 
       // Lắng nghe thay đổi từ các trang khác
@@ -521,19 +525,18 @@
       }
     }
 
-    // Xử lý cập nhật trạng thái đơn hàng
-    function handleUpdateOrderStatus(orderId) {
+    // Xử lý cập nhật trạng thái đơn hàng — gọi API thật, KHÔNG ghi đè state localStorage.
+    async function handleUpdateOrderStatus(orderId) {
       const selectEl = document.getElementById('order-next-status-select');
       if (!selectEl) return;
 
       const newStatus = selectEl.value;
       if (!newStatus) return;
 
-      const state = getAppState();
       const order = getOrdersList().find(o => o.id === orderId);
       if (!order) return;
 
-      // Kiểm tra tính hợp lệ của chuyển đổi
+      // Kiểm tra tính hợp lệ của chuyển đổi theo quy trình nghiệp vụ
       const allowed = (VALID_TRANSITIONS[order.orderStatus] || []).map(t => t.value);
       if (!allowed.includes(newStatus)) {
         alert('Chuyển đổi trạng thái không hợp lệ theo quy trình nghiệp vụ!');
@@ -543,25 +546,26 @@
       const oldStatusText = (STATUS_MAP[order.orderStatus] || {}).text || order.orderStatus;
       const newStatusText = (STATUS_MAP[newStatus] || {}).text || newStatus;
 
-      order.orderStatus = newStatus;
+      const button = selectEl.parentElement?.querySelector('button');
+      if (button) button.disabled = true;
 
-      // Tự động đồng bộ trạng thái ký quỹ Escrow theo trạng thái mới
-      if (newStatus === 'completed') {
-        order.escrowStatus = 'Đã giải ngân';
-      } else if (newStatus === 'cancelled') {
-        order.escrowStatus = 'Đã hoàn tiền';
-      } else if (newStatus === 'disputed') {
-        order.escrowStatus = 'Tạm giữ tranh chấp';
-      } else if (newStatus === 'processing' || newStatus === 'confirmed') {
-        order.escrowStatus = 'Đã giữ ký quỹ';
-      } else if (newStatus === 'pending') {
-        order.escrowStatus = 'Chờ thanh toán';
+      try {
+        // Server tự cập nhật trạng thái đơn + trạng thái ký quỹ Escrow tương ứng.
+        const result = await window.adminApi.updateOrderStatus(orderId, newStatus);
+        if (!result || !result.success) {
+          showToast('Cập nhật thất bại', (result && result.message) || 'Vui lòng thử lại.', 'error');
+          return;
+        }
+        // Nạp lại đơn hàng thật từ máy chủ rồi vẽ lại bảng + modal.
+        await loadLiveOrders();
+        renderOrdersTable();
+        openOrderModal(orderId);
+        showToast('Cập nhật trạng thái thành công', `Đơn hàng ${orderId}: ${oldStatusText} ➔ ${newStatusText}`, 'success');
+      } catch (error) {
+        showToast('Lỗi kết nối', error.message || 'Không thể cập nhật trạng thái đơn hàng.', 'error');
+      } finally {
+        if (button) button.disabled = false;
       }
-
-      saveAppState(state);
-      renderOrdersTable();
-      openOrderModal(orderId);
-      showToast('Cập nhật trạng thái thành công', `Đơn hàng ${order.id}: ${oldStatusText} ➔ ${newStatusText}`, 'success');
     }
   </script>
 </body>

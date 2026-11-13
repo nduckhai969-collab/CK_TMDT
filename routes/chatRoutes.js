@@ -120,7 +120,9 @@ router.get('/threads', requireSignedIn, (req, res) => {
     return {
       partnerId: pid,
       providerId: partnerProv.id || pid,
-      name: partnerProv.name || partnerUser.name || 'Người dùng',
+      // The user account is the source of truth for the person in the conversation.
+      // Provider profiles can contain stale/demo names and must not override it.
+      name: partnerUser.name || partnerProv.name || 'Người dùng',
       avatar: partnerProv.avatar || partnerUser.avatar || '',
       role: partnerProv.specialty || (partnerUser.role === 'Provider' ? 'Chuyên gia' : 'Khách hàng'),
       lastMessage: lastMsg ? lastMsg.text : '',

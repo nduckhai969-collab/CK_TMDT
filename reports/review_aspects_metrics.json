@@ -1,0 +1,1025 @@
+{
+  "dataset": "binh_luan_dich_vu_600_aspect.csv",
+  "splitCategories": {
+    "train": [
+      "cham_soc_tre_nguoi_gia",
+      "chup_anh_quay_phim",
+      "dich_thuat",
+      "gia_su",
+      "giup_viec",
+      "ke_toan_thue",
+      "ky_su",
+      "lap_trinh_web"
+    ],
+    "validation": [
+      "luat_su",
+      "marketing_seo"
+    ],
+    "test": [
+      "sua_chua_dien_nuoc",
+      "thiet_ke_do_hoa"
+    ]
+  },
+  "counts": {
+    "train": 2000,
+    "validation": 500,
+    "test": 500
+  },
+  "byAspect": {
+    "quality": {
+      "calibration": {
+        "temperature": 12,
+        "validationLogLoss": 0.6688296619851701
+      },
+      "trainLabelCounts": {
+        "pos": 101,
+        "neg": 90,
+        "neu": 3,
+        "none": 246
+      },
+      "validation": {
+        "count": 100,
+        "accuracy": 0.67,
+        "macroF1": 0.4885608577469043,
+        "f1": {
+          "pos": 0.6818181818181818,
+          "neg": 0.5581395348837209,
+          "neu": 0,
+          "none": 0.7142857142857143
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 15,
+            "neg": 0,
+            "neu": 1,
+            "none": 6
+          },
+          "neg": {
+            "pos": 0,
+            "neg": 12,
+            "neu": 0,
+            "none": 9
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 0,
+            "none": 0
+          },
+          "none": {
+            "pos": 7,
+            "neg": 10,
+            "neu": 0,
+            "none": 40
+          }
+        }
+      },
+      "test": {
+        "count": 100,
+        "accuracy": 0.76,
+        "macroF1": 0.57429930994684,
+        "f1": {
+          "pos": 0.7755102040816326,
+          "neg": 0.717948717948718,
+          "neu": 0,
+          "none": 0.8037383177570093
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 19,
+            "neg": 0,
+            "neu": 0,
+            "none": 3
+          },
+          "neg": {
+            "pos": 3,
+            "neg": 14,
+            "neu": 0,
+            "none": 5
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 0,
+            "none": 5
+          },
+          "none": {
+            "pos": 5,
+            "neg": 3,
+            "neu": 0,
+            "none": 43
+          }
+        }
+      },
+      "presenceTest": {
+        "count": 100,
+        "precision": 0.8181818181818182,
+        "recall": 0.7346938775510204,
+        "f1": 0.7741935483870968
+      },
+      "polarityTest": {
+        "count": 49,
+        "accuracy": 0.673469387755102,
+        "macroF1": 0.6100183582480986,
+        "f1": {
+          "pos": 0.926829268292683,
+          "neg": 0.9032258064516129,
+          "neu": 0
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 19,
+            "neg": 0,
+            "neu": 0,
+            "none": 3
+          },
+          "neg": {
+            "pos": 3,
+            "neg": 14,
+            "neu": 0,
+            "none": 5
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 0,
+            "none": 5
+          }
+        }
+      },
+      "testBySource": {
+        "binh_luan_dich_vu_600_aspect.csv": {
+          "allLabels": {
+            "count": 100,
+            "accuracy": 0.76,
+            "macroF1": 0.57429930994684,
+            "f1": {
+              "pos": 0.7755102040816326,
+              "neg": 0.717948717948718,
+              "neu": 0,
+              "none": 0.8037383177570093
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 19,
+                "neg": 0,
+                "neu": 0,
+                "none": 3
+              },
+              "neg": {
+                "pos": 3,
+                "neg": 14,
+                "neu": 0,
+                "none": 5
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 0,
+                "neu": 0,
+                "none": 5
+              },
+              "none": {
+                "pos": 5,
+                "neg": 3,
+                "neu": 0,
+                "none": 43
+              }
+            }
+          },
+          "presence": {
+            "count": 100,
+            "precision": 0.8181818181818182,
+            "recall": 0.7346938775510204,
+            "f1": 0.7741935483870968
+          },
+          "polarity": {
+            "count": 49,
+            "accuracy": 0.673469387755102,
+            "macroF1": 0.6100183582480986,
+            "f1": {
+              "pos": 0.926829268292683,
+              "neg": 0.9032258064516129,
+              "neu": 0
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 19,
+                "neg": 0,
+                "neu": 0,
+                "none": 3
+              },
+              "neg": {
+                "pos": 3,
+                "neg": 14,
+                "neu": 0,
+                "none": 5
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 0,
+                "neu": 0,
+                "none": 5
+              }
+            }
+          }
+        }
+      }
+    },
+    "price": {
+      "calibration": {
+        "temperature": 6,
+        "validationLogLoss": 0.43027516971628055
+      },
+      "trainLabelCounts": {
+        "pos": 37,
+        "neg": 39,
+        "neu": 54,
+        "none": 310
+      },
+      "validation": {
+        "count": 100,
+        "accuracy": 0.82,
+        "macroF1": 0.7473193473193473,
+        "f1": {
+          "pos": 0.8181818181818182,
+          "neg": 0.6923076923076923,
+          "neu": 0.6,
+          "none": 0.8787878787878788
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 9,
+            "neg": 1,
+            "neu": 0,
+            "none": 0
+          },
+          "neg": {
+            "pos": 0,
+            "neg": 9,
+            "neu": 0,
+            "none": 4
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 1,
+            "neu": 6,
+            "none": 2
+          },
+          "none": {
+            "pos": 3,
+            "neg": 2,
+            "neu": 5,
+            "none": 58
+          }
+        }
+      },
+      "test": {
+        "count": 100,
+        "accuracy": 0.7,
+        "macroF1": 0.6171186771810173,
+        "f1": {
+          "pos": 0.47058823529411764,
+          "neg": 0.7777777777777778,
+          "neu": 0.4375,
+          "none": 0.782608695652174
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 4,
+            "neg": 0,
+            "neu": 1,
+            "none": 5
+          },
+          "neg": {
+            "pos": 2,
+            "neg": 14,
+            "neu": 2,
+            "none": 1
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 7,
+            "none": 8
+          },
+          "none": {
+            "pos": 1,
+            "neg": 3,
+            "neu": 7,
+            "none": 45
+          }
+        }
+      },
+      "presenceTest": {
+        "count": 100,
+        "precision": 0.7317073170731707,
+        "recall": 0.6818181818181818,
+        "f1": 0.7058823529411765
+      },
+      "polarityTest": {
+        "count": 44,
+        "accuracy": 0.5681818181818182,
+        "macroF1": 0.8086007130124777,
+        "f1": {
+          "pos": 0.7272727272727273,
+          "neg": 0.875,
+          "neu": 0.8235294117647058
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 4,
+            "neg": 0,
+            "neu": 1,
+            "none": 5
+          },
+          "neg": {
+            "pos": 2,
+            "neg": 14,
+            "neu": 2,
+            "none": 1
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 7,
+            "none": 8
+          }
+        }
+      },
+      "testBySource": {
+        "binh_luan_dich_vu_600_aspect.csv": {
+          "allLabels": {
+            "count": 100,
+            "accuracy": 0.7,
+            "macroF1": 0.6171186771810173,
+            "f1": {
+              "pos": 0.47058823529411764,
+              "neg": 0.7777777777777778,
+              "neu": 0.4375,
+              "none": 0.782608695652174
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 4,
+                "neg": 0,
+                "neu": 1,
+                "none": 5
+              },
+              "neg": {
+                "pos": 2,
+                "neg": 14,
+                "neu": 2,
+                "none": 1
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 0,
+                "neu": 7,
+                "none": 8
+              },
+              "none": {
+                "pos": 1,
+                "neg": 3,
+                "neu": 7,
+                "none": 45
+              }
+            }
+          },
+          "presence": {
+            "count": 100,
+            "precision": 0.7317073170731707,
+            "recall": 0.6818181818181818,
+            "f1": 0.7058823529411765
+          },
+          "polarity": {
+            "count": 44,
+            "accuracy": 0.5681818181818182,
+            "macroF1": 0.8086007130124777,
+            "f1": {
+              "pos": 0.7272727272727273,
+              "neg": 0.875,
+              "neu": 0.8235294117647058
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 4,
+                "neg": 0,
+                "neu": 1,
+                "none": 5
+              },
+              "neg": {
+                "pos": 2,
+                "neg": 14,
+                "neu": 2,
+                "none": 1
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 0,
+                "neu": 7,
+                "none": 8
+              }
+            }
+          }
+        }
+      }
+    },
+    "speed": {
+      "calibration": {
+        "temperature": 8,
+        "validationLogLoss": 0.555750371115611
+      },
+      "trainLabelCounts": {
+        "pos": 40,
+        "neg": 49,
+        "neu": 23,
+        "none": 328
+      },
+      "validation": {
+        "count": 100,
+        "accuracy": 0.74,
+        "macroF1": 0.5898298799425208,
+        "f1": {
+          "pos": 0.5333333333333333,
+          "neg": 0.5185185185185185,
+          "neu": 0.47058823529411764,
+          "none": 0.8368794326241135
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 4,
+            "neg": 2,
+            "neu": 0,
+            "none": 0
+          },
+          "neg": {
+            "pos": 0,
+            "neg": 7,
+            "neu": 1,
+            "none": 0
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 4,
+            "none": 3
+          },
+          "none": {
+            "pos": 5,
+            "neg": 10,
+            "neu": 5,
+            "none": 59
+          }
+        }
+      },
+      "test": {
+        "count": 100,
+        "accuracy": 0.72,
+        "macroF1": 0.6455387205387205,
+        "f1": {
+          "pos": 0.5185185185185185,
+          "neg": 0.5333333333333333,
+          "neu": 0.7272727272727273,
+          "none": 0.803030303030303
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 7,
+            "neg": 2,
+            "neu": 0,
+            "none": 3
+          },
+          "neg": {
+            "pos": 0,
+            "neg": 8,
+            "neu": 0,
+            "none": 4
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 4,
+            "none": 2
+          },
+          "none": {
+            "pos": 8,
+            "neg": 8,
+            "neu": 1,
+            "none": 53
+          }
+        }
+      },
+      "presenceTest": {
+        "count": 100,
+        "precision": 0.5526315789473685,
+        "recall": 0.7,
+        "f1": 0.6176470588235294
+      },
+      "polarityTest": {
+        "count": 30,
+        "accuracy": 0.6333333333333333,
+        "macroF1": 0.9212962962962963,
+        "f1": {
+          "pos": 0.875,
+          "neg": 0.8888888888888888,
+          "neu": 1
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 7,
+            "neg": 2,
+            "neu": 0,
+            "none": 3
+          },
+          "neg": {
+            "pos": 0,
+            "neg": 8,
+            "neu": 0,
+            "none": 4
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 4,
+            "none": 2
+          }
+        }
+      },
+      "testBySource": {
+        "binh_luan_dich_vu_600_aspect.csv": {
+          "allLabels": {
+            "count": 100,
+            "accuracy": 0.72,
+            "macroF1": 0.6455387205387205,
+            "f1": {
+              "pos": 0.5185185185185185,
+              "neg": 0.5333333333333333,
+              "neu": 0.7272727272727273,
+              "none": 0.803030303030303
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 7,
+                "neg": 2,
+                "neu": 0,
+                "none": 3
+              },
+              "neg": {
+                "pos": 0,
+                "neg": 8,
+                "neu": 0,
+                "none": 4
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 0,
+                "neu": 4,
+                "none": 2
+              },
+              "none": {
+                "pos": 8,
+                "neg": 8,
+                "neu": 1,
+                "none": 53
+              }
+            }
+          },
+          "presence": {
+            "count": 100,
+            "precision": 0.5526315789473685,
+            "recall": 0.7,
+            "f1": 0.6176470588235294
+          },
+          "polarity": {
+            "count": 30,
+            "accuracy": 0.6333333333333333,
+            "macroF1": 0.9212962962962963,
+            "f1": {
+              "pos": 0.875,
+              "neg": 0.8888888888888888,
+              "neu": 1
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 7,
+                "neg": 2,
+                "neu": 0,
+                "none": 3
+              },
+              "neg": {
+                "pos": 0,
+                "neg": 8,
+                "neu": 0,
+                "none": 4
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 0,
+                "neu": 4,
+                "none": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    "attitude": {
+      "calibration": {
+        "temperature": 8,
+        "validationLogLoss": 0.5773770451454153
+      },
+      "trainLabelCounts": {
+        "pos": 78,
+        "neg": 69,
+        "neu": 0,
+        "none": 293
+      },
+      "validation": {
+        "count": 100,
+        "accuracy": 0.77,
+        "macroF1": 0.5683859791002648,
+        "f1": {
+          "pos": 0.7346938775510204,
+          "neg": 0.7307692307692307,
+          "neu": 0,
+          "none": 0.8080808080808081
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 18,
+            "neg": 3,
+            "neu": 0,
+            "none": 3
+          },
+          "neg": {
+            "pos": 1,
+            "neg": 19,
+            "neu": 0,
+            "none": 0
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 0,
+            "none": 0
+          },
+          "none": {
+            "pos": 6,
+            "neg": 10,
+            "neu": 0,
+            "none": 40
+          }
+        }
+      },
+      "test": {
+        "count": 100,
+        "accuracy": 0.67,
+        "macroF1": 0.4475075910931174,
+        "f1": {
+          "pos": 0.47368421052631576,
+          "neg": 0.5625,
+          "neu": 0,
+          "none": 0.7538461538461538
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 9,
+            "neg": 0,
+            "neu": 0,
+            "none": 3
+          },
+          "neg": {
+            "pos": 1,
+            "neg": 9,
+            "neu": 0,
+            "none": 3
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 0,
+            "none": 0
+          },
+          "none": {
+            "pos": 16,
+            "neg": 10,
+            "neu": 0,
+            "none": 49
+          }
+        }
+      },
+      "presenceTest": {
+        "count": 100,
+        "precision": 0.4222222222222222,
+        "recall": 0.76,
+        "f1": 0.5428571428571428
+      },
+      "polarityTest": {
+        "count": 25,
+        "accuracy": 0.72,
+        "macroF1": 0.631578947368421,
+        "f1": {
+          "pos": 0.9473684210526315,
+          "neg": 0.9473684210526315,
+          "neu": 0
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 9,
+            "neg": 0,
+            "neu": 0,
+            "none": 3
+          },
+          "neg": {
+            "pos": 1,
+            "neg": 9,
+            "neu": 0,
+            "none": 3
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 0,
+            "none": 0
+          }
+        }
+      },
+      "testBySource": {
+        "binh_luan_dich_vu_600_aspect.csv": {
+          "allLabels": {
+            "count": 100,
+            "accuracy": 0.67,
+            "macroF1": 0.4475075910931174,
+            "f1": {
+              "pos": 0.47368421052631576,
+              "neg": 0.5625,
+              "neu": 0,
+              "none": 0.7538461538461538
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 9,
+                "neg": 0,
+                "neu": 0,
+                "none": 3
+              },
+              "neg": {
+                "pos": 1,
+                "neg": 9,
+                "neu": 0,
+                "none": 3
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 0,
+                "neu": 0,
+                "none": 0
+              },
+              "none": {
+                "pos": 16,
+                "neg": 10,
+                "neu": 0,
+                "none": 49
+              }
+            }
+          },
+          "presence": {
+            "count": 100,
+            "precision": 0.4222222222222222,
+            "recall": 0.76,
+            "f1": 0.5428571428571428
+          },
+          "polarity": {
+            "count": 25,
+            "accuracy": 0.72,
+            "macroF1": 0.631578947368421,
+            "f1": {
+              "pos": 0.9473684210526315,
+              "neg": 0.9473684210526315,
+              "neu": 0
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 9,
+                "neg": 0,
+                "neu": 0,
+                "none": 3
+              },
+              "neg": {
+                "pos": 1,
+                "neg": 9,
+                "neu": 0,
+                "none": 3
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 0,
+                "neu": 0,
+                "none": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "warranty": {
+      "calibration": {
+        "temperature": 4,
+        "validationLogLoss": 0.28952854469661793
+      },
+      "trainLabelCounts": {
+        "pos": 11,
+        "neg": 29,
+        "neu": 4,
+        "none": 396
+      },
+      "validation": {
+        "count": 100,
+        "accuracy": 0.87,
+        "macroF1": 0.31537753222836096,
+        "f1": {
+          "pos": 0,
+          "neg": 0.3333333333333333,
+          "neu": 0,
+          "none": 0.9281767955801105
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 0,
+            "none": 0
+          },
+          "neg": {
+            "pos": 0,
+            "neg": 3,
+            "neu": 0,
+            "none": 5
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 0,
+            "neu": 0,
+            "none": 0
+          },
+          "none": {
+            "pos": 0,
+            "neg": 7,
+            "neu": 1,
+            "none": 84
+          }
+        }
+      },
+      "test": {
+        "count": 100,
+        "accuracy": 0.82,
+        "macroF1": 0.5277777777777778,
+        "f1": {
+          "pos": 0.2222222222222222,
+          "neg": 0.7692307692307693,
+          "neu": 0.2222222222222222,
+          "none": 0.8974358974358975
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 1,
+            "neg": 0,
+            "neu": 1,
+            "none": 0
+          },
+          "neg": {
+            "pos": 0,
+            "neg": 10,
+            "neu": 0,
+            "none": 0
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 1,
+            "neu": 1,
+            "none": 4
+          },
+          "none": {
+            "pos": 6,
+            "neg": 5,
+            "neu": 1,
+            "none": 70
+          }
+        }
+      },
+      "presenceTest": {
+        "count": 100,
+        "precision": 0.5384615384615384,
+        "recall": 0.7777777777777778,
+        "f1": 0.6363636363636364
+      },
+      "polarityTest": {
+        "count": 18,
+        "accuracy": 0.6666666666666666,
+        "macroF1": 0.7063492063492064,
+        "f1": {
+          "pos": 0.6666666666666666,
+          "neg": 0.9523809523809523,
+          "neu": 0.5
+        },
+        "confusionMatrix": {
+          "pos": {
+            "pos": 1,
+            "neg": 0,
+            "neu": 1,
+            "none": 0
+          },
+          "neg": {
+            "pos": 0,
+            "neg": 10,
+            "neu": 0,
+            "none": 0
+          },
+          "neu": {
+            "pos": 0,
+            "neg": 1,
+            "neu": 1,
+            "none": 4
+          }
+        }
+      },
+      "testBySource": {
+        "binh_luan_dich_vu_600_aspect.csv": {
+          "allLabels": {
+            "count": 100,
+            "accuracy": 0.82,
+            "macroF1": 0.5277777777777778,
+            "f1": {
+              "pos": 0.2222222222222222,
+              "neg": 0.7692307692307693,
+              "neu": 0.2222222222222222,
+              "none": 0.8974358974358975
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 1,
+                "neg": 0,
+                "neu": 1,
+                "none": 0
+              },
+              "neg": {
+                "pos": 0,
+                "neg": 10,
+                "neu": 0,
+                "none": 0
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 1,
+                "neu": 1,
+                "none": 4
+              },
+              "none": {
+                "pos": 6,
+                "neg": 5,
+                "neu": 1,
+                "none": 70
+              }
+            }
+          },
+          "presence": {
+            "count": 100,
+            "precision": 0.5384615384615384,
+            "recall": 0.7777777777777778,
+            "f1": 0.6363636363636364
+          },
+          "polarity": {
+            "count": 18,
+            "accuracy": 0.6666666666666666,
+            "macroF1": 0.7063492063492064,
+            "f1": {
+              "pos": 0.6666666666666666,
+              "neg": 0.9523809523809523,
+              "neu": 0.5
+            },
+            "confusionMatrix": {
+              "pos": {
+                "pos": 1,
+                "neg": 0,
+                "neu": 1,
+                "none": 0
+              },
+              "neg": {
+                "pos": 0,
+                "neg": 10,
+                "neu": 0,
+                "none": 0
+              },
+              "neu": {
+                "pos": 0,
+                "neg": 1,
+                "neu": 1,
+                "none": 4
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

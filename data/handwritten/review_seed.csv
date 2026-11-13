@@ -1,0 +1,41 @@
+id,writer,text,quality,price,speed,attitude,warranty
+SEED_001,seed_a,"Bản thiết kế nhìn trên máy ổn nhưng in ra màu lệch hẳn, bên làm vẫn nhận chỉnh lại miễn phí.",neg,-,-,pos,pos
+SEED_002,seed_a,"Gia sư giải từng bước dễ hiểu, bé tự làm được bài sau buổi học.",pos,-,neu,pos,-
+SEED_003,seed_a,"Thợ tới đúng khung giờ đã hẹn, thay vòi nước xong không còn rò nữa.",pos,-,pos,-,-
+SEED_004,seed_a,"Báo giá ban đầu thấp, đến lúc nhận file mới phát sinh thêm phí mà không báo trước.",- ,neg,-,-,-
+SEED_005,seed_a,"Sửa laptop nhanh thật, tiếc là máy vẫn nóng và sập nguồn như cũ.",neg,-,pos,-,-
+SEED_006,seed_b,"Bạn chụp ảnh tự nhiên, chọn góc đẹp và gửi album sớm hơn lịch hẹn.",pos,-,pos,pos,-
+SEED_007,seed_b,"Học phí đúng như thông tin đăng, chất lượng buổi học ở mức bình thường.",neu,neu,-,-,-
+SEED_008,seed_b,"Nhắn hỏi tình trạng đơn mấy lần mới trả lời, cách nói chuyện cũng khá khó chịu.",-,-,neg,neg,-
+SEED_009,seed_b,"Điều hòa chạy êm sau khi vệ sinh, anh thợ giải thích rõ phần nào cần thay.",pos,-,-,pos,-
+SEED_010,seed_b,"Dịch tài liệu đúng hạn, thuật ngữ chuyên ngành dùng chưa chuẩn nên phải sửa lại nhiều.",neg,-,pos,-,-
+SEED_011,seed_c,"Bên sửa máy quay lại xử lý lỗi sau một tuần, không thu thêm tiền bảo hành.",pos,-,-,-,pos
+SEED_012,seed_c,"Giá gói chụp cưới ở mức trung bình, không có phụ thu ngoài hợp đồng.",- ,neu,-,-,-
+SEED_013,seed_c,"Lớp học bắt đầu trễ gần nửa tiếng nhưng nội dung hướng dẫn khá kỹ.",pos,-,neg,-,-
+SEED_014,seed_c,"Mình chỉ nhờ thay pin, bạn làm đúng hạng mục và báo giá trước khi bắt đầu.",neu,neu,-,pos,-
+SEED_015,seed_c,"Ảnh giao thiếu nhiều tấm, hỏi thì bảo tự chọn trong link cũ đã hết hạn.",neg,-,-,neg,-
+SEED_016,seed_d,"Bài viết có nguồn rõ ràng, đọc mạch lạc và đăng đúng lịch.",pos,-,pos,-,-
+SEED_017,seed_d,"Lắp kệ chắc chắn, nhưng khoan lệch vị trí tường và để bụi bẩn lại.",neg,-,-,-,-
+SEED_018,seed_d,"Chi phí sửa chữa khá cao so với báo giá của hai nơi khác.",- ,neg,-,-,-
+SEED_019,seed_d,"Bạn tư vấn lịch sự, không thúc ép mua thêm dịch vụ.",-,-,-,pos,-
+SEED_020,seed_d,"Máy vẫn lỗi sau lần sửa thứ hai, cửa hàng không phản hồi yêu cầu bảo hành.",neg,-,-,neg,neg
+SEED_021,seed_e,"File bàn giao đúng kích thước, mở được trên phần mềm bên mình đang dùng.",pos,-,-,-,-
+SEED_022,seed_e,"Giao hàng đúng giờ như đã hẹn, tốc độ phục vụ bình thường.",-,-,neu,-,-
+SEED_023,seed_e,"Báo giá gói dạy theo tháng rõ ràng, không tính thêm tiền tài liệu.",- ,pos,-,-,-
+SEED_024,seed_e,"Bạn trả lời tin nhắn nhanh, nhưng giải thích vòng vo làm mình không hiểu cách dùng.",-,-,pos,neg,-
+SEED_025,seed_f,"Sàn gỗ sau khi lắp có khe hở ở nhiều chỗ, hẹn quay lại kiểm tra rồi mất liên lạc.",neg,-,-,neg,-
+SEED_026,seed_f,"Buổi tư vấn đúng thời lượng, mình được nghe đủ các lựa chọn và tự quyết định.",-,-,neu,pos,-
+SEED_027,seed_f,"Chi phí vừa túi tiền, ảnh chỉnh màu đẹp hơn mong đợi.",pos,pos,-,-,-
+SEED_028,seed_f,"Sửa khóa cửa xong dùng bình thường, thợ nói rõ cách bảo quản và thời hạn bảo hành.",pos,-,-,pos,pos
+SEED_029,seed_g,"Đến muộn nhưng có báo trước; phần lắp đặt gọn và hoạt động tốt.",pos,-,neg,pos,-
+SEED_030,seed_g,"Không đắt như mình nghĩ, tuy nhiên chất lượng bản dịch còn nhiều lỗi ngữ pháp.",neg,pos,-,-,-
+SEED_031,seed_g,"Tư vấn viên nghe kỹ nhu cầu rồi đề xuất gói rẻ hơn, không cố bán gói cao.",- ,pos,-,pos,-
+SEED_032,seed_g,"Hoàn thành sớm, nhưng bản dựng bị vỡ hình khi xuất đúng độ phân giải yêu cầu.",neg,-,pos,-,-
+SEED_033,seed_h,"Mức phí ghi trên báo giá là mức cuối cùng, không có khoản phát sinh.",- ,pos,-,-,-
+SEED_034,seed_h,"Bạn hướng dẫn cài đặt từ xa rất kiên nhẫn, sau đó gửi lại tài liệu để mình xem.",-,-,-,pos,pos
+SEED_035,seed_h,"Đặt lịch buổi sáng mà tới chiều vẫn chưa thấy ai, gọi điện thì không bắt máy.",-,-,neg,neg,-
+SEED_036,seed_h,"Nội dung buổi học vừa sức, giáo viên đến đúng giờ và giải đáp câu hỏi rõ ràng.",pos,-,pos,pos,-
+SEED_037,seed_i,"Chất lượng âm thanh sạch, nhưng giao file trễ hai ngày nên lỡ lịch đăng.",pos,-,neg,-,-
+SEED_038,seed_i,"Số tiền thu đúng hóa đơn, dịch vụ thực hiện theo đúng phạm vi đã thống nhất.",neu,neu,-,-,-
+SEED_039,seed_i,"Nhân viên nói chuyện cộc lốc, dù việc sửa chữa cuối cùng đã xử lý được lỗi.",pos,-,-,neg,-
+SEED_040,seed_i,"Đã hết thời hạn bảo hành nên mình phải trả phí thay linh kiện theo bảng giá.",- ,neu,-,-,neu

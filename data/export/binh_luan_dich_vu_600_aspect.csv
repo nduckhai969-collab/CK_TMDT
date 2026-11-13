@@ -1,0 +1,601 @@
+﻿id,text,category,label,chat_luong,gia,toc_do,thai_do,bao_hanh
+401,"Người chăm bệnh có kinh nghiệm, biết xử lý khi đột ngột. Rất biết ơn dịch vụ này.",cham_soc_tre_nguoi_gia,positive,positive,none,none,none,none
+402,Bạn giúp việc dùng điện thoại gần như cả buổi. Sẽ không thuê lại lần nào nữa.,giup_viec,negative,none,none,none,negative,none
+403,Bạn giúp việc dùng điện thoại gần như cả buổi. Công ty chỉ biết xin lỗi suông.,giup_viec,negative,none,none,none,negative,none
+404,Thiết kế không đúng yêu cầu ban đầu. Phát sinh chi phí liên tục.,ky_su,negative,negative,negative,none,none,none
+405,Loay hoay cả tiếng vẫn không tìm ra lỗi. Cảm giác như bị lừa.,sua_chua_dien_nuoc,negative,negative,none,negative,negative,none
+406,"Thiết kế logo giá từ 1 triệu, gồm ba phương án. Ai biết designer làm bao bì tốt xin chỉ giúp.",thiet_ke_do_hoa,neutral,none,neutral,none,none,none
+407,Kế toán làm sổ sách gọn gàng và đúng hạn. Sẽ gia hạn hợp đồng năm sau.,ke_toan_thue,positive,positive,none,positive,none,none
+408,"phí khảo sát 50k, nếu sửa thì trừ vào tiền công. Máy lạnh dùng 5 năm rồi nên sửa hay thay mới?",sua_chua_dien_nuoc,neutral,none,neutral,none,none,none
+409,Thay ổ cắm và công tắc giá 150k tiền công. Máy lạnh dùng 5 năm rồi nên sửa hay thay mới?,sua_chua_dien_nuoc,neutral,none,neutral,none,none,none
+410,"Anh thợ điện chuyên nghiệp, báo giá rõ trước khi sửa. Giá rẻ hơn mấy chỗ mình hỏi trước đó.",sua_chua_dien_nuoc,positive,none,positive,none,positive,none
+411,Dạy chỉ đọc đáp án chứ không giảng giải. Mình đã phản ánh nhưng không ai phản hồi.,gia_su,negative,negative,none,negative,negative,none
+412,Nộp tờ khai thuế trễ nên công ty bị phạt. Mình phải đi sửa lại toàn bộ hồ sơ.,ke_toan_thue,negative,negative,none,negative,none,none
+413,Thợ chụp đến trễ gần một tiếng. Rất tiếc và thất vọng.,chup_anh_quay_phim,negative,none,none,negative,none,none
+414,Sổ sách sai số liệu nhiều chỗ. Đòi bồi thường thì né tránh.,ke_toan_thue,negative,negative,none,none,negative,negative
+415,"Logo sáng tạo, đúng tinh thần thương hiệu. Mình sẽ tiếp tục hợp tác.",thiet_ke_do_hoa,positive,positive,none,none,none,none
+416,"Ít trả lời tin nhắn, hỏi gì cũng chậm. Đòi bồi thường thì né tránh.",ke_toan_thue,negative,none,none,negative,negative,negative
+417,Bên này có người chăm sóc người cao tuổi tại nhà. Cho mình hỏi có kiểm tra lý lịch người chăm sóc không?,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+418,Thợ báo sẽ có mặt trong khoảng 40 phút. Máy lạnh dùng 5 năm rồi nên sửa hay thay mới?,sua_chua_dien_nuoc,neutral,none,none,neutral,none,none
+419,Hồ sơ xin phép xây dựng được làm gọn gàng. Chủ nhà nào cũng nên làm việc với anh.,ky_su,positive,positive,none,none,none,none
+420,Có hỗ trợ đăng ký mã số thuế. Hợp đồng ký theo từng năm.,ke_toan_thue,neutral,none,none,none,none,none
+421,"Dọn nhà theo giờ giá 80k một giờ, tối thiểu 3 giờ. Ai từng thuê xin cho ý kiến.",giup_viec,neutral,none,neutral,none,none,none
+422,Dạy chỉ đọc đáp án chứ không giảng giải. Học ba tháng mà điểm không khá hơn.,gia_su,negative,negative,none,none,none,none
+423,làm vỡ đồ nhưng không báo cho chủ nhà. Tính tiền cao hơn báo giá ban đầu.,giup_viec,negative,negative,negative,none,negative,none
+424,Phí thiết kế nhà phố tính khoảng 200k một mét vuông. Lịch khởi công dự kiến vào đầu năm sau.,ky_su,neutral,none,neutral,neutral,none,none
+425,"Luật sư ít liên lạc, hỏi tiến độ phải nhắc nhiều lần. Mình mất nhiều thời gian chờ đợi.",luat_su,negative,none,none,negative,negative,none
+426,Bên làm SEO báo cáo thứ hạng từ khóa rất rõ ràng. Rất chuyên nghiệp và có tâm.,marketing_seo,positive,none,none,none,positive,none
+427,Chị phát hiện giúp mình nhiều khoản chi phí hợp lệ. Sẽ gia hạn hợp đồng năm sau.,ke_toan_thue,positive,positive,none,none,none,none
+428,Chị tận tâm theo vụ việc đến cùng. Rất đáng tin cậy.,luat_su,positive,none,none,none,positive,none
+429,Nộp tờ khai thuế trễ nên công ty bị phạt. Đòi bồi thường thì né tránh.,ke_toan_thue,negative,none,none,negative,negative,negative
+430,anh kỹ sư khảo sát thực tế kỹ rồi mới báo phương án. Chất lượng thi công vượt mong đợi.,ky_su,positive,positive,none,none,positive,none
+431,"Thầy dạy lan man, không bám chương trình trên lớp. Con càng học càng chán.",gia_su,negative,negative,none,none,none,none
+432,Bên này nhận dịch công chứng và dịch thuật chuyên ngành. Mình mới gửi tài liệu nên chưa nhận xét dc.,dich_thuat,neutral,none,none,none,none,none
+433,"Phí khảo sát 50k, nếu sửa thì trừ vào tiền công. Không biết bền không vì mình mới dùng.",sua_chua_dien_nuoc,neutral,neutral,neutral,none,none,none
+434,Chị nấu ăn ngon và biết giữ vệ sinh bếp. Nhà cửa thơm tho sau khi dọn xong.,giup_viec,positive,positive,none,none,none,none
+435,Chị phát hiện giúp mình nhiều khoản chi phí hợp lệ. Rất chuyên nghiệp và đáng tin cậy.,ke_toan_thue,positive,positive,none,none,positive,none
+436,Thợ chụp đến trễ gần một tiếng. Không nên đặt gói này.,chup_anh_quay_phim,negative,none,none,negative,none,none
+437,Luật sư hẹn gặp mình vào sáng thứ ba. Cho mình hỏi có tư vấn qua điện thoại không ạ?,luat_su,neutral,none,none,none,none,none
+438,"Dịch vụ kế toán trọn gói từ 1,5 triệu mỗi tháng. Ai biết kế toán nào làm tốt cho cửa hàng nhỏ xin gợi ý.",ke_toan_thue,neutral,none,neutral,none,none,none
+439,Phí đại diện tính theo vụ việc. Ai biết luật sư giỏi về lao động xin gợi ý giúp.,luat_su,neutral,none,neutral,none,none,none
+440,Ca làm việc bắt đầu lúc 7 giờ sáng. Cho mình hỏi có kiểm tra lý lịch người chăm sóc không?,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+441,Sửa máy lạnh xong chạy mát và êm hẳn. Mình sẽ gọi lại khi cần.,sua_chua_dien_nuoc,positive,positive,none,none,none,none
+442,Loay hoay cả tiếng vẫn không tìm ra lỗi. Rất thiếu minh bạch về giá.,sua_chua_dien_nuoc,negative,negative,negative,negative,none,none
+443,Ảnh được giao trong vòng bảy ngày. Có thể đổi lịch chụp nếu trời mưa.,chup_anh_quay_phim,neutral,none,none,neutral,none,none
+444,Thuật ngữ chuyên ngành bị dịch sai. Phí cao mà chất lượng thấp.,dich_thuat,negative,negative,negative,none,none,none
+445,"Tư vấn chung chung, không đi vào trọng tâm. Thất vọng thực sự.",luat_su,negative,negative,none,none,none,none
+446,Bên này nhận sửa ở Thủ Đức và quận 9. Máy lạnh dùng 5 năm rồi nên sửa hay thay mới?,sua_chua_dien_nuoc,neutral,none,none,none,none,none
+447,"Báo cáo hàng tháng chi tiết, dễ theo dõi. Doanh số của mình tăng rõ rệt.",marketing_seo,positive,positive,none,none,positive,none
+448,Phí phát sinh nhiều hơn thỏa thuận. Mình ko khuyên ai thuê.,luat_su,negative,none,negative,none,none,none
+449,"Anh thợ điện chuyên nghiệp, báo giá rõ trước khi sửa. Tay nghề thấy rất chắc.",sua_chua_dien_nuoc,positive,positive,positive,none,positive,none
+450,Lập trình viên làm web đúng mô tả và chạy mượt. Giao đúng hạn như đã hẹn.,lap_trinh_web,positive,positive,none,positive,none,none
+451,"Dịch như dùng máy, đọc rất gượng. Mất tiền và mất thời gian.",dich_thuat,negative,negative,negative,negative,none,none
+452,"Giao diện đẹp, hiển thị tốt trên cả điện thoại. Giá hợp lý so với chất lượng.",lap_trinh_web,positive,positive,positive,none,none,none
+453,Designer ít lắng nghe góp ý. Thật sự thất vọng.,thiet_ke_do_hoa,negative,none,none,none,negative,none
+454,thuật ngữ chuyên ngành bị dịch sai. Không khuyến khích sử dụng.,dich_thuat,negative,negative,none,none,none,none
+455,Bên này nhận khai thuế cho hộ kinh doanh và công ty. Cho mình hỏi có làm hóa đơn điện tử không ạ?,ke_toan_thue,neutral,none,none,none,none,none
+456,Bạn nhận góp ý và chỉnh sửa rất nhiệt tình. Mình sẽ tiếp tục hợp tác.,thiet_ke_do_hoa,positive,none,none,none,positive,none
+457,Đội ngũ phản hồi nhanh và chủ động đề xuất ý tưởng. Mình sẽ gia hạn hợp đồng.,marketing_seo,positive,none,none,positive,positive,none
+458,Mình cần dịch hồ sơ du học sang tiếng Anh. Có báo giá miễn phí trước khi dịch.,dich_thuat,neutral,none,neutral,none,none,none
+459,Cô có giáo án rõ ràng cho từng buổi. Con tự tin hơn hẳn khi lên lớp.,gia_su,positive,positive,none,none,none,none
+460,Nghỉ việc đột ngột khiến gia đình bị động. Dịch vụ ko xứng với phí đã trả.,cham_soc_tre_nguoi_gia,negative,negative,negative,none,negative,none
+461,Giá đã gồm tên miền và hosting năm đầu. Freelancer nào làm Laravel giới thiệu giúp mình với.,lap_trinh_web,neutral,none,neutral,none,none,none
+462,Có hỗ trợ đăng ký mã số thuế. Ai biết kế toán nào làm tốt cho cửa hàng nhỏ xin gợi ý.,ke_toan_thue,neutral,none,none,none,none,none
+463,thợ làm ẩu để lại đầy bụi và vụn gạch. Nên cân nhắc kỹ trước khi thuê.,sua_chua_dien_nuoc,negative,negative,none,none,negative,none
+464,nhân viên mang theo dụng cụ và hóa chất riêng. Mình mới thuê tuần này nên chưa có nhận xét.,giup_viec,neutral,none,none,none,none,none
+465,"cô làm việc nhanh nhẹn và có trách nhiệm. Giá minh bạch, không phát sinh gì thêm.",giup_viec,positive,none,positive,positive,positive,none
+466,Gói thiết kế cho phép chỉnh sửa ba lần. Ai biết designer làm bao bì tốt xin chỉ giúp.,thiet_ke_do_hoa,neutral,none,none,none,none,neutral
+467,Thời gian hoàn thành khoảng 5 ngày làm việc. Ai biết designer làm bao bì tốt xin chỉ giúp.,thiet_ke_do_hoa,neutral,none,none,neutral,none,none
+468,Anh giải thích số liệu rất dễ hiểu cho người không chuyên. Phản hồi nhanh mỗi khi cần hỏi.,ke_toan_thue,positive,none,none,positive,positive,none
+469,Thời gian hoàn thành dự kiến ba tuần. Mình mới thuê nên chưa có nhận xét.,lap_trinh_web,neutral,none,none,neutral,none,none
+470,Hỗ trợ chỉnh sửa nhiệt tình sau khi bàn giao. Rất đáng để hợp tác lâu dài.,lap_trinh_web,positive,none,none,none,positive,positive
+471,"Đội ngũ phản hồi nhanh và chủ động đề xuất ý tưởng. Giá minh bạch, ko phụ phí ẩn.",marketing_seo,positive,none,positive,positive,positive,none
+472,Thợ chụp hướng dẫn tạo dáng rất dễ. Mọi người trong ê-kíp đều thân thiện.,chup_anh_quay_phim,positive,none,none,none,positive,none
+473,Thợ đến đúng giờ và tìm ra chỗ rò rất nhanh. Đặt lịch qua app rất tiện.,sua_chua_dien_nuoc,positive,positive,none,positive,none,none
+474,Thợ đến đúng giờ và tìm ra chỗ rò rất nhanh. Tay nghề thấy rất chắc.,sua_chua_dien_nuoc,positive,positive,none,positive,none,none
+475,Giá đã gồm tên miền và hosting năm đầu. Mình mới thuê nên chưa có nhận xét.,lap_trinh_web,neutral,none,neutral,none,none,none
+476,Bé quấn cô và ăn ngủ rất đúng giờ. Chi phí hợp lý so với chất lượng.,cham_soc_tre_nguoi_gia,positive,positive,positive,none,none,none
+477,thợ báo sẽ có mặt trong khoảng 40 phút. Không biết bền không vì mình mới dùng.,sua_chua_dien_nuoc,neutral,neutral,none,neutral,none,none
+478,Gói SEO tổng thể giá khoảng 6 triệu mỗi tháng. Ai biết agency làm SEO uy tín xin chỉ giúp.,marketing_seo,neutral,none,neutral,none,none,none
+479,Công trình trễ tiến độ hai tháng. Phát sinh chi phí liên tục.,ky_su,negative,none,negative,negative,none,none
+480,Mình cần người quản trị fanpage bán hàng. Mình mới bắt đầu hợp tác nên chưa có nhận xét.,marketing_seo,neutral,none,none,none,none,none
+481,Anh giải thích số liệu rất dễ hiểu cho người không chuyên. Rất chuyên nghiệp và đáng tin cậy.,ke_toan_thue,positive,none,none,none,positive,none
+482,Ảnh giao đúng hẹn và đã chỉnh sửa kỹ. Giá hợp lý cho gói chụp trọn ngày.,chup_anh_quay_phim,positive,positive,positive,positive,none,none
+483,Vệ sinh máy lạnh treo tường giá 150k một máy. Không biết bền không vì mình mới dùng.,sua_chua_dien_nuoc,neutral,neutral,neutral,none,none,none
+484,"Người chăm bệnh có kinh nghiệm, biết xử lý khi đột ngột. Cô trung thực và đáng tin cậy.",cham_soc_tre_nguoi_gia,positive,positive,none,none,positive,none
+485,Đất của mình rộng 5 x 20 mét. Lịch khởi công dự kiến vào đầu năm sau.,ky_su,neutral,none,none,neutral,none,none
+486,Thợ hẹn hai giờ chiều năm giờ mới tới. Nên cân nhắc kỹ trước khi thuê.,sua_chua_dien_nuoc,negative,none,none,negative,none,none
+487,Mình cần web có trang giỏ hàng và thanh toán. Freelancer nào làm Laravel giới thiệu giúp mình với.,lap_trinh_web,neutral,none,none,none,none,none
+488,"trông trẻ theo giờ giá 70k một giờ, tối thiểu 4 giờ. Mình mới thuê tuần đầu nên chưa nhận xét.",cham_soc_tre_nguoi_gia,neutral,none,neutral,none,none,none
+489,"báo cáo hàng tháng chi tiết, dễ theo dõi. Rất chuyên nghiệp và có tâm.",marketing_seo,positive,none,none,none,positive,none
+490,Phí tư vấn lần đầu là 500k cho 60 phút. Thời gian giải quyết dự kiến vài tháng.,luat_su,neutral,none,neutral,neutral,none,none
+491,"Chiến dịch quảng cáo tối ưu tốt, chi phí mỗi đơn giảm. Cam kết thực hiện đúng như đã nói.",marketing_seo,positive,positive,positive,none,positive,none
+492,"Chiến dịch quảng cáo tối ưu tốt, chi phí mỗi đơn giảm. Rất chuyên nghiệp và có tâm.",marketing_seo,positive,positive,positive,none,positive,none
+493,Hồ sơ giới thiệu không đúng như thực tế. Rất thất vọng và sẽ không đăng ký lại.,gia_su,negative,negative,none,none,none,none
+494,Lấy tiền cọc rồi biến mất vài ngày. Mình rất thất vọng.,lap_trinh_web,negative,none,none,none,negative,none
+495,Bản dịch công chứng nhanh và đúng quy định. Có hỗ trợ chỉnh sửa miễn phí.,dich_thuat,positive,positive,none,positive,none,positive
+496,Chạy quảng cáo đốt tiền mà không ra đơn. Hỏi gì cũng viện cớ thuật toán.,marketing_seo,negative,negative,negative,none,negative,none
+497,Thời gian dịch khoảng ba ngày cho mười trang. Ai biết chỗ dịch công chứng nhanh xin chỉ giúp.,dich_thuat,neutral,none,none,neutral,none,none
+498,"Chăm sóc ông bà thiếu kiên nhẫn, hay nói lớn tiếng. Mình rất lo lắng và bất an.",cham_soc_tre_nguoi_gia,negative,none,none,none,negative,none
+499,Sửa xong hai hôm lại rò tiếp. Gọi bảo hành thì né tránh.,sua_chua_dien_nuoc,negative,negative,none,none,none,negative
+500,Mất điện lúc tối vẫn có thợ đến ngay. Tay nghề thấy rất chắc.,sua_chua_dien_nuoc,positive,positive,none,positive,none,none
+501,Luật sư hẹn gặp mình vào sáng thứ ba. Vụ việc đang xử lý nên mình chưa đánh giá được.,luat_su,neutral,none,none,none,none,none
+502,Web bị lỗi liên tục sau khi bàn giao. Tuyệt đối không giới thiệu cho ai.,lap_trinh_web,negative,negative,none,none,none,none
+503,Hỗ trợ chỉnh sửa nhiệt tình sau khi bàn giao. Khách hàng của mình khen web đẹp.,lap_trinh_web,positive,positive,none,none,positive,positive
+504,Thời gian hoàn thiện hồ sơ thiết kế khoảng ba tuần. Lịch khởi công dự kiến vào đầu năm sau.,ky_su,neutral,none,none,neutral,none,none
+505,Ảnh giao đúng hẹn và đã chỉnh sửa kỹ. Mình sẽ đặt lại cho dịp sau.,chup_anh_quay_phim,positive,positive,none,positive,none,none
+506,Thứ hạng từ khóa gần như không đổi sau sáu tháng. Không nên tin lời hứa suông.,marketing_seo,negative,negative,none,none,none,none
+507,Dự toán chênh lệch quá nhiều so với thực tế. Mất thời gian và tiền bạc.,ky_su,negative,none,negative,negative,none,none
+508,Dịch vụ dọn nhà theo giờ rất tiện cho gia đình bận rộn. Mình đã đặt lại hằng tuần.,giup_viec,positive,none,none,none,none,none
+509,"Phí khảo sát 50k, nếu sửa thì trừ vào tiền công. Hẹn thợ vào sáng thứ bảy được không?",sua_chua_dien_nuoc,neutral,none,neutral,none,none,none
+510,"Code rối, người khác không đọc nổi. Tuyệt đối không giới thiệu cho ai.",lap_trinh_web,negative,negative,none,none,none,none
+511,"Bên này nhận chụp cưới, sự kiện và sản phẩm. Có thể đổi lịch chụp nếu trời mưa.",chup_anh_quay_phim,neutral,none,none,none,none,none
+512,Địa điểm chụp ở khu vực Thủ Đức. Ai biết nhiếp ảnh gia chụp kỷ yếu giúp mình với.,chup_anh_quay_phim,neutral,none,none,none,none,none
+513,Ảnh giao đúng hẹn và đã chỉnh sửa kỹ. Rất đáng tiền.,chup_anh_quay_phim,positive,positive,positive,positive,none,none
+514,Bên này nhận dịch công chứng và dịch thuật chuyên ngành. Có báo giá miễn phí trước khi dịch.,dich_thuat,neutral,none,neutral,none,none,none
+515,có hỗ trợ đăng ký mã số thuế. Mình mới ký nên chưa đánh giá được.,ke_toan_thue,neutral,none,none,none,none,none
+516,Sổ sách sai số liệu nhiều chỗ. Thiệt hại không nhỏ cho công ty.,ke_toan_thue,negative,negative,none,none,none,none
+517,"Code sạch, có tài liệu hướng dẫn cho mình. Khách hàng của mình khen web đẹp.",lap_trinh_web,positive,positive,none,none,none,none
+518,Gia đình mình rất yên tâm đi làm. Mình sẽ giới thiệu cho người quen.,cham_soc_tre_nguoi_gia,positive,none,none,none,none,none
+519,Thợ chụp hướng dẫn tạo dáng rất dễ. Giới thiệu cho bạn bè chắc chắn.,chup_anh_quay_phim,positive,none,none,none,positive,none
+520,Ca làm việc bắt đầu lúc 7 giờ sáng. Ai biết trung tâm uy tín xin chỉ giúp.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+521,"Trông trẻ theo giờ giá 70k một giờ, tối thiểu 4 giờ. Cho mình hỏi có kiểm tra lý lịch người chăm sóc không?",cham_soc_tre_nguoi_gia,neutral,none,neutral,none,none,none
+522,"Dịch phụ đề mượt, đúng ngữ cảnh. Mình rất hài lòng.",dich_thuat,positive,positive,none,none,none,none
+523,"Ảnh bị mờ nhiều tấm, chỉnh màu sơ sài. Đòi hoàn tiền thì bị từ chối.",chup_anh_quay_phim,negative,negative,none,none,negative,negative
+524,Mình cần kế toán làm quyết toán thuế thu nhập cá nhân. Mình mới ký nên chưa đánh giá được.,ke_toan_thue,neutral,none,none,none,none,none
+525,Bàn giao thiếu file gốc. Chất lượng không xứng với số tiền.,thiet_ke_do_hoa,negative,negative,negative,none,none,none
+526,Gia đình mình rất yên tâm đi làm. Cả nhà đều quý cô.,cham_soc_tre_nguoi_gia,positive,none,none,none,none,none
+527,Thu phí cao hơn thỏa thuận ban đầu. Đòi bồi thường thì né tránh.,ke_toan_thue,negative,none,negative,none,negative,negative
+528,Nghỉ việc đột ngột khiến gia đình bị động. Phải tìm người khác gấp.,cham_soc_tre_nguoi_gia,negative,none,none,none,negative,none
+529,"Mình cần bộ menu cho quán cà phê. Thanh toán một nửa trước, một nửa khi nhận file.",thiet_ke_do_hoa,neutral,none,neutral,none,none,none
+530,"Bên này nhận làm banner, poster và nhận diện thương hiệu. Ai biết designer làm bao bì tốt xin chỉ giúp.",thiet_ke_do_hoa,neutral,none,none,none,none,none
+531,Thợ chụp đến trễ gần một tiếng. Đòi hoàn tiền thì bị từ chối.,chup_anh_quay_phim,negative,none,none,negative,negative,negative
+532,Anh trả lời tin nhắn rất chậm. Không nên giao hết cho người này.,ky_su,negative,none,none,negative,negative,none
+533,Cam kết top 1 nhưng không làm được. Mình mất khá nhiều ngân sách vô ích.,marketing_seo,negative,negative,negative,none,negative,none
+534,Chỉnh sửa vài lần vẫn chưa đúng ý. Chất lượng không xứng với số tiền.,thiet_ke_do_hoa,negative,negative,negative,none,none,none
+535,Designer hiểu ý rất nhanh và lên mẫu đẹp. Giao đúng hạn như cam kết.,thiet_ke_do_hoa,positive,positive,none,positive,none,none
+536,Giao ảnh chậm hơn hai tuần so với hẹn. Chất lượng không như ảnh mẫu.,chup_anh_quay_phim,negative,negative,none,negative,none,none
+537,Bạn phiên dịch xử lý tình huống rất linh hoạt. Có hỗ trợ chỉnh sửa miễn phí.,dich_thuat,positive,positive,none,none,none,positive
+538,Thợ giải thích nguyên nhân hư hỏng dễ hiểu. Giá rẻ hơn mấy chỗ mình hỏi trước đó.,sua_chua_dien_nuoc,positive,none,positive,none,positive,none
+539,Báo cáo được gửi vào đầu mỗi tháng. Ai biết agency làm SEO uy tín xin chỉ giúp.,marketing_seo,neutral,none,none,none,none,none
+540,Cô có thể ở lại qua đêm nếu gia đình cần. Mình mới thuê tuần đầu nên chưa nhận xét.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+541,dịch tài liệu tiếng Anh sang tiếng Việt giá 120k một trang. Cho mình hỏi có dịch tiếng Hàn không ạ?,dich_thuat,neutral,none,neutral,none,none,none
+542,"Thời gian hoàn thành khoảng 5 ngày làm việc. Thanh toán một nửa trước, một nửa khi nhận file.",thiet_ke_do_hoa,neutral,none,neutral,neutral,none,none
+543,Phí thiết kế nhà phố tính khoảng 200k một mét vuông. Mình vừa ký hợp đồng nên chưa đánh giá được.,ky_su,neutral,none,neutral,none,none,none
+544,Hồ sơ giới thiệu không đúng thực tế. Mình rất lo lắng và bất an.,cham_soc_tre_nguoi_gia,negative,negative,none,none,none,none
+545,"Dịch vụ kế toán trọn gói từ 1,5 triệu mỗi tháng. Cho mình hỏi có làm hóa đơn điện tử không ạ?",ke_toan_thue,neutral,none,neutral,none,none,none
+546,Luật sư hẹn gặp mình vào sáng thứ ba. Thời gian giải quyết dự kiến vài tháng.,luat_su,neutral,none,none,neutral,none,none
+547,"Báo cáo qua loa, số liệu khó kiểm chứng. Thật sự thất vọng.",marketing_seo,negative,none,none,none,negative,none
+548,Thời gian hoàn thành khoảng 5 ngày làm việc. Cho mình hỏi có giao file gốc không ạ?,thiet_ke_do_hoa,neutral,none,none,neutral,none,none
+549,Mình cần web có trang giỏ hàng và thanh toán. Mình mới thuê nên chưa có nhận xét.,lap_trinh_web,neutral,none,none,none,none,none
+550,Giao ảnh chậm hơn hai tuần so với hẹn. Mình đã bỏ lỡ khoảnh khắc không thể chụp lại.,chup_anh_quay_phim,negative,negative,none,negative,none,none
+551,Mình cần gia sư lớp 10 dạy tại nhà khu vực Thủ Đức. Lịch học có thể đổi theo thời gian của gia đình.,gia_su,neutral,none,none,none,none,none
+552,Anh kỹ sư khảo sát thực tế kỹ rồi mới báo phương án. Mình rất an tâm về phần kết cấu.,ky_su,positive,positive,none,none,positive,none
+553,"Gói chụp ảnh gia đình giá 1,5 triệu, thời gian hai giờ. Mình mới chụp hôm qua nên chưa nhận ảnh.",chup_anh_quay_phim,neutral,none,neutral,none,none,none
+554,Thiết kế không đúng yêu cầu ban đầu. Mất thời gian và tiền bạc.,ky_su,negative,negative,negative,negative,none,none
+555,Địa điểm chụp ở khu vực Thủ Đức. Có thể đổi lịch chụp nếu trời mưa.,chup_anh_quay_phim,neutral,none,none,none,none,none
+556,Giao bản dịch trước hạn một ngày. Rất chuyên nghiệp.,dich_thuat,positive,none,none,positive,positive,none
+557,Cô báo cáo tình hình hằng ngày kèm hình ảnh. Rất biết ơn dịch vụ này.,cham_soc_tre_nguoi_gia,positive,none,none,none,positive,none
+558,Cô nghỉ ngang mà không báo trước. Sẽ không thuê lại lần nào nữa.,giup_viec,negative,none,none,none,negative,none
+559,Dịch vụ có tổng vệ sinh dịp cuối năm. Cho mình hỏi có nhận khu vực quận 9 không ạ?,giup_viec,neutral,none,none,none,none,none
+560,Thu phí cao hơn thỏa thuận ban đầu. Mình phải đi sửa lại toàn bộ hồ sơ.,ke_toan_thue,negative,negative,negative,none,none,none
+561,Cô nghỉ ngang mà không báo trước. Mình đã khiếu nại nhưng không được xử lý.,giup_viec,negative,none,none,none,negative,negative
+562,"Gói chụp ảnh gia đình giá 1,5 triệu, thời gian hai giờ. Ai biết nhiếp ảnh gia chụp kỷ yếu giúp mình với.",chup_anh_quay_phim,neutral,none,neutral,none,none,none
+563,mất điện lúc tối vẫn có thợ đến ngay. Đặt lịch qua app rất tiện.,sua_chua_dien_nuoc,positive,none,none,positive,none,none
+564,Tự ý thay linh kiện rồi tính thêm tiền. Nên cân nhắc kỹ trước khi thuê.,sua_chua_dien_nuoc,negative,none,negative,none,negative,none
+565,"Logo sáng tạo, đúng tinh thần thương hiệu. Rất hài lòng với kết quả.",thiet_ke_do_hoa,positive,positive,none,none,none,none
+566,"File bàn giao đầy đủ, định dạng chuẩn. Mình sẽ tiếp tục hợp tác.",thiet_ke_do_hoa,positive,positive,none,none,none,none
+567,Chị phát hiện giúp mình nhiều khoản chi phí hợp lệ. Mình đỡ áp lực nhiều.,ke_toan_thue,positive,positive,none,none,none,none
+568,Hồ sơ giới thiệu không đúng thực tế. Rất thất vọng.,cham_soc_tre_nguoi_gia,negative,negative,none,none,none,none
+569,Nhân viên mang theo dụng cụ và hóa chất riêng. Ai từng thuê xin cho ý kiến.,giup_viec,neutral,none,none,none,none,none
+570,Hồ sơ nộp trễ hạn nên mình bị thiệt. Thất vọng thực sự.,luat_su,negative,negative,none,negative,none,none
+571,Giao diện không giống bản thiết kế đã duyệt. Không có bảo hành như cam kết.,lap_trinh_web,negative,negative,none,none,none,negative
+572,Kế toán làm sổ sách gọn gàng và đúng hạn. Mình đỡ áp lực nhiều.,ke_toan_thue,positive,positive,none,positive,none,none
+573,Dịch tài liệu tiếng Anh sang tiếng Việt giá 120k một trang. Có báo giá miễn phí trước khi dịch.,dich_thuat,neutral,none,neutral,none,none,none
+574,Giao trễ khiến mình lỡ hạn nộp hồ sơ. Phí cao mà chất lượng thấp.,dich_thuat,negative,negative,negative,negative,none,none
+575,Thời gian hoàn thiện hồ sơ thiết kế khoảng ba tuần. Ai biết kỹ sư kết cấu nào uy tín xin chỉ giúp.,ky_su,neutral,none,none,neutral,none,none
+576,Thợ chụp hướng dẫn tạo dáng rất dễ. Giá hợp lý cho gói chụp trọn ngày.,chup_anh_quay_phim,positive,none,positive,none,positive,none
+577,Không cập nhật quy định mới về thuế. Rất thất vọng.,ke_toan_thue,negative,negative,none,none,none,none
+578,"dịch vụ dọn nhà theo giờ rất tiện cho gia đình bận rộn. Giá minh bạch, không phát sinh gì thêm.",giup_viec,positive,none,positive,none,none,none
+579,"Ảnh bị mờ nhiều tấm, chỉnh màu sơ sài. Không nên đặt gói này.",chup_anh_quay_phim,negative,negative,none,none,none,none
+580,"Video quay rung, âm thanh rè. Đòi hoàn tiền thì bị từ chối.",chup_anh_quay_phim,negative,negative,none,none,negative,negative
+581,Anh luôn trả lời tin nhắn nhanh dù ngoài giờ. Rất đáng tin cậy.,luat_su,positive,none,none,positive,positive,none
+582,Kỹ sư nhận giám sát công trình mỗi tuần hai buổi. Ai biết kỹ sư kết cấu nào uy tín xin chỉ giúp.,ky_su,neutral,none,none,none,none,none
+583,Bên này làm cả bản vẽ xin phép xây dựng. Lịch khởi công dự kiến vào đầu năm sau.,ky_su,neutral,none,none,neutral,none,none
+584,Bản dịch có nhiều lỗi dùng từ sai nghĩa. Mất tiền và mất thời gian.,dich_thuat,negative,negative,negative,negative,none,none
+585,Cả nhà mình ai cũng thích bộ ảnh gia đình. Giới thiệu cho bạn bè chắc chắn.,chup_anh_quay_phim,positive,positive,none,none,none,none
+586,Anh luôn trả lời tin nhắn nhanh dù ngoài giờ. Mình đánh giá cao sự chuyên nghiệp.,luat_su,positive,none,none,positive,positive,none
+587,"Phí khảo sát 50k, nếu sửa thì trừ vào tiền công. Cho mình hỏi bảo hành bao lâu ạ?",sua_chua_dien_nuoc,neutral,none,neutral,none,none,neutral
+588,Bên này nhận chạy quảng cáo Facebook và Google. Mình mới bắt đầu hợp tác nên chưa có nhận xét.,marketing_seo,neutral,none,none,none,none,none
+589,Ảnh banner thu hút và nhiều khách khen. Giá cả hợp lý với chất lượng.,thiet_ke_do_hoa,positive,positive,positive,none,none,none
+590,Giao bản dịch trước hạn một ngày. Giá theo trang rõ ràng.,dich_thuat,positive,none,positive,positive,none,none
+591,Giao ảnh chậm hơn hai tuần so với hẹn. Không nên đặt gói này.,chup_anh_quay_phim,negative,none,none,negative,none,none
+592,"Thầy dạy lan man, không bám chương trình trên lớp. Học ba tháng mà điểm không khá hơn.",gia_su,negative,negative,none,none,none,none
+593,Lấy tiền cọc rồi biến mất vài ngày. Không có bảo hành như cam kết.,lap_trinh_web,negative,none,none,none,negative,negative
+594,anh tối ưu chi phí giúp mình đáng kể. Chủ nhà nào cũng nên làm việc với anh.,ky_su,positive,none,positive,none,none,none
+595,"Bản vẽ chi tiết, dễ thi công. Giao tiếp rõ ràng, cập nhật liên tục.",ky_su,positive,positive,none,none,positive,none
+596,"Bên này có dạy Toán, Lý, Hóa và tiếng Anh. Ai biết gia sư nào dạy tốt xin gợi ý giúp.",gia_su,neutral,none,none,none,none,none
+597,Giao trễ khiến mình lỡ hạn nộp hồ sơ. Không khuyến khích sử dụng.,dich_thuat,negative,none,none,negative,none,none
+598,Không trả lời khi mình yêu cầu sửa. Mình phải thuê người khác dịch lại.,dich_thuat,negative,negative,none,none,negative,negative
+599,thái độ qua loa khi mình hỏi thêm. Kết quả không như kỳ vọng.,luat_su,negative,negative,none,none,negative,none
+600,"Mẫu thiết kế sơ sài, không giống brief. Tính phí thêm cho mỗi lần chỉnh.",thiet_ke_do_hoa,negative,negative,negative,none,none,negative
+601,"Traffic website tăng đều sau ba tháng. Giá minh bạch, ko phụ phí ẩn.",marketing_seo,positive,positive,positive,none,none,none
+602,Nhân viên mang theo dụng cụ và hóa chất riêng. Hợp đồng ký theo tháng hoặc theo từng lần.,giup_viec,neutral,none,none,none,none,none
+603,Chỉnh sửa vài lần vẫn chưa đúng ý. Tính phí thêm cho mỗi lần chỉnh.,thiet_ke_do_hoa,negative,negative,negative,none,none,negative
+604,"Ảnh cưới đẹp, màu ảnh dịu và có chất. Giới thiệu cho bạn bè chắc chắn.",chup_anh_quay_phim,positive,positive,none,none,none,none
+605,Mình cần người giúp việc nhà buổi sáng ba ngày mỗi tuần. Hợp đồng ký theo tháng hoặc theo từng lần.,giup_viec,neutral,none,none,none,none,none
+606,Bạn dev trễ hạn hai tuần mà không báo. Mình rất thất vọng.,lap_trinh_web,negative,none,none,negative,negative,none
+607,Mình cần gia sư lớp 10 dạy tại nhà khu vực Thủ Đức. Con mới học tuần đầu nên chưa đánh giá dc.,gia_su,neutral,none,none,none,none,none
+608,Bên này có người chăm sóc người cao tuổi tại nhà. Có thể thử việc ba ngày trước khi ký.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+609,Phí tư vấn lần đầu là 500k cho 60 phút. Ai biết luật sư giỏi về lao động xin gợi ý giúp.,luat_su,neutral,none,neutral,none,none,none
+610,"Bên này có dạy Toán, Lý, Hóa và tiếng Anh. Con mới học tuần đầu nên chưa đánh giá được.",gia_su,neutral,none,none,none,none,none
+611,"Buổi học kéo dài 90 phút, học ba buổi mỗi tuần. Cho mình hỏi có học thử miễn phí không ạ?",gia_su,neutral,none,neutral,none,none,none
+612,Gia sư đến đúng giờ và chuẩn bị bài kỹ. Học phí hợp lý so với chất lượng.,gia_su,positive,positive,positive,positive,positive,none
+613,Designer ít lắng nghe góp ý. Tính phí thêm cho mỗi lần chỉnh.,thiet_ke_do_hoa,negative,none,negative,none,negative,negative
+614,Địa điểm chụp ở khu vực Thủ Đức. Cho mình hỏi giá đã gồm hậu kỳ chưa ạ?,chup_anh_quay_phim,neutral,none,neutral,none,none,none
+615,Chạy quảng cáo đốt tiền mà không ra đơn. Mình mất khá nhiều ngân sách vô ích.,marketing_seo,negative,negative,negative,none,none,none
+616,Gói SEO tổng thể giá khoảng 6 triệu mỗi tháng. Hợp đồng tối thiểu sáu tháng.,marketing_seo,neutral,none,neutral,none,none,none
+617,Cô báo cáo tình hình hằng ngày kèm hình ảnh. Cả nhà đều quý cô.,cham_soc_tre_nguoi_gia,positive,none,none,none,positive,none
+618,Luật sư nắm vững luật nên mình rất yên tâm. Vụ việc của mình được giải quyết thuận lợi.,luat_su,positive,positive,none,none,none,none
+619,Công ty có nhận soạn thảo hợp đồng thuê nhà. Thời gian giải quyết dự kiến vài tháng.,luat_su,neutral,none,none,neutral,none,none
+620,"Chiến dịch quảng cáo tối ưu tốt, chi phí mỗi đơn giảm. Doanh số của mình tăng rõ rệt.",marketing_seo,positive,positive,positive,none,none,none
+621,Gói SEO tổng thể giá khoảng 6 triệu mỗi tháng. Mình mới bắt đầu hợp tác nên chưa có nhận xét.,marketing_seo,neutral,none,neutral,none,none,none
+622,Phiên dịch viên đến muộn và thiếu chuẩn bị. Mất tiền và mất thời gian.,dich_thuat,negative,none,negative,negative,negative,none
+623,Bên này làm cả bản vẽ xin phép xây dựng. Cho mình hỏi có khảo sát trước khi báo giá không?,ky_su,neutral,none,neutral,none,none,none
+624,Cô theo sát điểm yếu của con từng tuần. Học phí hợp lý so với chất lượng.,gia_su,positive,positive,positive,none,positive,none
+625,Bên này nhận sửa ở Thủ Đức và quận 9. Hẹn thợ vào sáng thứ bảy được không?,sua_chua_dien_nuoc,neutral,none,none,none,none,none
+626,Bạn nhận góp ý và chỉnh sửa rất nhiệt tình. Rất hài lòng với kết quả.,thiet_ke_do_hoa,positive,none,none,none,positive,none
+627,Công trình trễ tiến độ hai tháng. Mất thời gian và tiền bạc.,ky_su,negative,none,negative,negative,none,none
+628,Thay ổ cắm và công tắc giá 150k tiền công. Không biết bền không vì mình mới dùng.,sua_chua_dien_nuoc,neutral,neutral,neutral,none,none,none
+629,Trang web hiển thị sai trên điện thoại. Phải thuê người khác làm lại từ đầu.,lap_trinh_web,negative,negative,none,none,none,none
+630,Bàn giao thiếu file gốc. Mình mất thời gian vô ích.,thiet_ke_do_hoa,negative,negative,none,negative,none,none
+631,Gia sư dạy dễ hiểu và rất kiên nhẫn. Con tự tin hơn hẳn khi lên lớp.,gia_su,positive,positive,none,none,positive,none
+632,Thuật ngữ chuyên ngành bị dịch sai. Mình phải thuê người khác dịch lại.,dich_thuat,negative,negative,none,none,none,none
+633,Vệ sinh máy lạnh treo tường giá 150k một máy. Máy lạnh dùng 5 năm rồi nên sửa hay thay mới?,sua_chua_dien_nuoc,neutral,none,neutral,none,none,none
+634,Thuật ngữ chuyên ngành bị dịch sai. Mất tiền và mất thời gian.,dich_thuat,negative,negative,negative,negative,none,none
+635,Mất điện lúc tối vẫn có thợ đến ngay. Giá rẻ hơn mấy chỗ mình hỏi trước đó.,sua_chua_dien_nuoc,positive,none,positive,positive,none,none
+636,Luật sư tư vấn rõ ràng và dễ hiểu. Sẽ nhờ lại khi có việc cần.,luat_su,positive,positive,none,none,positive,none
+637,"Báo cáo qua loa, số liệu khó kiểm chứng. Chấm dứt hợp đồng rồi mà vẫn bị tính phí.",marketing_seo,negative,none,negative,none,negative,negative
+638,Kỹ sư giám sát công trình sát sao. Công trình hoàn thành đúng tiến độ.,ky_su,positive,none,none,positive,positive,none
+639,"video quay rung, âm thanh rè. Rất tiếc và thất vọng.",chup_anh_quay_phim,negative,negative,none,none,none,none
+640,Chị nấu ăn ngon và biết giữ vệ sinh bếp. Mình đã đặt lại hằng tuần.,giup_viec,positive,positive,none,none,none,none
+641,Bên này nhận dịch công chứng và dịch thuật chuyên ngành. Cho mình hỏi có dịch tiếng Hàn không ạ?,dich_thuat,neutral,none,none,none,none,none
+642,"Báo cáo thuế nộp đúng hạn, không phát sinh phạt. Phản hồi nhanh mỗi khi cần hỏi.",ke_toan_thue,positive,none,none,positive,none,none
+643,Bạn dev trễ hạn hai tuần mà không báo. Không có bảo hành như cam kết.,lap_trinh_web,negative,none,none,negative,negative,negative
+644,"Gói chụp ảnh gia đình giá 1,5 triệu, thời gian hai giờ. Có thể đổi lịch chụp nếu trời mưa.",chup_anh_quay_phim,neutral,none,neutral,none,none,none
+645,"Chăm sóc ông bà thiếu kiên nhẫn, hay nói lớn tiếng. Phải tìm người khác gấp.",cham_soc_tre_nguoi_gia,negative,none,none,none,negative,none
+646,Ca làm việc bắt đầu lúc 7 giờ sáng. Có thể thử việc ba ngày trước khi ký.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+647,Kỹ sư tư vấn thiết kế rất tâm huyết. Công trình hoàn thành đúng tiến độ.,ky_su,positive,none,none,positive,positive,none
+648,Mình cần web có trang giỏ hàng và thanh toán. Cho mình hỏi có bảo trì sau bàn giao không?,lap_trinh_web,neutral,none,none,none,none,neutral
+649,Cô trông bé rất chu đáo và yêu trẻ. Rất biết ơn dịch vụ này.,cham_soc_tre_nguoi_gia,positive,positive,none,none,positive,none
+650,Thợ hẹn hai giờ chiều năm giờ mới tới. Không bao giờ dùng lại.,sua_chua_dien_nuoc,negative,none,none,negative,none,none
+651,Hình ảnh bị sao chép từ nguồn khác. Chất lượng không xứng với số tiền.,thiet_ke_do_hoa,negative,negative,negative,none,negative,none
+652,Người chăm sóc ông bà nhẹ nhàng và kiên nhẫn. Rất biết ơn dịch vụ này.,cham_soc_tre_nguoi_gia,positive,none,none,none,positive,none
+653,Thời gian hoàn thành dự kiến ba tuần. Thanh toán chia làm ba đợt theo tiến độ.,lap_trinh_web,neutral,none,neutral,neutral,none,none
+654,"Trông trẻ theo giờ giá 70k một giờ, tối thiểu 4 giờ. Có thể thử việc ba ngày trước khi ký.",cham_soc_tre_nguoi_gia,neutral,none,neutral,none,none,none
+655,Bản dịch công chứng nhanh và đúng quy định. Sẽ tiếp tục hợp tác với dịch vụ này.,dich_thuat,positive,positive,none,positive,none,none
+656,Gia sư nhận dạy cả trực tuyến lẫn trực tiếp. Lịch học có thể đổi theo thời gian của gia đình.,gia_su,neutral,none,none,none,none,none
+657,Giá đã gồm tên miền và hosting năm đầu. Thanh toán chia làm ba đợt theo tiến độ.,lap_trinh_web,neutral,none,neutral,none,none,none
+658,Bộ nhận diện thương hiệu đồng bộ và chuyên nghiệp. Mình sẽ tiếp tục hợp tác.,thiet_ke_do_hoa,positive,positive,none,none,none,none
+659,"Bạn freelancer viết bài chuẩn SEO và hay. Giá minh bạch, không phụ phí ẩn.",marketing_seo,positive,positive,positive,none,none,none
+660,"File bàn giao đầy đủ, định dạng chuẩn. Rất hài lòng với kết quả.",thiet_ke_do_hoa,positive,positive,none,none,none,none
+661,Học phí cao mà chất lượng chưa tương xứng. Đòi hoàn học phí thì bị làm khó.,gia_su,negative,negative,negative,none,negative,negative
+662,"Mẫu thiết kế sơ sài, ko giống brief. Thật sự thất vọng.",thiet_ke_do_hoa,negative,negative,none,none,none,none
+663,Kỹ sư nhận giám sát công trình mỗi tuần hai buổi. Cho mình hỏi có khảo sát trước khi báo giá không?,ky_su,neutral,none,neutral,none,none,none
+664,Làm xong thợ dọn dẹp sạch sẽ. Tay nghề thấy rất chắc.,sua_chua_dien_nuoc,positive,positive,none,none,positive,none
+665,Người chăm sóc ông bà nhẹ nhàng và kiên nhẫn. Chi phí hợp lý so với chất lượng.,cham_soc_tre_nguoi_gia,positive,none,positive,none,positive,none
+666,Học phí cao mà chất lượng chưa tương xứng. Mình đã phản ánh nhưng không ai phản hồi.,gia_su,negative,negative,negative,negative,negative,none
+667,Anh tối ưu chi phí giúp mình đáng kể. Mình rất an tâm về phần kết cấu.,ky_su,positive,positive,positive,none,none,none
+668,Kỹ sư tư vấn thiết kế rất tâm huyết. Chủ nhà nào cũng nên làm việc với anh.,ky_su,positive,none,none,none,positive,none
+669,"Dịch phụ đề mượt, đúng ngữ cảnh. Rất chuyên nghiệp.",dich_thuat,positive,positive,none,none,positive,none
+670,"Bản vẽ chi tiết, dễ thi công. Chất lượng thi công vượt mong đợi.",ky_su,positive,positive,none,none,none,none
+671,Bản dịch có nhiều lỗi dùng từ sai nghĩa. Mình phải thuê người khác dịch lại.,dich_thuat,negative,negative,none,none,none,none
+672,"bạn dọn nhà rất tỉ mỉ, góc nào cũng sạch. Nhất định sẽ giới thiệu cho bạn bè.",giup_viec,positive,positive,none,none,none,none
+673,Làm xong thợ dọn dẹp sạch sẽ. Có phiếu bảo hành ba tháng nên yên tâm.,sua_chua_dien_nuoc,positive,none,none,none,positive,positive
+674,Địa điểm chụp ở khu vực Thủ Đức. Mình mới chụp hôm qua nên chưa nhận ảnh.,chup_anh_quay_phim,neutral,none,none,none,none,none
+675,Không trả lời khi mình yêu cầu sửa. Không khuyến khích sử dụng.,dich_thuat,negative,none,none,none,negative,negative
+676,Anh trả lời tin nhắn rất chậm. Phải sửa lại nhiều hạng mục.,ky_su,negative,negative,none,negative,negative,none
+677,Web tải nhanh và chuẩn SEO cơ bản. Giá hợp lý so với chất lượng.,lap_trinh_web,positive,positive,positive,none,none,none
+678,Lập trình viên làm web đúng mô tả và chạy mượt. Rất đáng để hợp tác lâu dài.,lap_trinh_web,positive,positive,none,none,none,none
+679,Ảnh được giao trong vòng bảy ngày. Cho mình hỏi giá đã gồm hậu kỳ chưa ạ?,chup_anh_quay_phim,neutral,none,neutral,neutral,none,none
+680,Thợ giải thích nguyên nhân hư hỏng dễ hiểu. Có phiếu bảo hành ba tháng nên yên tâm.,sua_chua_dien_nuoc,positive,none,none,none,positive,positive
+681,Phiên dịch hội nghị tính phí theo buổi. Ai biết chỗ dịch công chứng nhanh xin chỉ giúp.,dich_thuat,neutral,none,neutral,none,none,none
+682,Kế toán thiếu kinh nghiệm xử lý hóa đơn. Thiệt hại không nhỏ cho công ty.,ke_toan_thue,negative,negative,none,none,none,none
+683,cam kết top 1 nhưng không làm được. Thật sự thất vọng.,marketing_seo,negative,negative,none,none,negative,none
+684,Phiên dịch hội nghị tính phí theo buổi. Cho mình hỏi có dịch tiếng Hàn không ạ?,dich_thuat,neutral,none,neutral,none,none,none
+685,"video quay rung, âm thanh rè. Không nên đặt gói này.",chup_anh_quay_phim,negative,negative,none,none,none,none
+686,"Người trông bé hay nhìn điện thoại, thiếu quan tâm. Không nên tin vào quảng cáo.",cham_soc_tre_nguoi_gia,negative,none,none,none,negative,none
+687,Có hỗ trợ đăng ký mã số thuế. Cho mình hỏi có làm hóa đơn điện tử không ạ?,ke_toan_thue,neutral,none,none,none,none,none
+688,Bản vẽ sai kích thước nhiều chỗ. Thật sự thất vọng.,ky_su,negative,negative,none,none,none,none
+689,Thợ chụp hướng dẫn tạo dáng rất dễ. Mình sẽ đặt lại cho dịp sau.,chup_anh_quay_phim,positive,none,none,none,positive,none
+690,Bản dịch có nhiều lỗi dùng từ sai nghĩa. Thật sự thất vọng.,dich_thuat,negative,negative,none,none,none,none
+691,Văn phòng luật nhận hợp đồng lao động và tranh chấp đất đai. Cho mình hỏi có tư vấn qua điện thoại không ạ?,luat_su,neutral,none,none,none,none,none
+692,"Ảnh cưới đẹp, màu ảnh dịu và có chất. Giá hợp lý cho gói chụp trọn ngày.",chup_anh_quay_phim,positive,positive,positive,none,none,none
+693,Chị nấu ăn ngon và biết giữ vệ sinh bếp. Nhất định sẽ giới thiệu cho bạn bè.,giup_viec,positive,positive,none,none,none,none
+694,"Thiết kế logo giá từ 1 triệu, gồm ba phương án. Cho mình hỏi có giao file gốc không ạ?",thiet_ke_do_hoa,neutral,none,neutral,none,none,none
+695,Học phí 200k một buổi cho học sinh cấp 2. Lịch học có thể đổi theo thời gian của gia đình.,gia_su,neutral,none,neutral,none,none,none
+696,Gói thiết kế cho phép chỉnh sửa ba lần. Cho mình hỏi có giao file gốc không ạ?,thiet_ke_do_hoa,neutral,none,none,none,none,neutral
+697,Bên này nhận dịch công chứng và dịch thuật chuyên ngành. Ai biết chỗ dịch công chứng nhanh xin chỉ giúp.,dich_thuat,neutral,none,none,none,none,none
+698,Cô đến trễ nhiều lần và ko báo. Phải tìm người khác gấp.,cham_soc_tre_nguoi_gia,negative,none,none,negative,none,none
+699,Ảnh giao đúng hẹn và đã chỉnh sửa kỹ. Giới thiệu cho bạn bè chắc chắn.,chup_anh_quay_phim,positive,positive,none,positive,none,none
+700,Mình cần bộ menu cho quán cà phê. Cho mình hỏi có giao file gốc không ạ?,thiet_ke_do_hoa,neutral,none,none,none,none,none
+701,Thời gian thấy kết quả SEO thường từ ba đến sáu tháng. Hợp đồng tối thiểu sáu tháng.,marketing_seo,neutral,none,none,neutral,none,none
+702,"Luật sư ít liên lạc, hỏi tiến độ phải nhắc nhiều lần. Mình không khuyên ai thuê.",luat_su,negative,none,none,negative,negative,none
+703,Bên này nhận làm web bán hàng bằng WordPress và React. Mình mới thuê nên chưa có nhận xét.,lap_trinh_web,neutral,none,none,none,none,none
+704,Nhà mình rộng khoảng 70 mét vuông. Ai từng thuê xin cho ý kiến.,giup_viec,neutral,none,none,none,none,none
+705,Trang web hiển thị sai trên điện thoại. Tuyệt đối không giới thiệu cho ai.,lap_trinh_web,negative,negative,none,none,none,none
+706,Hình ảnh bị sao chép từ nguồn khác. Tính phí thêm cho mỗi lần chỉnh.,thiet_ke_do_hoa,negative,negative,negative,none,negative,negative
+707,Dịch vụ kế toán trọn gói rất tiện cho doanh nghiệp nhỏ. Mình đỡ áp lực nhiều.,ke_toan_thue,positive,none,none,none,none,none
+708,Phí thiết kế nhà phố tính khoảng 200k một mét vuông. Ai biết kỹ sư kết cấu nào uy tín xin chỉ giúp.,ky_su,neutral,none,neutral,none,none,none
+709,Dịch vụ kế toán trọn gói rất tiện cho doanh nghiệp nhỏ. Phản hồi nhanh mỗi khi cần hỏi.,ke_toan_thue,positive,none,none,positive,none,none
+710,Dự toán chênh lệch quá nhiều so với thực tế. Phát sinh chi phí liên tục.,ky_su,negative,none,negative,none,none,none
+711,Thái độ cộc cằn khi mình nhắc nhở. Tính tiền cao hơn báo giá ban đầu.,giup_viec,negative,none,negative,none,negative,none
+712,Loay hoay cả tiếng vẫn không tìm ra lỗi. Gọi bảo hành thì né tránh.,sua_chua_dien_nuoc,negative,negative,none,negative,none,negative
+713,Thợ làm ẩu để lại đầy bụi và vụn gạch. Gọi bảo hành thì né tránh.,sua_chua_dien_nuoc,negative,negative,none,none,negative,negative
+714,Báo cáo thuế được nộp vào cuối mỗi quý. Mình mới ký nên chưa đánh giá được.,ke_toan_thue,neutral,none,none,neutral,none,none
+715,Gia sư hay hủy buổi sát giờ. Học ba tháng mà điểm không khá hơn.,gia_su,negative,negative,none,negative,negative,none
+716,Bên này nhận chạy quảng cáo Facebook và Google. Hợp đồng tối thiểu sáu tháng.,marketing_seo,neutral,none,none,none,none,none
+717,Mình cần web có trang giỏ hàng và thanh toán. Thanh toán chia làm ba đợt theo tiến độ.,lap_trinh_web,neutral,none,neutral,none,none,none
+718,Bàn giao thiếu file gốc. Tính phí thêm cho mỗi lần chỉnh.,thiet_ke_do_hoa,negative,negative,negative,none,none,negative
+719,Gói quay phim sự kiện bao gồm bản dựng 3 phút. Mình mới chụp hôm qua nên chưa nhận ảnh.,chup_anh_quay_phim,neutral,none,none,none,none,none
+720,Biên dịch viên hiểu rõ thuật ngữ chuyên ngành. Mình rất hài lòng.,dich_thuat,positive,positive,none,none,none,none
+721,Kỹ sư tư vấn thiết kế rất tâm huyết. Mình rất an tâm về phần kết cấu.,ky_su,positive,positive,none,none,positive,none
+722,"Thầy giảng bài logic, em hiểu bản chất chứ không học vẹt. Sau hai tháng điểm của con tăng rõ rệt.",gia_su,positive,positive,none,none,none,none
+723,"Dịch vụ kế toán trọn gói từ 1,5 triệu mỗi tháng. Mình mới ký nên chưa đánh giá được.",ke_toan_thue,neutral,none,neutral,none,none,none
+724,Văn phòng luật nhận hợp đồng lao động và tranh chấp đất đai. Ai biết luật sư giỏi về lao động xin gợi ý giúp.,luat_su,neutral,none,none,none,none,none
+725,bạn nhận góp ý và chỉnh sửa rất nhiệt tình. Giao đúng hạn như cam kết.,thiet_ke_do_hoa,positive,none,none,positive,positive,none
+726,Luật sư nắm vững luật nên mình rất yên tâm. Mình đánh giá cao sự chuyên nghiệp.,luat_su,positive,positive,none,none,positive,none
+727,Luật sư thiếu chuẩn bị khi ra làm việc. Mình mất nhiều thời gian chờ đợi.,luat_su,negative,negative,none,negative,negative,none
+728,Giao bản dịch trước hạn một ngày. Mình rất hài lòng.,dich_thuat,positive,none,none,positive,none,none
+729,Dạy chỉ đọc đáp án chứ không giảng giải. Rất thất vọng và sẽ không đăng ký lại.,gia_su,negative,negative,none,none,none,none
+730,Thời gian hoàn thiện hồ sơ thiết kế khoảng ba tuần. Cho mình hỏi có khảo sát trước khi báo giá không?,ky_su,neutral,none,neutral,neutral,none,none
+731,Kế toán tư vấn thuế rất tận tình. Giá dịch vụ hàng tháng hợp lý.,ke_toan_thue,positive,none,positive,none,positive,none
+732,Bên này làm cả bản vẽ xin phép xây dựng. Mình vừa ký hợp đồng nên chưa đánh giá được.,ky_su,neutral,none,none,none,none,none
+733,Trễ hạn khiến mình lỡ chiến dịch. Mình mất thời gian vô ích.,thiet_ke_do_hoa,negative,none,none,negative,none,none
+734,Bản dịch chính xác và văn phong tự nhiên. Mình rất hài lòng.,dich_thuat,positive,positive,none,none,none,none
+735,"Bạn quay phim chuyên nghiệp, thiết bị tốt. Giá hợp lý cho gói chụp trọn ngày.",chup_anh_quay_phim,positive,positive,positive,none,positive,none
+736,Giá đã gồm tên miền và hosting năm đầu. Cho mình hỏi có bảo trì sau bàn giao không?,lap_trinh_web,neutral,none,neutral,none,none,neutral
+737,Thời gian dịch khoảng ba ngày cho mười trang. Cho mình hỏi có dịch tiếng Hàn không ạ?,dich_thuat,neutral,none,none,neutral,none,none
+738,"tư vấn chung chung, không đi vào trọng tâm. Kết quả không như kỳ vọng.",luat_su,negative,negative,none,none,none,none
+739,Làm vỡ đồ nhưng không báo cho chủ nhà. Mình đã khiếu nại nhưng không được xử lý.,giup_viec,negative,negative,none,none,negative,negative
+740,Thứ hạng từ khóa gần như không đổi sau sáu tháng. Chấm dứt hợp đồng rồi mà vẫn bị tính phí.,marketing_seo,negative,negative,negative,none,none,negative
+741,"Dịch phụ đề mượt, đúng ngữ cảnh. Giá theo trang rõ ràng.",dich_thuat,positive,positive,positive,none,none,none
+742,"Bản vẽ chi tiết, dễ thi công. Mình rất an tâm về phần kết cấu.",ky_su,positive,positive,none,none,none,none
+743,Traffic website tăng đều sau ba tháng. Doanh số của mình tăng rõ rệt.,marketing_seo,positive,positive,none,none,none,none
+744,Thời gian hoàn thành khoảng 5 ngày làm việc. Mình mới đặt hàng nên chưa nhận xét được.,thiet_ke_do_hoa,neutral,none,none,neutral,none,none
+745,Trễ hạn khiến mình lỡ chiến dịch. Sẽ không thuê lại.,thiet_ke_do_hoa,negative,none,none,negative,none,none
+746,Thái độ cộc cằn khi mình nhắc nhở. Mình đã khiếu nại nhưng không được xử lý.,giup_viec,negative,none,none,none,negative,negative
+747,Kế toán thiếu kinh nghiệm xử lý hóa đơn. Mình ko khuyên dùng.,ke_toan_thue,negative,negative,none,none,none,none
+748,Chạy quảng cáo đốt tiền mà không ra đơn. Không nên tin lời hứa suông.,marketing_seo,negative,negative,negative,none,none,none
+749,Cô trông bé rất chu đáo và yêu trẻ. Mình sẽ giới thiệu cho người quen.,cham_soc_tre_nguoi_gia,positive,positive,none,none,positive,none
+750,Bên này có người chăm sóc người cao tuổi tại nhà. Ai biết trung tâm uy tín xin chỉ giúp.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+751,nhà mình rộng khoảng 70 mét vuông. Hợp đồng ký theo tháng hoặc theo từng lần.,giup_viec,neutral,none,none,none,none,none
+752,"File bàn giao đầy đủ, định dạng chuẩn. Giá cả hợp lý với chất lượng.",thiet_ke_do_hoa,positive,positive,positive,none,none,none
+753,Gói thiết kế cho phép chỉnh sửa ba lần. Mình mới đặt hàng nên chưa nhận xét được.,thiet_ke_do_hoa,neutral,none,none,none,none,neutral
+754,"Thầy giảng bài logic, em hiểu bản chất chứ không học vẹt. Con tự tin hơn hẳn khi lên lớp.",gia_su,positive,positive,none,none,none,none
+755,Phí đại diện tính theo vụ việc. Vụ việc đang xử lý nên mình chưa đánh giá được.,luat_su,neutral,none,neutral,none,none,none
+756,Nhân viên mang theo dụng cụ và hóa chất riêng. Cho mình hỏi có nhận khu vực quận 9 không ạ?,giup_viec,neutral,none,none,none,none,none
+757,Hồ sơ được soạn kỹ lưỡng và đúng quy định. Sẽ nhờ lại khi có việc cần.,luat_su,positive,positive,none,none,none,none
+758,"Dọn qua loa, sàn nhà vẫn còn bụi. Sẽ ko thuê lại lần nào nữa.",giup_viec,negative,negative,none,none,none,none
+759,Giao ảnh chậm hơn hai tuần so với hẹn. Rất tiếc và thất vọng.,chup_anh_quay_phim,negative,none,none,negative,none,none
+760,Web tải nhanh và chuẩn SEO cơ bản. Rất đáng để hợp tác lâu dài.,lap_trinh_web,positive,positive,none,none,none,none
+761,"Anh thợ điện chuyên nghiệp, báo giá rõ trước khi sửa. Đặt lịch qua app rất tiện.",sua_chua_dien_nuoc,positive,none,positive,none,positive,none
+762,Vệ sinh máy lạnh treo tường giá 150k một máy. Hẹn thợ vào sáng thứ bảy được không?,sua_chua_dien_nuoc,neutral,none,neutral,none,none,none
+763,Thời gian hoàn thiện hồ sơ thiết kế khoảng ba tuần. Mình vừa ký hợp đồng nên chưa đánh giá được.,ky_su,neutral,none,none,neutral,none,none
+764,Thái độ cộc cằn khi mình nhắc nhở. Công ty chỉ biết xin lỗi suông.,giup_viec,negative,none,none,none,negative,none
+765,"Nhiếp ảnh gia nhẹ nhàng, bắt khoảnh khắc rất tự nhiên. Giới thiệu cho bạn bè chắc chắn.",chup_anh_quay_phim,positive,positive,none,none,positive,none
+766,"Thiết kế logo giá từ 1 triệu, gồm ba phương án. Thanh toán một nửa trước, một nửa khi nhận file.",thiet_ke_do_hoa,neutral,none,neutral,none,none,none
+767,Thay đổi người phụ trách liên tục. Không nên tin lời hứa suông.,marketing_seo,negative,none,none,none,negative,none
+768,"Code rối, người khác không đọc nổi. Mỗi lần sửa lại đều tính thêm phí.",lap_trinh_web,negative,negative,negative,none,none,negative
+769,Chị giúp việc làm sạch sẽ và gọn gàng. Mình đã đặt lại hằng tuần.,giup_viec,positive,positive,none,none,none,none
+770,Bên này nhận sửa ở Thủ Đức và quận 9. Không biết bền không vì mình mới dùng.,sua_chua_dien_nuoc,neutral,neutral,none,none,none,none
+771,Thời gian dịch khoảng ba ngày cho mười trang. Có báo giá miễn phí trước khi dịch.,dich_thuat,neutral,none,neutral,neutral,none,none
+772,Gia sư nhận dạy cả trực tuyến lẫn trực tiếp. Ai biết gia sư nào dạy tốt xin gợi ý giúp.,gia_su,neutral,none,none,none,none,none
+773,Giao ảnh chậm hơn hai tuần so với hẹn. Đòi hoàn tiền thì bị từ chối.,chup_anh_quay_phim,negative,none,none,negative,negative,negative
+774,"Chiến dịch quảng cáo tối ưu tốt, chi phí mỗi đơn giảm. Mình sẽ gia hạn hợp đồng.",marketing_seo,positive,positive,positive,none,none,none
+775,Sửa xong hai hôm lại rò tiếp. Rất thiếu minh bạch về giá.,sua_chua_dien_nuoc,negative,negative,negative,none,none,none
+776,Phiên dịch viên đến muộn và thiếu chuẩn bị. Mình phải thuê người khác dịch lại.,dich_thuat,negative,negative,none,negative,negative,none
+777,Thời gian hoàn thành dự kiến ba tuần. Cho mình hỏi có bảo trì sau bàn giao không?,lap_trinh_web,neutral,none,none,neutral,none,neutral
+778,Thứ hạng từ khóa gần như không đổi sau sáu tháng. Mình mất khá nhiều ngân sách vô ích.,marketing_seo,negative,negative,negative,none,none,none
+779,"Anh kỹ sư khảo sát thực tế kỹ rồi mới báo phương án. Giao tiếp rõ ràng, cập nhật liên tục.",ky_su,positive,positive,none,none,positive,none
+780,"Dọn qua loa, sàn nhà vẫn còn bụi. Tính tiền cao hơn báo giá ban đầu.",giup_viec,negative,negative,negative,none,none,none
+781,Luật sư tư vấn rõ ràng và dễ hiểu. Chi phí thỏa thuận minh bạch từ đầu.,luat_su,positive,positive,positive,none,positive,none
+782,Web tải nhanh và chuẩn SEO cơ bản. Mình sẽ nhờ làm thêm phần quản trị.,lap_trinh_web,positive,positive,none,none,none,none
+783,Giao trễ khiến mình lỡ hạn nộp hồ sơ. Mất tiền và mất thời gian.,dich_thuat,negative,none,negative,negative,none,none
+784,Ảnh được giao trong vòng bảy ngày. Mình mới chụp hôm qua nên chưa nhận ảnh.,chup_anh_quay_phim,neutral,none,none,neutral,none,none
+785,Báo cáo thuế dc nộp vào cuối mỗi quý. Hợp đồng ký theo từng năm.,ke_toan_thue,neutral,none,none,neutral,none,none
+786,Kỹ sư gần như không xuống công trình. Phát sinh chi phí liên tục.,ky_su,negative,none,negative,none,negative,none
+787,Sửa xong hai hôm lại rò tiếp. Cảm giác như bị lừa.,sua_chua_dien_nuoc,negative,negative,none,none,negative,none
+788,Lập trình viên làm web đúng mô tả và chạy mượt. Khách hàng của mình khen web đẹp.,lap_trinh_web,positive,positive,none,none,none,none
+789,"Bạn dev trao đổi rõ ràng, báo tiến độ mỗi ngày. Rất đáng để hợp tác lâu dài.",lap_trinh_web,positive,none,none,none,positive,none
+790,"Thầy dạy lan man, không bám chương trình trên lớp. Mình đã phản ánh nhưng không ai phản hồi.",gia_su,negative,negative,none,negative,negative,none
+791,người chăm sóc ông bà nhẹ nhàng và kiên nhẫn. Cả nhà đều quý cô.,cham_soc_tre_nguoi_gia,positive,none,none,none,positive,none
+792,"Luật sư ít liên lạc, hỏi tiến độ phải nhắc nhiều lần. Kết quả không như kỳ vọng.",luat_su,negative,negative,none,negative,negative,none
+793,Báo giá 200k mà thu tới 500k. Nên cân nhắc kỹ trước khi thuê.,sua_chua_dien_nuoc,negative,none,negative,none,none,none
+794,"Bản vẽ chi tiết, dễ thi công. Chủ nhà nào cũng nên làm việc với anh.",ky_su,positive,positive,none,none,none,none
+795,Bên làm SEO báo cáo thứ hạng từ khóa rất rõ ràng. Doanh số của mình tăng rõ rệt.,marketing_seo,positive,positive,none,none,positive,none
+796,Bên này nhận làm web bán hàng bằng WordPress và React. Freelancer nào làm Laravel giới thiệu giúp mình với.,lap_trinh_web,neutral,none,none,none,none,none
+797,"Bạn dev trao đổi rõ ràng, báo tiến độ mỗi ngày. Mình sẽ nhờ làm thêm phần quản trị.",lap_trinh_web,positive,none,none,none,positive,none
+798,"Bên này nhận làm banner, poster và nhận diện thương hiệu. Cho mình hỏi có giao file gốc không ạ?",thiet_ke_do_hoa,neutral,none,none,none,none,none
+799,Gia sư dạy dễ hiểu và rất kiên nhẫn. Học phí hợp lý so với chất lượng.,gia_su,positive,positive,positive,none,positive,none
+800,Luật sư phân tích rủi ro rất thẳng thắn. Vụ việc của mình được giải quyết thuận lợi.,luat_su,positive,positive,none,none,positive,none
+801,Thay ổ cắm và công tắc giá 150k tiền công. Cho mình hỏi bảo hành bao lâu ạ?,sua_chua_dien_nuoc,neutral,none,neutral,none,none,neutral
+802,"Nhân viên đến đúng giờ và lịch sự. Giá minh bạch, không phát sinh gì thêm.",giup_viec,positive,none,positive,positive,positive,none
+803,Bạn nhận góp ý và chỉnh sửa rất nhiệt tình. Đáng để giới thiệu cho bạn bè.,thiet_ke_do_hoa,positive,none,none,none,positive,none
+804,"Dịch như dùng máy, đọc rất gượng. Phí cao mà chất lượng thấp.",dich_thuat,negative,negative,negative,none,none,none
+805,Công ty có nhận soạn thảo hợp đồng thuê nhà. Vụ việc đang xử lý nên mình chưa đánh giá được.,luat_su,neutral,none,none,none,none,none
+806,Bạn giúp việc dùng điện thoại gần như cả buổi. Thật sự không đáng tiền.,giup_viec,negative,none,negative,none,negative,none
+807,"Chị nấu ăn ngon và biết giữ vệ sinh bếp. Giá minh bạch, không phát sinh gì thêm.",giup_viec,positive,positive,positive,none,none,none
+808,Bạn freelancer viết bài chuẩn SEO và hay. Rất chuyên nghiệp và có tâm.,marketing_seo,positive,positive,none,none,positive,none
+809,Kỹ sư nhận giám sát công trình mỗi tuần hai buổi. Lịch khởi công dự kiến vào đầu năm sau.,ky_su,neutral,none,none,neutral,none,none
+810,Nhân viên đến đúng giờ và lịch sự. Nhà cửa thơm tho sau khi dọn xong.,giup_viec,positive,positive,none,positive,positive,none
+811,Anh giải thích số liệu rất dễ hiểu cho người không chuyên. Giá dịch vụ hàng tháng hợp lý.,ke_toan_thue,positive,none,positive,none,positive,none
+812,Chị tận tâm theo vụ việc đến cùng. Sẽ nhờ lại khi có việc cần.,luat_su,positive,none,none,none,positive,none
+813,Nhân viên đến đúng giờ và lịch sự. Mình đã đặt lại hằng tuần.,giup_viec,positive,none,none,positive,positive,none
+814,Ảnh giao đúng hẹn và đã chỉnh sửa kỹ. Mọi người trong ê-kíp đều thân thiện.,chup_anh_quay_phim,positive,positive,none,positive,positive,none
+815,Bên này nhận làm web bán hàng bằng WordPress và React. Thanh toán chia làm ba đợt theo tiến độ.,lap_trinh_web,neutral,none,neutral,none,none,none
+816,Dịch vụ dọn nhà theo giờ rất tiện cho gia đình bận rộn. Rất yên tâm khi giao nhà cho chị.,giup_viec,positive,none,none,none,positive,none
+817,Dạy chỉ đọc đáp án chứ không giảng giải. Đòi hoàn học phí thì bị làm khó.,gia_su,negative,negative,negative,none,negative,negative
+818,Luật sư nắm vững luật nên mình rất yên tâm. Sẽ nhờ lại khi có việc cần.,luat_su,positive,positive,none,none,none,none
+819,thời gian thấy kết quả SEO thường từ ba đến sáu tháng. Mình mới bắt đầu hợp tác nên chưa có nhận xét.,marketing_seo,neutral,none,none,neutral,none,none
+820,Dịch vụ có tổng vệ sinh dịp cuối năm. Ai từng thuê xin cho ý kiến.,giup_viec,neutral,none,none,none,none,none
+821,"Ảnh bị mờ nhiều tấm, chỉnh màu sơ sài. Mình đã bỏ lỡ khoảnh khắc ko thể chụp lại.",chup_anh_quay_phim,negative,negative,none,none,none,none
+822,Học phí 200k một buổi cho học sinh cấp 2. Ai biết gia sư nào dạy tốt xin gợi ý giúp.,gia_su,neutral,none,neutral,none,none,none
+823,Hồ sơ được soạn kỹ lưỡng và đúng quy định. Vụ việc của mình được giải quyết thuận lợi.,luat_su,positive,positive,none,none,none,none
+824,Ảnh banner thu hút và nhiều khách khen. Đáng để giới thiệu cho bạn bè.,thiet_ke_do_hoa,positive,positive,none,none,none,none
+825,Thợ đến đúng giờ và tìm ra chỗ rò rất nhanh. Giá rẻ hơn mấy chỗ mình hỏi trước đó.,sua_chua_dien_nuoc,positive,positive,positive,positive,none,none
+826,Mình cần người giúp việc nhà buổi sáng ba ngày mỗi tuần. Mình mới thuê tuần này nên chưa có nhận xét.,giup_viec,neutral,none,none,none,none,none
+827,Bên này nhận chạy quảng cáo Facebook và Google. Cho mình hỏi có cam kết từ khóa không ạ?,marketing_seo,neutral,none,none,none,none,none
+828,Mình cần kế toán làm quyết toán thuế thu nhập cá nhân. Cho mình hỏi có làm hóa đơn điện tử không ạ?,ke_toan_thue,neutral,none,none,none,none,none
+829,Công ty có nhận soạn thảo hợp đồng thuê nhà. Ai biết luật sư giỏi về lao động xin gợi ý giúp.,luat_su,neutral,none,none,none,none,none
+830,"Dọn nhà theo giờ giá 80k một giờ, tối thiểu 3 giờ. Hợp đồng ký theo tháng hoặc theo từng lần.",giup_viec,neutral,none,neutral,none,none,none
+831,"Ảnh bị mờ nhiều tấm, chỉnh màu sơ sài. Chất lượng không như ảnh mẫu.",chup_anh_quay_phim,negative,negative,none,none,none,none
+832,Designer hiểu ý rất nhanh và lên mẫu đẹp. Đáng để giới thiệu cho bạn bè.,thiet_ke_do_hoa,positive,positive,none,positive,none,none
+833,Luật sư phân tích rủi ro rất thẳng thắn. Mình đánh giá cao sự chuyên nghiệp.,luat_su,positive,positive,none,none,positive,none
+834,Bạn phiên dịch xử lý tình huống rất linh hoạt. Rất chuyên nghiệp.,dich_thuat,positive,positive,none,none,positive,none
+835,Thiết kế không đúng yêu cầu ban đầu. Phải sửa lại nhiều hạng mục.,ky_su,negative,negative,none,none,none,none
+836,Cô có giáo án rõ ràng cho từng buổi. Học phí hợp lý so với chất lượng.,gia_su,positive,positive,positive,none,none,none
+837,Làm website giới thiệu công ty giá khoảng 8 triệu. Mình mới thuê nên chưa có nhận xét.,lap_trinh_web,neutral,none,neutral,none,none,none
+838,Mình cần người quản trị fanpage bán hàng. Cho mình hỏi có cam kết từ khóa không ạ?,marketing_seo,neutral,none,none,none,none,none
+839,Biên dịch viên hiểu rõ thuật ngữ chuyên ngành. Có hỗ trợ chỉnh sửa miễn phí.,dich_thuat,positive,positive,none,none,none,positive
+840,"Logo sáng tạo, đúng tinh thần thương hiệu. Đáng để giới thiệu cho bạn bè.",thiet_ke_do_hoa,positive,positive,none,none,none,none
+841,"Gói chụp ảnh gia đình giá 1,5 triệu, thời gian hai giờ. Cho mình hỏi giá đã gồm hậu kỳ chưa ạ?",chup_anh_quay_phim,neutral,none,neutral,none,none,none
+842,Mình cần người trông bé 2 tuổi ban ngày. Mình mới thuê tuần đầu nên chưa nhận xét.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+843,cô có thể ở lại qua đêm nếu gia đình cần. Ai biết trung tâm uy tín xin chỉ giúp.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+844,Thay đổi người phụ trách liên tục. Chấm dứt hợp đồng rồi mà vẫn bị tính phí.,marketing_seo,negative,none,negative,none,negative,negative
+845,"Nhiếp ảnh gia nhẹ nhàng, bắt khoảnh khắc rất tự nhiên. Mình sẽ đặt lại cho dịp sau.",chup_anh_quay_phim,positive,positive,none,none,positive,none
+846,Kế toán thiếu kinh nghiệm xử lý hóa đơn. Đòi bồi thường thì né tránh.,ke_toan_thue,negative,negative,none,none,negative,negative
+847,"Người trông bé hay nhìn điện thoại, thiếu quan tâm. Dịch vụ không xứng với phí đã trả.",cham_soc_tre_nguoi_gia,negative,negative,negative,none,negative,none
+848,Báo cáo được gửi vào đầu mỗi tháng. Mình mới bắt đầu hợp tác nên chưa có nhận xét.,marketing_seo,neutral,none,none,none,none,none
+849,Hỗ trợ chỉnh sửa nhiệt tình sau khi bàn giao. Mình sẽ nhờ làm thêm phần quản trị.,lap_trinh_web,positive,none,none,none,positive,positive
+850,Thái độ cộc cằn khi mình nhắc nhở. Sẽ không thuê lại lần nào nữa.,giup_viec,negative,none,none,none,negative,none
+851,Bên này nhận khai thuế cho hộ kinh doanh và công ty. Hợp đồng ký theo từng năm.,ke_toan_thue,neutral,none,none,none,none,none
+852,Học phí cao mà chất lượng chưa tương xứng. Học ba tháng mà điểm không khá hơn.,gia_su,negative,negative,negative,none,none,none
+853,Thu phí cao hơn thỏa thuận ban đầu. Mình không khuyên dùng.,ke_toan_thue,negative,none,negative,none,none,none
+854,Designer hiểu ý rất nhanh và lên mẫu đẹp. Giá cả hợp lý với chất lượng.,thiet_ke_do_hoa,positive,positive,positive,positive,none,none
+855,Thời gian thấy kết quả SEO thường từ ba đến sáu tháng. Cho mình hỏi có cam kết từ khóa không ạ?,marketing_seo,neutral,none,none,neutral,none,none
+856,Báo cáo được gửi vào đầu mỗi tháng. Hợp đồng tối thiểu sáu tháng.,marketing_seo,neutral,none,none,none,none,none
+857,Công trình trễ tiến độ hai tháng. Không nên giao hết cho người này.,ky_su,negative,none,none,negative,none,none
+858,Kỹ sư gần như không xuống công trình. Thật sự thất vọng.,ky_su,negative,none,none,none,negative,none
+859,"Bạn dọn nhà rất tỉ mỉ, góc nào cũng sạch. Giá minh bạch, không phát sinh gì thêm.",giup_viec,positive,positive,positive,none,none,none
+860,Anh luôn trả lời tin nhắn nhanh dù ngoài giờ. Sẽ nhờ lại khi có việc cần.,luat_su,positive,none,none,positive,positive,none
+861,Web bị lỗi liên tục sau khi bàn giao. Không có bảo hành như cam kết.,lap_trinh_web,negative,negative,none,none,none,negative
+862,Phiên dịch hội nghị tính phí theo buổi. Mình mới gửi tài liệu nên chưa nhận xét được.,dich_thuat,neutral,none,neutral,none,none,none
+863,"Buổi học kéo dài 90 phút, học ba buổi mỗi tuần. Lịch học có thể đổi theo thời gian của gia đình.",gia_su,neutral,none,none,none,none,none
+864,Trang web hiển thị sai trên điện thoại. Không có bảo hành như cam kết.,lap_trinh_web,negative,negative,none,none,none,negative
+865,Gói quay phim sự kiện bao gồm bản dựng 3 phút. Ai biết nhiếp ảnh gia chụp kỷ yếu giúp mình với.,chup_anh_quay_phim,neutral,none,none,none,none,none
+866,Thợ đến đúng giờ và tìm ra chỗ rò rất nhanh. Mình sẽ gọi lại khi cần.,sua_chua_dien_nuoc,positive,positive,none,positive,none,none
+867,Mình cần người quản trị fanpage bán hàng. Ai biết agency làm SEO uy tín xin chỉ giúp.,marketing_seo,neutral,none,none,none,none,none
+868,"Dọn nhà theo giờ giá 80k một giờ, tối thiểu 3 giờ. Mình mới thuê tuần này nên chưa có nhận xét.",giup_viec,neutral,none,neutral,none,none,none
+869,"Hồ sơ xin phép xây dựng được làm gọn gàng. Giao tiếp rõ ràng, cập nhật liên tục.",ky_su,positive,positive,none,none,positive,none
+870,Gia sư dạy dễ hiểu và rất kiên nhẫn. Phụ huynh nào cần mình sẵn sàng giới thiệu.,gia_su,positive,positive,none,none,positive,none
+871,"Thầy giảng bài logic, em hiểu bản chất chứ không học vẹt. Cuối tuần còn có báo cáo tiến độ gửi phụ huynh.",gia_su,positive,positive,none,none,positive,none
+872,"Anh thợ điện chuyên nghiệp, báo giá rõ trước khi sửa. Mình sẽ gọi lại khi cần.",sua_chua_dien_nuoc,positive,none,positive,none,positive,none
+873,Designer ít lắng nghe góp ý. Chất lượng không xứng với số tiền.,thiet_ke_do_hoa,negative,negative,negative,none,negative,none
+874,"Ít trả lời tin nhắn, hỏi gì cũng chậm. Thiệt hại không nhỏ cho công ty.",ke_toan_thue,negative,none,none,negative,negative,none
+875,Báo cáo thuế được nộp vào cuối mỗi quý. Ai biết kế toán nào làm tốt cho cửa hàng nhỏ xin gợi ý.,ke_toan_thue,neutral,none,none,neutral,none,none
+876,Dịch tài liệu tiếng Anh sang tiếng Việt giá 120k một trang. Mình mới gửi tài liệu nên chưa nhận xét được.,dich_thuat,neutral,none,neutral,none,none,none
+877,Hồ sơ giới thiệu không đúng như thực tế. Con càng học càng chán.,gia_su,negative,negative,none,none,none,none
+878,hồ sơ giới thiệu không đúng thực tế. Phải tìm người khác gấp.,cham_soc_tre_nguoi_gia,negative,negative,none,none,none,none
+879,Báo giá 200k mà thu tới 500k. Không bao giờ dùng lại.,sua_chua_dien_nuoc,negative,none,negative,none,none,none
+880,Luật sư nắm vững luật nên mình rất yên tâm. Chi phí thỏa thuận minh bạch từ đầu.,luat_su,positive,positive,positive,none,none,none
+881,Tự ý thay linh kiện rồi tính thêm tiền. Gọi bảo hành thì né tránh.,sua_chua_dien_nuoc,negative,none,negative,none,negative,negative
+882,Gia sư đến đúng giờ và chuẩn bị bài kỹ. Con tự tin hơn hẳn khi lên lớp.,gia_su,positive,positive,none,positive,positive,none
+883,Ca làm việc bắt đầu lúc 7 giờ sáng. Mình mới thuê tuần đầu nên chưa nhận xét.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+884,"Thầy giảng bài logic, em hiểu bản chất chứ không học vẹt. Học phí hợp lý so với chất lượng.",gia_su,positive,positive,positive,none,none,none
+885,"Buổi học kéo dài 90 phút, học ba buổi mỗi tuần. Con mới học tuần đầu nên chưa đánh giá được.",gia_su,neutral,none,none,none,none,none
+886,Học phí 200k một buổi cho học sinh cấp 2. Cho mình hỏi có học thử miễn phí không ạ?,gia_su,neutral,none,neutral,none,none,none
+887,Công trình trễ tiến độ hai tháng. Thật sự thất vọng.,ky_su,negative,none,none,negative,none,none
+888,Đội ngũ phản hồi nhanh và chủ động đề xuất ý tưởng. Cam kết thực hiện đúng như đã nói.,marketing_seo,positive,none,none,positive,positive,none
+889,Cô đến trễ nhiều lần và không báo. Mình rất lo lắng và bất an.,cham_soc_tre_nguoi_gia,negative,none,none,negative,none,none
+890,Hồ sơ xin phép xây dựng được làm gọn gàng. Công trình hoàn thành đúng tiến độ.,ky_su,positive,positive,none,positive,none,none
+891,Cô làm việc nhanh nhẹn và có trách nhiệm. Nhà cửa thơm tho sau khi dọn xong.,giup_viec,positive,positive,none,positive,positive,none
+892,Anh giải thích số liệu rất dễ hiểu cho người ko chuyên. Sẽ gia hạn hợp đồng năm sau.,ke_toan_thue,positive,none,none,none,positive,none
+893,Cô báo cáo tình hình hằng ngày kèm hình ảnh. Mình sẽ giới thiệu cho người quen.,cham_soc_tre_nguoi_gia,positive,none,none,none,positive,none
+894,Dịch tài liệu tiếng Anh sang tiếng Việt giá 120k một trang. Ai biết chỗ dịch công chứng nhanh xin chỉ giúp.,dich_thuat,neutral,none,neutral,none,none,none
+895,Người chăm sóc ông bà nhẹ nhàng và kiên nhẫn. Cô trung thực và đáng tin cậy.,cham_soc_tre_nguoi_gia,positive,none,none,none,positive,none
+896,Thợ chụp hướng dẫn tạo dáng rất dễ. Rất đáng tiền.,chup_anh_quay_phim,positive,none,positive,none,positive,none
+897,Mình cần kế toán làm quyết toán thuế thu nhập cá nhân. Hợp đồng ký theo từng năm.,ke_toan_thue,neutral,none,none,none,none,none
+898,"code sạch, có tài liệu hướng dẫn cho mình. Mình sẽ nhờ làm thêm phần quản trị.",lap_trinh_web,positive,positive,none,none,none,none
+899,kế toán tư vấn thuế rất tận tình. Rất chuyên nghiệp và đáng tin cậy.,ke_toan_thue,positive,none,none,none,positive,none
+900,Mình cần gia sư lớp 10 dạy tại nhà khu vực Thủ Đức. Cho mình hỏi có học thử miễn phí ko ạ?,gia_su,neutral,none,neutral,none,none,none
+901,Gói quay phim sự kiện bao gồm bản dựng 3 phút. Cho mình hỏi giá đã gồm hậu kỳ chưa ạ?,chup_anh_quay_phim,neutral,none,neutral,none,none,none
+902,Cô báo cáo tình hình hằng ngày kèm hình ảnh. Cô trung thực và đáng tin cậy.,cham_soc_tre_nguoi_gia,positive,none,none,none,positive,none
+903,Luật sư thiếu chuẩn bị khi ra làm việc. Mình không khuyên ai thuê.,luat_su,negative,negative,none,none,negative,none
+904,"Bạn quay phim chuyên nghiệp, thiết bị tốt. Rất đáng tiền.",chup_anh_quay_phim,positive,positive,positive,none,positive,none
+905,Trang web hiển thị sai trên điện thoại. Mình rất thất vọng.,lap_trinh_web,negative,negative,none,none,none,none
+906,Gói SEO tổng thể giá khoảng 6 triệu mỗi tháng. Cho mình hỏi có cam kết từ khóa không ạ?,marketing_seo,neutral,none,neutral,none,none,none
+907,Luật sư tư vấn rõ ràng và dễ hiểu. Rất đáng tin cậy.,luat_su,positive,positive,none,none,positive,none
+908,Cô đến trễ nhiều lần và không báo. Dịch vụ không xứng với phí đã trả.,cham_soc_tre_nguoi_gia,negative,negative,negative,negative,none,none
+909,"tư vấn chung chung, không đi vào trọng tâm. Mình mất nhiều thời gian chờ đợi.",luat_su,negative,negative,none,negative,none,none
+910,Nghỉ việc đột ngột khiến gia đình bị động. Rất thất vọng.,cham_soc_tre_nguoi_gia,negative,none,none,none,negative,none
+911,Bé về nhà bị trầy xước mà không giải thích. Mình rất lo lắng và bất an.,cham_soc_tre_nguoi_gia,negative,negative,none,none,negative,none
+912,Lập trình viên làm web đúng mô tả và chạy mượt. Giá hợp lý so với chất lượng.,lap_trinh_web,positive,positive,positive,none,none,none
+913,Dạy chỉ đọc đáp án chứ không giảng giải. Con càng học càng chán.,gia_su,negative,negative,none,none,none,none
+914,Kế toán tư vấn thuế rất tận tình. Mình đỡ áp lực nhiều.,ke_toan_thue,positive,none,none,none,positive,none
+915,Thái độ thiếu nhiệt tình khi chụp. Đòi hoàn tiền thì bị từ chối.,chup_anh_quay_phim,negative,none,none,none,negative,negative
+916,"Bên này có dạy Toán, Lý, Hóa và tiếng Anh. Lịch học có thể đổi theo thời gian của gia đình.",gia_su,neutral,none,none,none,none,none
+917,Lấy tiền cọc rồi biến mất vài ngày. Phải thuê người khác làm lại từ đầu.,lap_trinh_web,negative,negative,none,none,negative,none
+918,"Code sạch, có tài liệu hướng dẫn cho mình. Giá hợp lý so với chất lượng.",lap_trinh_web,positive,positive,positive,none,none,none
+919,"Người chăm bệnh có kinh nghiệm, biết xử lý khi đột ngột. Chi phí hợp lý so với chất lượng.",cham_soc_tre_nguoi_gia,positive,positive,positive,none,none,none
+920,"Anh tối ưu chi phí giúp mình đáng kể. Giao tiếp rõ ràng, cập nhật liên tục.",ky_su,positive,none,positive,none,positive,none
+921,Web tải nhanh và chuẩn SEO cơ bản. Giao đúng hạn như đã hẹn.,lap_trinh_web,positive,positive,none,positive,none,none
+922,Cô đến trễ nhiều lần và không báo. Không nên tin vào quảng cáo.,cham_soc_tre_nguoi_gia,negative,none,none,negative,none,none
+923,Dịch vụ kế toán trọn gói rất tiện cho doanh nghiệp nhỏ. Sẽ gia hạn hợp đồng năm sau.,ke_toan_thue,positive,none,none,none,none,none
+924,Sửa máy lạnh xong chạy mát và êm hẳn. Đặt lịch qua app rất tiện.,sua_chua_dien_nuoc,positive,positive,none,none,none,none
+925,Gia sư hay hủy buổi sát giờ. Mình đã phản ánh nhưng không ai phản hồi.,gia_su,negative,none,none,negative,negative,none
+926,Nhân viên đến đúng giờ và lịch sự. Nhất định sẽ giới thiệu cho bạn bè.,giup_viec,positive,none,none,positive,positive,none
+927,Cô trông bé rất chu đáo và yêu trẻ. Cả nhà đều quý cô.,cham_soc_tre_nguoi_gia,positive,positive,none,none,positive,none
+928,Gia sư hay hủy buổi sát giờ. Đòi hoàn học phí thì bị làm khó.,gia_su,negative,none,negative,negative,negative,negative
+929,Hồ sơ giới thiệu không đúng như thực tế. Học ba tháng mà điểm không khá hơn.,gia_su,negative,negative,none,none,none,none
+930,Bên này nhận sửa ở Thủ Đức và quận 9. Cho mình hỏi bảo hành bao lâu ạ?,sua_chua_dien_nuoc,neutral,none,none,none,none,neutral
+931,Thứ hạng từ khóa gần như không đổi sau sáu tháng. Thật sự thất vọng.,marketing_seo,negative,negative,none,none,none,none
+932,Cam kết top 1 nhưng không làm được. Chấm dứt hợp đồng rồi mà vẫn bị tính phí.,marketing_seo,negative,negative,negative,none,negative,negative
+933,Bạn gia sư vui tính nên con rất hào hứng học. Sau hai tháng điểm của con tăng rõ rệt.,gia_su,positive,positive,none,none,positive,none
+934,"Báo cáo hàng tháng chi tiết, dễ theo dõi. Cam kết thực hiện đúng như đã nói.",marketing_seo,positive,none,none,none,positive,none
+935,Bạn giúp việc dùng điện thoại gần như cả buổi. Tính tiền cao hơn báo giá ban đầu.,giup_viec,negative,none,negative,none,negative,none
+936,Cô có giáo án rõ ràng cho từng buổi. Phụ huynh nào cần mình sẵn sàng giới thiệu.,gia_su,positive,positive,none,none,none,none
+937,Gia sư đến đúng giờ và chuẩn bị bài kỹ. Cuối tuần còn có báo cáo tiến độ gửi phụ huynh.,gia_su,positive,none,none,positive,positive,none
+938,Biên dịch viên hiểu rõ thuật ngữ chuyên ngành. Sẽ tiếp tục hợp tác với dịch vụ này.,dich_thuat,positive,positive,none,none,none,none
+939,Tính phí thêm nhiều hạng mục không báo trước. Đòi hoàn tiền thì bị từ chối.,chup_anh_quay_phim,negative,none,negative,none,negative,negative
+940,Nhà mình rộng khoảng 70 mét vuông. Mình mới thuê tuần này nên chưa có nhận xét.,giup_viec,neutral,none,none,none,none,none
+941,Giao bản dịch trước hạn một ngày. Sẽ tiếp tục hợp tác với dịch vụ này.,dich_thuat,positive,none,none,positive,none,none
+942,Bản vẽ sai kích thước nhiều chỗ. Phải sửa lại nhiều hạng mục.,ky_su,negative,negative,none,none,none,none
+943,Cô theo sát điểm yếu của con từng tuần. Cuối tuần còn có báo cáo tiến độ gửi phụ huynh.,gia_su,positive,positive,none,none,positive,none
+944,Bạn phiên dịch xử lý tình huống rất linh hoạt. Giá theo trang rõ ràng.,dich_thuat,positive,positive,positive,none,none,none
+945,Bên này có người chăm sóc người cao tuổi tại nhà. Mình mới thuê tuần đầu nên chưa nhận xét.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+946,Thái độ qua loa khi mình hỏi thêm. Mình không khuyên ai thuê.,luat_su,negative,none,none,none,negative,none
+947,Thợ làm ẩu để lại đầy bụi và vụn gạch. Rất thiếu minh bạch về giá.,sua_chua_dien_nuoc,negative,negative,negative,none,negative,none
+948,"Dọn qua loa, sàn nhà vẫn còn bụi. Thật sự không đáng tiền.",giup_viec,negative,negative,negative,none,none,none
+949,Nghỉ việc đột ngột khiến gia đình bị động. Mình rất lo lắng và bất an.,cham_soc_tre_nguoi_gia,negative,none,none,none,negative,none
+950,"Ít trả lời tin nhắn, hỏi gì cũng chậm. Rất thất vọng.",ke_toan_thue,negative,none,none,negative,negative,none
+951,Phí đại diện tính theo vụ việc. Cho mình hỏi có tư vấn qua điện thoại không ạ?,luat_su,neutral,none,neutral,none,none,none
+952,"Dịch vụ kế toán trọn gói từ 1,5 triệu mỗi tháng. Hợp đồng ký theo từng năm.",ke_toan_thue,neutral,none,neutral,none,none,none
+953,Thay đổi người phụ trách liên tục. Thật sự thất vọng.,marketing_seo,negative,none,none,none,negative,none
+954,dự toán chênh lệch quá nhiều so với thực tế. Phải sửa lại nhiều hạng mục.,ky_su,negative,negative,negative,none,none,none
+955,Luật sư hẹn gặp mình vào sáng thứ ba. Ai biết luật sư giỏi về lao động xin gợi ý giúp.,luat_su,neutral,none,none,none,none,none
+956,Gia sư dạy dễ hiểu và rất kiên nhẫn. Sau hai tháng điểm của con tăng rõ rệt.,gia_su,positive,positive,none,none,positive,none
+957,Phí phát sinh nhiều hơn thỏa thuận. Thất vọng thực sự.,luat_su,negative,none,negative,none,none,none
+958,"Luật sư ít liên lạc, hỏi tiến độ phải nhắc nhiều lần. Không nhận lỗi khi sai sót.",luat_su,negative,none,none,negative,negative,negative
+959,"Code rối, người khác không đọc nổi. Không có bảo hành như cam kết.",lap_trinh_web,negative,negative,none,none,none,negative
+960,trễ hạn khiến mình lỡ chiến dịch. Tính phí thêm cho mỗi lần chỉnh.,thiet_ke_do_hoa,negative,none,negative,negative,none,negative
+961,Trễ hạn khiến mình lỡ chiến dịch. Chất lượng không xứng với số tiền.,thiet_ke_do_hoa,negative,negative,negative,negative,none,none
+962,Luật sư tư vấn rõ ràng và dễ hiểu. Mình đánh giá cao sự chuyên nghiệp.,luat_su,positive,positive,none,none,positive,none
+963,Tự ý thay linh kiện rồi tính thêm tiền. Không bao giờ dùng lại.,sua_chua_dien_nuoc,negative,none,negative,none,negative,none
+964,Cô có thể ở lại qua đêm nếu gia đình cần. Cho mình hỏi có kiểm tra lý lịch người chăm sóc không?,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+965,"Bạn dọn nhà rất tỉ mỉ, góc nào cũng sạch. Nhà cửa thơm tho sau khi dọn xong.",giup_viec,positive,positive,none,none,none,none
+966,Chạy quảng cáo đốt tiền mà không ra đơn. Chấm dứt hợp đồng rồi mà vẫn bị tính phí.,marketing_seo,negative,negative,negative,none,none,negative
+967,Văn phòng luật nhận hợp đồng lao động và tranh chấp đất đai. Thời gian giải quyết dự kiến vài tháng.,luat_su,neutral,none,none,neutral,none,none
+968,Loay hoay cả tiếng vẫn không tìm ra lỗi. Nên cân nhắc kỹ trước khi thuê.,sua_chua_dien_nuoc,negative,negative,none,negative,none,none
+969,Thay đổi người phụ trách liên tục. Mình mất khá nhiều ngân sách vô ích.,marketing_seo,negative,none,negative,none,negative,none
+970,"Dịch như dùng máy, đọc rất gượng. Không khuyến khích sử dụng.",dich_thuat,negative,negative,none,none,none,none
+971,Chỉnh sửa vài lần vẫn chưa đúng ý. Mình mất thời gian vô ích.,thiet_ke_do_hoa,negative,negative,none,negative,none,none
+972,Phiên dịch hội nghị tính phí theo buổi. Có báo giá miễn phí trước khi dịch.,dich_thuat,neutral,none,neutral,none,none,none
+973,"Chăm sóc ông bà thiếu kiên nhẫn, hay nói lớn tiếng. Rất thất vọng.",cham_soc_tre_nguoi_gia,negative,none,none,none,negative,none
+974,Mình cần người trông bé 2 tuổi ban ngày. Có thể thử việc ba ngày trước khi ký.,cham_soc_tre_nguoi_gia,neutral,none,none,none,none,none
+975,"Bên này nhận chụp cưới, sự kiện và sản phẩm. Ai biết nhiếp ảnh gia chụp kỷ yếu giúp mình với.",chup_anh_quay_phim,neutral,none,none,none,none,none
+976,"Dọn qua loa, sàn nhà vẫn còn bụi. Công ty chỉ biết xin lỗi suông.",giup_viec,negative,negative,none,none,negative,none
+977,mình cần bộ menu cho quán cà phê. Mình mới đặt hàng nên chưa nhận xét được.,thiet_ke_do_hoa,neutral,none,none,none,none,none
+978,"Ít trả lời tin nhắn, hỏi gì cũng chậm. Mình phải đi sửa lại toàn bộ hồ sơ.",ke_toan_thue,negative,negative,none,negative,negative,none
+979,Luật sư thiếu chuẩn bị khi ra làm việc. Không nhận lỗi khi sai sót.,luat_su,negative,negative,none,none,negative,negative
+980,Mình cần gia sư lớp 10 dạy tại nhà khu vực Thủ Đức. Ai biết gia sư nào dạy tốt xin gợi ý giúp.,gia_su,neutral,none,none,none,none,none
+981,Dịch vụ có tổng vệ sinh dịp cuối năm. Hợp đồng ký theo tháng hoặc theo từng lần.,giup_viec,neutral,none,none,none,none,none
+982,Văn phòng luật nhận hợp đồng lao động và tranh chấp đất đai. Vụ việc đang xử lý nên mình chưa đánh giá được.,luat_su,neutral,none,none,none,none,none
+983,Thái độ qua loa khi mình hỏi thêm. Không nhận lỗi khi sai sót.,luat_su,negative,none,none,none,negative,negative
+984,"Bên này có dạy Toán, Lý, Hóa và tiếng Anh. Cho mình hỏi có học thử miễn phí không ạ?",gia_su,neutral,none,neutral,none,none,none
+985,"Báo cáo thuế nộp đúng hạn, không phát sinh phạt. Sẽ gia hạn hợp đồng năm sau.",ke_toan_thue,positive,none,none,positive,none,none
+986,Không cập nhật quy định mới về thuế. Mình phải đi sửa lại toàn bộ hồ sơ.,ke_toan_thue,negative,negative,none,none,none,none
+987,Giao bản dịch trước hạn một ngày. Có hỗ trợ chỉnh sửa miễn phí.,dich_thuat,positive,none,none,positive,none,positive
+988,Ảnh banner thu hút và nhiều khách khen. Giao đúng hạn như cam kết.,thiet_ke_do_hoa,positive,positive,none,positive,none,none
+989,Bạn dev trễ hạn hai tuần mà không báo. Mỗi lần sửa lại đều tính thêm phí.,lap_trinh_web,negative,none,negative,negative,negative,negative
+990,Web bị lỗi liên tục sau khi bàn giao. Mình rất thất vọng.,lap_trinh_web,negative,negative,none,none,none,none
+991,Anh trả lời tin nhắn rất chậm. Phát sinh chi phí liên tục.,ky_su,negative,none,negative,negative,negative,none
+992,Không cập nhật quy định mới về thuế. Đòi bồi thường thì né tránh.,ke_toan_thue,negative,negative,none,none,negative,negative
+993,Làm vỡ đồ nhưng không báo cho chủ nhà. Công ty chỉ biết xin lỗi suông.,giup_viec,negative,negative,none,none,negative,none
+994,Bên này làm cả bản vẽ xin phép xây dựng. Ai biết kỹ sư kết cấu nào uy tín xin chỉ giúp.,ky_su,neutral,none,none,none,none,none
+995,Hồ sơ nộp trễ hạn nên mình bị thiệt. Mình không khuyên ai thuê.,luat_su,negative,negative,none,negative,none,none
+996,Đất của mình rộng 5 x 20 mét. Ai biết kỹ sư kết cấu nào uy tín xin chỉ giúp.,ky_su,neutral,none,none,none,none,none
+997,Dịch vụ có tổng vệ sinh dịp cuối năm. Mình mới thuê tuần này nên chưa có nhận xét.,giup_viec,neutral,none,none,none,none,none
+998,"Báo cáo hàng tháng chi tiết, dễ theo dõi. Giá minh bạch, ko phụ phí ẩn.",marketing_seo,positive,none,positive,none,positive,none
+999,Mình cần bộ menu cho quán cà phê. Ai biết designer làm bao bì tốt xin chỉ giúp.,thiet_ke_do_hoa,neutral,none,none,none,none,none
+1000,Làm website giới thiệu công ty giá khoảng 8 triệu. Freelancer nào làm Laravel giới thiệu giúp mình với.,lap_trinh_web,neutral,none,neutral,none,none,none

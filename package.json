@@ -10,6 +10,8 @@
     "seed:mysql": "node scripts/seedMysql.js",
     "email:worker": "node scripts/emailWorker.js",
     "email:dry": "node scripts/emailWorker.js --dry",
+    "ml:train": "node ml/train_overall_nb.js",
+    "ml:train:overall": "node ml/train_overall_nb.js",
     "check": "node scripts/checkFrontend.js",
     "check:mysql": "node scripts/testMysqlConnection.js"
   },

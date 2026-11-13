@@ -513,11 +513,18 @@ window.providerApi = {
     return res.json();
   },
 
-  submitDefense: async (complaintId, providerClaim) => {
+  submitDefense: async (complaintId, providerClaim, evidence = []) => {
     const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/defense`, {
       method: 'POST',
       headers: getAuthHeader(),
-      body: JSON.stringify({ providerClaim })
+      body: JSON.stringify({ providerClaim, evidence })
+    });
+    return res.json();
+  },
+
+  acceptComplaintRefund: async (complaintId) => {
+    const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/accept-refund`, {
+      method: 'POST', headers: getAuthHeader()
     });
     return res.json();
   },

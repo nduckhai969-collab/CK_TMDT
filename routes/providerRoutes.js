@@ -932,9 +932,15 @@ router.get('/me/complaints', requireProvider, (req, res) => {
 });
 
 router.post('/complaints/:id/defense', requireProvider, (req, res) => {
-  const { providerClaim } = req.body;
+  const { providerClaim, evidence = [] } = req.body;
   if (!providerClaim || String(providerClaim).trim().length < 10) {
     return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung giải trình chi tiết (tối thiểu 10 ký tự).' });
+  }
+  if (!Array.isArray(evidence) || evidence.length > 5 || evidence.reduce((total, item) => total + (typeof item?.data === 'string' ? item.data.length : 0), 0) > 19 * 1024 * 1024 || evidence.some(item =>
+    !item || typeof item.name !== 'string' || typeof item.data !== 'string' ||
+    !/^data:image\/(png|jpeg|webp);base64,/.test(item.data) || item.data.length > 15 * 1024 * 1024 * 1.4
+  )) {
+    return res.status(400).json({ success: false, message: 'Chỉ nhận tối đa 5 ảnh PNG/JPG/WEBP, mỗi ảnh tối đa 15MB (tổng tối đa 14MB).' });
   }
   const provider = getMyProvider(req);
   const complaints = db.getCollection('complaints') || [];
@@ -947,6 +953,7 @@ router.post('/complaints/:id/defense', requireProvider, (req, res) => {
   );
   if (idx !== -1) {
     complaints[idx].providerClaim = String(providerClaim).trim();
+    complaints[idx].providerEvidence = evidence.map(item => ({ name: item.name.slice(0, 160), data: item.data }));
     complaints[idx].status = 'pending_review';
     complaints[idx].defenseSubmittedAt = new Date().toLocaleString('vi-VN');
     db.saveCollection('complaints', complaints);
@@ -954,6 +961,22 @@ router.post('/complaints/:id/defense', requireProvider, (req, res) => {
   } else {
     res.status(404).json({ success: false, message: 'Không tìm thấy khiếu nại hoặc bạn không có quyền giải trình.' });
   }
+});
+
+router.post('/complaints/:id/accept-refund', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  const complaints = db.getCollection('complaints') || [];
+  const complaint = complaints.find(c => c.id === req.params.id && (
+    c.defendantId === provider.id || c.defendantId === provider.userId || c.defendantId === req.authUser.id
+  ));
+  if (!complaint) return res.status(404).json({ success: false, message: 'Không tìm thấy khiếu nại hoặc bạn không có quyền xử lý.' });
+  if (complaint.status === 'resolved') return res.status(409).json({ success: false, message: 'Khiếu nại này đã được giải quyết.' });
+  complaint.providerAcceptedRefund = true;
+  complaint.providerAcceptedRefundAt = new Date().toLocaleString('vi-VN');
+  complaint.providerClaim = 'Provider chấp nhận hoàn tiền cho khách hàng; chờ Admin xác nhận phán quyết.';
+  complaint.status = 'pending_review';
+  db.saveCollection('complaints', complaints);
+  res.json({ success: true, message: 'Đã ghi nhận việc chấp nhận hoàn tiền. Admin sẽ xác nhận phán quyết.' });
 });
 
 router.post('/packages/purchase', requireProvider, (req, res) => {

@@ -156,7 +156,7 @@
             </select>
             <select class="filter-select" id="comp-status-filter">
               <option value="all">Tất cả trạng thái</option>
-              <option value="pending">Chờ xử lý</option>
+              <option value="pending">Chưa có phán quyết</option>
               <option value="resolved">Đã giải quyết</option>
             </select>
           </div>
@@ -197,7 +197,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-complaint-detail')">Đóng</button>
         <button class="btn btn-warning btn-sm" id="btn-verdict-split">Chia bồi thường 50 / 50</button>
-        <button class="btn btn-danger btn-sm" id="btn-verdict-refund">Hoàn tiền 100% cho Khách</button>
+        <button class="btn btn-danger btn-sm" id="btn-verdict-refund">Hoàn tiền 70% cho Khách</button>
         <button class="btn btn-primary btn-sm" id="btn-verdict-provider">Bác bỏ & Trả tiền Provider</button>
       </div>
     </div>
@@ -258,7 +258,7 @@
       const filtered = cases.filter(c => {
         const matchQ = [c.id, c.orderId, c.complainant, c.defendant, c.reason].some(value => String(value || '').toLowerCase().includes(q));
         const matchPrio = (prio === 'all') || (c.priority === prio);
-        const matchSt = (st === 'all') || (c.status === st);
+        const matchSt = st === 'all' || (st === 'pending' ? c.status !== 'resolved' : c.status === st);
         return matchQ && matchPrio && matchSt;
       });
 
@@ -283,12 +283,14 @@
             </span>
           </td>
           <td>
-            ${c.status === 'pending'
-              ? '<span class="badge badge-warning">Đang chờ phân xử</span>'
-              : '<span class="badge badge-success">Đã giải quyết</span>'}
+            ${c.status === 'resolved'
+              ? '<span class="badge badge-success">Đã có phán quyết</span>'
+              : c.status === 'pending_review'
+                ? '<span class="badge badge-info">Chờ Admin phán quyết</span>'
+                : '<span class="badge badge-warning">Chờ Provider giải trình</span>'}
           </td>
           <td style="text-align:right">
-            ${c.status === 'pending'
+            ${c.status !== 'resolved'
               ? `<button class="btn btn-primary btn-xs" onclick="openVerdictModal('${c.id}')">
                    Phán quyết
                  </button>`
@@ -309,7 +311,7 @@
       if (st) st.addEventListener('change', renderComplaintsTable);
 
       document.getElementById('btn-verdict-refund').addEventListener('click', () => {
-        executeVerdict(activeCancellationCase ? 'Hủy đơn và hoàn 100% cho khách' : 'Hoàn tiền 100% cho Khách hàng', 'success');
+        executeVerdict(activeCancellationCase ? 'Hủy đơn và hoàn 100% cho khách' : 'Hoàn tiền 70% cho Khách hàng', 'success');
       });
       document.getElementById('btn-verdict-split').addEventListener('click', () => {
         executeVerdict(activeCancellationCase ? 'Hủy đơn và hoàn 50% cho khách' : 'Chia bồi thường 50 / 50 giữa hai bên', 'warning');
@@ -343,7 +345,7 @@
           <textarea id="cancellation-admin-note" class="form-control" rows="4" minlength="10" placeholder="Ghi rõ căn cứ xem xét của Admin"></textarea>
         `;
         document.querySelector('#modal-complaint-detail .modal-header h3').textContent = 'Phân xử yêu cầu hủy đơn';
-        document.getElementById('btn-verdict-refund').textContent = 'Hủy đơn & hoàn 100%';
+        document.getElementById('btn-verdict-refund').textContent = 'Hủy đơn & hoàn 70%';
         document.getElementById('btn-verdict-split').textContent = 'Hủy đơn & hoàn 50%';
         document.getElementById('btn-verdict-provider').textContent = 'Cho đơn tiếp tục';
         const splitBtn = document.getElementById('btn-verdict-split');
@@ -357,14 +359,15 @@
       }
 
       document.querySelector('#modal-complaint-detail .modal-header h3').textContent = 'Phán quyết Xử lý Khiếu nại Tranh chấp';
-      document.getElementById('btn-verdict-refund').textContent = 'Hoàn tiền 100% cho Khách';
+      document.getElementById('btn-verdict-refund').textContent = 'Hoàn tiền 70% cho Khách';
       document.getElementById('btn-verdict-split').textContent = 'Chia bồi thường 50 / 50';
       document.getElementById('btn-verdict-provider').textContent = 'Bác bỏ & Trả tiền Provider';
       body.innerHTML = `
+        <p style="padding:10px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;color:#9a3412;font-size:12px">Phán quyết khiếu nại chỉ hoàn tối đa 70% ký quỹ. Nếu bác khiếu nại, ký quỹ được giải ngân cho Provider.</p>
         <div style="margin-bottom:14px;">
-          <h4>Khiếu nại: ${comp.id} (Đơn hàng ${comp.orderId})</h4>
-          <p style="color:var(--error); font-weight:600;">Lý do: ${comp.reason}</p>
-          <p style="color:var(--text-secondary); margin-top:2px;">Số tiền tranh chấp: <strong>${comp.amount}</strong></p>
+          <h4>Khiếu nại: ${escapeComplaintHtml(comp.id)} (Đơn hàng ${escapeComplaintHtml(comp.orderId)})</h4>
+          <p style="color:var(--error); font-weight:600;">Lý do: ${escapeComplaintHtml(comp.reason)}</p>
+          <p style="color:var(--text-secondary); margin-top:2px;">Số tiền tranh chấp: <strong>${escapeComplaintHtml(comp.amount)}</strong></p>
           ${isResolved ? `
             <div style="margin-top:10px; padding:10px 14px; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; color:#166534; font-size:13px;">
               <strong>✓ Vụ khiếu nại này đã có phán quyết cuối cùng:</strong>
@@ -376,20 +379,15 @@
 
         <div class="dispute-box">
           <div class="party-statement">
-            <h4><span>👤</span> Lời khai Bên khiếu nại (${comp.complainant})</h4>
-            <p>${comp.userClaim}</p>
-            <div class="evidence-thumb-row">
-              <div class="evidence-thumb" onclick="showToast('Chứng cứ', 'Mở ảnh hiện trường', 'info')">[Ảnh chụp 1]</div>
-              <div class="evidence-thumb" onclick="showToast('Chứng cứ', 'Mở tin nhắn đối thoại', 'info')">[Tin nhắn]</div>
-            </div>
+          <h4><span>👤</span> Lời khai Bên khiếu nại (${escapeComplaintHtml(comp.complainant)})</h4>
+            <p>${escapeComplaintHtml(comp.userClaim)}</p>
+            ${renderComplaintEvidence(comp.evidence)}
           </div>
 
           <div class="party-statement">
-            <h4><span>⚒</span> Lời khai Bên bị khiếu nại (${comp.defendant})</h4>
-            <p>${comp.providerClaim}</p>
-            <div class="evidence-thumb-row">
-              <div class="evidence-thumb" onclick="showToast('Chứng cứ', 'Ảnh xác nhận hoàn thành công việc', 'info')">[Ảnh hoàn thành]</div>
-            </div>
+          <h4><span>⚒</span> Lời khai Bên bị khiếu nại (${escapeComplaintHtml(comp.defendant)})</h4>
+            <p>${escapeComplaintHtml(comp.providerClaim)}</p>
+            ${renderComplaintEvidence(comp.providerEvidence)}
           </div>
         </div>
       `;
@@ -405,6 +403,20 @@
       openModal('modal-complaint-detail');
     }
 
+    function escapeComplaintHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function renderComplaintEvidence(files) {
+      if (!Array.isArray(files) || !files.length) return '<p style="color:#64748b;font-size:12px">Chưa có tệp bằng chứng đính kèm.</p>';
+      return `<div class="evidence-thumb-row">${files.map(file => {
+        const data = typeof file.data === 'string' && /^data:(image\/(png|jpeg|webp)|application\/pdf);base64,/.test(file.data) ? file.data : '';
+        if (!data) return '';
+        const label = escapeComplaintHtml(file.name || 'Bằng chứng');
+        return `<a class="evidence-thumb" href="${data}" target="_blank" rel="noopener noreferrer" download="${label}">${label}</a>`;
+      }).join('')}</div>`;
+    }
+
     async function executeVerdict(decisionText, toastType) {
       if (!activeCompId) return;
       if (activeCancellationCase) {
@@ -414,7 +426,7 @@
           return;
         }
         const action = decisionText.includes('Cho đơn tiếp tục') ? 'continue' : 'cancel';
-        const refundPercentage = decisionText.includes('hoàn 50%') ? 50 : 100;
+        const refundPercentage = decisionText.includes('70%') ? 70 : 50;
         try {
           const result = await window.adminApi.arbitrateCancellation(activeCancellationCase.orderId, action, adminNote, refundPercentage);
           if (!result.success) {
@@ -440,9 +452,10 @@
         return;
       }
 
-      const resolution = decisionText.includes('Hoàn tiền 100%') ? 'refund_customer' : (decisionText.includes('Giải ngân') ? 'pay_provider' : 'partial_refund');
+      const resolution = decisionText.includes('Giải ngân') ? 'pay_provider' : 'partial_refund';
+      const refundPercentage = decisionText.includes('70%') ? 70 : 50;
       try {
-        const result = await window.adminApi.resolveComplaint(activeCompId, resolution, 50, decisionText);
+        const result = await window.adminApi.resolveComplaint(activeCompId, resolution, refundPercentage, decisionText);
         if (!result.success) return showToast('Không thể lưu phán quyết', result.message || 'Vui lòng thử lại.', 'error');
         await loadDisputeCases();
         closeModal('modal-complaint-detail');

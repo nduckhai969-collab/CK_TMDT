@@ -270,13 +270,12 @@
       await loadChatThreads();
       await loadAutoReplySettings();
 
-      // Kiểm tra tham số URL nếu có yêu cầu mở cuộc chat cụ thể
+      // Chỉ tự mở conversation nếu được chỉ định qua URL (?with=...)
+      // Không auto-chọn thread đầu tiên để tránh hiện tin nhắn khi vừa vào trang
       const urlParams = new URLSearchParams(window.location.search);
       const withUser = urlParams.get('with');
       if (withUser) {
         selectConversation(withUser);
-      } else if (allThreads.length > 0) {
-        selectConversation(allThreads[0].partnerId);
       }
 
       const input = document.getElementById('chatInputText');
@@ -333,15 +332,19 @@
       container.innerHTML = filtered.map(t => {
         const isActive = t.partnerId === activePartnerId;
         const initials = (t.name || 'KH').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+        const unread = t.unread || 0;
         return `
           <div class="chat-item ${isActive ? 'active' : ''}" onclick="selectConversation('${t.partnerId}')" style="cursor:pointer;">
             <div class="avatar" style="background-color: #DBEAFE; color: #1D4ED8; font-weight:700;">${initials}</div>
             <div class="chat-item-info" style="flex:1; overflow:hidden;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="chat-item-name" style="font-weight:700; font-size:13.5px; color:#0f172a;">${t.name}</span>
-                <span class="chat-item-time" style="font-size:11px; color:#94a3b8;">${t.lastTime || ''}</span>
+                <span class="chat-item-name" style="font-weight:${unread > 0 ? '800' : '700'}; font-size:13.5px; color:#0f172a;">${t.name}</span>
+                <span style="display:flex;align-items:center;gap:4px;">
+                  <span class="chat-item-time" style="font-size:11px; color:#94a3b8;">${t.lastTime || ''}</span>
+                  ${unread > 0 ? `<span style="background:#DC2626;color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;min-width:16px;text-align:center;">${unread > 99 ? '99+' : unread}</span>` : ''}
+                </span>
               </div>
-              <div class="chat-item-msg" style="font-size:12px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <div class="chat-item-msg" style="font-size:12px; color:${unread > 0 ? '#0f172a' : '#64748b'}; font-weight:${unread > 0 ? '600' : '400'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                 ${t.lastMessage || 'Chưa có tin nhắn'}
               </div>
             </div>
@@ -355,6 +358,10 @@
 
     function selectConversation(partnerId) {
       activePartnerId = partnerId;
+      // Reset lastRenderedCount để buộc render lại khi đổi conversation
+      lastRenderedCount = -1;
+      // Đánh dấu đã đọc trước khi render (để badge biến mất ngay)
+      markProviderRead(partnerId);
       renderChatThreads();
 
       const partner = allThreads.find(t => t.partnerId === partnerId);
@@ -370,19 +377,39 @@
       loadActiveMessages();
     }
 
+    async function markProviderRead(partnerId) {
+      if (!partnerId) return;
+      try {
+        await fetch(`${API_BASE}/api/chat/read`, {
+          method: 'POST',
+          headers: getAuthHeader(),
+          body: JSON.stringify({ partnerId })
+        });
+        // Reset unread trong memory
+        const t = allThreads.find(x => x.partnerId === partnerId);
+        if (t) t.unread = 0;
+      } catch (e) { /* bỏ qua */ }
+    }
+
     async function loadActiveMessages() {
       if (!activePartnerId) return;
+      const snapshotPartnerId = activePartnerId; // chụp lại để kiểm tra sau async
       const container = document.getElementById('chatMessagesContainer');
       container.innerHTML = '<div style="margin:auto; text-align:center; color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải tin nhắn...</div>';
 
       try {
-        const res = await fetch(`${API_BASE}/api/chat?user2=${encodeURIComponent(activePartnerId)}`, {
+        const res = await fetch(`${API_BASE}/api/chat?user2=${encodeURIComponent(snapshotPartnerId)}`, {
           headers: getAuthHeader()
         });
         const json = await res.json();
+        // Nếu user đã đổi sang conversation khác trong lúc chờ, bỏ qua kết quả
+        if (snapshotPartnerId !== activePartnerId) return;
+        lastRenderedPartnerId = snapshotPartnerId;
         renderMessages(json.messages || []);
       } catch (err) {
-        container.innerHTML = '<div style="margin:auto; text-align:center; color:#dc2626;">Lỗi tải tin nhắn. Vui lòng thử lại.</div>';
+        if (snapshotPartnerId === activePartnerId) {
+          container.innerHTML = '<div style="margin:auto; text-align:center; color:#dc2626;">Lỗi tải tin nhắn. Vui lòng thử lại.</div>';
+        }
       }
     }
 
@@ -400,7 +427,10 @@
     }
 
     let lastRenderedCount = -1;
+    let lastRenderedPartnerId = null; // Track partner để tránh render nhầm khi đổi conversation
     function renderMessages(messages) {
+      // Nếu activePartnerId đã thay đổi kể từ lúc bắt đầu fetch, bỏ qua kết quả cũ
+      if (lastRenderedPartnerId !== null && lastRenderedPartnerId !== activePartnerId) return;
       const container = document.getElementById('chatMessagesContainer');
       if (messages.length === 0) {
         container.innerHTML = `
@@ -409,10 +439,11 @@
             <div>Chưa có tin nhắn nào với khách hàng này. Hãy bắt đầu cuộc trò chuyện!</div>
           </div>`;
         lastRenderedCount = 0;
+        lastRenderedPartnerId = activePartnerId;
         return;
       }
 
-      if (messages.length === lastRenderedCount) return; // Tránh giật màn hình nếu không có tin nhắn mới
+      if (messages.length === lastRenderedCount && lastRenderedPartnerId === activePartnerId) return; // Không có tin nhắn mới
 
       const myId = myProvider ? (myProvider.providerId || myProvider.id) : 'USR001';
       container.innerHTML = messages.map(m => {
@@ -428,6 +459,7 @@
 
       container.scrollTop = container.scrollHeight;
       lastRenderedCount = messages.length;
+      lastRenderedPartnerId = activePartnerId;
     }
 
     function escapeHtml(str) {
@@ -461,6 +493,8 @@
         if (json.success) {
           await loadActiveMessages();
           await loadChatThreadsSilently();
+          // Đánh dấu đọc tin (auto-reply nếu có)
+          if (activePartnerId) markProviderRead(activePartnerId);
         } else {
           alert(json.message || 'Không thể gửi tin nhắn.');
         }

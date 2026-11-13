@@ -101,8 +101,8 @@
 </main>
 <div id="footer-placeholder"></div>
 <div id="postDetailModal" class="post-detail-backdrop" role="dialog" aria-modal="true" aria-labelledby="postDetailTitle" onclick="if(event.target===this)closePostDetail()"><section class="post-detail-dialog"><header class="post-detail-header"><div><h2 id="postDetailTitle" style="font-size:19px;color:#182230;margin:0 0 6px"></h2><small id="postDetailMeta" style="color:#8792a0"></small></div><button type="button" class="post-detail-close" aria-label="Đóng chi tiết bài viết" onclick="closePostDetail()">×</button></header><div class="post-detail-grid"><article id="postDetailContent" class="post-detail-content"></article><section id="postDetailComments" class="post-detail-comments"></section></div></section></div>
-  <script src="reviewBadge.js"></script>
-  <script src="customer.js"></script>
+<script src="reviewBadge.js"></script>
+<script src="customer.js"></script>
 <script>
 let currentProvider=null;
 document.addEventListener('DOMContentLoaded',()=>{
@@ -237,6 +237,7 @@ function renderCustomerProviderServices(services, provider) {
 
     return `
       <div class="service-pkg-card">
+        </div>
         <div class="profile-info-col" style="flex:1; min-width:0; padding-top:2px;">
           <div class="service-pkg-header">
             <span class="skill-tag" style="background:#f1f5f9;color:#475569;font-size:11px;">${escapeHtml(s.category || 'Dịch vụ')}</span>

@@ -93,14 +93,14 @@ def extract_targets(samples):
     y_aspects = np.zeros((N, len(ASPECTS)), dtype=int)
     # y_sentiments[aspect] = list of sentiments ('pos'/'neg'/'neu' or None if aspect absent)
     y_sentiments = {a: [None] * N for a in ASPECTS}
-    
+
     for i, r in enumerate(samples):
         aspect_map = {item['aspect']: item['sentiment'] for item in r['groundTruth']['aspects']}
         for j, a in enumerate(ASPECTS):
             if a in aspect_map:
                 y_aspects[i, j] = 1
                 y_sentiments[a][i] = aspect_map[a]
-                
+
     return y_aspects, y_sentiments
 
 
@@ -168,7 +168,7 @@ class RuleBasedAspectModel:
             pos_matches = sum(1 for p in self.processed_lexicon[aspect]['pos'] if p in clean or remove_accents(p) in unacc)
             neg_matches = sum(1 for p in self.processed_lexicon[aspect]['neg'] if p in clean or remove_accents(p) in unacc)
             neu_matches = sum(1 for p in self.processed_lexicon[aspect]['neu'] if p in clean or remove_accents(p) in unacc)
-            
+
             if pos_matches > neg_matches and pos_matches >= neu_matches:
                 results.append('pos')
             elif neg_matches > pos_matches and neg_matches >= neu_matches:
@@ -185,7 +185,7 @@ def tune_logistic_regression(X_train, y_aspects_train, y_sentiments_train, train
     # Smaller regularization search space discourages memorizing synthetic phrase patterns.
     C_values = [0.01, 0.03, 0.1, 0.3, 1.0]
     gkf = GroupKFold(n_splits=5)
-    
+
     print("\n--- [GridSearch + GroupKFold] Tác vụ A: Aspect Detection ---")
     best_C_A = {}
     for j, a in enumerate(ASPECTS):
@@ -219,16 +219,16 @@ def tune_logistic_regression(X_train, y_aspects_train, y_sentiments_train, train
         if len(present_indices) < 10:
             best_C_B[a] = 1.0
             continue
-        
+
         X_sub = X_train[present_indices]
         y_sub = np.array([labels[i] for i in present_indices])
         groups_sub = [train_providers[i] for i in present_indices]
-        
+
         # Kiểm tra số nhóm duy nhất
         n_groups = len(set(groups_sub))
         n_splits = min(3, n_groups)
         sub_gkf = GroupKFold(n_splits=n_splits)
-        
+
         best_score = -1.0
         best_c = 1.0
         for C in C_values:
@@ -267,7 +267,7 @@ def tune_thresholds_on_val(models_A, X_val, y_aspects_val):
         clf = models_A[a]
         probs = clf.predict_proba(X_val)[:, 1]
         y_true = y_aspects_val[:, j]
-        
+
         best_thresh = 0.5
         best_f1 = -1.0
         for th in threshold_range:
@@ -293,7 +293,7 @@ def evaluate_baselines_on_val(X_train, y_aspects_train, y_sentiments_train,
     (5) Logistic Regression (chính)
     """
     results = {}
-    
+
     # ---------------- 1. Majority Class ----------------
     maj_preds_A = np.zeros_like(y_aspects_val)
     maj_preds_B = {}
@@ -384,7 +384,7 @@ def evaluate_baselines_on_val(X_train, y_aspects_train, y_sentiments_train,
         f1_per_asp = [f1_score(y_aspects_val[:, j], preds_A[:, j], zero_division=0) for j in range(len(ASPECTS))]
         macro_f1_A = np.mean(f1_per_asp)
         micro_f1_A = f1_score(y_aspects_val, preds_A, average='micro', zero_division=0)
-        
+
         # Task B metrics
         b_accs = []
         b_macro_f1s = []
@@ -513,10 +513,10 @@ def run_learning_curve(X_train_full, y_aspects_train, X_val, y_aspects_val, best
         for j, a in enumerate(ASPECTS):
             clf = LogisticRegression(C=best_C_A[a], penalty='l2', class_weight='balanced', solver='liblinear', random_state=RANDOM_STATE)
             clf.fit(X_sub, y_sub[:, j])
-            
+
             p_tr = (clf.predict_proba(X_sub)[:, 1] >= thresholds_A[a]).astype(int)
             p_va = (clf.predict_proba(X_val)[:, 1] >= thresholds_A[a]).astype(int)
-            
+
             train_f1s.append(f1_score(y_sub[:, j], p_tr, zero_division=0))
             val_f1s.append(f1_score(y_aspects_val[:, j], p_va, zero_division=0))
 
@@ -602,7 +602,7 @@ def evaluate_on_test_once(lr_models_A, lr_thresholds_A, lr_models_B, X_test, tes
         'tricky': 'Ca khó (tricky - phủ định kép / mỉa mai)',
         'short': 'Ngắn gọn (short)'
     }
-    
+
     style_metrics = {}
     for st in styles_list:
         st_indices = [i for i, r in enumerate(test_samples) if r['style'] == st]
@@ -610,7 +610,7 @@ def evaluate_on_test_once(lr_models_A, lr_thresholds_A, lr_models_B, X_test, tes
             continue
         st_y_A = y_test_A[st_indices]
         st_p_A = preds_A[st_indices]
-        
+
         # Task A Macro F1
         st_f1s = [f1_score(st_y_A[:, j], st_p_A[:, j], zero_division=0) for j in range(len(ASPECTS))]
         st_macro_A = float(np.mean(st_f1s))

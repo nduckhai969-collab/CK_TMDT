@@ -387,7 +387,7 @@ def generate_markdown_report(samples, results, output_report_path, sha256_hash):
     lines.append("## 1. Tóm Tắt Tập Dữ Liệu Kiểm Thử")
     lines.append(f"- **Tổng số câu đánh giá hợp lệ**: **{n_samples} câu**")
     lines.append(f"- **Số lượng người viết (Writers)**: {len(writers)} người ({', '.join(writers)})")
-    
+
     if n_samples < 30:
         lines.append("\n> [!WARNING] Cảnh báo kích thước mẫu nhỏ")
         lines.append(f"> Số lượng mẫu hiện tại ($n = {n_samples}$) nhỏ hơn 30. Kết quả đánh giá mang tính định hướng ban đầu (pilot evaluation), sai số thống kê còn lớn. Cần bổ sung thêm người viết để đạt mức tối thiểu 30–50 mẫu nhằm khẳng định chắc chắn.\n")

@@ -32,7 +32,7 @@ def main():
         if seen_styles[r['style']] < 3 and len(selected_samples) < 20:
             selected_samples.append(r)
             seen_styles[r['style']] += 1
-    
+
     # Nếu chưa đủ 20 câu thì lấy thêm cho đủ
     for r in test_samples:
         if len(selected_samples) >= 20:

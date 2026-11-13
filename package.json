@@ -12,6 +12,7 @@
     "email:dry": "node scripts/emailWorker.js --dry",
     "ml:train": "node ml/train_overall_nb.js",
     "ml:train:overall": "node ml/train_overall_nb.js",
+    "ml:train:aspect": "node scripts/trainReviewModel.js",
     "check": "node scripts/checkFrontend.js",
     "check:mysql": "node scripts/testMysqlConnection.js"
   },
@@ -20,6 +21,7 @@
     "url": "git+https://github.com/nduckhai969-collab/CK_TMDT.git"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^16.4.5",
     "express": "^5.2.1",

@@ -260,17 +260,17 @@ for a in ASPECTS:
     test_idx = [i for i, l in enumerate(y_test_B[a]) if l is not None]
     y_true = [y_test_B[a][i] for i in test_idx]
     preds = lr_models_B[a].predict(X_test[test_idx])
-    
+
     cnt = Counter(y_true)
     b_support_counts[a] = cnt
     present_classes = sorted(list(cnt.keys()))
-    
+
     # F1 tính chỉ trên các lớp xuất hiện thực tế trong ground truth test
     f1_nonzero = f1_score(y_true, preds, labels=present_classes, average='macro', zero_division=0)
     # F1 tính trên cả 3 lớp pos, neg, neu
     f1_all = f1_score(y_true, preds, labels=['pos', 'neg', 'neu'], average='macro', zero_division=0)
     acc = accuracy_score(y_true, preds)
-    
+
     b_macro_nonzero[a] = f1_nonzero
     b_macro_all[a] = f1_all
     print(f"  Aspect {a:10s} (N={len(y_true)}): Acc={acc:.4f} | Macro-F1 (support>0)={f1_nonzero:.4f} | Macro-F1 (3 classes)={f1_all:.4f} | Phân bổ nhãn: {dict(cnt)}")
@@ -305,10 +305,10 @@ CUSTOMER_PERSONAS = personas_data['CUSTOMER_PERSONAS']
 def evaluate_reco_subset(review_filter_fn, name_label):
     db_file = 'data/database.json'
     dbData = json.load(open(db_file, encoding='utf-8'))
-    
+
     # Lấy các review theo bộ lọc
     target_reviews = [r for r in data if review_filter_fn(r)]
-    
+
     # Dự đoán trực tiếp bằng lr_models_A và lr_models_B
     providerAspectStats = {}
     for idx, p in enumerate(PROVIDER_PERSONAS):
@@ -317,7 +317,7 @@ def evaluate_reco_subset(review_filter_fn, name_label):
             'id': prvId, 'name': p['name'], 'category': p['category'], 'reviewCount': 0,
             'aspectSums': {a: 0.0 for a in ASPECTS}, 'aspectCounts': {a: 0 for a in ASPECTS}
         }
-    
+
     for r in target_reviews:
         prvId = r['providerId']
         if prvId in providerAspectStats:
@@ -333,7 +333,7 @@ def evaluate_reco_subset(review_filter_fn, name_label):
                     score = 5.0 if pred_sent == 'pos' else (3.0 if pred_sent == 'neu' else 1.0)
                     providerAspectStats[prvId]['aspectSums'][a] += score
                     providerAspectStats[prvId]['aspectCounts'][a] += 1
-                    
+
     # Global means
     g_sums = {a: 0.0 for a in ASPECTS}
     g_counts = {a: 0 for a in ASPECTS}
@@ -343,7 +343,7 @@ def evaluate_reco_subset(review_filter_fn, name_label):
                 g_sums[a] += st['aspectSums'][a]
                 g_counts[a] += st['aspectCounts'][a]
     g_means = {a: (g_sums[a] / g_counts[a] if g_counts[a] > 0 else 3.5) for a in ASPECTS}
-    
+
     # Scores
     scores_dict = {}
     for prvId, st in providerAspectStats.items():
@@ -355,7 +355,7 @@ def evaluate_reco_subset(review_filter_fn, name_label):
             val = (sm + m * g_means[a]) / (cnt + m)
             sc[a] = round(val, 1)
         scores_dict[prvId] = sc
-        
+
     # Đánh giá 8 Customer Personas
     # Lấy danh sách provider được đánh giá (chỉ lấy providers có review trong tập filter nếu là val+test)
     eval_prov_ids = [prvId for prvId, st in providerAspectStats.items() if st['reviewCount'] > 0]
@@ -372,14 +372,14 @@ def evaluate_reco_subset(review_filter_fn, name_label):
                 'trueAspects': p['aspectProfile'],
                 'predictedAspects': scores_dict[prvId]
             })
-            
+
     ndcg3_list, ndcg3_base_list = [], []
     ndcg5_list, ndcg5_base_list = [], []
     prec3_list, prec3_base_list = [], []
-    
+
     def dcg(rels, k):
         return sum((2**r - 1) / np.log2(i + 2) for i, r in enumerate(rels[:k]))
-        
+
     for cust in CUSTOMER_PERSONAS:
         w = cust['aspectWeights']
         items = []
@@ -387,38 +387,38 @@ def evaluate_reco_subset(review_filter_fn, name_label):
             true_u = sum(w[a] * p['trueAspects'][a] for a in ASPECTS)
             pred_s = sum(w[a] * p['predictedAspects'][a] for a in ASPECTS)
             items.append({**p, 'trueUtility': true_u, 'predictedScore': pred_s})
-            
+
         ideal = sorted(items, key=lambda x: x['trueUtility'], reverse=True)
         ideal_rels = [x['trueUtility'] for x in ideal]
-        
+
         reco = sorted(items, key=lambda x: x['predictedScore'], reverse=True)
         reco_rels = [x['trueUtility'] for x in reco]
-        
+
         base = sorted(items, key=lambda x: (x['rating'], x['completedOrders']), reverse=True)
         base_rels = [x['trueUtility'] for x in base]
-        
+
         # P70 utility
         sorted_u = sorted(ideal_rels)
         p70 = sorted_u[int(len(sorted_u) * 0.7)]
-        
+
         k3_ideal = dcg(ideal_rels, 3)
         n3_reco = dcg(reco_rels, 3) / k3_ideal if k3_ideal > 0 else 0
         n3_base = dcg(base_rels, 3) / k3_ideal if k3_ideal > 0 else 0
-        
+
         k5_ideal = dcg(ideal_rels, 5)
         n5_reco = dcg(reco_rels, 5) / k5_ideal if k5_ideal > 0 else 0
         n5_base = dcg(base_rels, 5) / k5_ideal if k5_ideal > 0 else 0
-        
+
         p3_reco = sum(1 for x in reco[:3] if x['trueUtility'] >= p70) / 3
         p3_base = sum(1 for x in base[:3] if x['trueUtility'] >= p70) / 3
-        
+
         ndcg3_list.append(n3_reco)
         ndcg3_base_list.append(n3_base)
         ndcg5_list.append(n5_reco)
         ndcg5_base_list.append(n5_base)
         prec3_list.append(p3_reco)
         prec3_base_list.append(p3_base)
-        
+
     print(f"[{name_label}] ({len(eval_providers)} Providers đánh giá):")
     print(f"  NDCG@3:      Recommender = {np.mean(ndcg3_list):.4f} vs Baseline = {np.mean(ndcg3_base_list):.4f} (Chênh lệch: +{(np.mean(ndcg3_list) - np.mean(ndcg3_base_list))*100:.2f}%)")
     print(f"  NDCG@5:      Recommender = {np.mean(ndcg5_list):.4f} vs Baseline = {np.mean(ndcg5_base_list):.4f} (Chênh lệch: +{(np.mean(ndcg5_list) - np.mean(ndcg5_base_list))*100:.2f}%)")
@@ -454,7 +454,7 @@ for fold, (trn_idx, val_idx) in enumerate(logo.split(X_all, groups=all_providers
         preds = (clf.predict_proba(X_all[val_idx])[:, 1] >= 0.45).astype(int)
         f1s_fold.append(f1_score(y_all_A[val_idx, j], preds, zero_division=0))
     lopo_f1s_A.append(np.mean(f1s_fold))
-    
+
     # Task B
     accs_fold = []
     for a in ASPECTS:
@@ -494,11 +494,11 @@ for a in ASPECTS:
 
 for b_i in range(1000):
     sample_indices = np.random.choice(N_test, size=N_test, replace=True)
-    
+
     # Task A F1 trên sample
     f1_a = np.mean([f1_score(y_test_A[sample_indices, j], p_test_A[sample_indices, j], zero_division=0) for j in range(len(ASPECTS))])
     boot_f1s_A.append(f1_a)
-    
+
     # Task B Accuracy trên sample
     b_accs = []
     for a in ASPECTS:

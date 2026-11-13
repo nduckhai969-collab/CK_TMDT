@@ -241,7 +241,8 @@
         name: thread.name || 'Tài khoản',
         specialty: thread.role || '',
         avatar: thread.avatar || '',
-        lastMsg: thread.lastMessage || ''
+        lastMsg: thread.lastMessage || '',
+        unread: thread.unread || 0
       })));
     }
 
@@ -263,8 +264,11 @@
             <div style="position:absolute; bottom:-1px; right:-1px; width:10px; height:10px; border-radius:50%; background:#22C55E; border:1.5px solid #FFF;"></div>
           </div>
           <div style="flex:1; min-width:0;">
-            <div style="font-weight:700; font-size:13.5px; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
-            <div style="font-size:11.5px; color:#64748B; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.lastMsg}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+              <div style="font-weight:${c.unread > 0 ? '800' : '700'}; font-size:13.5px; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.name}</div>
+              ${c.unread > 0 ? `<span style="flex-shrink:0;background:#16A34A;color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:1px 7px;min-width:18px;text-align:center;">${c.unread > 99 ? '99+' : c.unread}</span>` : ''}
+            </div>
+            <div style="font-size:11.5px; color:${c.unread > 0 ? '#0F172A' : '#64748B'}; font-weight:${c.unread > 0 ? '600' : '400'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.lastMsg}</div>
           </div>
         </div>
       `).join('');
@@ -293,8 +297,20 @@
       document.getElementById('chatInput').placeholder = 'Nhập tin nhắn trao đổi yêu cầu với chuyên gia...';
       document.querySelector('.chat-main > div:last-child').style.display = '';
 
+      // Đánh dấu đã đọc tin nhắn từ partner này
+      markAsRead(partner.id);
       renderConversationsList();
       loadMessages();
+    }
+
+    async function markAsRead(partnerId) {
+      if (!partnerId) return;
+      try {
+        await apiRequest('/api/chat/read', { method: 'POST', body: JSON.stringify({ partnerId }) });
+        // Cập nhật unread về 0 cho contact này trong bộ nhớ
+        const c = contacts.find(x => x.id === partnerId);
+        if (c) c.unread = 0;
+      } catch (e) { /* bỏ qua lỗi */ }
     }
 
     let lastCustomerMsgCount = -1;
@@ -385,6 +401,8 @@
 
       await loadMessages();
       await loadChatThreads();
+      // Đánh dấu đã đọc ngay sau khi gửi (auto-reply sẽ được đọc luôn)
+      if (currentPartner) markAsRead(currentPartner.id);
       renderConversationsList();
     }
   </script>

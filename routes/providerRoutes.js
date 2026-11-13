@@ -9,9 +9,10 @@ const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireProvider, requireSignedIn } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancellation, checkAutoReleaseOrders } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, checkAutoReleaseOrders } = require('../services/orderService');
 const { isVisibleToProvider } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
+const walletService = require('../services/walletService');
 const { attachProviderReputation, addReviewSentimentPoints } = require('../services/providerReputation');
 
 function getMyProvider(req) {
@@ -583,53 +584,19 @@ router.get('/me/orders', requireProvider, (req, res) => {
 });
 
 router.get('/me/wallet', requireProvider, (req, res) => {
-  const provider = getMyProvider(req);
-  const transactions = (db.getCollection('walletTransactions') || []).filter(t => t.userId === req.authUser.id);
-  res.json({ 
-    success: true, 
-    balance: req.authUser.balance || 0,
-    transactions 
-  });
+  const user = (db.getCollection('users') || []).find(row => row.id === req.authUser.id) || req.authUser;
+  getMyProvider(req);
+  res.json({ success: true, wallet: walletService.getWallet(user) });
 });
 
-router.post('/wallet/withdraw', requireProvider, (req, res) => {
-  const { amount, bankCode, bankAccount } = req.body;
-  const numAmount = Number(amount);
-  
-  if (!numAmount || numAmount <= 0) {
-    return res.status(400).json({ success: false, message: 'Số tiền rút không hợp lệ.' });
+router.post('/wallet/withdraw', requireProvider, async (req, res) => {
+  try {
+    const payout = await walletService.requestWithdrawal(req.authUser.id, req.body?.amount);
+    res.json({ success: true, message: 'Đã gửi yêu cầu rút tiền. Số tiền được giữ trong lúc chờ Admin xử lý.', payout });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể lưu yêu cầu rút tiền lúc này.' });
   }
-  
-  if (req.authUser.balance < numAmount) {
-    return res.status(400).json({ success: false, message: 'Số dư không đủ để rút.' });
-  }
-  
-  // Trừ tiền user
-  const users = db.getCollection('users');
-  const userIndex = users.findIndex(u => u.id === req.authUser.id);
-  if (userIndex !== -1) {
-    users[userIndex].balance -= numAmount;
-    db.saveCollection('users', users);
-  }
-  
-  // Ghi log giao dịch
-  const transactions = db.getCollection('walletTransactions') || [];
-  transactions.unshift({
-    id: generateId('TXN'),
-    userId: req.authUser.id,
-    type: 'withdraw',
-    amount: numAmount,
-    status: 'pending',
-    bankCode,
-    bankAccount,
-    createdAt: formatDateTime(new Date()),
-    description: `Yêu cầu rút ${numAmount.toLocaleString('vi-VN')}đ về ngân hàng`
-  });
-  db.saveCollection('walletTransactions', transactions);
-  
-  res.json({ success: true, message: 'Đã gửi yêu cầu rút tiền thành công!' });
 });
-
 // ---- Thao tác đơn hàng của người bán (đường dẫn mà provider.js đang gọi) ----
 function orderAction(handler) {
   return (req, res) => {
@@ -646,7 +613,7 @@ router.post('/orders/:id/deliver', requireProvider, orderAction(req => processDe
 router.post('/orders/:id/progress', requireProvider, orderAction(req => processProgressOrder(req.params.id, req.authUser.id, req.body)));
 router.post('/orders/:id/reject', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason)));
 router.post('/orders/:id/cancel', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason)));
-router.post('/orders/:id/cancellation-response', requireProvider, orderAction(req => processRespondCancellation(req.params.id, req.authUser.id, 'Provider', req.body.approve === true, req.body.reason)));
+router.post('/orders/:id/cancellation-response', requireProvider, (req, res) => res.status(410).json({ success: false, message: 'Luồng duyệt yêu cầu hủy đã đóng. Provider có thể tự hủy đơn trong 24 giờ đầu kể từ lúc tạo đơn.' }));
 
 // ---- Đánh giá của tôi + trả lời đánh giá ----
 router.get('/me/reviews', requireProvider, async (req, res) => {
@@ -906,7 +873,12 @@ router.put('/services/:id/request-price', requireProvider, (req, res) => {
 });
 
 router.put('/me/bank-account', requireProvider, (req, res) => {
-  const { bank, account, holder } = req.body;
+  const bank = String(req.body?.bank || '').trim();
+  const account = String(req.body?.account || '').trim();
+  const holder = String(req.body?.holder || '').trim();
+  if (!bank || !account || !holder || bank.length > 100 || account.length > 40 || holder.length > 120) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập hợp lệ tên ngân hàng, số tài khoản và chủ tài khoản.' });
+  }
   const providers = db.getCollection('providers');
   const provider = getMyProvider(req);
   const index = providers.findIndex(p => p.id === provider.id);
@@ -1174,8 +1146,7 @@ router.get('/', async (req, res) => {
     priceRange.max = Math.max(...providerPrices);
   }
 
-  // Main's approval rule controls visibility; HTran's reputation analysis is
-  // attached after filtering so verified providers keep sentiment-based scores.
+  // Chỉ cần verified=true (admin đã duyệt) là hiển thị cho customer
   let providers = allProviders
     .filter(provider => provider.verified === true)
     .map(provider => attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)));
@@ -1276,3 +1247,4 @@ router.get('/', async (req, res) => {
 });
 
 module.exports = router;
+

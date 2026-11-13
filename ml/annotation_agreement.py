@@ -106,7 +106,7 @@ def compute_agreement(file_a, file_b, disagreements_output=None):
     print("-" * 80)
 
     disagreements = []
-    
+
     # 1. Đo lường từng khía cạnh
     aspect_binary_kappas = {}
     aspect_sentiment_kappas = {}

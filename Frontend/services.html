@@ -291,208 +291,216 @@
       setupServiceEvents();
     });
 
-    function renderServicesPage() {
-      const state = getAppState();
+    let allServiceList = [];
 
-      // Tab 1: Active Services
+    // Nạp danh sách dịch vụ THẬT từ DB (không còn dùng state demo localStorage).
+    async function renderServicesPage() {
       const tbodyAll = document.getElementById('all-services-tbody');
+      if (tbodyAll) {
+        tbodyAll.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-secondary);">Đang tải danh sách dịch vụ...</td></tr>`;
+      }
+
+      try {
+        const response = await window.adminApi.getServices();
+        if (!response.success) throw new Error(response.message || 'Không tải được danh sách dịch vụ.');
+        allServiceList = Array.isArray(response.services) ? response.services : [];
+      } catch (error) {
+        if (tbodyAll) {
+          tbodyAll.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--error);">${error.message || 'Không tải được danh sách dịch vụ.'}</td></tr>`;
+        }
+        return;
+      }
+
+      paintAllServices();
+      paintPendingServices();
+      paintPriceChanges();
+      paintLockedServices();
+      updateServiceBadges();
+    }
+
+    function emptyRow(colspan, message) {
+      return `<tr><td colspan="${colspan}" style="text-align:center; padding:24px; color:var(--text-secondary);">${message}</td></tr>`;
+    }
+
+    function serviceRatingBadge(s) {
+      return Number(s.reviewCount) > 0
+        ? `★ ${Number(s.rating).toFixed(1)} (${s.reviewCount} đánh giá)`
+        : 'Chưa có đánh giá';
+    }
+
+    function paintAllServices() {
+      const tbody = document.getElementById('all-services-tbody');
+      if (!tbody) return;
       const q = (document.getElementById('svc-search-input')?.value || '').toLowerCase().trim();
       const cat = document.getElementById('svc-cat-filter')?.value || 'all';
-
-      const activeSvcs = state.services.filter(s => s.status === 'active').filter(s => {
-        const matchQ = s.title.toLowerCase().includes(q) || s.providerName.toLowerCase().includes(q);
+      const list = allServiceList.filter(s => s.status === 'active').filter(s => {
+        const matchQ = String(s.title || '').toLowerCase().includes(q) || String(s.providerName || '').toLowerCase().includes(q);
         const matchCat = (cat === 'all') || (s.category === cat);
         return matchQ && matchCat;
       });
 
-      if (tbodyAll) {
-        if (activeSvcs.length === 0) {
-          tbodyAll.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px; color:var(--text-secondary);">Không tìm thấy dịch vụ phù hợp.</td></tr>`;
-        } else {
-          tbodyAll.innerHTML = activeSvcs.map(s => `
-            <tr>
-              <td><strong>${s.title}</strong></td>
-              <td><span class="badge badge-neutral">${s.category}</span></td>
-              <td>${s.providerName}</td>
-              <td><strong style="color:var(--secondary)">${s.price.toLocaleString('vi-VN')}đ</strong></td>
-              <td>${s.rating}</td>
-              <td><span class="badge badge-success">Đang hiển thị</span></td>
-              <td style="text-align:right">
-                <button class="btn btn-danger-outline btn-xs" onclick="triggerLockService('${s.id}')">Khóa vi phạm</button>
-              </td>
-            </tr>
-          `).join('');
-        }
+      if (list.length === 0) {
+        tbody.innerHTML = emptyRow(7, 'Không tìm thấy dịch vụ phù hợp.');
+        return;
       }
 
-      // Tab 2: Pending Services
-      const pendingSvcs = state.services.filter(s => s.status === 'pending');
-      const badgePending = document.getElementById('tab-badge-pending-svc');
-      if (badgePending) badgePending.textContent = pendingSvcs.length;
+      tbody.innerHTML = list.map(s => `
+        <tr>
+          <td><strong>${s.title}</strong></td>
+          <td><span class="badge badge-neutral">${s.category || '—'}</span></td>
+          <td>${s.providerName}</td>
+          <td><strong style="color:var(--secondary)">${window.adminUtils.formatMoney(s.price)}</strong></td>
+          <td>${serviceRatingBadge(s)}</td>
+          <td><span class="badge badge-success">Đang hiển thị</span></td>
+          <td style="text-align:right">
+            <button class="btn btn-danger-outline btn-xs" onclick="triggerLockService('${s.id}')">Khóa vi phạm</button>
+          </td>
+        </tr>
+      `).join('');
+    }
 
-      const tbodyPending = document.getElementById('pending-services-tbody');
-      if (tbodyPending) {
-        if (pendingSvcs.length === 0) {
-          tbodyPending.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-secondary);">Không có bài đăng mới chờ duyệt.</td></tr>`;
-        } else {
-          tbodyPending.innerHTML = pendingSvcs.map(s => `
-            <tr>
-              <td><strong>${s.title}</strong></td>
-              <td><span class="badge badge-neutral">${s.category}</span></td>
-              <td>${s.providerName}</td>
-              <td><strong style="color:var(--primary)">${s.price.toLocaleString('vi-VN')}đ</strong></td>
-              <td>${s.dateSubmitted || 'Hôm nay'}</td>
-              <td style="text-align:right">
-                <button class="btn btn-primary btn-xs" onclick="approveService('${s.id}')">Duyệt bài đăng</button>
-                <button class="btn btn-danger-outline btn-xs" onclick="rejectService('${s.id}')">Từ chối</button>
-              </td>
-            </tr>
-          `).join('');
-        }
+    function paintPendingServices() {
+      const list = allServiceList.filter(s => s.status === 'pending');
+      const badge = document.getElementById('tab-badge-pending-svc');
+      if (badge) badge.textContent = list.length;
+
+      const tbody = document.getElementById('pending-services-tbody');
+      if (!tbody) return;
+      if (list.length === 0) {
+        tbody.innerHTML = emptyRow(6, 'Không có bài đăng mới chờ duyệt.');
+        return;
       }
 
-      // Tab 3: Price Changes
-      const priceSvcs = state.services.filter(s => s.status === 'price_pending');
-      const badgePrice = document.getElementById('tab-badge-pending-prices');
-      if (badgePrice) badgePrice.textContent = priceSvcs.length;
+      tbody.innerHTML = list.map(s => `
+        <tr>
+          <td><strong>${s.title}</strong></td>
+          <td><span class="badge badge-neutral">${s.category || '—'}</span></td>
+          <td>${s.providerName}</td>
+          <td><strong style="color:var(--primary)">${window.adminUtils.formatMoney(s.price)}</strong></td>
+          <td>${s.dateSubmitted || '—'}</td>
+          <td style="text-align:right">
+            <button class="btn btn-primary btn-xs" onclick="approveService('${s.id}')">Duyệt bài đăng</button>
+            <button class="btn btn-danger-outline btn-xs" onclick="rejectService('${s.id}')">Từ chối</button>
+          </td>
+        </tr>
+      `).join('');
+    }
 
-      const tbodyPrices = document.getElementById('price-changes-tbody');
-      if (tbodyPrices) {
-        if (priceSvcs.length === 0) {
-          tbodyPrices.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-secondary);">Không có yêu cầu điều chỉnh giá nào.</td></tr>`;
-        } else {
-          tbodyPrices.innerHTML = priceSvcs.map(s => `
-            <tr>
-              <td><strong>${s.title}</strong></td>
-              <td>${s.providerName}</td>
-              <td><span style="text-decoration:line-through; color:var(--text-secondary);">${s.price.toLocaleString('vi-VN')}đ</span></td>
-              <td><strong style="color:var(--primary); font-size:14px;">${s.newPrice.toLocaleString('vi-VN')}đ</strong></td>
-              <td>${s.reason}</td>
-              <td style="text-align:right">
-                <button class="btn btn-primary btn-xs" onclick="approvePrice('${s.id}')">Duyệt giá mới</button>
-                <button class="btn btn-danger-outline btn-xs" onclick="rejectPrice('${s.id}')">Từ chối</button>
-              </td>
-            </tr>
-          `).join('');
-        }
+    function paintPriceChanges() {
+      const list = allServiceList.filter(s => s.status === 'price_pending');
+      const badge = document.getElementById('tab-badge-pending-prices');
+      if (badge) badge.textContent = list.length;
+
+      const tbody = document.getElementById('price-changes-tbody');
+      if (!tbody) return;
+      if (list.length === 0) {
+        tbody.innerHTML = emptyRow(6, 'Không có yêu cầu điều chỉnh giá nào.');
+        return;
       }
 
-      // Tab 4: Locked Services
-      const lockedSvcs = state.services.filter(s => s.status === 'locked');
-      const tbodyLocked = document.getElementById('locked-services-tbody');
-      if (tbodyLocked) {
-        if (lockedSvcs.length === 0) {
-          tbodyLocked.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-secondary);">Không có dịch vụ nào đang bị khóa.</td></tr>`;
-        } else {
-          tbodyLocked.innerHTML = lockedSvcs.map(s => `
-            <tr>
-              <td><strong>${s.title}</strong></td>
-              <td>${s.providerName}</td>
-              <td><span style="color:var(--error); font-weight:600;">${s.lockReason}</span></td>
-              <td>Admin Hệ Thống</td>
-              <td>25/04/2025</td>
-              <td style="text-align:right">
-                <button class="btn btn-secondary btn-xs" onclick="unlockService('${s.id}')">Mở khóa lại</button>
-              </td>
-            </tr>
-          `).join('');
-        }
+      tbody.innerHTML = list.map(s => `
+        <tr>
+          <td><strong>${s.title}</strong></td>
+          <td>${s.providerName}</td>
+          <td><span style="text-decoration:line-through; color:var(--text-secondary);">${window.adminUtils.formatMoney(s.price)}</span></td>
+          <td><strong style="color:var(--primary); font-size:14px;">${window.adminUtils.formatMoney(s.newPrice)}</strong></td>
+          <td>${s.reason || '—'}</td>
+          <td style="text-align:right">
+            <button class="btn btn-primary btn-xs" onclick="approvePrice('${s.id}')">Duyệt giá mới</button>
+            <button class="btn btn-danger-outline btn-xs" onclick="rejectPrice('${s.id}')">Từ chối</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function paintLockedServices() {
+      const list = allServiceList.filter(s => s.status === 'locked');
+      const tbody = document.getElementById('locked-services-tbody');
+      if (!tbody) return;
+      if (list.length === 0) {
+        tbody.innerHTML = emptyRow(6, 'Không có dịch vụ nào đang bị khóa.');
+        return;
       }
+
+      tbody.innerHTML = list.map(s => `
+        <tr>
+          <td><strong>${s.title}</strong></td>
+          <td>${s.providerName}</td>
+          <td><span style="color:var(--error); font-weight:600;">${s.lockReason || '—'}</span></td>
+          <td>${s.lockBy || 'Admin Hệ Thống'}</td>
+          <td>${s.lockDate || '—'}</td>
+          <td style="text-align:right">
+            <button class="btn btn-secondary btn-xs" onclick="unlockService('${s.id}')">Mở khóa lại</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateServiceBadges() {
+      const pending = allServiceList.filter(s => s.status === 'pending').length;
+      const pricePending = allServiceList.filter(s => s.status === 'price_pending').length;
+      const sidebarBadge = document.getElementById('badge-service-pending');
+      if (sidebarBadge) sidebarBadge.textContent = pending + pricePending;
     }
 
     function setupServiceEvents() {
       const search = document.getElementById('svc-search-input');
       const cat = document.getElementById('svc-cat-filter');
-      if (search) search.addEventListener('input', renderServicesPage);
-      if (cat) cat.addEventListener('change', renderServicesPage);
+      if (search) search.addEventListener('input', paintAllServices);
+      if (cat) cat.addEventListener('change', paintAllServices);
     }
 
-    function approveService(id) {
-      const state = getAppState();
-      const svc = state.services.find(s => s.id === id);
-      if (svc) {
-        svc.status = 'active';
-        if (window.adminApi) {
-          window.adminApi.approveService(id).catch(console.warn);
-        }
-        saveAppState(state);
-        renderServicesPage();
-        updateSidebarBadges();
-        showToast('Duyệt bài đăng dịch vụ', `Dịch vụ "${svc.title}" đã được hiển thị trên sàn!`, 'success');
-      }
+    // Duyệt thật: gọi API server, chờ kết quả rồi nạp lại danh sách. Không ghi đè state localStorage lên DB nữa.
+    async function approveService(id) {
+      const svc = allServiceList.find(s => s.id === id);
+      const result = await window.adminApi.approveService(id);
+      if (!result || !result.success) return showToast('Không thể duyệt', (result && result.message) || 'Vui lòng thử lại.', 'error');
+      await renderServicesPage();
+      showToast('Duyệt bài đăng dịch vụ', result.message || `Dịch vụ "${svc ? svc.title : ''}" đã được hiển thị trên sàn!`, 'success');
     }
 
-    function rejectService(id) {
-      const state = getAppState();
-      const svc = state.services.find(s => s.id === id);
-      if (svc) {
-        svc.status = 'rejected';
-        saveAppState(state);
-        renderServicesPage();
-        updateSidebarBadges();
-        showToast('Từ chối dịch vụ', `Đã từ chối bài đăng "${svc.title}"`, 'warning');
-      }
+    async function rejectService(id) {
+      const svc = allServiceList.find(s => s.id === id);
+      const reason = window.prompt('Nhập lý do từ chối bài đăng dịch vụ (để Provider biết nội dung cần bổ sung):') || '';
+      if (!reason.trim()) return;
+      const result = await window.adminApi.rejectService(id, reason.trim());
+      if (!result || !result.success) return showToast('Không thể từ chối', (result && result.message) || 'Vui lòng thử lại.', 'error');
+      await renderServicesPage();
+      showToast('Từ chối dịch vụ', `Đã từ chối bài đăng "${svc ? svc.title : ''}".`, 'warning');
     }
 
-    function approvePrice(id) {
-      const state = getAppState();
-      const svc = state.services.find(s => s.id === id);
-      if (svc) {
-        svc.price = svc.newPrice;
-        svc.status = 'active';
-        if (window.adminApi) {
-          window.adminApi.approveServicePrice(id).catch(console.warn);
-        }
-        saveAppState(state);
-        renderServicesPage();
-        updateSidebarBadges();
-        showToast('Duyệt điều chỉnh giá', `Đã cập nhật mức giá mới cho dịch vụ "${svc.title}"!`, 'success');
-      }
+    async function approvePrice(id) {
+      const svc = allServiceList.find(s => s.id === id);
+      const result = await window.adminApi.approveServicePrice(id);
+      if (!result || !result.success) return showToast('Không thể duyệt', (result && result.message) || 'Vui lòng thử lại.', 'error');
+      await renderServicesPage();
+      showToast('Duyệt điều chỉnh giá', result.message || `Đã cập nhật mức giá mới cho dịch vụ "${svc ? svc.title : ''}"!`, 'success');
     }
 
-    function rejectPrice(id) {
-      const state = getAppState();
-      const svc = state.services.find(s => s.id === id);
-      if (svc) {
-        svc.status = 'active';
-        saveAppState(state);
-        renderServicesPage();
-        updateSidebarBadges();
-        showToast('Từ chối điều chỉnh giá', `Đã giữ nguyên bảng giá hiện tại`, 'info');
-      }
+    async function rejectPrice(id) {
+      const svc = allServiceList.find(s => s.id === id);
+      const result = await window.adminApi.rejectServicePrice(id);
+      if (!result || !result.success) return showToast('Không thể từ chối', (result && result.message) || 'Vui lòng thử lại.', 'error');
+      await renderServicesPage();
+      showToast('Từ chối điều chỉnh giá', result.message || `Đã giữ nguyên bảng giá hiện tại cho "${svc ? svc.title : ''}".`, 'info');
     }
 
-    function triggerLockService(id) {
-      const state = getAppState();
-      const svc = state.services.find(s => s.id === id);
-      if (svc) {
-        const reason = prompt('Nhập lý do khóa dịch vụ vi phạm chính sách:', 'Nội dung vi phạm tiêu chuẩn cộng đồng');
-        if (reason) {
-          svc.status = 'locked';
-          svc.lockReason = reason;
-          if (window.adminApi) {
-            window.adminApi.lockService(id, reason).catch(console.warn);
-          }
-          saveAppState(state);
-          renderServicesPage();
-          showToast('Khóa dịch vụ vi phạm', `Đã gỡ dịch vụ "${svc.title}" khỏi sàn.`, 'warning');
-        }
-      }
+    async function triggerLockService(id) {
+      const svc = allServiceList.find(s => s.id === id);
+      const reason = window.prompt('Nhập lý do khóa dịch vụ vi phạm chính sách:', 'Nội dung vi phạm tiêu chuẩn cộng đồng');
+      if (!reason || !reason.trim()) return;
+      const result = await window.adminApi.lockService(id, reason.trim());
+      if (!result || !result.success) return showToast('Không thể khóa', (result && result.message) || 'Vui lòng thử lại.', 'error');
+      await renderServicesPage();
+      showToast('Khóa dịch vụ vi phạm', result.message || `Đã gỡ dịch vụ "${svc ? svc.title : ''}" khỏi sàn.`, 'warning');
     }
 
-    function unlockService(id) {
-      const state = getAppState();
-      const svc = state.services.find(s => s.id === id);
-      if (svc) {
-        svc.status = 'active';
-        svc.lockReason = '';
-        if (window.adminApi) {
-          window.adminApi.unlockService(id).catch(console.warn);
-        }
-        saveAppState(state);
-        renderServicesPage();
-        showToast('Mở khóa dịch vụ', `Dịch vụ "${svc.title}" đã được kích hoạt lại.`, 'success');
-      }
+    async function unlockService(id) {
+      const svc = allServiceList.find(s => s.id === id);
+      const result = await window.adminApi.unlockService(id);
+      if (!result || !result.success) return showToast('Không thể mở khóa', (result && result.message) || 'Vui lòng thử lại.', 'error');
+      await renderServicesPage();
+      showToast('Mở khóa dịch vụ', result.message || `Dịch vụ "${svc ? svc.title : ''}" đã được kích hoạt lại.`, 'success');
     }
   </script>
 </body>

@@ -16,6 +16,13 @@ const aspectColumns = { quality: 'chat_luong', price: 'gia', speed: 'toc_do', at
 const alpha = 0.5;
 const minDocumentFrequency = 2;
 
+function readJsonArrayIfPresent(filePath) {
+  if (!fs.existsSync(filePath)) return [];
+  const rows = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  if (!Array.isArray(rows)) throw new Error(`Expected a JSON array in ${filePath}`);
+  return rows;
+}
+
 function parseCsv(text) {
   const rows = [];
   let row = [], field = '', quoted = false;
@@ -95,8 +102,7 @@ function trainModel(trainingRows) {
   }
   return { version: 1, algorithm: 'multinomial-naive-bayes', classes, alpha, minDocumentFrequency, temperature: 1,
     ngramRange: [1, 2], vocabulary: Object.fromEntries(vocabulary.map((token, index) => [token, index])),
-    priors, likelihoods, trainingCounts: docsByClass, trainingSize: trainingRows.length,
-    trainingSources: ['reviews_labeled.json', 'binh_luan_dich_vu_600_aspect.csv'] };
+    priors, likelihoods, trainingCounts: docsByClass, trainingSize: trainingRows.length };
 }
 
 function trainAspectClassifier(rows, balancedPrior = true) {
@@ -263,18 +269,20 @@ function sha256(file) { return crypto.createHash('sha256').update(fs.readFileSyn
 const sourceRows = parseCsv(fs.readFileSync(csvPath, 'utf8'));
 const validCsv = sourceRows.filter(row => row.text.trim() && classes.includes(row.label.trim().toLowerCase()));
 const grouped = splitCsvRows(validCsv);
-const existing = JSON.parse(fs.readFileSync(reviewPath, 'utf8'))
+const existingReviews = readJsonArrayIfPresent(reviewPath);
+const existing = existingReviews
   .filter(row => row.split === 'train' && classes.includes(row.groundTruth?.overallSentiment))
   .map(row => ({ text: row.content, label: row.groundTruth.overallSentiment, source: 'reviews_labeled.json' }));
 const trainingRows = [...existing, ...grouped.rows.filter(row => row.split === 'train')];
 const validationRows = grouped.rows.filter(row => row.split === 'validation');
 const testRows = [
-  ...JSON.parse(fs.readFileSync(reviewPath, 'utf8'))
+  ...existingReviews
     .filter(row => row.split === 'test' && classes.includes(row.groundTruth?.overallSentiment))
     .map(row => ({ text: row.content, label: row.groundTruth.overallSentiment, source: 'reviews_labeled.json' })),
   ...grouped.rows.filter(row => row.split === 'test')
 ];
 const model = trainModel(trainingRows);
+model.trainingSources = [...(existing.length ? ['reviews_labeled.json'] : []), path.basename(csvPath)];
 const calibration = fitTemperature(model, validationRows);
 const validationMetrics = metrics(validationRows, model);
 const testMetrics = metrics(testRows, model);
@@ -294,7 +302,7 @@ const report = {
   datasetSha256: sha256(csvPath)
 };
 
-const existingAspectRows = JSON.parse(fs.readFileSync(reviewPath, 'utf8'));
+const existingAspectRows = existingReviews;
 const manualAspectSamples = [];
 for (const manualPath of [path.join(root, 'data', 'handwritten', 'annotator_A.csv'), path.join(root, 'data', 'handwritten', 'review_seed.csv')]) {
   if (!fs.existsSync(manualPath)) continue;
@@ -329,7 +337,11 @@ const existingAspectTrain = projectAspectSamples([
 const existingAspectValidation = projectAspectSamples(existingAspectRows.filter(row => row.split === 'val'), 'reviews_labeled.json');
 const existingAspectTest = projectAspectSamples(existingAspectRows.filter(row => row.split === 'test'), 'reviews_labeled.json');
 const aspectModel = { version: 1, algorithm: 'multinomial-naive-bayes', aspectColumns,
-  classes: aspectClasses, models: {}, trainingSources: ['reviews_labeled.json', 'binh_luan_dich_vu_600_aspect.csv'] };
+  classes: aspectClasses, models: {}, trainingSources: [
+    ...(existingAspectRows.length ? ['reviews_labeled.json'] : []),
+    ...(manualAspectSamples.length ? ['handwritten annotations'] : []),
+    path.basename(csvPath)
+  ] };
 const aspectReport = { dataset: path.basename(csvPath), splitCategories: report.categoriesBySplit,
   counts: { train: csvAspectRows.filter(row => row.split === 'train').length,
     validation: csvAspectRows.filter(row => row.split === 'validation').length,

@@ -71,16 +71,16 @@ def remove_accents(text: str) -> str:
 def normalize_text_base(text: str) -> str:
     if not text:
         return ""
-    
+
     # 1. Unicode NFC
     text = unicodedata.normalize('NFC', text)
-    
+
     # 2. Lowercase
     text = text.lower()
-    
+
     # 3. Rút gọn ký tự lặp
     text = RE_REPEATED.sub(r'\1', text)
-    
+
     # 4. Map teencode (theo từ phân cách bởi ranh giới từ hoặc ký tự đặc biệt)
     tokens = re.split(r'(\s+|[^\w\s])', text)
     mapped_tokens = []
@@ -91,7 +91,7 @@ def normalize_text_base(text: str) -> str:
         else:
             mapped_tokens.append(tok)
     text = ''.join(mapped_tokens)
-    
+
     # Chuẩn hóa khoảng trắng
     text = re.sub(r'\s+', ' ', text).strip()
     return text

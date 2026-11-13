@@ -28,6 +28,31 @@ const PORT = process.env.PORT || 3000;
 let server; 
 let stopRecommendationScheduler;
 
+// ============================================================================
+// DỮ LIỆU DEMO CHO CÁC TAB DUYỆT CỦA ADMIN (Dịch vụ chờ duyệt / chờ duyệt giá / bị khóa)
+// Được nạp vào DB khi khởi động để các tab luôn có dữ liệu trưng bày.
+// Chỉ THÊM bản ghi còn thiếu theo ID — tuyệt đối không ghi đè dữ liệu thật.
+// ============================================================================
+const ADMIN_DEMO_SERVICES = [
+  { id: 'SVC006', title: 'Xây dựng ứng dụng di động Flutter đa nền tảng', category: 'IT', providerName: 'Võ Minh Trí', price: 8000000, priceUnit: 'Dự án', duration: '14-21 ngày', status: 'pending', dateSubmitted: '28/04/2025', desc: 'Lập trình ứng dụng Android và iOS với giao diện hiện đại, hiệu năng cao, tích hợp thanh toán.' },
+  { id: 'SVC007', title: 'Dạy Piano và đệm hát cơ bản tại nhà', category: 'Tutor', providerName: 'Hoàng Ánh Tuyết', price: 250000, priceUnit: 'Buổi 60 phút', duration: 'Theo lịch hẹn', status: 'pending', dateSubmitted: '27/04/2025', desc: 'Lộ trình cá nhân hóa cho người mới bắt đầu, dạy đệm hát và cảm âm cơ bản.' },
+  { id: 'SVC008', title: 'Chụp ảnh Profile doanh nhân và Lookbook thời trang', category: 'Design', providerName: 'Đỗ Hùng Dũng', price: 1500000, priceUnit: 'Buổi chụp', duration: '1 ngày', status: 'pending', dateSubmitted: '26/04/2025', desc: 'Retouch chuyên nghiệp, bàn giao ảnh gốc và ảnh đã chỉnh sửa trong 48 giờ.' },
+  { id: 'SVC009', title: 'Bảo trì máy lạnh treo tường Inverter', category: 'Repair', providerName: 'Trần Đình Trọng', price: 150000, newPrice: 220000, priceUnit: 'Lần bảo trì', duration: '60-90 phút', status: 'price_pending', reason: 'Tăng giá do bổ sung nạp gas R32 và vệ sinh dàn nóng nano' },
+  { id: 'SVC010', title: 'Thiết kế giao diện App Mobile (UI/UX)', category: 'Design', providerName: 'Trần Thị Lan', price: 3000000, newPrice: 4000000, priceUnit: 'Dự án', duration: '10 ngày', status: 'price_pending', reason: 'Nâng cấp quy trình bàn giao source Figma đầy đủ Design System' },
+  { id: 'SVC011', title: 'Dịch vụ cài đặt phần mềm hack & can thiệp game', category: 'IT', providerName: 'Đặng Quốc Huy', price: 500000, priceUnit: 'Lần cài', status: 'locked', lockReason: 'Vi phạm nghiêm trọng chính sách bảo mật và pháp luật an ninh mạng', lockBy: 'Admin Hệ Thống', lockDate: '28/04/2025' }
+];
+
+async function seedAdminDemoData() {
+  const services = db.getCollection('services') || [];
+  const existingIds = new Set(services.map(item => String(item.id)));
+  const missing = ADMIN_DEMO_SERVICES.filter(item => !existingIds.has(String(item.id)));
+  if (!missing.length) return 0;
+  services.push(...missing.map(item => ({ ...item })));
+  await db.saveCollectionAndWait('services', services);
+  return missing.length;
+}
+
+
 // 1. CORS Middleware - BẮT BUỘC ĐẶT TRƯỚC TẤT CẢ ROUTES để hỗ trợ WebStorm (port 63342), Live Server (port 5500)
 const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
 app.use(cors({
@@ -185,6 +210,14 @@ db.init().then(async () => {
     }
   } catch (migErr) {
     console.error('[Migration] Lỗi fix provider data:', migErr.message);
+  }
+
+  // Bổ sung dữ liệu demo cho các tab duyệt dịch vụ/giá của Admin (chỉ thêm bản ghi còn thiếu).
+  try {
+    const seededCount = await seedAdminDemoData();
+    if (seededCount) console.log(`[Seed] Đã bổ sung ${seededCount} dịch vụ demo cho các tab duyệt của Admin.`);
+  } catch (seedErr) {
+    console.error('[Seed] Lỗi bổ sung dữ liệu demo:', seedErr.message);
   }
 
   stopRecommendationScheduler = require('./services/recommendationCampaign').startRecommendationScheduler();

@@ -495,11 +495,10 @@ router.post('/providers/:id/approve', async (req, res) => {
   } else {
     provider.verified = true;
     provider.reviewStatus = 'approved';
-    provider.profileCompleted = provider.profileCompleted === true;
-    if (provider.profileCompleted === true) {
-      if (!provider.availabilityStatus || provider.availabilityStatus === 'inactive') provider.availabilityStatus = 'ready';
-    } else {
-      provider.availabilityStatus = 'inactive';
+    // Khi admin duyệt: đánh dấu hồ sơ hoàn chỉnh và sẵn sàng nhận việc
+    provider.profileCompleted = true;
+    if (!provider.availabilityStatus || provider.availabilityStatus === 'inactive') {
+      provider.availabilityStatus = 'ready';
     }
   }
   db.saveCollection('providers', providers);

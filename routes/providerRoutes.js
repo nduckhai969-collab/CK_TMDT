@@ -107,7 +107,7 @@ router.get('/stats', async (req, res) => {
 
 router.get('/featured', async (req, res) => {
   const providers = [...(await db.getCollectionFresh('providers'))]
-    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
+    .filter(provider => provider.verified === true)
     .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
@@ -115,7 +115,7 @@ router.get('/featured', async (req, res) => {
 
 router.get('/newest', async (req, res) => {
   const providers = [...(await db.getCollectionFresh('providers'))]
-    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
+    .filter(provider => provider.verified === true)
     .sort((a, b) => new Date(b.createdAt || b.joinDate || 0) - new Date(a.createdAt || a.joinDate || 0));
   if (providers.every(p => !p.createdAt && !p.joinDate)) providers.reverse();
   res.json({ success: true, providers: providers.slice(0, 6) });
@@ -1174,8 +1174,10 @@ router.get('/', async (req, res) => {
     priceRange.max = Math.max(...providerPrices);
   }
 
+  // Main's approval rule controls visibility; HTran's reputation analysis is
+  // attached after filtering so verified providers keep sentiment-based scores.
   let providers = allProviders
-    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
+    .filter(provider => provider.verified === true)
     .map(provider => attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)));
 
   if (category && category !== 'all') {

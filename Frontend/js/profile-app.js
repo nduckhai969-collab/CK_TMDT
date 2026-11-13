@@ -690,6 +690,7 @@ function renderServicesList(services) {
           <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openEditServiceModal('${s.id}')">
             <i class="fa-solid fa-pen"></i> Chỉnh Sửa
           </button>
+          ${['active', undefined, null].includes(s.status) ? `<button class="btn btn-outline btn-sm" onclick="togglePackageServiceVisibility('${s.id}', 'inactive')"><i class="fa-solid fa-eye-slash"></i> Ẩn</button>` : (s.status === 'inactive' ? `<button class="btn btn-outline btn-sm" onclick="togglePackageServiceVisibility('${s.id}', 'active')"><i class="fa-solid fa-eye"></i> Hiện</button>` : '')}
           <button class="btn btn-outline btn-sm" style="color: var(--danger); border-color: #FECACA;" onclick="deletePackageService('${s.id}')">
             <i class="fa-solid fa-trash"></i> Xóa
           </button>
@@ -697,6 +698,20 @@ function renderServicesList(services) {
       </div>
     `;
   }).join('');
+}
+
+async function togglePackageServiceVisibility(id, status) {
+  try {
+    const result = await window.providerApi.updateService(id, { status });
+    if (!result?.success) {
+      showToast(result?.message || 'Không thể cập nhật trạng thái dịch vụ.');
+      return;
+    }
+    showToast(status === 'inactive' ? 'Đã ẩn dịch vụ khỏi khách hàng.' : 'Đã hiển thị lại dịch vụ.');
+    await loadProviderProfile();
+  } catch (error) {
+    showToast(error?.message || 'Không thể cập nhật trạng thái dịch vụ.');
+  }
 }
 
 function escapeHtml(text) {
@@ -813,10 +828,18 @@ async function savePackageService() {
 
   try {
     if (id) {
-      await window.providerApi.updateService(id, payload);
+      const result = await window.providerApi.updateService(id, payload);
+      if (!result?.success) {
+        showToast(result?.message || 'Không thể cập nhật dịch vụ.');
+        return;
+      }
       showToast('Đã cập nhật gói dịch vụ thành công!');
     } else {
-      await window.providerApi.createService(payload);
+      const result = await window.providerApi.createService(payload);
+      if (!result?.success) {
+        showToast(result?.message || 'Không thể tạo dịch vụ.');
+        return;
+      }
       showToast('Đã tạo gói dịch vụ mới thành công!');
     }
     closeModal('editPackageModal');
@@ -974,6 +997,12 @@ async function loadProviderProfile() {
     if (identityBadge) identityBadge.textContent = p.verified ? 'Đã xác minh' : 'Chưa xác minh';
     const profileIdentityBadge = document.getElementById('profileIdentityBadge');
     if (profileIdentityBadge) profileIdentityBadge.textContent = p.verified ? 'Đã xác minh danh tính' : 'Chưa xác minh danh tính';
+    const packageBadge = document.getElementById('profilePackageBadge');
+    const packageBadgeText = document.getElementById('profilePackageBadgeText');
+    const packageLabels = { PKG_PRO: 'Pro Provider', PKG_VIP: 'VIP Elite' };
+    const activePackageLabel = packageLabels[p.activePackage] || '';
+    if (packageBadge) packageBadge.hidden = !activePackageLabel;
+    if (packageBadgeText) packageBadgeText.textContent = activePackageLabel;
     const bankBadge = document.getElementById('bankAccountBadge');
     if (bankBadge) bankBadge.textContent = p.bankName || p.bankAccount?.bank || 'Chưa cập nhật';
     const vJoin = document.getElementById('viewJoinDate');

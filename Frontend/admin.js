@@ -230,8 +230,8 @@ const STATE = {
       name: 'Gói Doanh Nghiệp (VIP Elite)',
       price: 499000,
       duration: 30,
-      postsCount: 50,
-      features: ['Không giới hạn bài đăng dịch vụ', '10 lượt đẩy tin Hot mỗi tháng', 'Huy hiệu vàng "VIP ELITE"', 'Giảm 4% phí hoa hồng nền tảng', 'Quản lý tài khoản riêng biệt 24/7', 'Báo cáo số liệu chuyên sâu hàng tuần'],
+      postsCount: 0,
+      features: ['Không giới hạn bài đăng dịch vụ', '10 lượt đẩy tin Hot mỗi tháng (7 ngày/lượt)', 'Huy hiệu vàng "VIP ELITE"', 'Giảm phí nền tảng từ 5% còn 1%', 'Không giới hạn lượt chào giá'],
       highlight: false
     }
   ],
@@ -816,7 +816,7 @@ function renderPackages() {
         ${pkg.badgeText ? `<span class="package-tag">${pkg.badgeText}</span>` : ''}
         <div class="package-header">
           <h3>${pkg.name}</h3>
-          <p>Thời hạn: ${pkg.duration} ngày • Tối đa ${pkg.postsCount} bài đăng</p>
+          <p>Thời hạn: ${pkg.duration} ngày • ${Number(pkg.postsCount) > 0 ? `Tối đa ${pkg.postsCount} dịch vụ` : 'Không giới hạn dịch vụ'}</p>
         </div>
         <div class="package-price">
           <strong>${pkg.price === 0 ? 'Miễn phí' : pkg.price.toLocaleString('vi-VN') + 'đ'}</strong>
@@ -1454,9 +1454,19 @@ function rejectSkill(skillId) {
   }
 }
 
-function approveNewService(svcId) {
+async function approveNewService(svcId) {
   const svc = STATE.services.find(s => s.id === svcId);
   if (svc) {
+    try {
+      const result = await window.adminApi?.approveService(svcId);
+      if (!result?.success) {
+        showToast('Không thể duyệt dịch vụ', result?.message || 'Không thể xác nhận duyệt dịch vụ với máy chủ.', 'warning');
+        return;
+      }
+    } catch (error) {
+      showToast('Không thể duyệt dịch vụ', 'Không kết nối được máy chủ. Vui lòng thử lại.', 'warning');
+      return;
+    }
     svc.status = 'active';
     renderServices();
     showToast('Duyệt bài đăng dịch vụ (UC-58)', `Dịch vụ "${svc.title}" đã được hiển thị trên sàn!`, 'success');

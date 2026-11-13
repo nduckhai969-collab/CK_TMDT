@@ -9,6 +9,13 @@ const vnpay = require('../services/vnpayService');
 const { startGatewayCheckout, startGatewayRetry, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
+function getPlatformFeeRate(providerId) {
+  const provider = (db.getCollection('providers') || []).find(item => item.id === providerId || item.userId === providerId);
+  if (!provider || !provider.packageExpiresAt || Date.parse(provider.packageExpiresAt) <= Date.now()) return 0.05;
+  const discount = provider.activePackage === 'PKG_PRO' ? 0.02 : provider.activePackage === 'PKG_VIP' ? 0.04 : 0;
+  return Math.max(0, 0.05 - discount);
+}
+
 // Tự động đồng bộ và sinh đơn chờ thanh toán cho các Yêu cầu (Job Request) đã chốt chuyên gia nhưng chưa có đơn hàng
 async function syncPendingJobOrders(customerId, customerUid = null) {
   if (!customerId) return;
@@ -48,7 +55,7 @@ async function syncPendingJobOrders(customerId, customerUid = null) {
     const priceNum = Number(String(applicant.proposedPriceNum || applicant.proposedPrice || '').replace(/[^0-9]/g, '')) || 0;
     if (priceNum <= 0) continue;
 
-    const platformFee = Math.round(priceNum * 0.05);
+    const platformFee = Math.round(priceNum * getPlatformFeeRate(provider.id));
     const escrowDeposit = priceNum + platformFee;
     const now = new Date();
     const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -385,7 +392,7 @@ router.post('/', requireCustomer, async (req, res) => {
     priceNum = Number(service.price) * hours;
   }
 
-  const platformFee = Math.round(priceNum * 0.05); // 5% escrow protection & platform fee
+  const platformFee = Math.round(priceNum * getPlatformFeeRate(providerId));
   const escrowDeposit = priceNum + platformFee;
 
   const users = db.getCollection('users');

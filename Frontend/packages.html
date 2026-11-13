@@ -273,7 +273,7 @@
 
           <div class="package-header">
             <h3>${pkg.name}</h3>
-            <p>Thời hạn: ${pkg.duration} ngày • Tối đa ${pkg.postsCount} bài đăng</p>
+            <p>Thời hạn: ${pkg.duration} ngày • ${Number(pkg.postsCount) > 0 ? `Tối đa ${pkg.postsCount} dịch vụ` : 'Không giới hạn dịch vụ'}</p>
           </div>
           <div class="package-price">
             <strong>${pkg.price === 0 ? 'Miễn phí' : pkg.price.toLocaleString('vi-VN') + 'đ'}</strong>
@@ -356,7 +356,7 @@
           </div>
           <div>
             <span class="form-label" style="margin-bottom:2px;">Số lượt đăng bài tối đa:</span>
-            <strong style="font-size:14px; color:var(--secondary);">${pkg.postsCount} bài</strong>
+            <strong style="font-size:14px; color:var(--secondary);">${Number(pkg.postsCount) > 0 ? `${pkg.postsCount} dịch vụ` : 'Không giới hạn'}</strong>
           </div>
           <div>
             <span class="form-label" style="margin-bottom:2px;">Nhãn nổi bật:</span>

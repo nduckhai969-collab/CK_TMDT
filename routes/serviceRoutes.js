@@ -47,6 +47,9 @@ router.get('/', (req, res) => {
     services.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   }
 
+  const now = Date.now();
+  services.sort((a, b) => Number(Date.parse(b.boostedUntil || '') > now) - Number(Date.parse(a.boostedUntil || '') > now));
+
   res.json({
     success: true,
     total: services.length,

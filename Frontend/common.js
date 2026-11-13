@@ -215,7 +215,7 @@ const DEFAULT_STATE = {
       price: 199000,
       duration: 30,
       postsCount: 15,
-      features: ['Đăng tối đa 15 dịch vụ kỹ năng', '3 lượt đẩy tin lên Top tìm kiếm mỗi tháng', 'Gắn huy hiệu uy tín "PRO PROVIDER"', 'Giảm 2% phí hoa hồng nền tảng', 'Ưu tiên hiển thị kết quả tìm kiếm'],
+      features: ['Đăng tối đa 15 dịch vụ kỹ năng', '3 lượt đẩy tin lên Top tìm kiếm mỗi tháng (7 ngày/lượt)', 'Gắn huy hiệu uy tín "PRO PROVIDER"', 'Giảm phí nền tảng từ 5% còn 3%', 'Ưu tiên hiển thị trong thời gian đẩy tin'],
       highlight: true,
       badgeText: 'PHỔ BIẾN NHẤT'
     },
@@ -224,8 +224,8 @@ const DEFAULT_STATE = {
       name: 'Gói Doanh Nghiệp (VIP Elite)',
       price: 499000,
       duration: 30,
-      postsCount: 50,
-      features: ['Không giới hạn bài đăng dịch vụ', '10 lượt đẩy tin Hot mỗi tháng', 'Huy hiệu vàng "VIP ELITE"', 'Giảm 4% phí hoa hồng nền tảng', 'Quản lý tài khoản riêng biệt 24/7', 'Báo cáo số liệu chuyên sâu hàng tuần'],
+      postsCount: 0,
+      features: ['Không giới hạn bài đăng dịch vụ', '10 lượt đẩy tin Hot mỗi tháng (7 ngày/lượt)', 'Huy hiệu vàng "VIP ELITE"', 'Giảm phí nền tảng từ 5% còn 1%', 'Không giới hạn lượt chào giá'],
       highlight: false
     }
   ],

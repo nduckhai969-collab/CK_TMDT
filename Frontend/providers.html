@@ -45,11 +45,11 @@
         </a>
 
         <div class="menu-label">QUẢN LÝ PROVIDER</div>
-        <a class="menu-item" href="providers.html">
+        <a class="menu-item active" href="providers.html">
           <span class="menu-icon">♙</span>
           <span>Tất cả Provider</span>
         </a>
-        <a class="menu-item active" href="providers.html?tab=pending">
+        <a class="menu-item" href="providers.html?tab=pending">
           <span class="menu-icon">✓</span>
           <span>Duyệt Provider &amp; Hồ sơ</span>
           <span class="badge-count" id="badge-provider-pending">4</span>
@@ -143,7 +143,10 @@
 
         <!-- Subtabs -->
         <div class="subtabs">
-          <button class="subtab-btn active" data-subtab="tab-pending">
+          <button class="subtab-btn active" data-subtab="tab-all">
+            <span>Danh sách tất cả Provider</span>
+          </button>
+          <button class="subtab-btn" data-subtab="tab-pending">
             <span>Hồ sơ chờ xét duyệt</span>
             <span class="tab-badge" id="tab-badge-pending-prov">4</span>
           </button>
@@ -151,13 +154,10 @@
             <span>Duyệt kỹ năng &amp; Chứng chỉ</span>
             <span class="tab-badge" id="tab-badge-pending-sk">3</span>
           </button>
-          <button class="subtab-btn" data-subtab="tab-all">
-            <span>Danh sách tất cả Provider</span>
-          </button>
         </div>
 
         <!-- Tab 1: Pending Approvals -->
-        <div class="subtab-content active" id="tab-pending">
+        <div class="subtab-content" id="tab-pending">
           <div class="card">
             <div class="panel-header">
               <div>
@@ -218,7 +218,7 @@
         </div>
 
         <!-- Tab 3: All Active Providers -->
-        <div class="subtab-content" id="tab-all">
+        <div class="subtab-content active" id="tab-all">
           <div class="card">
             <div class="filter-toolbar" style="margin-bottom:14px;">
               <div class="search-input-wrap">
@@ -273,13 +273,20 @@
   <script>
     let activeApprovalId = null;
     let pendingProviderApplications = [];
+    let pendingSkillList = [];
+    let allProviderList = [];
 
     document.addEventListener('DOMContentLoaded', () => {
+      renderAllProviders();
       renderPendingProviders();
       renderSkillApprovals();
-      renderAllProviders();
       setupApprovalEvents();
+      setupProviderSearch();
     });
+
+    function initialsOf(name) {
+      return String(name || '?').trim().split(/\s+/).map(n => n[0]).slice(-2).join('').toUpperCase();
+    }
 
     async function renderPendingProviders() {
       const tbody = document.getElementById('pending-prov-tbody');
@@ -329,14 +336,27 @@
       `).join('');
     }
 
-    function renderSkillApprovals() {
-      const state = getAppState();
-      const skills = state.skillApprovals.filter(s => s.status === 'pending');
-      const badge = document.getElementById('tab-badge-pending-sk');
-      if (badge) badge.textContent = skills.length;
-
+    // Duyệt Kỹ năng & Chứng chỉ: tải danh sách THẬT từ DB thay vì dữ liệu demo localStorage.
+    async function renderSkillApprovals() {
       const tbody = document.getElementById('pending-skills-tbody');
       if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-secondary)">Đang tải chứng chỉ chờ duyệt...</td></tr>`;
+
+      let skills = [];
+      try {
+        const response = await window.adminApi.getPendingSkills();
+        if (!response.success) throw new Error(response.message || 'Không tải được chứng chỉ chờ duyệt.');
+        skills = (Array.isArray(response.skillApprovals) ? response.skillApprovals : []).filter(s => s.status === 'pending');
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#b91c1c">${error.message || 'Không tải được chứng chỉ chờ duyệt.'}</td></tr>`;
+        return;
+      }
+
+      pendingSkillList = skills;
+      const badge = document.getElementById('tab-badge-pending-sk');
+      if (badge) badge.textContent = skills.length;
+      const sidebarBadge = document.getElementById('badge-skill-pending');
+      if (sidebarBadge) sidebarBadge.textContent = skills.length;
 
       if (skills.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-secondary);">Không có kỹ năng nào đang chờ kiểm duyệt.</td></tr>`;
@@ -345,11 +365,11 @@
 
       tbody.innerHTML = skills.map(s => `
         <tr>
-          <td><strong>${s.providerName}</strong></td>
-          <td><span class="badge badge-purple">${s.skillName}</span></td>
-          <td>${s.certTitle}</td>
-          <td>${s.issuer}</td>
-          <td>${s.date}</td>
+          <td><strong>${s.providerName || 'Provider'}</strong></td>
+          <td><span class="badge badge-purple">${s.skillName || '—'}</span></td>
+          <td>${s.certTitle || '—'}</td>
+          <td>${s.issuer || '—'}</td>
+          <td>${s.date || '—'}</td>
           <td><span class="badge badge-warning">Chờ kiểm duyệt</span></td>
           <td style="text-align:right">
             <button class="btn btn-primary btn-xs" onclick="approveSkill('${s.id}')">Duyệt & Cấp huy hiệu</button>
@@ -359,33 +379,75 @@
       `).join('');
     }
 
-    function renderAllProviders() {
-      const state = getAppState();
-      const providers = state.users.filter(u => u.role === 'Provider');
+    // Tab mặc định: danh sách TẤT CẢ Provider lấy từ DB (không dùng dữ liệu demo localStorage).
+    async function renderAllProviders() {
       const tbody = document.getElementById('all-prov-tbody');
       if (!tbody) return;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-secondary)">Đang tải danh sách Provider...</td></tr>`;
 
-      tbody.innerHTML = providers.map(p => `
+      try {
+        const response = await window.adminApi.getAllProviders();
+        if (!response.success) throw new Error(response.message || 'Không tải được danh sách Provider.');
+        allProviderList = Array.isArray(response.providers) ? response.providers : [];
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#b91c1c">${error.message || 'Không tải được danh sách Provider.'}</td></tr>`;
+        return;
+      }
+      paintAllProviders();
+    }
+
+    function providerStatusBadge(p) {
+      if (!p.verified) {
+        return p.reviewStatus === 'rejected'
+          ? '<span class="badge badge-danger">Đã từ chối</span>'
+          : '<span class="badge badge-warning">Chờ xét duyệt</span>';
+      }
+      return p.availabilityStatus === 'inactive'
+        ? '<span class="badge badge-neutral">Tạm ngưng</span>'
+        : '<span class="badge badge-success">Đang hoạt động</span>';
+    }
+
+    function paintAllProviders() {
+      const tbody = document.getElementById('all-prov-tbody');
+      if (!tbody) return;
+      const keyword = (document.getElementById('active-prov-search')?.value || '').trim().toLowerCase();
+      const rows = allProviderList.filter(p => {
+        if (!keyword) return true;
+        return [p.name, p.specialty, p.category, p.location, p.email, p.phone, p.id]
+          .some(value => String(value || '').toLowerCase().includes(keyword));
+      });
+
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-secondary);">${allProviderList.length === 0 ? 'Chưa có Provider nào trên hệ thống.' : 'Không tìm thấy Provider phù hợp.'}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map(p => `
         <tr>
           <td>
             <div class="user-cell">
-              <div class="avatar-sm green">${p.name.split(' ').map(n=>n[0]).slice(-2).join('')}</div>
+              <div class="avatar-sm green">${initialsOf(p.name)}</div>
               <div class="user-cell-meta">
                 <strong>${p.name}</strong>
-                <span>${p.email}</span>
+                <span>${p.email || p.phone || p.id}</span>
               </div>
             </div>
           </td>
-          <td>Kỹ năng chuyên môn / Dịch vụ</td>
-          <td>★ 4.88 (98 đánh giá)</td>
-          <td><strong>86 đơn hoàn tất</strong></td>
-          <td>${p.spentOrEarned}</td>
-          <td><span class="badge badge-success">Đang hoạt động</span></td>
+          <td>${p.specialty || p.category || 'Chưa khai báo'}</td>
+          <td>${p.reviewCount > 0 ? `★ ${p.rating.toFixed(2)} (${p.reviewCount} đánh giá)` : 'Chưa có đánh giá'}</td>
+          <td><strong>${p.completedOrders} đơn hoàn tất</strong></td>
+          <td>${window.adminUtils.formatMoney(p.earnings)}</td>
+          <td>${providerStatusBadge(p)}</td>
           <td style="text-align:right">
             <a href="users.html" class="btn btn-secondary btn-xs">Xem chi tiết</a>
           </td>
         </tr>
       `).join('');
+    }
+
+    function setupProviderSearch() {
+      const input = document.getElementById('active-prov-search');
+      if (input) input.addEventListener('input', paintAllProviders);
     }
 
     function openApprovalModal(appId) {
@@ -451,34 +513,27 @@
       });
     }
 
-    function approveSkill(skillId) {
-      const state = getAppState();
-      const skill = state.skillApprovals.find(s => s.id === skillId);
-      if (skill) {
-        skill.status = 'approved';
-        if (window.adminApi) {
-          window.adminApi.approveSkill(skillId).catch(console.warn);
-        }
-        saveAppState(state);
-        renderSkillApprovals();
-        updateSidebarBadges();
-        showToast('Duyệt kỹ năng thành công', `Đã cấp huy hiệu Verified Skill cho ${skill.providerName}!`, 'success');
+    // Duyệt thật: gọi API server, chờ kết quả rồi nạp lại danh sách. Không ghi đè state localStorage lên DB nữa.
+    async function approveSkill(skillId) {
+      const skill = pendingSkillList.find(s => s.id === skillId);
+      const result = await window.adminApi.approveSkill(skillId);
+      if (!result || !result.success) {
+        return showToast('Không thể duyệt', (result && result.message) || 'Vui lòng thử lại.', 'error');
       }
+      await renderSkillApprovals();
+      showToast('Duyệt kỹ năng thành công', result.message || `Đã cấp huy hiệu Verified Skill cho ${skill ? skill.providerName : 'Provider'}!`, 'success');
     }
 
-    function rejectSkill(skillId) {
-      const state = getAppState();
-      const skill = state.skillApprovals.find(s => s.id === skillId);
-      if (skill) {
-        skill.status = 'rejected';
-        if (window.adminApi) {
-          window.adminApi.rejectSkill(skillId).catch(console.warn);
-        }
-        saveAppState(state);
-        renderSkillApprovals();
-        updateSidebarBadges();
-        showToast('Từ chối chứng chỉ', `Đã từ chối cấp chứng nhận cho ${skill.skillName}`, 'warning');
+    async function rejectSkill(skillId) {
+      const skill = pendingSkillList.find(s => s.id === skillId);
+      const reason = window.prompt('Nhập lý do từ chối chứng chỉ (để Provider biết nội dung cần bổ sung):') || '';
+      if (!reason.trim()) return;
+      const result = await window.adminApi.rejectSkill(skillId, reason.trim());
+      if (!result || !result.success) {
+        return showToast('Không thể từ chối', (result && result.message) || 'Vui lòng thử lại.', 'error');
       }
+      await renderSkillApprovals();
+      showToast('Từ chối chứng chỉ', `Đã từ chối cấp chứng nhận cho ${skill ? skill.skillName : 'kỹ năng'}.`, 'warning');
     }
   </script>
 </body>

@@ -677,15 +677,54 @@ function showToast(title, message, type = 'success') {
 }
 
 /**
+ * Các hàm hỗ trợ lọc ngày cho báo cáo xuất file (UC-67)
+ */
+function _reportParseDate(val, isEnd) {
+  if (!val) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(val));
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (isEnd) d.setHours(23, 59, 59, 999); else d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function _reportToDate(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmy) return new Date(+dmy[3], +dmy[2] - 1, +dmy[1]);
+  const ymd = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (ymd) return new Date(+ymd[1], +ymd[2] - 1, +ymd[3]);
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function _reportInRange(start, end) {
+  return (dateStr) => {
+    if (!start && !end) return true;
+    const d = _reportToDate(dateStr);
+    if (!d) return true; // bản ghi thiếu ngày: giữ lại để không mất dữ liệu
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  };
+}
+
+/**
  * exportDataSimulation — Xuất dữ liệu thực tế từ localStorage ra file CSV
  * Hỗ trợ 3 loại báo cáo: đơn hàng, người dùng, và doanh thu.
+ * Tham số options (tùy chọn): { from, to, segment, orderStatus } để lọc theo thời gian/phân khúc.
  * Không phụ thuộc vào dịch vụ bên ngoài.
  */
-function exportDataSimulation(filename) {
+function exportDataSimulation(filename, options) {
   showToast('Xuất báo cáo (UC-67)', `Đang tạo tệp [${filename}.csv] từ dữ liệu hệ thống...`, 'info');
 
   setTimeout(() => {
     const state = getAppState();
+    const opts = options || {};
+    const rangeStart = _reportParseDate(opts.from, false);
+    const rangeEnd = _reportParseDate(opts.to, true);
+    const inRange = _reportInRange(rangeStart, rangeEnd);
     let csvRows = [];
     let recordCount = 0;
 
@@ -693,8 +732,13 @@ function exportDataSimulation(filename) {
     const nameLower = filename.toLowerCase();
 
     if (nameLower.includes('don_hang') || nameLower.includes('orders') || nameLower.includes('bao_cao_don')) {
-      // Báo cáo đơn hàng
-      const orders = Array.isArray(state.orders) ? state.orders : [];
+      // Báo cáo đơn hàng (lọc theo thời gian + trạng thái nếu có)
+      let orders = (Array.isArray(state.orders) ? state.orders : []).filter(o => inRange(o.date));
+      if (opts.orderStatus === 'completed') {
+        orders = orders.filter(o => o.orderStatus === 'completed');
+      } else if (opts.orderStatus === 'disputed') {
+        orders = orders.filter(o => ['disputed', 'cancel_requested', 'cancel_rejected'].includes(o.orderStatus));
+      }
       csvRows.push(['Mã đơn hàng', 'Khách hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn', 'Trạng thái Escrow', 'Trạng thái đơn', 'Ngày tạo', 'Hạn chót']);
       orders.forEach(o => {
         const statusText = {
@@ -709,8 +753,13 @@ function exportDataSimulation(filename) {
       recordCount = orders.length;
 
     } else if (nameLower.includes('nguoi_dung') || nameLower.includes('users')) {
-      // Báo cáo người dùng
-      const users = Array.isArray(state.users) ? state.users : [];
+      // Báo cáo người dùng (lọc theo phân khúc + thời gian tham gia)
+      let users = (Array.isArray(state.users) ? state.users : []).filter(u => inRange(u.joinDate));
+      if (opts.segment === 'active-providers') {
+        users = users.filter(u => u.role === 'Provider' && u.status === 'active');
+      } else if (opts.segment === 'locked') {
+        users = users.filter(u => u.status === 'locked');
+      }
       csvRows.push(['Mã người dùng', 'Họ tên', 'Email', 'Số điện thoại', 'Vai trò', 'Ngày tham gia', 'Doanh thu/Chi tiêu', 'Trạng thái', 'Lý do khóa']);
       users.forEach(u => {
         csvRows.push([
@@ -722,8 +771,8 @@ function exportDataSimulation(filename) {
       recordCount = users.length;
 
     } else if (nameLower.includes('doanh_thu') || nameLower.includes('revenue') || nameLower.includes('doanh thu')) {
-      // Báo cáo doanh thu - tổng hợp từ đơn hàng
-      const orders = Array.isArray(state.orders) ? state.orders : [];
+      // Báo cáo doanh thu - tổng hợp từ đơn hàng (lọc theo thời gian)
+      const orders = (Array.isArray(state.orders) ? state.orders : []).filter(o => inRange(o.date));
       csvRows.push(['Mã đơn hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn (VNĐ)', 'Phí hoa hồng 10% (VNĐ)', 'Trạng thái đơn', 'Ngày tạo']);
       orders.filter(o => o.orderStatus !== 'cancelled').forEach(o => {
         const rawPrice = String(o.price || '0').replace(/[^\d]/g, '');
@@ -738,8 +787,8 @@ function exportDataSimulation(filename) {
       recordCount = csvRows.length - 1;
 
     } else {
-      // Mặc định: xuất toàn bộ đơn hàng
-      const orders = Array.isArray(state.orders) ? state.orders : [];
+      // Mặc định: xuất toàn bộ đơn hàng (lọc theo thời gian)
+      const orders = (Array.isArray(state.orders) ? state.orders : []).filter(o => inRange(o.date));
       csvRows.push(['Mã đơn hàng', 'Khách hàng', 'Provider', 'Dịch vụ', 'Giá trị đơn', 'Trạng thái đơn', 'Ngày tạo']);
       orders.forEach(o => {
         csvRows.push([o.id || '', o.customer || '', o.provider || '', o.service || '', o.price || '', o.orderStatus || '', o.date || '']);

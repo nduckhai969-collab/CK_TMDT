@@ -45,35 +45,37 @@ function transactionAffectsBalance(transaction) {
 }
 
 function reconcileWalletLedger(user, users, transactions) {
-  const ledgerBalance = transactions
+  let ledgerBalance = transactions
     .filter(transaction => transaction.userId === user.id && transactionAffectsBalance(transaction))
     .reduce((sum, transaction) => sum + (Number(transaction.amount) || 0), 0);
   const currentBalance = Number(user.balance) || 0;
   const adjustment = Math.round((currentBalance - ledgerBalance) * 100) / 100;
-  if (!user.walletLedgerInitializedAt || Math.abs(adjustment) >= 1) {
+  if (!user.walletLedgerInitializedAt) {
     if (Math.abs(adjustment) >= 1) {
-      const isInitial = !user.walletLedgerInitializedAt;
       transactions.unshift({
         id: generateId('TXN'),
         userId: user.id,
         providerId: providerForUser(user.id)?.id || user.id,
-        type: isInitial ? 'opening_balance_adjustment' : 'wallet_reconciliation',
+        type: 'opening_balance_adjustment',
         amount: adjustment,
         balanceAfter: currentBalance,
         status: 'completed',
         walletAffectsBalance: true,
-        description: isInitial ? 'Số dư đầu kỳ được đối chiếu với sổ giao dịch.' : 'Điều chỉnh để số dư khớp với sổ giao dịch.',
+        description: 'Số dư đầu kỳ được đối chiếu một lần khi chuyển sang sổ giao dịch.',
         createdAt: formatDateTime(new Date()),
         createdAtISO: new Date().toISOString()
       });
+      ledgerBalance += adjustment;
     }
     user.walletLedgerInitializedAt = new Date().toISOString();
-    user.balance = currentBalance;
-    db.saveCollection('users', users);
     db.saveCollection('walletTransactions', transactions);
-    return currentBalance;
   }
-  return Math.round(ledgerBalance);
+  ledgerBalance = Math.round(ledgerBalance);
+  if (Number(user.balance) !== ledgerBalance) {
+    user.balance = ledgerBalance;
+    db.saveCollection('users', users);
+  }
+  return ledgerBalance;
 }
 
 function getWallet(user) {
@@ -90,11 +92,11 @@ function getWallet(user) {
   const payouts = (db.getCollection('payouts') || [])
     .filter(payout => payout.userId === user.id || providerIds.has(payout.providerId))
     .sort((a, b) => timestampForSort(b) - timestampForSort(a));
-  const cumulativeEarnings = transactions
+  const cumulativeEarnings = Math.max(0, transactions
     .filter(t => ['disbursement', 'earning'].includes(t.type) && t.status === 'completed')
     .reduce((sum, t) => sum + Math.max(0, Number(t.amount) || 0), 0)
     - transactions.filter(t => t.type === 'penalty' && t.status === 'completed')
-      .reduce((sum, t) => sum + Math.abs(Math.min(0, Number(t.amount) || 0)), 0);
+      .reduce((sum, t) => sum + Math.abs(Math.min(0, Number(t.amount) || 0)), 0));
   const escrowHeld = orders
     .filter(o => ['escrow_held', 'disputed'].includes(o.escrowStatus))
     .reduce((sum, o) => sum + Math.max(0, Number(o.escrowDeposit) || Number(o.price) || 0), 0);

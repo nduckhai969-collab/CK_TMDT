@@ -8,6 +8,7 @@
 let currentMode = 'ready';
 let currentProviderData = null;
 let providerServices = [];
+let providerServiceEntitlement = null;
 
 // Tab switching between profile sub-views
 function switchSection(targetId, tabEl) {
@@ -637,12 +638,28 @@ function renderServicesList(services) {
   const container = document.getElementById('packagesContainer');
   if (!container) return;
   const serviceList = Array.isArray(services) ? services : [];
-  const publicCount = serviceList.filter(service => !service.status || service.status === 'active').length;
+  const listedServiceCount = serviceList.filter(service => !['inactive', 'rejected'].includes(service.status)).length;
+  const countedServices = Number.isFinite(Number(providerServiceEntitlement?.activeServiceCount))
+    ? Number(providerServiceEntitlement.activeServiceCount)
+    : listedServiceCount;
+  const serviceLimit = providerServiceEntitlement?.serviceLimit;
   const countLabel = document.getElementById('serviceCountSummary');
   if (countLabel) {
-    countLabel.textContent = publicCount === serviceList.length
-      ? `${publicCount} gói đang hiển thị`
-      : `${publicCount} đang hiển thị · ${serviceList.length} tổng`;
+    if (!providerServiceEntitlement) {
+      countLabel.textContent = `${countedServices} gói đã dùng · chưa kiểm tra hạn mức`;
+    } else if (serviceLimit == null) {
+      countLabel.textContent = `${countedServices} gói đã dùng · không giới hạn`;
+    } else {
+      countLabel.textContent = `${countedServices}/${serviceLimit} gói đã dùng · ${Math.max(0, serviceLimit - countedServices)} còn lại`;
+    }
+  }
+  const createButton = document.getElementById('createProviderServiceButton');
+  const limitReached = providerServiceEntitlement && serviceLimit != null && countedServices >= serviceLimit;
+  if (createButton) {
+    createButton.disabled = !providerServiceEntitlement || Boolean(limitReached);
+    createButton.title = !providerServiceEntitlement
+      ? 'Chưa tải được hạn mức gói dịch vụ.'
+      : limitReached ? 'Đã đạt số lượng gói dịch vụ theo gói đã mua.' : '';
   }
 
   if (serviceList.length === 0) {
@@ -651,7 +668,7 @@ function renderServicesList(services) {
         <i class="fa-solid fa-box-open" style="font-size: 36px; color: var(--text-muted); margin-bottom: 12px;"></i>
         <div style="font-weight: 600; color: var(--secondary);">Chưa có gói dịch vụ nào</div>
         <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Hãy tạo gói dịch vụ đầu tiên để khách hàng có thể đặt lịch ngay!</div>
-        <button class="btn btn-primary btn-sm" style="margin-top: 14px;" onclick="openCreateServiceModal()">
+        <button class="btn btn-primary btn-sm" style="margin-top: 14px;" onclick="openCreateServiceModal()" ${!providerServiceEntitlement || limitReached ? 'disabled' : ''}>
           <i class="fa-solid fa-plus"></i> Tạo Gói Ngay
         </button>
       </div>
@@ -763,6 +780,17 @@ function renderProviderProfileCollections(provider) {
 }
 
 function openCreateServiceModal() {
+  if (!providerServiceEntitlement) {
+    showToast('Chưa tải được hạn mức gói dịch vụ. Vui lòng tải lại trang.');
+    return;
+  }
+  const currentCount = Number.isFinite(Number(providerServiceEntitlement.activeServiceCount))
+    ? Number(providerServiceEntitlement.activeServiceCount)
+    : providerServices.filter(service => !['inactive', 'rejected'].includes(service.status)).length;
+  if (providerServiceEntitlement.serviceLimit != null && currentCount >= providerServiceEntitlement.serviceLimit) {
+    showToast(`Bạn đã dùng hết ${providerServiceEntitlement.serviceLimit} gói dịch vụ theo gói đã mua.`);
+    return;
+  }
   const idEl = document.getElementById('inputPackageId');
   if (idEl) idEl.value = '';
   const titleEl = document.getElementById('inputPackageTitle');
@@ -906,6 +934,18 @@ async function loadProviderProfile() {
 
     currentProviderData = res.provider;
     providerServices = res.services || [];
+
+    providerServiceEntitlement = null;
+    if (window.providerApi.getMyPackage) {
+      try {
+        const packageResult = await window.providerApi.getMyPackage();
+        if (packageResult?.success && packageResult.entitlement) {
+          providerServiceEntitlement = packageResult.entitlement;
+        }
+      } catch (packageError) {
+        console.warn('Không tải được hạn mức gói dịch vụ:', packageError);
+      }
+    }
 
     const p = res.provider;
 

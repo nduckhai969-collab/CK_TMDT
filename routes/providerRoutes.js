@@ -15,6 +15,7 @@ const { replyToReview } = require('../services/reviewService');
 const walletService = require('../services/walletService');
 const platformFundService = require('../services/platformFundService');
 const { attachProviderReputation, addReviewSentimentPoints } = require('../services/providerReputation');
+const providerPackageService = require('../services/providerPackageService');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
 function getMyProvider(req) {
@@ -90,6 +91,34 @@ async function getMyProviderFresh(req) {
     (req.authUser.email && providers.find(p => p.email && p.email.toLowerCase() === req.authUser.email.toLowerCase())) || null;
 }
 
+function addPublicServicePackageSummary(provider, services) {
+  const packages = (services || []).filter(service =>
+    String(service.providerId) === String(provider.id) &&
+    (service.status || 'active') === 'active'
+  );
+  const prices = packages.map(service => Number(service.price)).filter(price => Number.isFinite(price) && price > 0);
+  return {
+    ...provider,
+    servicePackageCount: packages.length,
+    startingPackagePrice: prices.length ? Math.min(...prices) : null
+  };
+}
+
+function normalizePackagePurchaseHistory(purchases, providerId, activePackageId) {
+  const history = (purchases || [])
+    .filter(item => String(item.providerId) === String(providerId))
+    .map(item => ({ ...item }));
+  const latestCurrentPurchase = history.findIndex(item =>
+    item.status === 'Đang hoạt động' && String(item.packageId) === String(activePackageId)
+  );
+  history.forEach((item, index) => {
+    if (item.status === 'Đang hoạt động' && index !== latestCurrentPurchase) {
+      item.status = String(item.packageId) === String(activePackageId) ? 'Đã gia hạn' : 'Đã thay thế';
+    }
+  });
+  return history;
+}
+
 /* ============================================================
    Gói dịch vụ & phí duy trì sàn (dùng chung cho package.html và payment.html)
    Nguồn dữ liệu chung: `packages` (cấu hình), `packagePurchases` (lịch sử mua)
@@ -148,8 +177,15 @@ function activatePackagePurchase(req, pkg, options = {}) {
   }
 
   const now = new Date();
+  const currentEntitlement = providerPackageService.getPlan(provider);
+  const currentExpiry = Date.parse(currentEntitlement.expiresAt || '');
+  const startsAt = currentEntitlement.packageId === pkg.id && Number.isFinite(currentExpiry) && currentExpiry > now.getTime()
+    ? new Date(currentExpiry)
+    : now;
+  const expiresAt = addDays(startsAt, Number(pkg.duration) || 30);
   const paidAt = formatDateTime(now);
-  const expireAt = formatDateTime(addDays(now, Number(pkg.duration) || 30));
+  const activeAt = formatDateTime(startsAt);
+  const expireAt = formatDateTime(expiresAt);
   const method = options.method || 'Số dư ví';
 
   // 1. Trừ tiền ví và ghi lịch sử giao dịch (bỏ qua với gói miễn phí).
@@ -192,7 +228,8 @@ function activatePackagePurchase(req, pkg, options = {}) {
     const badge = PACKAGE_BADGES[pkg.id];
     providers[provIdx].activePackage = pkg.id;
     providers[provIdx].activePackageName = pkg.name;
-    providers[provIdx].packageStartedAt = paidAt;
+    providers[provIdx].packageStartedAt = activeAt;
+    providers[provIdx].packageExpiresAt = expiresAt.toISOString();
     providers[provIdx].packageExpireAt = expireAt;
     if (badge) {
       providers[provIdx].badge = badge;
@@ -203,6 +240,11 @@ function activatePackagePurchase(req, pkg, options = {}) {
 
   // 3. Lưu lịch sử mua gói (dùng chung cho cả 2 trang Provider & Admin).
   const purchases = db.getCollection('packagePurchases') || [];
+  purchases.forEach(item => {
+    if (String(item.providerId) === String(provider.id) && item.status === 'Đang hoạt động') {
+      item.status = String(item.packageId) === String(pkg.id) ? 'Đã gia hạn' : 'Đã thay thế';
+    }
+  });
   const purchaseId = generateId('PKG-ORD');
   purchases.unshift({
     id: purchaseId,
@@ -213,7 +255,8 @@ function activatePackagePurchase(req, pkg, options = {}) {
     amount: price.toLocaleString('vi-VN') + 'đ',
     amountNum: price,
     method,
-    activeDate: paidAt.split(' ')[0],
+    purchaseDate: paidAt,
+    activeDate: activeAt.split(' ')[0],
     expireDate: expireAt.split(' ')[0],
     status: 'Đang hoạt động'
   });
@@ -256,16 +299,20 @@ router.get('/stats', async (req, res) => {
 });
 
 router.get('/featured', async (req, res) => {
-  const providers = [...(await db.getCollectionFresh('providers'))]
+  const [allProviders, services] = await Promise.all([db.getCollectionFresh('providers'), db.getCollectionFresh('services')]);
+  const providers = allProviders
     .filter(provider => provider.verified === true)
+    .map(provider => addPublicServicePackageSummary(provider, services))
     .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
 });
 
 router.get('/newest', async (req, res) => {
-  const providers = [...(await db.getCollectionFresh('providers'))]
+  const [allProviders, services] = await Promise.all([db.getCollectionFresh('providers'), db.getCollectionFresh('services')]);
+  const providers = allProviders
     .filter(provider => provider.verified === true)
+    .map(provider => addPublicServicePackageSummary(provider, services))
     .sort((a, b) => new Date(b.createdAt || b.joinDate || 0) - new Date(a.createdAt || a.joinDate || 0));
   if (providers.every(p => !p.createdAt && !p.joinDate)) providers.reverse();
   res.json({ success: true, providers: providers.slice(0, 6) });
@@ -814,6 +861,26 @@ router.get('/packages', (req, res) => {
   res.json({ success: true, packages });
 });
 
+router.get('/me/package', requireProvider, async (req, res) => {
+  const provider = await getMyProviderFresh(req) || getMyProvider(req);
+  await providerPackageService.repairSameDayRenewals(provider);
+  const entitlement = providerPackageService.getPlan(provider);
+  entitlement.proposalsUsed = providerPackageService.countMonthlyProposals(provider);
+
+  const providerIds = new Set([provider.id, provider.userId, req.authUser.id].filter(Boolean).map(String));
+  const services = await db.getCollectionFresh('services');
+  const activeServiceCount = services.filter(service =>
+    providerIds.has(String(service.providerId)) && !['inactive', 'rejected'].includes(service.status)
+  ).length;
+  const purchases = normalizePackagePurchaseHistory(await db.getCollectionFresh('packagePurchases'), provider.id, entitlement.packageId);
+
+  res.json({
+    success: true,
+    entitlement: { ...entitlement, activeServiceCount },
+    purchases
+  });
+});
+
 // Customer favorites are stored per signed-in customer in the database.
 router.get('/favorites', requireCustomer, (req, res) => {
   const favorites = (db.getCollection('favoriteProviders') || []).filter(item => item.customerId === req.authUser.id);
@@ -895,7 +962,7 @@ router.get('/:id', async (req, res) => {
   const allReviews = await require('./reviewRoutes').refreshStoredReviewAnalyses();
   const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (p.email && p.email.toLowerCase() === req.params.id.toLowerCase()));
   if (!provider || provider.verified !== true) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
-  const services = allServices.filter(s => s.providerId === provider.id && s.status !== 'inactive');
+  const services = allServices.filter(s => s.providerId === provider.id && (s.status || 'active') === 'active');
   const reviews = allReviews.filter(r => r.providerId === provider.id).map(addReviewSentimentPoints);
   res.json({ success: true, provider: attachProviderReputation(provider, reviews), services, reviews });
 });
@@ -1002,10 +1069,24 @@ router.post('/certifications/submit', requireProvider, (req, res) => {
   res.json({ success: true, message: 'Đã gửi chứng chỉ chờ duyệt' });
 });
 
-router.post('/services', requireProvider, (req, res) => {
+router.post('/services', requireProvider, async (req, res) => {
   const serviceData = req.body;
-  const services = db.getCollection('services') || [];
-  const p = getMyProvider(req);
+  const p = await getMyProviderFresh(req) || getMyProvider(req);
+  const entitlement = providerPackageService.getPlan(p);
+  const services = await db.getCollectionFresh('services');
+  const providerIds = new Set([p.id, p.userId, req.authUser.id].filter(Boolean).map(String));
+  const activeServiceCount = services.filter(service =>
+    providerIds.has(String(service.providerId)) && !['inactive', 'rejected'].includes(service.status)
+  ).length;
+  if (entitlement.serviceLimit != null && activeServiceCount >= entitlement.serviceLimit) {
+    return res.status(400).json({
+      success: false,
+      code: 'SERVICE_LIMIT_REACHED',
+      message: `Gói ${entitlement.package?.name || 'hiện tại'} cho phép tối đa ${entitlement.serviceLimit} gói dịch vụ. Bạn đang dùng ${activeServiceCount}.`,
+      serviceLimit: entitlement.serviceLimit,
+      activeServiceCount
+    });
+  }
   const newSvc = {
     ...serviceData,
     id: generateId('SVC'),
@@ -1144,10 +1225,11 @@ router.post(['/packages/purchase-platform', '/packages/platform-fee'], requirePr
 });
 
 // Lịch sử mua gói của Provider đang đăng nhập (trang Gói dịch vụ / Thanh toán & Phí sàn).
-router.get('/packages/purchases', requireProvider, (req, res) => {
-  const provider = getMyProvider(req);
+router.get('/packages/purchases', requireProvider, async (req, res) => {
+  const provider = await getMyProviderFresh(req) || getMyProvider(req);
+  const entitlement = providerPackageService.getPlan(provider);
   // `packagePurchases` luôn unshift bản ghi mới lên đầu nên giữ nguyên thứ tự = mới nhất trước.
-  const purchases = (db.getCollection('packagePurchases') || []).filter(item => item.providerId === provider.id);
+  const purchases = normalizePackagePurchaseHistory(await db.getCollectionFresh('packagePurchases'), provider.id, entitlement.packageId);
   res.json({ success: true, purchases });
 });
 
@@ -1288,13 +1370,21 @@ router.get('/', async (req, res) => {
     limit
   } = req.query;
 
-  const [allProviders, allReviews] = await Promise.all([
+  const [allProviders, allReviews, allServices] = await Promise.all([
     db.getCollectionFresh('providers'),
-    require('./reviewRoutes').refreshStoredReviewAnalyses()
+    require('./reviewRoutes').refreshStoredReviewAnalyses(),
+    db.getCollectionFresh('services')
   ]);
 
-  const providerPrices = allProviders
-    .map(provider => Number(provider.hourlyRate))
+  let providers = allProviders
+    .filter(provider => provider.verified === true)
+    .map(provider => addPublicServicePackageSummary(
+      attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)),
+      allServices
+    ));
+
+  const providerPrices = providers
+    .map(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate))
     .filter(price => Number.isFinite(price) && price >= 0);
 
   let priceRange = { min: 0, max: 0 };
@@ -1304,10 +1394,6 @@ router.get('/', async (req, res) => {
   }
 
   // Chỉ cần verified=true (admin đã duyệt) là hiển thị cho customer
-  let providers = allProviders
-    .filter(provider => provider.verified === true)
-    .map(provider => attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)));
-
   if (category && category !== 'all') {
     const categoryLower = category.toLowerCase().trim();
     providers = providers.filter(provider => {
@@ -1360,14 +1446,14 @@ router.get('/', async (req, res) => {
   if (minPrice !== undefined && minPrice !== '') {
     const minPriceValue = Number(minPrice);
     if (Number.isFinite(minPriceValue)) {
-      providers = providers.filter(provider => Number(provider.hourlyRate || 0) >= minPriceValue);
+      providers = providers.filter(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate ?? 0) >= minPriceValue);
     }
   }
 
   if (maxPrice !== undefined && maxPrice !== '') {
     const maxPriceValue = Number(maxPrice);
     if (Number.isFinite(maxPriceValue)) {
-      providers = providers.filter(provider => Number(provider.hourlyRate || 0) <= maxPriceValue);
+      providers = providers.filter(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate ?? 0) <= maxPriceValue);
     }
   }
 
@@ -1379,9 +1465,9 @@ router.get('/', async (req, res) => {
     providers.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0)
       || Number(b.reputationScore || 0) - Number(a.reputationScore || 0));
   } else if (sort === 'price-asc') {
-    providers.sort((a, b) => Number(a.hourlyRate || 0) - Number(b.hourlyRate || 0));
+    providers.sort((a, b) => Number(a.startingPackagePrice ?? a.hourlyRate ?? 0) - Number(b.startingPackagePrice ?? b.hourlyRate ?? 0));
   } else if (sort === 'price-desc') {
-    providers.sort((a, b) => Number(b.hourlyRate || 0) - Number(a.hourlyRate || 0));
+    providers.sort((a, b) => Number(b.startingPackagePrice ?? b.hourlyRate ?? 0) - Number(a.startingPackagePrice ?? a.hourlyRate ?? 0));
   } else if (sort === 'orders') {
     providers.sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0));
   }

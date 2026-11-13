@@ -548,6 +548,11 @@ window.providerApi = {
     return res.json();
   },
 
+  getMyPackage: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/me/package`, { headers: getAuthHeader() });
+    return res.json();
+  },
+
   purchasePackage: async (packageId) => {
     const res = await fetch(`${API_BASE}/api/providers/packages/purchase`, {
       method: 'POST',
@@ -691,9 +696,50 @@ function updateProviderNavBadges(stats = {}) {
   setProviderNavBadge('complaint.html', stats.unresolvedComplaintsCount);
 }
 
+function ensureProviderLogoutButton() {
+  const profile = document.querySelector('.sidebar-profile');
+  if (profile && profile.querySelector('[data-provider-logout], button[onclick*="handleLogout"]')) return;
+  if (!profile && document.getElementById('providerLogoutButton')) return;
+
+  const button = document.createElement('button');
+  button.id = 'providerLogoutButton';
+  button.type = 'button';
+  button.dataset.providerLogout = 'true';
+  button.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>';
+  button.title = 'Đăng xuất khỏi hệ thống';
+  button.setAttribute('aria-label', 'Đăng xuất');
+  button.style.cssText = profile
+    ? 'background:#FEE2E2;border:1px solid #FCA5A5;color:#DC2626;border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0;'
+    : 'position:fixed;top:18px;right:20px;z-index:1000;background:#FEE2E2;border:1px solid #FCA5A5;color:#DC2626;border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;';
+  button.addEventListener('click', () => {
+    if (typeof window.handleLogout === 'function') window.handleLogout();
+  });
+  if (profile) profile.appendChild(button);
+  else document.body.appendChild(button);
+}
+
 async function updateProviderHeader() {
-  const provider = getCurrentProvider();
+  ensureProviderLogoutButton();
+  let provider = getCurrentProvider();
   if (!provider) return;
+
+  // Session data can outlive profile edits made in another tab. Refresh the
+  // signed-in provider from the API before rendering shared navigation.
+  try {
+    const profile = await window.providerApi.getProfile();
+    if (profile?.success && profile.provider) {
+      provider = { ...provider, ...profile.provider, role: 'Provider' };
+      ['SKILLRENTAL_CURRENT_USER', PROVIDER_SESSION_KEY].forEach(key => {
+        try {
+          const serialized = JSON.stringify(provider);
+          sessionStorage.setItem(key, serialized);
+          localStorage.setItem(key, serialized);
+        } catch (_) {}
+      });
+    }
+  } catch (error) {
+    console.warn('Không thể làm mới hồ sơ Provider cho thanh điều hướng:', error);
+  }
 
   // Update profile in sidebar
   const sidebarName = document.querySelector('.sidebar-profile .profile-name');
@@ -701,6 +747,7 @@ async function updateProviderHeader() {
   const sidebarAvatar = document.querySelector('.sidebar-profile .avatar');
 
   if (sidebarName && provider.name) sidebarName.textContent = provider.name;
+  if (sidebarRole) sidebarRole.textContent = provider.specialty || provider.headline || 'Provider';
   if (sidebarAvatar && provider.avatar) {
     sidebarAvatar.innerHTML = `<img src="${provider.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
   }

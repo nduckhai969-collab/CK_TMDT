@@ -84,7 +84,6 @@
             <button id="boostServiceBtn" class="btn btn-outline btn-sm" type="button" onclick="boostSelectedService()"><i class="fa-solid fa-arrow-up"></i> Đẩy dịch vụ lên Top</button>
             <span id="boostUsageText" style="font-size:12px;color:var(--text-muted)"></span>
           </div>
-          <div id="packagePurchaseHistory" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
         </div>
 
         <div class="grid-3">
@@ -148,6 +147,10 @@
             </div>
           </div>
         </div>
+
+        <div class="card" style="margin-top:24px;">
+          <div id="packagePurchaseHistory"></div>
+        </div>
       </div>
     </main>
   </div>
@@ -179,6 +182,38 @@
       }
     }
 
+    function renderPackagePurchaseHistory(purchases) {
+      const container = document.getElementById('packagePurchaseHistory');
+      const items = Array.isArray(purchases) ? purchases.slice(0, 4) : [];
+      if (!items.length) {
+        container.innerHTML = '<div style="padding:12px 14px;border:1px dashed var(--border-color);border-radius:10px;color:var(--text-muted);font-size:12px">Chưa có giao dịch mua gói.</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px">
+          <strong style="font-size:13px;color:var(--text-main)"><i class="fa-solid fa-receipt" style="color:var(--primary);margin-right:6px"></i>Lịch sử giao dịch</strong>
+          <span style="font-size:11px;color:var(--text-muted)">${items.length} giao dịch gần nhất</span>
+        </div>
+        <div style="display:grid;gap:8px">
+          ${items.map(item => {
+            const isActive = item.status === 'Đang hoạt động';
+            const statusColor = isActive ? '#15803d' : (item.status === 'Đã gia hạn' ? '#1d4ed8' : '#64748b');
+            const statusBg = isActive ? '#f0fdf4' : (item.status === 'Đã gia hạn' ? '#eff6ff' : '#f1f5f9');
+            const purchaseDate = String(item.purchaseDate || item.activeDate || '').split(' ')[0];
+            const period = [item.activeDate, item.expireDate].filter(Boolean).map(escapePackageHtml).join(' → ');
+            return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--border-color);border-radius:10px;background:#fff">
+              <div style="min-width:0;display:grid;gap:4px">
+                <strong style="font-size:12px;color:var(--text-main);overflow:hidden;text-overflow:ellipsis">${escapePackageHtml(item.packageName || 'Gói dịch vụ')}</strong>
+                <span style="font-size:11px;color:var(--text-muted)">${escapePackageHtml(item.amount || '')} · Mua ngày ${escapePackageHtml(purchaseDate || '—')}</span>
+                <span style="font-size:11px;color:var(--text-muted)"><i class="fa-regular fa-calendar" style="margin-right:4px"></i>Hiệu lực: ${period || '—'}</span>
+              </div>
+              <span style="flex:none;padding:4px 8px;border-radius:999px;background:${statusBg};color:${statusColor};font-size:10px;font-weight:700">${escapePackageHtml(item.status || 'Đã ghi nhận')}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }
+
     async function loadPackageState() {
       const details = document.getElementById('activePlanDetails');
       try {
@@ -202,9 +237,7 @@
         boostControls.style.display = currentEntitlement.boostLimit > 0 ? 'flex' : 'none';
         document.getElementById('boostUsageText').textContent = `Còn ${Math.max(0, currentEntitlement.boostLimit - currentEntitlement.boostsUsed)} / ${currentEntitlement.boostLimit} lượt đẩy tháng này`;
         if (currentEntitlement.boostLimit > currentEntitlement.boostsUsed) await loadBoostableServices();
-        document.getElementById('packagePurchaseHistory').innerHTML = (state.purchases || []).length
-          ? `<strong>Lịch sử gói:</strong> ${(state.purchases || []).slice(0, 4).map(item => `${escapePackageHtml(item.packageName)} · ${escapePackageHtml(item.amount)} · ${escapePackageHtml(item.status)}`).join(' &nbsp; | &nbsp; ')}`
-          : 'Chưa có giao dịch mua gói.';
+        renderPackagePurchaseHistory(state.purchases || []);
       } catch (error) {
         details.textContent = error.message || 'Không tải được thông tin gói.';
       }

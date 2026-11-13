@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "providers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "rating", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "providers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "completedOrders", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "services",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "price", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

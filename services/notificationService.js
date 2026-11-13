@@ -2,11 +2,9 @@ const db = require('../data/db');
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
 
-function createNotification(userId, title, message, type = 'info', detailsUrl = '') {
+function buildNotification(userId, title, message, type = 'info', detailsUrl = '') {
   if (!userId) return null;
-  const notifications = db.getCollection('notifications') || [];
-
-  const notif = {
+  return {
     id: generateId('NOTIF'),
     userId,
     title,
@@ -16,6 +14,32 @@ function createNotification(userId, title, message, type = 'info', detailsUrl = 
     isRead: false,
     createdAt: formatDateTime(new Date())
   };
+}
+
+function resolveProviderUserId(providerId) {
+  const provider = (db.getCollection('providers') || []).find(p => p.id === providerId || p.userId === providerId || (p.email && p.email.toLowerCase() === String(providerId).toLowerCase()));
+  let targetUserId = provider?.userId;
+  if (!targetUserId && provider?.email) {
+    const user = (db.getCollection('users') || []).find(x => x.email && x.email.toLowerCase() === provider.email.toLowerCase());
+    if (user) targetUserId = user.id;
+  }
+  return targetUserId || provider?.id || providerId;
+}
+
+function notificationRecords(records = []) {
+  return records.map(record => record.userId
+    ? buildNotification(record.userId, record.title, record.message, record.type, record.detailsUrl)
+    : buildNotification(resolveProviderUserId(record.providerId), record.title, record.message, record.type, record.detailsUrl))
+    .filter(Boolean);
+}
+
+// Use this for APIs that must not report success until all notifications have
+// been committed. The caller may include the returned records in the same
+// saveCollectionsAndWait transaction as its business data.
+function createNotification(userId, title, message, type = 'info', detailsUrl = '') {
+  const notif = buildNotification(userId, title, message, type, detailsUrl);
+  if (!notif) return null;
+  const notifications = db.getCollection('notifications') || [];
 
   notifications.unshift(notif);
   db.saveCollection('notifications', notifications);
@@ -25,9 +49,7 @@ function createNotification(userId, title, message, type = 'info', detailsUrl = 
 // Thông báo được lưu theo id TÀI KHOẢN (USRxxx). Đơn hàng chỉ lưu id hồ sơ người bán (PRVxxx)
 // nên phải đổi sang userId trước khi gửi.
 function notifyProvider(providerId, title, message, type = 'info', detailsUrl = '') {
-  const provider = (db.getCollection('providers') || []).find(p => p.id === providerId || p.userId === providerId || (p.email && p.email.toLowerCase() === String(providerId).toLowerCase()));
-  let targetUserId = provider?.userId; if (!targetUserId && provider?.email) { const u = (db.getCollection('users') || []).find(x => x.email && x.email.toLowerCase() === provider.email.toLowerCase()); if (u) targetUserId = u.id; } if (!targetUserId) targetUserId = provider?.id || providerId; return createNotification(targetUserId, title, message, type, detailsUrl);
-
+  return createNotification(resolveProviderUserId(providerId), title, message, type, detailsUrl);
 }
 
 function getNotifications(userId) {
@@ -59,6 +81,8 @@ function markAllAsRead(userId) {
 }
 
 module.exports = {
+  buildNotification,
+  notificationRecords,
   createNotification,
   notifyProvider,
   getNotifications,

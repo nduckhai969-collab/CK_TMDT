@@ -145,16 +145,41 @@ class SqlDatabase {
   }
 
   async replaceCollection(name, items) {
+    return this.replaceCollections({ [name]: items });
+  }
+
+  async replaceCollections(collections) {
     const connection = await this.pool.getConnection();
     try {
       await connection.beginTransaction();
-      await connection.execute('DELETE FROM app_records WHERE collection_name = ?', [name]);
-      if (items.length) {
-        const values = items.map((item, position) => [name, String(item.id), position, JSON.stringify(item)]);
-        await connection.query('INSERT INTO app_records (collection_name, record_id, position, payload) VALUES ?', [values]);
+      for (const [name, incomingItems] of Object.entries(collections)) {
+        let items = incomingItems;
+        // Orders and order items are append-only business records. A request
+        // can hold an older in-memory snapshot while another request commits;
+        // preserve records already committed instead of replacing them with
+        // that stale snapshot.
+        if (name === 'orders' || name === 'order_items' || name === 'notifications') {
+          const [existingRows] = await connection.execute(
+            'SELECT payload FROM app_records WHERE collection_name = ? ORDER BY position ASC FOR UPDATE',
+            [name]
+          );
+          const existingItems = existingRows.map(row => typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload);
+          const incomingIds = new Set(items.map(item => String(item.id)));
+          const missingItems = existingItems.filter(item => !incomingIds.has(String(item.id)));
+          if (missingItems.length) {
+            items = [...items, ...missingItems];
+            collections[name] = items;
+            this.cache[name] = items;
+          }
+        }
+        await connection.execute('DELETE FROM app_records WHERE collection_name = ?', [name]);
+        if (items.length) {
+          const values = items.map((item, position) => [name, String(item.id), position, JSON.stringify(item)]);
+          await connection.query('INSERT INTO app_records (collection_name, record_id, position, payload) VALUES ?', [values]);
+        }
+        if (name === 'reviews') await persistReviewAnalyses(connection, items);
+        if (name === 'users') await this.syncRelationalUsers(connection, items);
       }
-      if (name === 'reviews') await persistReviewAnalyses(connection, items);
-      if (name === 'users') await this.syncRelationalUsers(connection, items);
       await connection.commit();
     } catch (error) {
       await connection.rollback();
@@ -199,6 +224,46 @@ class SqlDatabase {
     await write;
     if (this.writeErrors > errorsBefore) throw new Error(`MySQL write failed for collection "${name}".`);
     return true;
+  }
+
+  async saveCollectionsAndWait(collections) {
+    if (!collections || typeof collections !== 'object' || Array.isArray(collections)) {
+      throw new TypeError('Collections to save must be an object of arrays.');
+    }
+
+    const prepared = {};
+    const previous = {};
+    for (const [name, items] of Object.entries(collections)) {
+      if (!Array.isArray(items)) throw new TypeError(`Collection "${name}" must be an array.`);
+      previous[name] = this.cache[name];
+      prepared[name] = this.prepare(items);
+      this.cache[name] = prepared[name];
+    }
+
+    const names = Object.keys(prepared);
+    if (!names.length) return true;
+
+    const write = this.queue.then(() => this.replaceCollections(prepared));
+    this.queue = write.catch(error => {
+      this.writeErrors += 1;
+      console.error(`[db] MySQL write failed (${names.join(', ')}):`, error.message);
+    });
+
+    try {
+      await write;
+      return true;
+    } catch (error) {
+      // Keep in-memory reads aligned with the last committed data when this
+      // write failed. Do not roll back a newer write queued after this one.
+      for (const name of names) {
+        if (this.cache[name] === prepared[name]) {
+          if (previous[name] === undefined) delete this.cache[name];
+          else this.cache[name] = previous[name];
+        }
+      }
+      if (!error.status) error.status = 500;
+      throw error;
+    }
   }
 
   prepare(items) {

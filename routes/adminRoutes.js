@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { processReleaseEscrow } = require('../services/orderService');
 const walletService = require('../services/walletService');
+const platformFundService = require('../services/platformFundService');
 const { hashPassword } = require('../utils/authTokens');
 
 function safeAdminUser(u) {
@@ -1311,6 +1312,12 @@ router.post('/payouts/:id/reject', async (req, res) => {
     res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể cập nhật yêu cầu rút tiền.' });
   }
 });
+// Quỹ nền tảng: nơi giữ toàn bộ lợi nhuận của sàn (phí gói, phí duy trì sàn,
+// hoa hồng đơn hoàn tất, tiền phạt hủy đơn) để Admin theo dõi tập trung.
+router.get('/platform-fund', (req, res) => {
+  res.json({ success: true, ...platformFundService.getFund() });
+});
+
 // ============================================================================
 // 11. PACKAGES CONFIGURATION (UC-70)
 // ============================================================================

@@ -507,9 +507,18 @@ window.providerApi = {
     return res.json();
   },
 
+  deleteReviewReply: async (reviewId) => {
+    const res = await fetch(`${API_BASE}/api/providers/reviews/${reviewId}/reply`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    return res.json();
+  },
+
   // Complaints & Disputes (UC-45)
-  getMyComplaints: async () => {
-    const res = await fetch(`${API_BASE}/api/providers/me/complaints`, { headers: getAuthHeader() });
+  getMyComplaints: async (status) => {
+    const url = status ? `${API_BASE}/api/providers/me/complaints?status=${encodeURIComponent(status)}` : `${API_BASE}/api/providers/me/complaints`;
+    const res = await fetch(url, { headers: getAuthHeader() });
     return res.json();
   },
 
@@ -517,17 +526,21 @@ window.providerApi = {
     const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/defense`, {
       method: 'POST',
       headers: getAuthHeader(),
-      body: JSON.stringify({ providerClaim, evidence })
+      body: JSON.stringify({ providerClaim, defenseText: providerClaim, evidence, attachments: evidence })
     });
     return res.json();
   },
 
-  acceptComplaintRefund: async (complaintId) => {
+  acceptRefund: async (complaintId, note) => {
     const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/accept-refund`, {
-      method: 'POST', headers: getAuthHeader()
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ note })
     });
     return res.json();
   },
+
+  acceptComplaintRefund: async (complaintId, note) => window.providerApi.acceptRefund(complaintId, note),
 
   // Packages (UC-46)
   getPackages: async () => {
@@ -541,6 +554,22 @@ window.providerApi = {
       headers: getAuthHeader(),
       body: JSON.stringify({ packageId })
     });
+    return res.json();
+  },
+
+  // Mua gói VIP Partner (duy trì phí sàn) — trừ trực tiếp số dư ví Provider.
+  purchasePlatformFee: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/packages/purchase-platform`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({})
+    });
+    return res.json();
+  },
+
+  // Lịch sử mua gói / gia hạn phí sàn của Provider đang đăng nhập.
+  getPackagePurchases: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/packages/purchases`, { headers: getAuthHeader() });
     return res.json();
   },
 

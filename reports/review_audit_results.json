@@ -1,0 +1,214 @@
+{
+  "leaked_rule_test": {
+    "macro_f1_A": 0.9828000877770464,
+    "micro_f1_A": 0.983739837398374
+  },
+  "indep_rule_val": {
+    "macro_f1_A": 0.6942246362585346,
+    "acc_B": 0.5747348819762613,
+    "macro_f1_B": 0.4137665298677611
+  },
+  "indep_rule_test": {
+    "macro_f1_A": 0.6704196442485363,
+    "acc_B": 0.6256441837732161,
+    "macro_f1_B": 0.40564332617239207
+  },
+  "linear_svm_test": {
+    "macro_f1_A": 0.8506204906204907,
+    "micro_f1_A": 0.853448275862069,
+    "acc_B": 0.775733137829912,
+    "macro_f1_B": 0.5629613442113441
+  },
+  "support_macro_f1_B": {
+    "quality": {
+      "n_samples": 31,
+      "classes_present": [
+        "neg",
+        "pos"
+      ],
+      "f1_per_present_class": {
+        "neg": 0.0,
+        "pos": 0.9122807017543859
+      },
+      "macro_f1_support_gt_0": 0.45614035087719296,
+      "accuracy": 0.8387096774193549
+    },
+    "price": {
+      "n_samples": 33,
+      "classes_present": [
+        "neg",
+        "pos"
+      ],
+      "f1_per_present_class": {
+        "neg": 0.7857142857142857,
+        "pos": 0.8648648648648649
+      },
+      "macro_f1_support_gt_0": 0.8252895752895753,
+      "accuracy": 0.8181818181818182
+    },
+    "speed": {
+      "n_samples": 20,
+      "classes_present": [
+        "neg",
+        "pos"
+      ],
+      "f1_per_present_class": {
+        "neg": 0.75,
+        "pos": 0.9375
+      },
+      "macro_f1_support_gt_0": 0.84375,
+      "accuracy": 0.9
+    },
+    "attitude": {
+      "n_samples": 25,
+      "classes_present": [
+        "neg",
+        "neu",
+        "pos"
+      ],
+      "f1_per_present_class": {
+        "neg": 0.3333333333333333,
+        "neu": 0.7142857142857143,
+        "pos": 0.75
+      },
+      "macro_f1_support_gt_0": 0.5992063492063492,
+      "accuracy": 0.64
+    },
+    "warranty": {
+      "n_samples": 16,
+      "classes_present": [
+        "pos"
+      ],
+      "f1_per_present_class": {
+        "pos": 0.7692307692307693
+      },
+      "macro_f1_support_gt_0": 0.7692307692307693,
+      "accuracy": 0.625
+    }
+  },
+  "mean_support_macro_B": 0.6987234089207773,
+  "warranty_errors": [
+    {
+      "id": "REV_RECO_0083",
+      "providerId": "PRV_RECO_005",
+      "style": "casual",
+      "content": "tay nghề đỉnh chóp, thêm nữa báo giá rất minh bạch và rẻ, nhưng chế độ bảo hành cực kỳ uy tín. Rất xứng đáng với sự tin tưởng.",
+      "true": "pos",
+      "pred": "neg",
+      "probs": {
+        "neg": 0.4391,
+        "neu": 0.1308,
+        "pos": 0.4301
+      }
+    },
+    {
+      "id": "REV_RECO_0086",
+      "providerId": "PRV_RECO_005",
+      "style": "formal",
+      "content": "Kính gửi sàn SkillRental, nói chuyện nhát gừng khó chịu, thêm nữa chăm sóc sau dịch vụ cực kỳ tận tâm, nhưng sản phẩm bàn giao rất ưng ý. Lần sau có việc nhất định sẽ book tiếp.",
+      "true": "pos",
+      "pred": "neg",
+      "probs": {
+        "neg": 0.4927,
+        "neu": 0.1934,
+        "pos": 0.3138
+      }
+    },
+    {
+      "id": "REV_RECO_0094",
+      "providerId": "PRV_RECO_005",
+      "style": "short",
+      "content": "Giá cả quá tốt! 4 sao.",
+      "true": "pos",
+      "pred": "neg",
+      "probs": {
+        "neg": 0.4126,
+        "neu": 0.21,
+        "pos": 0.3774
+      }
+    },
+    {
+      "id": "REV_RECO_0100",
+      "providerId": "PRV_RECO_005",
+      "style": "southern",
+      "content": "Thiệt tình là ưng cái bụng ghê luôn á, hôm nay mới có thời gian viết đánh giá, không để khách phải đợi lâu, kèm theo đó là hậu mãi chu đáo dài lâu. Cực kỳ hài lòng với kết quả. Dễ thương dữ thần nè! 🥰",
+      "true": "pos",
+      "pred": "neu",
+      "probs": {
+        "neg": 0.1933,
+        "neu": 0.4887,
+        "pos": 0.318
+      }
+    },
+    {
+      "id": "REV_RECO_0209",
+      "providerId": "PRV_RECO_011",
+      "style": "formal",
+      "content": "Kính gửi sàn SkillRental, hôm nay mới có thời gian viết đánh giá, chất lượng không như quảng cáo, thêm nữa cực kỳ khó tính và gắt gỏng, nhưng cam kết bảo hành dài hạn.",
+      "true": "pos",
+      "pred": "neg",
+      "probs": {
+        "neg": 0.5575,
+        "neu": 0.1042,
+        "pos": 0.3383
+      }
+    },
+    {
+      "id": "REV_RECO_0213",
+      "providerId": "PRV_RECO_011",
+      "style": "casual",
+      "content": "Đánh giá thật lòng sau khi sử dụng, hỗ trợ chỉnh sửa phát sinh tận tình, mặc dù vậy ăn nói xấc xược coi thường khách. Đúng với mức giá sàn đưa ra.",
+      "true": "pos",
+      "pred": "neu",
+      "probs": {
+        "neg": 0.222,
+        "neu": 0.5127,
+        "pos": 0.2653
+      }
+    }
+  ],
+  "recommender_oof": {
+    "avg_ndcg3": 0.8931042925186516,
+    "avg_base_ndcg3": 0.7810379211525817,
+    "avg_ndcg5": 0.8985923876887556,
+    "avg_base_ndcg5": 0.8376388634123408,
+    "avg_ndcg10": 0.8900209035236957,
+    "avg_base_ndcg10": 0.8514161429595173,
+    "avg_prec3": 0.6666666666666666,
+    "avg_base_prec3": 0.5416666666666666,
+    "avg_prec5": 0.6499999999999999,
+    "avg_base_prec5": 0.625
+  },
+  "recommender_val_test": {
+    "avg_ndcg3": 0.9232507137327493,
+    "avg_base_ndcg3": 0.856515899286144,
+    "avg_ndcg5": 0.9415430648861078,
+    "avg_base_ndcg5": 0.8979399701105866,
+    "avg_prec3": 0.5833333333333333,
+    "avg_base_prec3": 0.4583333333333333
+  },
+  "cv_all_400": {
+    "f1_A_mean": 0.8522563331995888,
+    "f1_A_std": 0.03639757437101557,
+    "acc_B_mean": 0.7553427916655017,
+    "acc_B_std": 0.0796094903637718
+  },
+  "bootstrap_ci_95": {
+    "macro_A": [
+      0.7352179544919151,
+      0.8477422349330884
+    ],
+    "micro_A": [
+      0.7467591289664391,
+      0.8529591104734576
+    ],
+    "acc_B": [
+      0.6725516519902194,
+      0.8622498364195511
+    ],
+    "macro_B_supp": [
+      0.6099550605738836,
+      0.8614768305298027
+    ]
+  }
+}

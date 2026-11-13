@@ -1,0 +1,942 @@
+[
+  {
+    "id": "REV_RECO_0001",
+    "style": "formal",
+    "content": "Kính gửi sàn SkillRental, sửa chữa dứt điểm không bị lại, được cái giao tiếp đúng mực không quá nhiệt tình.",
+    "preprocessed": "kính gửi sàn skillrental, sửa chữa dứt điểm không bị lại, được cái giao tiếp đúng mực không quá nhiệt tình. kinh gui san skillrental, sua chua dut diem khong bi lai, duoc cai giao tiep dung muc khong qua nhiet tinh.",
+    "aspect_probs": {
+      "quality": 0.41941431686997027,
+      "price": 0.1238090043646405,
+      "speed": 0.3261447716855657,
+      "attitude": 0.5958087977129938,
+      "warranty": 0.4444837824972589
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": false,
+      "speed": false,
+      "attitude": true,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.34504932166719066,
+        "neu": 0.3182983102588604,
+        "pos": 0.33665236807394894
+      },
+      "price": {
+        "neg": 0.34960813720463924,
+        "neu": 0.29710701322641825,
+        "pos": 0.35328484956894257
+      },
+      "speed": {
+        "neg": 0.207828625119277,
+        "neu": 0.2267116477268396,
+        "pos": 0.5654597271538835
+      },
+      "attitude": {
+        "neg": 0.07273233753313212,
+        "neu": 0.6945241303685532,
+        "pos": 0.2327435320983146
+      },
+      "warranty": {
+        "neg": 0.41512110105111977,
+        "neu": 0.30710043886968735,
+        "pos": 0.277778460079193
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0002",
+    "style": "southern",
+    "content": "Thiệt tình là ưng cái bụng ghê luôn á, thiết kế sáng tạo độc đáo, tuy nhiên quá chát ví xót cả ruột. Dễ thương dữ thần nè!",
+    "preprocessed": "thiệt tình là ưng cái bụng ghê luôn á, thiết kế sáng tạo độc đáo, tuy nhiên quá chát ví xót cả ruột. dễ thương dữ thần nè! thiet tinh la ung cai bung ghe luon a, thiet ke sang tao doc dao, tuy nhien qua chat vi xot ca ruot. de thuong du than ne!",
+    "aspect_probs": {
+      "quality": 0.4547030292463059,
+      "price": 0.6961098912167804,
+      "speed": 0.36975282650211533,
+      "attitude": 0.27957596501703774,
+      "warranty": 0.45371991725087607
+    },
+    "aspect_preds": {
+      "quality": true,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": true
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.28832309855252525,
+        "neu": 0.35478960549658894,
+        "pos": 0.35688729595088575
+      },
+      "price": {
+        "neg": 0.42077663113160085,
+        "neu": 0.24919651104758725,
+        "pos": 0.3300268578208119
+      },
+      "speed": {
+        "neg": 0.6730173467033105,
+        "neu": 0.07093637814916855,
+        "pos": 0.256046275147521
+      },
+      "attitude": {
+        "neg": 0.21800425388707878,
+        "neu": 0.1510662568982245,
+        "pos": 0.6309294892146967
+      },
+      "warranty": {
+        "neg": 0.22052225552740617,
+        "neu": 0.3302030135467132,
+        "pos": 0.44927473092588055
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0003",
+    "style": "casual",
+    "content": "Lần đầu đặt thử gói này, xong sớm hơn dự kiến. 💯",
+    "preprocessed": "lần đầu đặt thử gói này, xong sớm hơn dự kiến. 💯 lan dau dat thu goi nay, xong som hon du kien. 💯",
+    "aspect_probs": {
+      "quality": 0.18686504082568486,
+      "price": 0.17552985937710805,
+      "speed": 0.7774352326324775,
+      "attitude": 0.05327892760147848,
+      "warranty": 0.3332299484202839
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": false,
+      "speed": true,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.33851408541817996,
+        "neu": 0.3279748732433808,
+        "pos": 0.3335110413384391
+      },
+      "price": {
+        "neg": 0.3449499990188426,
+        "neu": 0.28054273351629616,
+        "pos": 0.37450726746486124
+      },
+      "speed": {
+        "neg": 0.07358652116869509,
+        "neu": 0.009831691957690309,
+        "pos": 0.9165817868736146
+      },
+      "attitude": {
+        "neg": 0.08580331533977513,
+        "neu": 0.28636726416877034,
+        "pos": 0.6278294204914545
+      },
+      "warranty": {
+        "neg": 0.5249587354842032,
+        "neu": 0.13133105341424633,
+        "pos": 0.3437102111015504
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0004",
+    "style": "casual",
+    "content": "kiến thức sâu rộng giảng dạy cuốn hút, tuy nhiên giá cắt cổ so với thị trường. Nói chung dùng tạm thì ổn.",
+    "preprocessed": "kiến thức sâu rộng giảng dạy cuốn hút, tuy nhiên giá cắt cổ so với thị trường. nói chung dùng tạm thì ổn. kien thuc sau rong giang day cuon hut, tuy nhien gia cat co so voi thi truong. noi chung dung tam thi on.",
+    "aspect_probs": {
+      "quality": 0.942356400162784,
+      "price": 0.5505540269992275,
+      "speed": 0.19480370337777414,
+      "attitude": 0.046592745123743055,
+      "warranty": 0.057023212370552745
+    },
+    "aspect_preds": {
+      "quality": true,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.28972662014788336,
+        "neu": 0.3391590615972494,
+        "pos": 0.3711143182548671
+      },
+      "price": {
+        "neg": 0.3741035227638296,
+        "neu": 0.2870625560951814,
+        "pos": 0.338833921140989
+      },
+      "speed": {
+        "neg": 0.6453236104557597,
+        "neu": 0.046583212705279375,
+        "pos": 0.30809317683896087
+      },
+      "attitude": {
+        "neg": 0.08842206381542053,
+        "neu": 0.25672039592407053,
+        "pos": 0.6548575402605089
+      },
+      "warranty": {
+        "neg": 0.3052899376067618,
+        "neu": 0.22940129799187303,
+        "pos": 0.4653087644013651
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0005",
+    "style": "casual",
+    "content": "Cảm nhận của mình là, báo giá chát chúa, nhưng sản phẩm bàn giao rất ưng ý. 🤔",
+    "preprocessed": "cảm nhận của mình là, báo giá chát chúa, nhưng sản phẩm bàn giao rất ưng ý. 🤔 cam nhan cua minh la, bao gia chat chua, nhung san pham ban giao rat ung y. 🤔",
+    "aspect_probs": {
+      "quality": 0.0727946417305785,
+      "price": 0.5930490549306314,
+      "speed": 0.3640997051934674,
+      "attitude": 0.11739462699805389,
+      "warranty": 0.056157530193859245
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3443981452217324,
+        "neu": 0.30927781432176005,
+        "pos": 0.3463240404565076
+      },
+      "price": {
+        "neg": 0.3672979267033948,
+        "neu": 0.27006145582566865,
+        "pos": 0.3626406174709366
+      },
+      "speed": {
+        "neg": 0.4778694980075553,
+        "neu": 0.05721637745567265,
+        "pos": 0.46491412453677206
+      },
+      "attitude": {
+        "neg": 0.13153879367337076,
+        "neu": 0.2985091345077466,
+        "pos": 0.5699520718188826
+      },
+      "warranty": {
+        "neg": 0.48079427760590454,
+        "neu": 0.155725024043974,
+        "pos": 0.3634806983501216
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0006",
+    "style": "teencode",
+    "content": "giá quá đắt đỏ. Khá là thất vọng vs cách làm việc này. 🙄",
+    "preprocessed": "giá quá đắt đỏ. khá là thất vọng với cách làm việc này. 🙄 gia qua dat do. kha la that vong voi cach lam viec nay. 🙄",
+    "aspect_probs": {
+      "quality": 0.1254771990066504,
+      "price": 0.8735192607102144,
+      "speed": 0.5306612992463874,
+      "attitude": 0.035605279758566664,
+      "warranty": 0.045559875240167955
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": true,
+      "speed": true,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3182533391463432,
+        "neu": 0.3365261951380857,
+        "pos": 0.3452204657155711
+      },
+      "price": {
+        "neg": 0.37636753996709865,
+        "neu": 0.2721967548912018,
+        "pos": 0.3514357051416995
+      },
+      "speed": {
+        "neg": 0.7292060103937686,
+        "neu": 0.019811037961087588,
+        "pos": 0.25098295164514367
+      },
+      "attitude": {
+        "neg": 0.08518701365122837,
+        "neu": 0.3694990176252619,
+        "pos": 0.5453139687235097
+      },
+      "warranty": {
+        "neg": 0.5551154317449488,
+        "neu": 0.16993047926010774,
+        "pos": 0.27495408899494345
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0008",
+    "style": "formal",
+    "content": "Kính gửi sàn SkillRental, cảm nhận của mình là, chỉ trao đổi đúng chuyên môn, nhưng đắt xắt ra miếng nhưng hơi buốt ví.",
+    "preprocessed": "kính gửi sàn skillrental, cảm nhận của mình là, chỉ trao đổi đúng chuyên môn, nhưng đắt xắt ra miếng nhưng hơi buốt ví. kinh gui san skillrental, cam nhan cua minh la, chi trao doi dung chuyen mon, nhung dat xat ra mieng nhung hoi buot vi.",
+    "aspect_probs": {
+      "quality": 0.43846008836801753,
+      "price": 0.3500930485333468,
+      "speed": 0.646067178971643,
+      "attitude": 0.20825853434850286,
+      "warranty": 0.10686670128471734
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": false,
+      "speed": true,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3355687409554065,
+        "neu": 0.31130119250916394,
+        "pos": 0.35313006653542955
+      },
+      "price": {
+        "neg": 0.35606144601254985,
+        "neu": 0.301531935128183,
+        "pos": 0.3424066188592671
+      },
+      "speed": {
+        "neg": 0.1408274579904005,
+        "neu": 0.05875876050039687,
+        "pos": 0.8004137815092026
+      },
+      "attitude": {
+        "neg": 0.09476973380388864,
+        "neu": 0.48081717671688523,
+        "pos": 0.42441308947922624
+      },
+      "warranty": {
+        "neg": 0.5917827788330372,
+        "neu": 0.15705388353227348,
+        "pos": 0.25116333763468923
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0009",
+    "style": "no_accent",
+    "content": "qua chat vi xot ca ruot, duoc cai giao tiep dung muc khong qua nhiet tinh.",
+    "preprocessed": "qua chat vi xot ca ruot, duoc cai giao tiep dung muc khong qua nhiet tinh. qua chat vi xot ca ruot, duoc cai giao tiep dung muc khong qua nhiet tinh.",
+    "aspect_probs": {
+      "quality": 0.18788773648383275,
+      "price": 0.6691378366787559,
+      "speed": 0.3261048444602613,
+      "attitude": 0.38050851586387496,
+      "warranty": 0.18456779161786688
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.30890416306303553,
+        "neu": 0.3493136103711625,
+        "pos": 0.34178222656580204
+      },
+      "price": {
+        "neg": 0.34993599111496015,
+        "neu": 0.2802317736489444,
+        "pos": 0.36983223523609543
+      },
+      "speed": {
+        "neg": 0.677270437934708,
+        "neu": 0.08083119105673033,
+        "pos": 0.2418983710085616
+      },
+      "attitude": {
+        "neg": 0.08168400531914426,
+        "neu": 0.48703835362811787,
+        "pos": 0.43127764105273786
+      },
+      "warranty": {
+        "neg": 0.4053695630714512,
+        "neu": 0.3049860307562627,
+        "pos": 0.28964440617228615
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0011",
+    "style": "formal",
+    "content": "Kính gửi sàn SkillRental, quá đắt đỏ so với mặt bằng chung. Không biết có nên quay lại nữa không.",
+    "preprocessed": "kính gửi sàn skillrental, quá đắt đỏ so với mặt bằng chung. không biết có nên quay lại nữa không. kinh gui san skillrental, qua dat do so voi mat bang chung. khong biet co nen quay lai nua khong.",
+    "aspect_probs": {
+      "quality": 0.2138878068089633,
+      "price": 0.5670242627869624,
+      "speed": 0.5245271013030693,
+      "attitude": 0.14056345178679058,
+      "warranty": 0.15720489232912188
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": true,
+      "speed": true,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3371438148798145,
+        "neu": 0.3241923543216027,
+        "pos": 0.33866383079858287
+      },
+      "price": {
+        "neg": 0.33371298976219604,
+        "neu": 0.36326771479983605,
+        "pos": 0.3030192954379679
+      },
+      "speed": {
+        "neg": 0.6104388337325236,
+        "neu": 0.06275201917575447,
+        "pos": 0.326809147091722
+      },
+      "attitude": {
+        "neg": 0.08251439072892865,
+        "neu": 0.48734554173120515,
+        "pos": 0.4301400675398661
+      },
+      "warranty": {
+        "neg": 0.42606117283819306,
+        "neu": 0.13160442735628247,
+        "pos": 0.4423343998055246
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0013",
+    "style": "northern",
+    "content": "Bác thợ làm chuẩn đét luôn nhé, giao tiếp vừa đủ không mặn mà lắm, có điều tốc độ xử lý siêu tốc. Quá đã luôn!",
+    "preprocessed": "bác thợ làm chuẩn đét luôn nhé, giao tiếp vừa đủ không mặn mà lắm, có điều tốc độ xử lý siêu tốc. quá đã luôn! bac tho lam chuan det luon nhe, giao tiep vua du khong man ma lam, co dieu toc do xu ly sieu toc. qua da luon!",
+    "aspect_probs": {
+      "quality": 0.14084229656172964,
+      "price": 0.2050558675731399,
+      "speed": 0.8594979300060889,
+      "attitude": 0.6313837562288891,
+      "warranty": 0.19073701997442905
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": false,
+      "speed": true,
+      "attitude": true,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.33117319735710093,
+        "neu": 0.3121281077876632,
+        "pos": 0.3566986948552359
+      },
+      "price": {
+        "neg": 0.3675115925499921,
+        "neu": 0.2586292242471667,
+        "pos": 0.3738591832028412
+      },
+      "speed": {
+        "neg": 0.13821219418334316,
+        "neu": 0.019437358482782954,
+        "pos": 0.8423504473338739
+      },
+      "attitude": {
+        "neg": 0.042699370681856134,
+        "neu": 0.5403587736778624,
+        "pos": 0.4169418556402815
+      },
+      "warranty": {
+        "neg": 0.2935178591081165,
+        "neu": 0.47583968579767166,
+        "pos": 0.23064245509421188
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0015",
+    "style": "generic",
+    "content": "Mình vừa hoàn thành đơn hàng, mọi thứ đều ổn, xứng đáng để trải nghiệm nhiều lần.",
+    "preprocessed": "mình vừa hoàn thành đơn hàng, mọi thứ đều ổn, xứng đáng để trải nghiệm nhiều lần. minh vua hoan thanh don hang, moi thu deu on, xung dang de trai nghiem nhieu lan.",
+    "aspect_probs": {
+      "quality": 0.45529052333982967,
+      "price": 0.11916762911667254,
+      "speed": 0.07252929150142262,
+      "attitude": 0.049227473479260195,
+      "warranty": 0.053585258860792635
+    },
+    "aspect_preds": {
+      "quality": true,
+      "price": false,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.35018488812913445,
+        "neu": 0.31327702074237723,
+        "pos": 0.3365380911284883
+      },
+      "price": {
+        "neg": 0.3667808041948323,
+        "neu": 0.2741236831984834,
+        "pos": 0.3590955126066843
+      },
+      "speed": {
+        "neg": 0.4451526022693271,
+        "neu": 0.09355695015121065,
+        "pos": 0.4612904475794622
+      },
+      "attitude": {
+        "neg": 0.04456518808003863,
+        "neu": 0.24790647337564872,
+        "pos": 0.7075283385443127
+      },
+      "warranty": {
+        "neg": 0.3792043613687683,
+        "neu": 0.1655590198922387,
+        "pos": 0.45523661873899307
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0016",
+    "style": "no_accent",
+    "content": "Hom nay moi co thoi gian viet danh gia, gia cao ngat nguong. Kha la that vong voi cach lam viec nay. 😡",
+    "preprocessed": "hom nay moi co thoi gian viet danh gia, gia cao ngat nguong. kha la that vong voi cach lam viec nay. 😡 hom nay moi co thoi gian viet danh gia, gia cao ngat nguong. kha la that vong voi cach lam viec nay. 😡",
+    "aspect_probs": {
+      "quality": 0.15681896371989568,
+      "price": 0.6906035181915556,
+      "speed": 0.24540021669838724,
+      "attitude": 0.056467966427799866,
+      "warranty": 0.1775879409509358
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3150050499350628,
+        "neu": 0.32159674372441527,
+        "pos": 0.3633982063405219
+      },
+      "price": {
+        "neg": 0.3966807951884972,
+        "neu": 0.2573236301834813,
+        "pos": 0.34599557462802155
+      },
+      "speed": {
+        "neg": 0.7041237204980767,
+        "neu": 0.018156401881044445,
+        "pos": 0.27771987762087874
+      },
+      "attitude": {
+        "neg": 0.06734924589770591,
+        "neu": 0.3226490861407052,
+        "pos": 0.610001667961589
+      },
+      "warranty": {
+        "neg": 0.5717835839518975,
+        "neu": 0.1697009435664419,
+        "pos": 0.25851547248166046
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0020",
+    "style": "short",
+    "content": "Giá cao vút! 3 sao.",
+    "preprocessed": "giá cao vút! 3 sao. gia cao vut! 3 sao.",
+    "aspect_probs": {
+      "quality": 0.4104482943599339,
+      "price": 0.9798740227021154,
+      "speed": 0.05870273746209331,
+      "attitude": 0.08577678849797996,
+      "warranty": 0.050441030108251066
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.33152792896219824,
+        "neu": 0.2999182254494157,
+        "pos": 0.36855384558838605
+      },
+      "price": {
+        "neg": 0.4146528480975389,
+        "neu": 0.25427169679123346,
+        "pos": 0.3310754551112276
+      },
+      "speed": {
+        "neg": 0.5257498967399878,
+        "neu": 0.030753498954380426,
+        "pos": 0.44349660430563176
+      },
+      "attitude": {
+        "neg": 0.12505710480432955,
+        "neu": 0.20512528127141388,
+        "pos": 0.6698176139242565
+      },
+      "warranty": {
+        "neg": 0.31725684593433384,
+        "neu": 0.16524148571797687,
+        "pos": 0.5175016683476893
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0081",
+    "style": "generic",
+    "content": "Lần đầu đặt thử gói này, mọi thứ diễn ra rất thuận lợi, không có gì để phàn nàn cả.",
+    "preprocessed": "lần đầu đặt thử gói này, mọi thứ diễn ra rất thuận lợi, không có gì để phàn nàn cả. lan dau dat thu goi nay, moi thu dien ra rat thuan loi, khong co gi de phan nan ca.",
+    "aspect_probs": {
+      "quality": 0.1858184090777614,
+      "price": 0.08694814862252648,
+      "speed": 0.04818081350431251,
+      "attitude": 0.12794543838636221,
+      "warranty": 0.06632733610433826
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": false,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3262341549236815,
+        "neu": 0.342577195623009,
+        "pos": 0.3311886494533095
+      },
+      "price": {
+        "neg": 0.33988339377510973,
+        "neu": 0.28247269092244354,
+        "pos": 0.3776439153024468
+      },
+      "speed": {
+        "neg": 0.34903020775963667,
+        "neu": 0.03687743027630005,
+        "pos": 0.6140923619640634
+      },
+      "attitude": {
+        "neg": 0.06586313010233902,
+        "neu": 0.39123854407545366,
+        "pos": 0.5428983258222073
+      },
+      "warranty": {
+        "neg": 0.5376413096305794,
+        "neu": 0.15199378408566208,
+        "pos": 0.31036490628375846
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0082",
+    "style": "generic",
+    "content": "Cảm nhận của mình là, dịch vụ ở mức vừa phải, có thể cân nhắc nếu cần.",
+    "preprocessed": "cảm nhận của mình là, dịch vụ ở mức vừa phải, có thể cân nhắc nếu cần. cam nhan cua minh la, dich vu o muc vua phai, co the can nhac neu can.",
+    "aspect_probs": {
+      "quality": 0.029926657178152904,
+      "price": 0.03834223626945562,
+      "speed": 0.1551526412238437,
+      "attitude": 0.18156225380230456,
+      "warranty": 0.04229712668666212
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": false,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3012052209474271,
+        "neu": 0.3637493927293104,
+        "pos": 0.3350453863232625
+      },
+      "price": {
+        "neg": 0.35631665273987373,
+        "neu": 0.26934316263788666,
+        "pos": 0.3743401846222397
+      },
+      "speed": {
+        "neg": 0.2503592794488676,
+        "neu": 0.049808584218601695,
+        "pos": 0.6998321363325306
+      },
+      "attitude": {
+        "neg": 0.10823699453716099,
+        "neu": 0.5120490838789876,
+        "pos": 0.37971392158385137
+      },
+      "warranty": {
+        "neg": 0.44833395480316685,
+        "neu": 0.2144160435893983,
+        "pos": 0.33725000160743485
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0085",
+    "style": "southern",
+    "content": "Thiệt tình là ưng cái bụng ghê luôn á, bàn giao đúng hẹn, với lại chi phí rẻ bất ngờ. Lần sau có việc nhất định sẽ book tiếp. Dễ thương dữ thần nè!",
+    "preprocessed": "thiệt tình là ưng cái bụng ghê luôn á, bàn giao đúng hẹn, với lại chi phí rẻ bất ngờ. lần sau có việc nhất định sẽ book tiếp. dễ thương dữ thần nè! thiet tinh la ung cai bung ghe luon a, ban giao dung hen, voi lai chi phi re bat ngo. lan sau co viec nhat dinh se book tiep. de thuong du than ne!",
+    "aspect_probs": {
+      "quality": 0.2184676650459736,
+      "price": 0.5760364748786523,
+      "speed": 0.4106945083161495,
+      "attitude": 0.26324933280335305,
+      "warranty": 0.4435894992878096
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.29775279590784814,
+        "neu": 0.3401204989431736,
+        "pos": 0.36212670514897827
+      },
+      "price": {
+        "neg": 0.3698324212783561,
+        "neu": 0.2496079459674889,
+        "pos": 0.3805596327541551
+      },
+      "speed": {
+        "neg": 0.1852775916520646,
+        "neu": 0.031572949791223784,
+        "pos": 0.7831494585567117
+      },
+      "attitude": {
+        "neg": 0.21220851426079215,
+        "neu": 0.10386691006501253,
+        "pos": 0.6839245756741954
+      },
+      "warranty": {
+        "neg": 0.22237515000293806,
+        "neu": 0.612998687667317,
+        "pos": 0.1646261623297449
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0087",
+    "style": "northern",
+    "content": "Bác thợ làm chuẩn đét luôn nhé, giao tiếp trịch thượng thiếu tôn trọng, có điều dọn dẹp sạch bóng không tì vết. Quá đã luôn!",
+    "preprocessed": "bác thợ làm chuẩn đét luôn nhé, giao tiếp trịch thượng thiếu tôn trọng, có điều dọn dẹp sạch bóng không tì vết. quá đã luôn! bac tho lam chuan det luon nhe, giao tiep trich thuong thieu ton trong, co dieu don dep sach bong khong ti vet. qua da luon!",
+    "aspect_probs": {
+      "quality": 0.7812250108400972,
+      "price": 0.3278389276255979,
+      "speed": 0.11836843796320054,
+      "attitude": 0.46170410377004834,
+      "warranty": 0.13746607377555303
+    },
+    "aspect_preds": {
+      "quality": true,
+      "price": false,
+      "speed": false,
+      "attitude": true,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.32359242996277476,
+        "neu": 0.3150863442522484,
+        "pos": 0.3613212257849769
+      },
+      "price": {
+        "neg": 0.3239167483495378,
+        "neu": 0.31863729282884523,
+        "pos": 0.3574459588216169
+      },
+      "speed": {
+        "neg": 0.6348502231864609,
+        "neu": 0.05450786115857948,
+        "pos": 0.3106419156549596
+      },
+      "attitude": {
+        "neg": 0.04823623370345812,
+        "neu": 0.28363426040874345,
+        "pos": 0.6681295058877985
+      },
+      "warranty": {
+        "neg": 0.41929118303554497,
+        "neu": 0.2190202074675999,
+        "pos": 0.3616886094968553
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0091",
+    "style": "tricky",
+    "content": "Đúng là đắt xắt ra miếng, giá cao ngất ngưởng nhưng code cực kỳ chuẩn chỉ.",
+    "preprocessed": "đúng là đắt xắt ra miếng, giá cao ngất ngưởng nhưng code cực kỳ chuẩn chỉ. dung la dat xat ra mieng, gia cao ngat nguong nhung code cuc ky chuan chi.",
+    "aspect_probs": {
+      "quality": 0.9048959245513117,
+      "price": 0.9411563836642828,
+      "speed": 0.1114955082564569,
+      "attitude": 0.18754881509643861,
+      "warranty": 0.05248330079245871
+    },
+    "aspect_preds": {
+      "quality": true,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.2995308029770655,
+        "neu": 0.3020758114742253,
+        "pos": 0.39839338554870907
+      },
+      "price": {
+        "neg": 0.3859844864113498,
+        "neu": 0.26447382774591616,
+        "pos": 0.34954168584273404
+      },
+      "speed": {
+        "neg": 0.16307140073293566,
+        "neu": 0.02271057558084166,
+        "pos": 0.8142180236862226
+      },
+      "attitude": {
+        "neg": 0.07224474679007462,
+        "neu": 0.3461574773594963,
+        "pos": 0.581597775850429
+      },
+      "warranty": {
+        "neg": 0.30306619583567,
+        "neu": 0.37293713621160424,
+        "pos": 0.3239966679527257
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0092",
+    "style": "teencode",
+    "content": "thân thiện như ng nhà, đồng thời tác phong làm việc nhanh thoăn thoắt.",
+    "preprocessed": "thân thiện như người nhà, đồng thời tác phong làm việc nhanh thoăn thoắt. than thien nhu nguoi nha, dong thoi tac phong lam viec nhanh thoan thoat.",
+    "aspect_probs": {
+      "quality": 0.05002520982207281,
+      "price": 0.12877629024074153,
+      "speed": 0.88808107810102,
+      "attitude": 0.7458989336750422,
+      "warranty": 0.26527700598833054
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": false,
+      "speed": true,
+      "attitude": true,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3210346847269186,
+        "neu": 0.32567579241788813,
+        "pos": 0.3532895228551932
+      },
+      "price": {
+        "neg": 0.38352423133307495,
+        "neu": 0.2717469533488081,
+        "pos": 0.3447288153181169
+      },
+      "speed": {
+        "neg": 0.09574797246121756,
+        "neu": 0.01815079580316166,
+        "pos": 0.8861012317356208
+      },
+      "attitude": {
+        "neg": 0.05282430310448115,
+        "neu": 0.21991995753813381,
+        "pos": 0.7272557393573851
+      },
+      "warranty": {
+        "neg": 0.7257963185783354,
+        "neu": 0.129920321362069,
+        "pos": 0.14428336005959572
+      }
+    }
+  },
+  {
+    "id": "REV_RECO_0094",
+    "style": "short",
+    "content": "Giá cả quá tốt! 4 sao.",
+    "preprocessed": "giá cả quá tốt! 4 sao. gia ca qua tot! 4 sao.",
+    "aspect_probs": {
+      "quality": 0.21564835091966686,
+      "price": 0.9930097787710538,
+      "speed": 0.06819410981837436,
+      "attitude": 0.14413921519525202,
+      "warranty": 0.017019393177104943
+    },
+    "aspect_preds": {
+      "quality": false,
+      "price": true,
+      "speed": false,
+      "attitude": false,
+      "warranty": false
+    },
+    "sentiment_probs": {
+      "quality": {
+        "neg": 0.3117029834676689,
+        "neu": 0.3263161385199663,
+        "pos": 0.3619808780123648
+      },
+      "price": {
+        "neg": 0.3407851844205357,
+        "neu": 0.2704501139471859,
+        "pos": 0.3887647016322785
+      },
+      "speed": {
+        "neg": 0.5604858029623934,
+        "neu": 0.03213870656126538,
+        "pos": 0.4073754904763412
+      },
+      "attitude": {
+        "neg": 0.10282926070987573,
+        "neu": 0.18695970641841092,
+        "pos": 0.7102110328717133
+      },
+      "warranty": {
+        "neg": 0.4126192335531538,
+        "neu": 0.20998995100250223,
+        "pos": 0.37739081544434405
+      }
+    }
+  }
+]

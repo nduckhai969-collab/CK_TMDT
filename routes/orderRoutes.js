@@ -4,13 +4,13 @@ const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
 const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, getCancellationDeadlineAt, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
-const { createNotification, notifyProvider } = require('../services/notificationService');
+const { createNotification, notifyProvider, notificationRecords } = require('../services/notificationService');
 const vnpay = require('../services/vnpayService');
 const { startGatewayCheckout, startGatewayRetry, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
 // Tự động đồng bộ và sinh đơn chờ thanh toán cho các Yêu cầu (Job Request) đã chốt chuyên gia nhưng chưa có đơn hàng
-function syncPendingJobOrders(customerId, customerUid = null) {
+async function syncPendingJobOrders(customerId, customerUid = null) {
   if (!customerId) return;
   const jobs = db.getCollection('jobRequests') || [];
   const orders = db.getCollection('orders') || [];
@@ -101,15 +101,19 @@ function syncPendingJobOrders(customerId, customerUid = null) {
     updatedJobs = true;
   }
 
-  if (updatedOrders) db.saveCollection('orders', orders);
-  if (updatedJobs) db.saveCollection('jobRequests', jobs);
+  if (updatedOrders || updatedJobs) {
+    const collections = {};
+    if (updatedOrders) collections.orders = orders;
+    if (updatedJobs) collections.jobRequests = jobs;
+    await db.saveCollectionsAndWait(collections);
+  }
 }
 
 // List orders
-router.get('/', requireCustomer, (req, res) => {
+router.get('/', requireCustomer, async (req, res) => {
   expireUnpaidOrders();
   checkAutoReleaseOrders();
-  syncPendingJobOrders(req.authUser.id, req.authUser.uid);
+  await syncPendingJobOrders(req.authUser.id, req.authUser.uid);
   const { customerId, providerId, status, escrowStatus } = req.query;
   let orders = db.getCollection('orders');
 
@@ -152,14 +156,14 @@ router.get('/', requireCustomer, (req, res) => {
 // WHERE o.user_id = ?
 // ORDER BY o.created_at DESC;
 // ============================================================================
-router.get('/history', requireSignedIn, (req, res) => {
+router.get('/history', requireSignedIn, async (req, res) => {
   const userId = req.session?.userId || req.authUser?.id || req.authUser?.uid;
   if (!userId) {
     return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để xem lịch sử mua hàng.' });
   }
 
   // Tự động đồng bộ các đơn yêu cầu (job) nếu có
-  syncPendingJobOrders(userId, req.authUser?.uid);
+  await syncPendingJobOrders(userId, req.authUser?.uid);
 
   const ordersCol = db.getCollection('orders') || [];
   const orderItemsCol = db.getCollection('order_items') || [];
@@ -261,7 +265,7 @@ router.get('/:id', requireCustomer, (req, res) => {
 });
 
 // Create new booking / order with Escrow Deposit
-router.post('/', requireCustomer, (req, res) => {
+router.post('/', requireCustomer, async (req, res) => {
   const {
     customerPhone,
     customerAddress,
@@ -393,7 +397,7 @@ router.post('/', requireCustomer, (req, res) => {
       return res.status(401).json({ success: false, message: 'Không tìm thấy thông tin khách hàng.' });
     }
     try {
-      const { orders: created, txn, paymentUrl } = startGatewayCheckout({
+      const { orders: created, txn, paymentUrl } = await startGatewayCheckout({
         customer,
         specs: [{
           providerId,
@@ -465,7 +469,6 @@ router.post('/', requireCustomer, (req, res) => {
 
   const newBalance = realBalance - escrowDeposit;
   customer.balance = newBalance;
-  db.saveCollection('users', users);
 
   const txnId = `TXN_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
@@ -506,17 +509,22 @@ router.post('/', requireCustomer, (req, res) => {
   };
 
   orders.unshift(newOrder);
-  db.saveCollection('orders', orders);
 
+  let jobRequestsToSave;
+  const notificationSpecs = [];
   if (jobRequest) {
     jobRequest.selectedProviderId = providerId;
     (jobRequest.applicants || []).forEach(applicant => {
       if (applicant.providerId !== providerId) {
         if (applicant.status === 'pending' || applicant.status === 'selected') {
           applicant.status = 'rejected';
-          notifyProvider(applicant.providerId, 'Yêu cầu tuyển dụng đã có chuyên gia',
-            `Yêu cầu “${jobRequest.title}” đã được khách hàng giao cho một chuyên gia khác. Cảm ơn bạn đã quan tâm và gửi báo giá.`,
-            'info', '/jobs.html?tab=tab-uc36');
+          notificationSpecs.push({
+            providerId: applicant.providerId,
+            title: 'Yêu cầu tuyển dụng đã có chuyên gia',
+            message: `Yêu cầu “${jobRequest.title}” đã được khách hàng giao cho một chuyên gia khác. Cảm ơn bạn đã quan tâm và gửi báo giá.`,
+            type: 'info',
+            detailsUrl: '/jobs.html?tab=tab-uc36'
+          });
         }
       } else {
         applicant.status = 'accepted';
@@ -526,7 +534,7 @@ router.post('/', requireCustomer, (req, res) => {
     jobRequest.closeReason = 'provider_selected';
     jobRequest.paymentOrderId = newId;
     jobRequest.statusUpdatedAt = new Date().toISOString();
-    db.saveCollection('jobRequests', db.getCollection('jobRequests').map(j => j.id === jobRequest.id ? jobRequest : j));
+    jobRequestsToSave = db.getCollection('jobRequests').map(j => j.id === jobRequest.id ? jobRequest : j);
   }
 
   // Add Wallet Transaction for Escrow
@@ -544,24 +552,36 @@ router.post('/', requireCustomer, (req, res) => {
     orderIds: [newId],
     balanceAfter: newBalance
   });
-  db.saveCollection('walletTransactions', transactions);
-
-  createNotification(req.authUser.id, jobRequest ? 'Đã ký quỹ, đơn hàng bắt đầu' : 'Đơn hàng đã được tạo',
-    jobRequest
+  const collectionsToSave = { users, orders, walletTransactions: transactions };
+  if (jobRequestsToSave) collectionsToSave.jobRequests = jobRequestsToSave;
+  notificationSpecs.push({
+    userId: req.authUser.id,
+    title: jobRequest ? 'Đã ký quỹ, đơn hàng bắt đầu' : 'Đơn hàng đã được tạo',
+    message: jobRequest
       ? `Đơn ${newId} cho yêu cầu “${jobRequest.title}” đã được ký quỹ ${newOrder.escrowDeposit.toLocaleString('vi-VN')}đ và Provider có thể bắt đầu thực hiện.`
       : `Đơn ${newId} đã được tạo và ký quỹ ${newOrder.escrowDeposit.toLocaleString('vi-VN')}đ. Đang chờ Provider tiếp nhận.`,
-    'success', `/customer_orders.html?orderId=${encodeURIComponent(newId)}`);
-
-  // Notify Provider
-  notifyProvider(
+    type: 'success',
+    detailsUrl: `/customer_orders.html?orderId=${encodeURIComponent(newId)}`
+  }, {
     providerId,
-    jobRequest ? 'Ký quỹ hoàn tất - Bắt đầu dự án' : 'Đơn hàng mới',
-    jobRequest
+    title: jobRequest ? 'Ký quỹ hoàn tất - Bắt đầu dự án' : 'Đơn hàng mới',
+    message: jobRequest
       ? `Khách hàng ${req.authUser.name} đã ký quỹ ${newOrder.priceFormatted} cho yêu cầu “${jobRequest.title}”. Dự án đã chuyển sang mục Đặt lịch & Tiến độ để bạn bắt đầu thực hiện.`
       : `Bạn có một yêu cầu dịch vụ mới từ ${req.authUser.name} với giá trị ${newOrder.priceFormatted}. Đã ký quỹ Escrow an toàn.`,
-    'success',
-    jobRequest ? `/bookings.html?tab=tab-uc39&orderId=${encodeURIComponent(newId)}` : `/bookings.html?orderId=${encodeURIComponent(newId)}`
-  );
+    type: 'success',
+    detailsUrl: jobRequest ? `/bookings.html?tab=tab-uc39&orderId=${encodeURIComponent(newId)}` : `/bookings.html?orderId=${encodeURIComponent(newId)}`
+  });
+  try {
+    const notifications = await db.getCollectionFresh('notifications');
+    collectionsToSave.notifications = [...notificationRecords(notificationSpecs), ...notifications];
+    await db.saveCollectionsAndWait(collectionsToSave);
+  } catch (err) {
+    console.error('[orders] Không thể lưu đơn đặt lịch vào MySQL:', err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể lưu đơn hàng vào cơ sở dữ liệu. Vui lòng thử lại sau.'
+    });
+  }
 
   res.status(201).json({
     success: true,

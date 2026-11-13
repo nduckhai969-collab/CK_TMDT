@@ -8,6 +8,14 @@ uploads/
 .idea_old/
 powershell.cmd
 
+# Local Python environment/cache and database snapshots
+ml/.venv/
+**/__pycache__/
+*.pyc
+data/database.json
+data/database.backup.json
+data/database.json.backup_*
+
 # Scripts tạm
 scripts/_*.js
 

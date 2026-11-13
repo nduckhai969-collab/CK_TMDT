@@ -101,6 +101,7 @@
 </main>
 <div id="footer-placeholder"></div>
 <div id="postDetailModal" class="post-detail-backdrop" role="dialog" aria-modal="true" aria-labelledby="postDetailTitle" onclick="if(event.target===this)closePostDetail()"><section class="post-detail-dialog"><header class="post-detail-header"><div><h2 id="postDetailTitle" style="font-size:19px;color:#182230;margin:0 0 6px"></h2><small id="postDetailMeta" style="color:#8792a0"></small></div><button type="button" class="post-detail-close" aria-label="Đóng chi tiết bài viết" onclick="closePostDetail()">×</button></header><div class="post-detail-grid"><article id="postDetailContent" class="post-detail-content"></article><section id="postDetailComments" class="post-detail-comments"></section></div></section></div>
+<script src="reviewBadge.js"></script>
 <script src="customer.js"></script>
 <script>
 let currentProvider=null;
@@ -210,7 +211,7 @@ async function loadProviderDetail(id){
   document.getElementById('scoreStars').textContent='★'.repeat(Math.max(0,Math.min(5,Math.round(Number(p.rating)||0))));
   document.getElementById('reviewCount').textContent=`${Number(p.reviewCount)||0} đánh giá trên hồ sơ`;
   document.getElementById('ratingBars').innerHTML=[5,4,3,2,1].map(n=>{const count=reviews.filter(r=>Number(r.rating)===n).length;const percent=reviews.length?Math.round(count/reviews.length*100):0;return `<div class="rating-row"><span>${n} ★</span><div class="rating-track"><div class="rating-fill" style="width:${percent}%"></div></div><span>${count}</span></div>`}).join('');
-  document.getElementById('reviewsContainer').innerHTML=reviews.length?reviews.slice(0,3).map(r=>`<div style="border-top:1px solid #edf0f2;padding-top:10px;margin-top:10px"><strong style="font-size:12px">${escapeHtml(r.customerName||'Khách hàng')}</strong><span style="float:right;color:#e7ad37">${'★'.repeat(Math.max(0,Math.min(5,Number(r.rating)||0)))}</span><p style="margin-top:5px">${escapeHtml(r.content||'')}</p></div>`).join(''):'<div class="empty-reviews">Chưa có đánh giá chi tiết từ khách hàng trong hệ thống.</div>';
+  document.getElementById('reviewsContainer').innerHTML=reviews.length?reviews.slice(0,3).map(r=>`<div style="border-top:1px solid #edf0f2;padding-top:10px;margin-top:10px"><strong style="font-size:12px">${escapeHtml(r.customerName||'Khách hàng')}</strong><span style="float:right;color:#e7ad37">${'★'.repeat(Math.max(0,Math.min(5,Number(r.rating)||0)))}</span><p style="margin-top:5px">${escapeHtml(r.content||'')}</p><div style="margin-top:5px;">${typeof renderAiBadge === 'function' ? renderAiBadge(r.aiAnalysis) : ''}</div></div>`).join(''):'<div class="empty-reviews">Chưa có đánh giá chi tiết từ khách hàng trong hệ thống.</div>';
   loadProviderPosts(id);
 }
 

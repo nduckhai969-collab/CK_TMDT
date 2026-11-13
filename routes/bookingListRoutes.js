@@ -146,7 +146,8 @@ router.post(['/', '/items'], requireCustomer, (req, res) => {
   } else {
     bookingList.items.push({
       serviceId: effectiveServiceId,
-      hours: qty
+      hours: qty,
+      selected: true
     });
   }
 
@@ -198,7 +199,8 @@ router.post('/sync', requireCustomer, (req, res) => {
         serviceId: prodId,
         product_id: prodId,
         hours: qty,
-        quantity: qty
+        quantity: qty,
+        selected: true
       });
     }
   }
@@ -216,12 +218,18 @@ router.post('/sync', requireCustomer, (req, res) => {
 
 // Cập nhật số giờ
 router.put('/items/:serviceId', requireCustomer, (req, res) => {
-  const { hours } = req.body;
+  const { hours, selected } = req.body;
   const bookingList = getBookingList(req.authUser.id);
   
   const item = bookingList.items.find(i => i.serviceId === req.params.serviceId);
   if (!item) {
     return res.status(404).json({ success: false, message: 'Sản phẩm không có trong danh sách đặt lịch.' });
+  }
+
+  if (typeof selected === 'boolean') {
+    item.selected = selected;
+    updateBookingList(bookingList);
+    return res.json({ success: true, bookingList });
   }
 
   const qty = Number(hours);
@@ -236,6 +244,19 @@ router.put('/items/:serviceId', requireCustomer, (req, res) => {
 
   updateBookingList(bookingList);
   res.json({ success: true, message: 'Đã cập nhật danh sách đặt lịch!', bookingList });
+});
+
+// LÆ°u tráº¡ng thÃ¡i chá»n tá»«ng dÃ²ng trong giá» hÃ ng.
+router.patch('/items/:serviceId', requireCustomer, (req, res) => {
+  if (typeof req.body.selected !== 'boolean') {
+    return res.status(400).json({ success: false, message: 'Tráº¡ng thÃ¡i chá»n khÃ´ng há»£p lá»‡.' });
+  }
+  const bookingList = getBookingList(req.authUser.id);
+  const item = bookingList.items.find(i => i.serviceId === req.params.serviceId);
+  if (!item) return res.status(404).json({ success: false, message: 'Dá»‹ch vá»¥ khÃ´ng cÃ²n trong giá».' });
+  item.selected = req.body.selected;
+  updateBookingList(bookingList);
+  res.json({ success: true, bookingList });
 });
 
 // Xóa khỏi danh sách đặt lịch
@@ -253,12 +274,21 @@ router.delete('/items/:serviceId', requireCustomer, (req, res) => {
 router.post('/checkout', requireCustomer, (req, res) => {
   try {
     expireUnpaidOrders();
-    const { customerPhone, customerAddress, notes, paymentMethod, schedulesByProvider, bankCode } = req.body;
+    const { customerPhone, customerAddress, notes, paymentMethod, schedulesByProvider, bankCode, selectedServiceIds } = req.body;
     const bookingList = getBookingList(req.authUser.id);
 
     if (bookingList.items.length === 0) {
       return res.status(400).json({ success: false, message: 'Danh sách đặt lịch đang trống.' });
     }
+
+    const requestedIds = Array.isArray(selectedServiceIds) ? [...new Set(selectedServiceIds.map(String))] : null;
+    const selectedItems = requestedIds
+      ? bookingList.items.filter(item => requestedIds.includes(String(item.serviceId)))
+      : bookingList.items.filter(item => item.selected !== false);
+    if (!selectedItems.length || (requestedIds && selectedItems.length !== requestedIds.length)) {
+      return res.status(400).json({ success: false, message: 'HÃ£y chá»n Ã­t nháº¥t má»™t dá»‹ch vá»¥ cÃ²n trong giá».' });
+    }
+    const selectedBookingList = { ...bookingList, items: selectedItems };
 
     const walletPayment = vnpay.isWalletMethod(paymentMethod);
     if (!walletPayment && !vnpay.isGatewayMethod(paymentMethod)) {
@@ -271,7 +301,7 @@ router.post('/checkout', requireCustomer, (req, res) => {
     }
 
     // Giá, lịch và khung giờ đều được kiểm tra lại ở server
-    const { specs, total } = buildCartSpecs(bookingList, schedulesByProvider);
+    const { specs, total } = buildCartSpecs(selectedBookingList, schedulesByProvider);
 
     if (walletPayment) {
       // Đối soát số dư thực tế từ lịch sử ví
@@ -303,7 +333,8 @@ router.post('/checkout', requireCustomer, (req, res) => {
       customer.balance = realBalance;
 
       const orders = createOrders(customer, specs, { mode: 'wallet', paymentMethod, customerPhone, customerAddress, notes });
-      bookingList.items = [];
+      const purchasedIds = new Set(selectedItems.map(item => item.serviceId));
+      bookingList.items = bookingList.items.filter(item => !purchasedIds.has(item.serviceId));
       updateBookingList(bookingList);
       return res.json({ success: true, message: 'Thanh toán & Ký quỹ Escrow thành công!', orders });
     }
@@ -321,7 +352,8 @@ router.post('/checkout', requireCustomer, (req, res) => {
       ipAddr: req.headers['x-forwarded-for'] || req.socket.remoteAddress
     });
 
-    bookingList.items = [];
+    const purchasedIds = new Set(selectedItems.map(item => item.serviceId));
+    bookingList.items = bookingList.items.filter(item => !purchasedIds.has(item.serviceId));
     updateBookingList(bookingList);
     res.json({
       success: true,

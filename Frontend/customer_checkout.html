@@ -659,7 +659,8 @@
               customerAddress: document.getElementById('custAddress').value.trim(),
               notes: draft.notes || '',
               paymentMethod: paymentMethods[selectedMethod],
-              schedulesByProvider: draft.schedulesByProvider
+              schedulesByProvider: draft.schedulesByProvider,
+              selectedServiceIds: draft.selectedServiceIds
             })
           });
           if (result.success && result.paymentUrl) {

@@ -543,7 +543,11 @@ router.get('/dashboard/stats', requireProvider, async (req, res) => {
   const myApplications = jobRequests.flatMap(job => (job.applicants || []).filter(applicant =>
     applicant.providerId === provider.id || applicant.providerUserId === req.authUser.id
   ));
-  const complaints = (db.getCollection('complaints') || []).filter(complaint => complaint.defendantId === provider.id);
+  const complaints = (db.getCollection('complaints') || []).filter(complaint =>
+    complaint.defendantId === provider.id ||
+    complaint.defendantId === provider.userId ||
+    complaint.defendantId === req.authUser.id
+  );
 
   const pending = myOrders.filter(o => o.orderStatus === 'pending').length;
   const processing = myOrders.filter(o => o.orderStatus === 'processing').length;
@@ -892,21 +896,37 @@ router.put('/me/bank-account', requireProvider, (req, res) => {
 });
 
 router.get('/me/complaints', requireProvider, (req, res) => {
-  const complaints = (db.getCollection('complaints') || []).filter(c => c.defendantId === getMyProvider(req).id);
-  res.json({ success: true, complaints });
+  const provider = getMyProvider(req);
+  const complaints = (db.getCollection('complaints') || []).filter(c =>
+    c.defendantId === provider.id ||
+    c.defendantId === provider.userId ||
+    c.defendantId === req.authUser.id
+  );
+  res.json({ success: true, total: complaints.length, complaints });
 });
 
 router.post('/complaints/:id/defense', requireProvider, (req, res) => {
   const { providerClaim } = req.body;
+  if (!providerClaim || String(providerClaim).trim().length < 10) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập nội dung giải trình chi tiết (tối thiểu 10 ký tự).' });
+  }
+  const provider = getMyProvider(req);
   const complaints = db.getCollection('complaints') || [];
-  const idx = complaints.findIndex(c => c.id === req.params.id && c.defendantId === getMyProvider(req).id);
+  const idx = complaints.findIndex(c =>
+    c.id === req.params.id && (
+      c.defendantId === provider.id ||
+      c.defendantId === provider.userId ||
+      c.defendantId === req.authUser.id
+    )
+  );
   if (idx !== -1) {
-    complaints[idx].providerClaim = providerClaim;
+    complaints[idx].providerClaim = String(providerClaim).trim();
     complaints[idx].status = 'pending_review';
+    complaints[idx].defenseSubmittedAt = new Date().toLocaleString('vi-VN');
     db.saveCollection('complaints', complaints);
-    res.json({ success: true, message: 'Đã gửi giải trình' });
+    res.json({ success: true, message: 'Đã gửi bằng chứng giải trình thành công! Admin sẽ xem xét trong vòng 5 ngày làm việc.' });
   } else {
-    res.status(404).json({ success: false, message: 'Không tìm thấy khiếu nại' });
+    res.status(404).json({ success: false, message: 'Không tìm thấy khiếu nại hoặc bạn không có quyền giải trình.' });
   }
 });
 

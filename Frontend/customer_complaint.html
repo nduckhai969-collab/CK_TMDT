@@ -72,6 +72,7 @@
           <div>
             <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Số Tiền Yêu Cầu Hoàn Lại (VNĐ) <span style="color:#EF4444;">*</span></label>
             <input type="text" id="refundAmountInput" data-thousands required inputmode="numeric" placeholder="Ví dụ: 200.000" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+            <small id="refundAmountHint" style="display:block;margin-top:5px;color:#64748B">Nhập số tiền cần hoàn, tối đa bằng giá trị ký quỹ của đơn hàng.</small>
           </div>
         </div>
 
@@ -101,11 +102,13 @@
 
         <div style="margin-bottom:24px;">
           <label style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Tải Lên Bằng Chứng / Ảnh Chụp Màn Hình</label>
-          <div style="border:2px dashed #CBD5E1; border-radius:10px; padding:20px; text-align:center; background:#F8FAFC; cursor:pointer;" onclick="showToast('Đã Đính Kèm', 'Đã tải lên tệp ảnh chụp bằng chứng giao việc', 'info')">
+          <label for="complaintEvidence" style="display:block;border:2px dashed #CBD5E1; border-radius:10px; padding:20px; text-align:center; background:#F8FAFC; cursor:pointer;">
             <i class="fa-solid fa-cloud-arrow-up" style="font-size:28px; color:#94A3B8; margin-bottom:6px;"></i>
             <div style="font-size:13px; font-weight:600; color:#0F172A;">Bấm để tải ảnh chụp lỗi hoặc tài liệu chứng minh</div>
-            <div style="font-size:11.5px; color:#64748B;">Hỗ trợ PNG, JPG, PDF (tối đa 15MB)</div>
-          </div>
+            <div style="font-size:11.5px; color:#64748B;">PNG, JPG, PDF · tối đa 5 tệp, mỗi tệp 15MB (tổng tối đa 14MB)</div>
+            <input id="complaintEvidence" type="file" accept="image/png,image/jpeg,application/pdf" multiple style="display:none" onchange="showSelectedEvidence()">
+          </label>
+          <div id="evidenceFileList" style="margin-top:8px;font-size:12px;color:#475569"></div>
         </div>
 
         <!-- Buttons with Red Figma Submit Button -->
@@ -137,12 +140,78 @@
       const orderId = urlParams.get('orderId');
       if (orderId) {
         document.getElementById('orderIdInput').value = orderId;
+        loadOrderRefundLimit(orderId);
       }
     });
+
+    let orderRefundLimit = null;
+    let refundAmountTouched = false;
+    document.getElementById('orderIdInput').addEventListener('change', event => loadOrderRefundLimit(event.target.value.trim()));
+    document.getElementById('refundAmountInput').addEventListener('input', () => {
+      refundAmountTouched = true;
+      updateRefundAmountHint();
+    });
+    async function loadOrderRefundLimit(orderId) {
+      orderRefundLimit = null;
+      const hint = document.getElementById('refundAmountHint');
+      if (!orderId) { hint.textContent = 'Nhập số tiền cần hoàn, tối đa bằng giá trị ký quỹ của đơn hàng.'; return; }
+      hint.textContent = 'Đang tải giá trị ký quỹ của đơn hàng…';
+      const user = getCurrentCustomer();
+      if (!user) { hint.textContent = 'Đăng nhập để kiểm tra đơn hàng và số tiền ký quỹ.'; return; }
+      try {
+        const result = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}`);
+        if (!result.success || !result.order) throw new Error(result.message || 'Không tìm thấy đơn hàng.');
+        orderRefundLimit = Number(result.order.escrowDeposit) || Number(result.order.price) || 0;
+        if (orderRefundLimit > 0 && !refundAmountTouched) {
+          if (window.setFormattedNumber) setFormattedNumber('refundAmountInput', orderRefundLimit);
+          else document.getElementById('refundAmountInput').value = String(orderRefundLimit);
+        }
+        updateRefundAmountHint();
+      } catch (error) {
+        hint.textContent = error.message || 'Không tải được giá trị ký quỹ của đơn hàng.';
+        hint.style.color = '#b91c1c';
+      }
+    }
+    function updateRefundAmountHint() {
+      const input = document.getElementById('refundAmountInput');
+      const hint = document.getElementById('refundAmountHint');
+      const entered = window.readFormattedNumber ? readFormattedNumber(input) : Number(String(input.value).replace(/\D/g, ''));
+      const overLimit = orderRefundLimit !== null && entered > orderRefundLimit;
+      hint.style.color = overLimit ? '#b91c1c' : '#64748B';
+      hint.textContent = orderRefundLimit === null
+        ? 'Nhập số tiền cần hoàn, tối đa bằng giá trị ký quỹ của đơn hàng.'
+        : `Giá trị ký quỹ tối đa: ${orderRefundLimit.toLocaleString('vi-VN')}đ${overLimit ? ' — số tiền nhập đang vượt giới hạn.' : ''}`;
+      input.setCustomValidity(overLimit ? 'Số tiền yêu cầu không được vượt quá giá trị ký quỹ.' : '');
+    }
 
     const complaintReasonSelect = document.getElementById('complaintReason');
     const technicalIncidentWrap = document.getElementById('technicalIncidentTimeWrap');
     const technicalIncidentInput = document.getElementById('technicalIncidentTime');
+    let complaintEvidence = [];
+    async function showSelectedEvidence() {
+      const files = Array.from(document.getElementById('complaintEvidence').files || []);
+      const label = document.getElementById('evidenceFileList');
+      if (files.length > 5 || files.reduce((sum, file) => sum + file.size, 0) > 14 * 1024 * 1024 || files.some(file => file.size > 15 * 1024 * 1024 || !['image/png', 'image/jpeg', 'application/pdf'].includes(file.type))) {
+        document.getElementById('complaintEvidence').value = '';
+        complaintEvidence = [];
+        label.textContent = 'Chỉ nhận tối đa 5 tệp PNG/JPG/PDF, mỗi tệp không quá 15MB và tổng không quá 14MB.';
+        label.style.color = '#b91c1c';
+        return;
+      }
+      try {
+        complaintEvidence = await Promise.all(files.map(file => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ name: file.name, data: reader.result });
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        })));
+        label.style.color = '#475569';
+        label.textContent = complaintEvidence.map(file => file.name).join(' · ') || '';
+      } catch (_) {
+        complaintEvidence = [];
+        label.textContent = 'Không thể đọc tệp đã chọn.';
+      }
+    }
     function updateTechnicalIncidentField() {
       const technical = /kỹ thuật|ky thuat|technical/i.test(complaintReasonSelect.value);
       technicalIncidentWrap.style.display = technical ? 'block' : 'none';
@@ -168,7 +237,7 @@
         incidentAt: technicalIncidentInput.value ? new Date(technicalIncidentInput.value).toISOString() : undefined,
         amount: document.getElementById('refundAmountInput').value,
         userClaim: document.getElementById('complaintDetail').value,
-        priority: 'high'
+        evidence: complaintEvidence
       };
 
       const res = await apiRequest('/api/complaints', {

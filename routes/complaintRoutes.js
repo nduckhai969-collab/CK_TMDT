@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../data/db');
-const { requireCustomer } = require('./customerAuth');
+const { requireCustomer, requireAdmin } = require('./customerAuth');
 
 // List complaints
 router.get('/', requireCustomer, (req, res) => {
@@ -27,7 +27,7 @@ router.get('/', requireCustomer, (req, res) => {
 
 // Submit new dispute / complaint
 router.post('/', requireCustomer, (req, res) => {
-  const { orderId, defendantId, defendant, reason, amount, userClaim, priority, incidentAt } = req.body;
+  const { orderId, reason, amount, userClaim, incidentAt, evidence = [] } = req.body;
 
   if (!orderId || !reason || !userClaim) {
     return res.status(400).json({ success: false, message: 'Vui lòng điền mã đơn hàng, lý do và nội dung khiếu nại chi tiết!' });
@@ -37,6 +37,26 @@ router.post('/', requireCustomer, (req, res) => {
   const order = orders.find(item => item.id === orderId);
   if (!order || order.customerId !== req.authUser.id) {
     return res.status(403).json({ success: false, message: 'Chỉ khách hàng sở hữu đơn hàng mới có thể gửi khiếu nại.' });
+  }
+
+  if (!['confirmed', 'processing', 'delivered', 'disputed', 'cancel_requested', 'cancel_rejected'].includes(order.orderStatus) ||
+      ['completed', 'refunded', 'cancelled'].includes(order.escrowStatus)) {
+    return res.status(409).json({ success: false, message: 'Đơn hàng không còn đủ điều kiện mở tranh chấp.' });
+  }
+  const requestedAmount = amount ? Number(String(amount).replace(/[^\d]/g, '')) : null;
+  const escrowValue = Number(order.escrowDeposit) || Number(order.price) || 0;
+  if (requestedAmount !== null && (!Number.isFinite(requestedAmount) || requestedAmount <= 0 || requestedAmount > escrowValue)) {
+    return res.status(400).json({ success: false, message: 'Số tiền yêu cầu phải lớn hơn 0 và không vượt quá giá trị ký quỹ.' });
+  }
+  const complaints = db.getCollection('complaints') || [];
+  if (complaints.some(c => c.orderId === orderId && c.status !== 'resolved')) {
+    return res.status(409).json({ success: false, message: 'Đơn hàng này đã có khiếu nại đang được xử lý.' });
+  }
+  if (!Array.isArray(evidence) || evidence.length > 5 || evidence.reduce((total, item) => total + (typeof item?.data === 'string' ? item.data.length : 0), 0) > 19 * 1024 * 1024 || evidence.some(item =>
+    !item || typeof item.name !== 'string' || typeof item.data !== 'string' ||
+    !/^data:(image\/(png|jpeg)|application\/pdf);base64,/.test(item.data) || item.data.length > 15 * 1024 * 1024 * 1.4
+  )) {
+    return res.status(400).json({ success: false, message: 'Bằng chứng phải là tối đa 5 tệp PNG, JPG hoặc PDF, mỗi tệp không quá 15MB.' });
   }
 
   const isTechnicalIssue = /kỹ thuật|ky thuat|technical/i.test(String(reason));
@@ -50,7 +70,9 @@ router.post('/', requireCustomer, (req, res) => {
     normalizedIncidentAt = new Date(incidentTime).toISOString();
   }
 
-  const complaints = db.getCollection('complaints');
+  const providers = db.getCollection('providers') || [];
+  const provider = providers.find(p => p.id === order.providerId || p.userId === order.providerId);
+  const providerUser = (db.getCollection('users') || []).find(u => u.id === provider?.userId);
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const newId = `KN-${now.getFullYear()}-${String(complaints.length + 1).padStart(2, '0')}`;
@@ -60,16 +82,18 @@ router.post('/', requireCustomer, (req, res) => {
     orderId,
     complainantId: req.authUser.id,
     complainant: `${req.authUser.name} (Khách hàng)`,
-    defendantId: defendantId || 'PRV001',
-    defendant: defendant || 'Nguyễn Văn An (Provider)',
+    defendantId: provider?.id || order.providerId,
+    defendant: `${providerUser?.name || provider?.name || order.providerName || 'Provider'} (Provider)`,
     reason: reason.trim(),
     ...(normalizedIncidentAt ? { incidentAt: normalizedIncidentAt } : {}),
     amount: amount || 'Theo giá trị đơn',
-    priority: priority || 'high',
+    requestedAmount,
+    priority: 'high',
     status: 'pending',
     createdAt: dateStr,
     userClaim: userClaim.trim(),
-    providerClaim: 'Chờ Provider phản hồi giải trình'
+    providerClaim: 'Chờ Provider phản hồi giải trình',
+    evidence: evidence.map(item => ({ name: item.name.slice(0, 160), data: item.data }))
   };
 
   complaints.unshift(newComplaint);
@@ -89,7 +113,7 @@ router.post('/', requireCustomer, (req, res) => {
 });
 
 // Admin resolves complaint
-router.put('/:id/resolve', (req, res) => {
+router.put('/:id/resolve', requireAdmin, (req, res) => {
   const { resolution, refundPercentage = 100 } = req.body; // 'refund_customer' or 'pay_provider'
   if (!['refund_customer', 'pay_provider', 'partial_refund'].includes(resolution)) {
     return res.status(400).json({ success: false, message: 'Phương án xử lý khiếu nại không hợp lệ.' });

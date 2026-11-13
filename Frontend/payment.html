@@ -63,7 +63,7 @@
           <div class="card" style="grid-column: span 2;">
             <div class="card-header">
               <div class="card-title"><i class="fa-solid fa-credit-card" style="color: var(--primary-accent);"></i> Thanh Toán Phí Duy Trì Tài Khoản Provider</div>
-              <span class="badge badge-warning">Hạn duy trì: 20/09/2026</span>
+              <span class="badge badge-warning" id="maintenanceDue">Hạn duy trì: Chưa kích hoạt</span>
             </div>
 
             <div style="background-color: var(--bg-subtle); padding: 18px; border-radius: 8px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center;">
@@ -75,31 +75,16 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Chọn phương thức thanh toán</label>
-              <div class="grid-3">
-                <div class="payment-card-method selected">
-                  <i class="fa-solid fa-qrcode" style="font-size: 24px; color: var(--primary-accent);"></i>
+              <label class="form-label">Phương thức thanh toán</label>
+              <div style="background-color: var(--bg-subtle); padding: 14px 18px; border-radius: 8px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <i class="fa-solid fa-wallet" style="font-size: 20px; color: var(--primary-accent);"></i>
                   <div>
-                    <div style="font-weight: 600;">VNPay QR</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">Quét app ngân hàng</div>
+                    <div style="font-weight: 600;">Số dư ví Provider</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Trừ trực tiếp từ số dư ví của bạn</div>
                   </div>
                 </div>
-
-                <div class="payment-card-method">
-                  <i class="fa-solid fa-wallet" style="font-size: 24px; color: #A50064;"></i>
-                  <div>
-                    <div style="font-weight: 600;">Ví MoMo</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">Thanh toán Ví MoMo</div>
-                  </div>
-                </div>
-
-                <div class="payment-card-method">
-                  <i class="fa-solid fa-building-columns" style="font-size: 24px; color: var(--info);"></i>
-                  <div>
-                    <div style="font-weight: 600;">Thẻ ATM / Banking</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">Chuyển khoản trực tiếp</div>
-                  </div>
-                </div>
+                <div style="font-weight: 700;" id="providerWalletBalance">--</div>
               </div>
             </div>
 
@@ -144,22 +129,9 @@
                 <th>Trạng Thái</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="platformFeeHistory">
               <tr>
-                <td>#INV-2026-08</td>
-                <td>Gói VIP Partner (Tháng 8)</td>
-                <td>299.000đ</td>
-                <td>VNPay QR</td>
-                <td>15/08/2026</td>
-                <td><span class="badge badge-success"><span class="badge-dot"></span> Thành công</span></td>
-              </tr>
-              <tr>
-                <td>#INV-2026-07</td>
-                <td>Gói VIP Partner (Tháng 7)</td>
-                <td>299.000đ</td>
-                <td>Ví MoMo</td>
-                <td>15/07/2026</td>
-                <td><span class="badge badge-success"><span class="badge-dot"></span> Thành công</span></td>
+                <td colspan="6" style="text-align:center; color: var(--text-muted);">Đang tải lịch sử giao dịch...</td>
               </tr>
             </tbody>
           </table>
@@ -170,18 +142,90 @@
 
   <script src="provider.js"></script>
   <script>
-    document.querySelectorAll('.payment-card-method').forEach(card => {
-      card.addEventListener('click', () => {
-        document.querySelectorAll('.payment-card-method').forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-      });
+    const PLATFORM_FEE = 299000;
+    let currentProviderBal = 0;
+
+    function formatVnd(value) {
+      return Number(value || 0).toLocaleString('vi-VN') + 'đ';
+    }
+
+    // Giao dịch lưu ngày dạng YYYY-MM-DD -> hiển thị dd/mm/yyyy.
+    function formatDate(value) {
+      const raw = String(value || '').trim();
+      const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return match ? `${match[3]}/${match[2]}/${match[1]}` : (raw || '--');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProviderBalance();
+      loadPlatformFeeHistory();
     });
 
+    async function loadProviderBalance() {
+      const el = document.getElementById('providerWalletBalance');
+      try {
+        const res = await window.providerApi.getWallet();
+        if (res && res.success && res.wallet) {
+          currentProviderBal = Number(res.wallet.balance) || 0;
+          el.textContent = res.wallet.balanceFormatted || formatVnd(currentProviderBal);
+        } else {
+          el.textContent = 'Chưa tải được số dư';
+        }
+      } catch (e) {
+        el.textContent = 'Chưa tải được số dư';
+      }
+    }
+
+    async function loadPlatformFeeHistory() {
+      const tbody = document.getElementById('platformFeeHistory');
+      try {
+        const res = await window.providerApi.getPackagePurchases();
+        const purchases = ((res && res.success ? res.purchases : []) || [])
+          .filter(item => item.packageId === 'PKG_PLATFORM');
+        if (!purchases.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Chưa có giao dịch phí sàn nào.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = purchases.map(item => `
+          <tr>
+            <td>#${item.id}</td>
+            <td>${item.packageName || 'Gói VIP Partner'}</td>
+            <td>${item.amount || formatVnd(item.amountNum)}</td>
+            <td>${item.method || 'Số dư ví'}</td>
+            <td>${formatDate(item.activeDate)}</td>
+            <td><span class="badge badge-success"><span class="badge-dot"></span> Thành công</span></td>
+          </tr>`).join('');
+        const latest = purchases[0];
+        if (latest && latest.expireDate) {
+          document.getElementById('maintenanceDue').textContent = 'Hạn duy trì: ' + formatDate(latest.expireDate);
+        }
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Không tải được lịch sử phí sàn.</td></tr>';
+      }
+    }
+
     async function confirmPartnerPayment() {
-      showToast('Đang kết nối cổng thanh toán Escrow...', 'info');
-      setTimeout(() => {
-        showToast('Thanh toán duy trì phí sàn 299.000đ thành công!');
-      }, 800);
+      if (currentProviderBal < PLATFORM_FEE) {
+        if (confirm(`Số dư ví hiện có ${formatVnd(currentProviderBal)}, không đủ ${formatVnd(PLATFORM_FEE)} để duy trì phí sàn.\n\nBạn có muốn chuyển sang trang Ví để nạp thêm tiền không?`)) {
+          window.location.href = 'income.html';
+        }
+        return;
+      }
+      if (!confirm(`Bạn có chắc chắn muốn thanh toán phí duy trì sàn ${formatVnd(PLATFORM_FEE)}?\nSố tiền sẽ được trừ trực tiếp từ số dư ví Provider của bạn.`)) return;
+
+      showToast('Thanh toán phí sàn', 'Đang xử lý trừ số dư ví...', 'info');
+      try {
+        const res = await window.providerApi.purchasePlatformFee();
+        if (res && res.success) {
+          showToast('Thanh toán thành công', `${res.message} Số dư ví còn lại: ${formatVnd(res.newBalance)}.`, 'success');
+          await loadProviderBalance();
+          await loadPlatformFeeHistory();
+        } else {
+          showToast('Thanh toán thất bại', (res && res.message) || 'Không thể thanh toán phí sàn.', 'error');
+        }
+      } catch (e) {
+        showToast('Thanh toán thất bại', e.message || 'Lỗi khi thanh toán phí sàn.', 'error');
+      }
     }
   </script>
 </body>

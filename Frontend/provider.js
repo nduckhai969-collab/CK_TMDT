@@ -522,11 +522,11 @@ window.providerApi = {
     return res.json();
   },
 
-  submitDefense: async (complaintId, providerClaim, attachments) => {
+  submitDefense: async (complaintId, providerClaim, evidence = []) => {
     const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/defense`, {
       method: 'POST',
       headers: getAuthHeader(),
-      body: JSON.stringify({ providerClaim, defenseText: providerClaim, attachments })
+      body: JSON.stringify({ providerClaim, defenseText: providerClaim, evidence, attachments: evidence })
     });
     return res.json();
   },
@@ -540,6 +540,8 @@ window.providerApi = {
     return res.json();
   },
 
+  acceptComplaintRefund: async (complaintId, note) => window.providerApi.acceptRefund(complaintId, note),
+
   // Packages (UC-46)
   getPackages: async () => {
     const res = await fetch(`${API_BASE}/api/providers/packages`);
@@ -552,6 +554,22 @@ window.providerApi = {
       headers: getAuthHeader(),
       body: JSON.stringify({ packageId })
     });
+    return res.json();
+  },
+
+  // Mua gói VIP Partner (duy trì phí sàn) — trừ trực tiếp số dư ví Provider.
+  purchasePlatformFee: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/packages/purchase-platform`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({})
+    });
+    return res.json();
+  },
+
+  // Lịch sử mua gói / gia hạn phí sàn của Provider đang đăng nhập.
+  getPackagePurchases: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/packages/purchases`, { headers: getAuthHeader() });
     return res.json();
   },
 

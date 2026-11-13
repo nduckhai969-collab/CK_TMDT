@@ -1,9 +1,9 @@
 /**
  * SkillRental - Statistics Module (UC-68)
- * Quản lý thống kê dữ liệu trực tiếp từ localStorage:
+ * Quản lý thống kê dữ liệu đơn hàng thật đọc từ máy chủ (đồng bộ với orders.html):
  * - Chức năng 1: Biểu đồ CỘT theo khoảng ngày (Doanh thu & Giá trị giao dịch, loại trừ đơn đã hủy)
  * - Chức năng 2: Biểu đồ TRÒN phân bổ trạng thái đơn hàng (Số lượng & Tỷ lệ %)
- * - Tự động đồng bộ thời gian thực khi localStorage thay đổi
+ * - Tự động làm mới khi quay lại tab hoặc dữ liệu thay đổi
  */
 
 let revenueChart = null;
@@ -21,6 +21,35 @@ const STATUS_CONFIG = [
 ];
 
 const DAILY_LIMIT_DAYS = 62; // Vượt quá 62 ngày thì tự động gom nhóm theo tháng
+
+// ============================================================================
+// NGUỒN DỮ LIỆU: ĐƠN HÀNG THẬT TỪ MÁY CHỦ (ĐỒNG BỘ VỚI orders.html)
+// ============================================================================
+// Trang Thống kê dùng CÙNG nguồn đơn hàng với orders.html: GET /api/admin/orders.
+// Không đọc state demo trong localStorage để tránh thống kê trên đơn ảo.
+let liveOrders = null;
+
+async function loadLiveOrders() {
+  try {
+    if (!window.adminApi || typeof window.adminApi.getOrders !== 'function') return;
+    const response = await window.adminApi.getOrders();
+    if (response && response.success && Array.isArray(response.orders)) {
+      liveOrders = response.orders;
+    }
+  } catch (err) {
+    console.warn('Không tải được đơn hàng từ máy chủ:', err);
+  }
+}
+
+function getLiveOrders() {
+  return Array.isArray(liveOrders) ? liveOrders : [];
+}
+
+// Loại đơn CHƯA THANH TOÁN / ĐÃ HỦY THANH TOÁN khỏi thống kê — khớp quy tắc server
+// (routes/adminRoutes.js: orders.filter(o => o.paymentStatus !== 'pending' && o.paymentStatus !== 'cancelled'))
+function getCountedOrders() {
+  return getLiveOrders().filter(o => o.paymentStatus !== 'pending' && o.paymentStatus !== 'cancelled');
+}
 
 // ============================================================================
 // HÀM TIỆN ÍCH NGÀY THÁNG & TIỀN TỆ
@@ -90,11 +119,10 @@ function showFeedback(message, type = 'warning') {
 }
 
 // ============================================================================
-// ĐỌC VÀ TÍNH TOÁN DỮ LIỆU TỪ LOCALSTORAGE
+// ĐỌC VÀ TÍNH TOÁN DỮ LIỆU ĐƠN HÀNG (TỪ MÁY CHỦ)
 // ============================================================================
 function getStatisticsData(start, end) {
-  const state = typeof getAppState === 'function' ? getAppState() : { orders: [] };
-  const allOrders = Array.isArray(state.orders) ? state.orders : [];
+  const allOrders = getCountedOrders();
 
   const startDay = new Date(start);
   startDay.setHours(0, 0, 0, 0);
@@ -160,8 +188,7 @@ function getStatisticsData(start, end) {
 
 // Đếm trạng thái đơn toàn bộ hệ thống (KHÔNG lọc ngày) — dùng riêng cho biểu đồ tròn
 function getAllOrderStatusCounts() {
-  const state = typeof getAppState === 'function' ? getAppState() : { orders: [] };
-  const allOrders = Array.isArray(state.orders) ? state.orders : [];
+  const allOrders = getCountedOrders();
 
   const statusCounts = {};
   STATUS_CONFIG.forEach(s => { statusCounts[s.key] = 0; });
@@ -435,12 +462,80 @@ function renderPieChart(data) {
 }
 
 // ============================================================================
+// BỘ CHỌN KIỂU THỜI GIAN: KHOẢNG NGÀY / QUÝ / NĂM
+// ============================================================================
+// Lấy danh sách năm có dữ liệu đơn hàng (kèm năm hiện tại)
+function getDataYears() {
+  const orders = getCountedOrders();
+  const years = new Set();
+  orders.forEach(o => {
+    const d = parseOrderDate(o.date);
+    if (d) years.add(d.getFullYear());
+  });
+  years.add(new Date().getFullYear());
+  return [...years].sort((a, b) => b - a);
+}
+
+// Đổ danh sách năm vào các select (Quý + Năm, và Năm)
+function populateYearSelects() {
+  const years = getDataYears();
+  ['stats-quarter-year', 'stats-year'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const prev = parseInt(sel.value, 10);
+    sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+    sel.value = String(years.includes(prev) ? prev : years[0]);
+  });
+}
+
+// Hiển thị/ẩn nhóm điều khiển theo kiểu thời gian đang chọn
+function updateRangeModeVisibility() {
+  const modeEl = document.getElementById('stats-range-mode');
+  const mode = modeEl ? modeEl.value : 'range';
+  const groups = {
+    range: document.getElementById('stats-group-range'),
+    quarter: document.getElementById('stats-group-quarter'),
+    year: document.getElementById('stats-group-year')
+  };
+  Object.entries(groups).forEach(([key, el]) => {
+    if (el) el.style.display = key === mode ? 'flex' : 'none';
+  });
+}
+
+// Quy đổi kiểu thời gian (quý/năm) thành khoảng ngày, ghi vào 2 input date
+function computeRangeFromMode() {
+  const modeEl = document.getElementById('stats-range-mode');
+  const mode = modeEl ? modeEl.value : 'range';
+  const fromInput = document.getElementById('stats-date-from');
+  const toInput = document.getElementById('stats-date-to');
+  if (!fromInput || !toInput || mode === 'range') return;
+
+  if (mode === 'quarter') {
+    const qEl = document.getElementById('stats-quarter');
+    const yEl = document.getElementById('stats-quarter-year');
+    const q = qEl ? parseInt(qEl.value, 10) : 1;
+    const y = yEl ? parseInt(yEl.value, 10) : new Date().getFullYear();
+    const startMonth = (q - 1) * 3;
+    fromInput.value = toISO(new Date(y, startMonth, 1));
+    toInput.value = toISO(new Date(y, startMonth + 3, 0)); // ngày cuối quý
+  } else if (mode === 'year') {
+    const yEl = document.getElementById('stats-year');
+    const y = yEl ? parseInt(yEl.value, 10) : new Date().getFullYear();
+    fromInput.value = toISO(new Date(y, 0, 1));
+    toInput.value = toISO(new Date(y, 11, 31));
+  }
+}
+
+// ============================================================================
 // ĐIỀU KHIỂN BỘ LỌC & TẢI THỐNG KÊ
 // ============================================================================
 function loadStatistics() {
   const fromInput = document.getElementById('stats-date-from');
   const toInput = document.getElementById('stats-date-to');
   if (!fromInput || !toInput) return;
+
+  // Nếu đang chọn theo Quý/Năm thì tự quy đổi ra khoảng ngày trước khi tính
+  computeRangeFromMode();
 
   const fromVal = fromInput.value;
   const toVal = toInput.value;
@@ -482,14 +577,14 @@ function loadStatistics() {
   }
 }
 
-// Tự động tìm khoảng ngày bao phủ các đơn hàng hiện có trong localStorage
-function initStatistics() {
+// Tự động tìm khoảng ngày bao phủ các đơn hàng hiện có (đọc từ máy chủ)
+async function initStatistics() {
   const fromInput = document.getElementById('stats-date-from');
   const toInput = document.getElementById('stats-date-to');
   if (!fromInput || !toInput) return;
 
-  const state = typeof getAppState === 'function' ? getAppState() : { orders: [] };
-  const orders = Array.isArray(state.orders) ? state.orders : [];
+  await loadLiveOrders();
+  const orders = getCountedOrders();
 
   const timestamps = orders
     .map(o => parseOrderDate(o.date))
@@ -508,10 +603,12 @@ function initStatistics() {
     toInput.value = toISO(today);
   }
 
+  populateYearSelects();
+  updateRangeModeVisibility();
   loadStatistics();
 }
 
-// Lắng nghe sự kiện để cập nhật thời gian thực khi localStorage hoặc tab khác thay đổi
+// Lắng nghe sự kiện để cập nhật thời gian thực khi dữ liệu đổi hoặc quay lại tab
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('btn-filter-revenue');
   if (btn) btn.addEventListener('click', loadStatistics);
@@ -521,20 +618,35 @@ document.addEventListener('DOMContentLoaded', () => {
   if (fromInput) fromInput.addEventListener('change', loadStatistics);
   if (toInput) toInput.addEventListener('change', loadStatistics);
 
+  // Bộ chọn kiểu thời gian: Khoảng ngày / Quý / Năm
+  const modeSelector = document.getElementById('stats-range-mode');
+  if (modeSelector) {
+    modeSelector.addEventListener('change', () => {
+      updateRangeModeVisibility();
+      if (modeSelector.value !== 'range') loadStatistics();
+    });
+  }
+  ['stats-quarter', 'stats-quarter-year', 'stats-year'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      const modeSelector = document.getElementById('stats-range-mode');
+      if (modeSelector && modeSelector.value !== 'range') loadStatistics();
+    });
+  });
+
   initStatistics();
 });
 
-// Lắng nghe thay đổi từ các trang khác (orders.html, users.html, v.v.)
-window.addEventListener('storage', (e) => {
-  if (!e.key || e.key === 'SKILL_RENTAL_ADMIN_STATE_V1') {
-    loadStatistics();
-  }
-});
-
-window.addEventListener('appStateUpdated', () => {
+// Tải lại đơn hàng từ máy chủ rồi vẽ lại biểu đồ (giữ nguyên bộ lọc thời gian đang chọn)
+async function refreshStatisticsFromServer() {
+  await loadLiveOrders();
+  populateYearSelects();
   loadStatistics();
-});
+}
 
-window.addEventListener('focus', () => {
-  loadStatistics();
-});
+// Lắng nghe sự kiện để cập nhật thời gian thực khi quay lại tab hoặc dữ liệu đổi
+window.addEventListener('storage', () => { refreshStatisticsFromServer(); });
+
+window.addEventListener('appStateUpdated', () => { refreshStatisticsFromServer(); });
+
+window.addEventListener('focus', () => { refreshStatisticsFromServer(); });

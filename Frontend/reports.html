@@ -181,62 +181,99 @@
 
         <!-- Subtab 2: Export Center -->
         <div class="subtab-content" id="tab-export">
+          <!-- Bộ lọc phạm vi thời gian dùng chung cho các báo cáo -->
+          <div class="card" style="margin-bottom:20px;">
+            <div class="panel-header">
+              <h3>Bộ lọc phạm vi thời gian báo cáo</h3>
+              <p>Chọn khoảng thời gian, quý hoặc năm để giới hạn dữ liệu xuất cho các báo cáo bên dưới</p>
+            </div>
+            <div style="display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;">
+              <div class="form-group" style="margin:0; min-width:180px;">
+                <label class="form-label" for="export-mode">Kiểu thời gian</label>
+                <select class="form-control" id="export-mode">
+                  <option value="all">Toàn bộ thời gian</option>
+                  <option value="range">Tùy chỉnh khoảng ngày</option>
+                  <option value="quarter">Theo quý</option>
+                  <option value="year">Theo năm</option>
+                </select>
+              </div>
+              <div class="form-group" id="export-group-range" style="margin:0; display:none; min-width:160px;">
+                <label class="form-label" for="export-from">Từ ngày</label>
+                <input type="date" class="form-control" id="export-from">
+              </div>
+              <div class="form-group" id="export-group-range-to" style="margin:0; display:none; min-width:160px;">
+                <label class="form-label" for="export-to">Đến ngày</label>
+                <input type="date" class="form-control" id="export-to">
+              </div>
+              <div class="form-group" id="export-group-quarter" style="margin:0; display:none; min-width:160px;">
+                <label class="form-label" for="export-quarter">Quý</label>
+                <select class="form-control" id="export-quarter">
+                  <option value="1">Quý 1 (T1–T3)</option>
+                  <option value="2">Quý 2 (T4–T6)</option>
+                  <option value="3">Quý 3 (T7–T9)</option>
+                  <option value="4">Quý 4 (T10–T12)</option>
+                </select>
+              </div>
+              <div class="form-group" id="export-group-quarter-year" style="margin:0; display:none; min-width:120px;">
+                <label class="form-label" for="export-quarter-year">Năm</label>
+                <select class="form-control" id="export-quarter-year"></select>
+              </div>
+              <div class="form-group" id="export-group-year" style="margin:0; display:none; min-width:120px;">
+                <label class="form-label" for="export-year">Năm</label>
+                <select class="form-control" id="export-year"></select>
+              </div>
+              <button class="btn btn-secondary btn-sm" type="button" onclick="resetExportFilter()" style="height:42px;">Đặt lại</button>
+            </div>
+            <p id="export-range-hint" style="margin-top:12px; font-size:12px; color:var(--text-secondary);">Đang áp dụng: <strong>Toàn bộ thời gian</strong></p>
+          </div>
+
           <div class="pricing-grid">
             <div class="card">
               <div class="panel-header">
-                <h3>Báo cáo Doanh thu & Dòng tiền</h3>
+                <h3>Báo cáo Doanh thu &amp; Dòng tiền</h3>
               </div>
-              <p style="color:var(--text-secondary); margin-bottom:16px;">Xuất toàn bộ dữ liệu biến động GMV, doanh thu hoa hồng sàn 10% và đối soát Escrow theo mốc thời gian.</p>
-              <div class="form-group">
-                <label class="form-label">Chọn khoảng thời gian</label>
-                <select class="form-control">
-                  <option>Tháng hiện tại (Tháng 4/2025)</option>
-                  <option>Tháng 3/2025</option>
-                  <option>Quý 1/2025</option>
-                  <option>Tùy chỉnh khoảng ngày</option>
-                </select>
-              </div>
+              <p style="color:var(--text-secondary); margin-bottom:16px;">Xuất toàn bộ dữ liệu biến động GMV, doanh thu hoa hồng sàn 10% và đối soát Escrow theo mốc thời gian đã chọn ở trên.</p>
               <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="btn btn-primary btn-sm" onclick="exportDataSimulation('Doanh_Thu_Thang_4')">Xuất Excel (.xlsx)</button>
-                <button class="btn btn-secondary btn-sm" onclick="exportDataSimulation('Doanh_Thu_CSV')">Xuất CSV</button>
+                <button class="btn btn-primary btn-sm" type="button" onclick="exportReport('Doanh_Thu_Thang_4')">Xuất Excel (.xlsx)</button>
+                <button class="btn btn-secondary btn-sm" type="button" onclick="exportReport('Doanh_Thu_CSV')">Xuất CSV</button>
               </div>
             </div>
 
             <div class="card">
               <div class="panel-header">
-                <h3>Báo cáo Người dùng & Provider</h3>
+                <h3>Báo cáo Người dùng &amp; Provider</h3>
               </div>
-              <p style="color:var(--text-secondary); margin-bottom:16px;">Trích xuất danh sách 2,845 người dùng, tỷ lệ tài khoản hoạt động, phân bổ vai trò và lịch sử khóa tài khoản.</p>
+              <p style="color:var(--text-secondary); margin-bottom:16px;">Trích xuất danh sách người dùng, tỷ lệ tài khoản hoạt động, phân bổ vai trò và lịch sử khóa tài khoản.</p>
               <div class="form-group">
-                <label class="form-label">Phân khúc đối tượng</label>
-                <select class="form-control">
-                  <option>Tất cả người dùng (Customer + Provider)</option>
-                  <option>Chỉ Provider đang hoạt động</option>
-                  <option>Danh sách tài khoản bị khóa vi phạm</option>
+                <label class="form-label" for="export-users-segment">Phân khúc đối tượng</label>
+                <select class="form-control" id="export-users-segment">
+                  <option value="all">Tất cả người dùng (Customer + Provider)</option>
+                  <option value="active-providers">Chỉ Provider đang hoạt động</option>
+                  <option value="locked">Danh sách tài khoản bị khóa vi phạm</option>
                 </select>
               </div>
               <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="btn btn-primary btn-sm" onclick="exportDataSimulation('Danh_Sach_Nguoi_Dung')">Xuất Excel (.xlsx)</button>
-                <button class="btn btn-secondary btn-sm" onclick="exportDataSimulation('Users_CSV')">Xuất CSV</button>
+                <button class="btn btn-primary btn-sm" type="button" onclick="exportReport('Danh_Sach_Nguoi_Dung')">Xuất Excel (.xlsx)</button>
+                <button class="btn btn-secondary btn-sm" type="button" onclick="exportReport('Users_CSV')">Xuất CSV</button>
               </div>
             </div>
 
             <div class="card">
               <div class="panel-header">
-                <h3>Báo cáo Đơn hàng & Khiếu nại</h3>
+                <h3>Báo cáo Đơn hàng &amp; Khiếu nại</h3>
               </div>
               <p style="color:var(--text-secondary); margin-bottom:16px;">Thống kê chi tiết tỷ lệ đơn hoàn thành, tỷ lệ đơn hủy, giá trị hợp đồng trung bình và kết quả giải quyết khiếu nại.</p>
               <div class="form-group">
-                <label class="form-label">Trạng thái đơn hàng</label>
-                <select class="form-control">
-                  <option>Tất cả đơn hàng</option>
-                  <option>Đơn hàng đã hoàn thành</option>
-                  <option>Đơn hàng tranh chấp / Khiếu nại</option>
+                <label class="form-label" for="export-orders-status">Trạng thái đơn hàng</label>
+                <select class="form-control" id="export-orders-status">
+                  <option value="all">Tất cả đơn hàng</option>
+                  <option value="completed">Đơn hàng đã hoàn thành</option>
+                  <option value="disputed">Đơn hàng tranh chấp / Khiếu nại</option>
                 </select>
               </div>
               <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="btn btn-primary btn-sm" onclick="exportDataSimulation('Bao_Cao_Don_Hang')">Xuất Excel (.xlsx)</button>
-                <button class="btn btn-secondary btn-sm" onclick="exportDataSimulation('Orders_CSV')">Xuất CSV</button>
+                <button class="btn btn-primary btn-sm" type="button" onclick="exportReport('Bao_Cao_Don_Hang')">Xuất Excel (.xlsx)</button>
+                <button class="btn btn-secondary btn-sm" type="button" onclick="exportReport('Orders_CSV')">Xuất CSV</button>
               </div>
             </div>
           </div>
@@ -251,6 +288,13 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       renderReportsTable();
+      populateExportYears();
+      updateExportModeVisibility();
+      ['export-mode', 'export-quarter', 'export-quarter-year', 'export-year', 'export-from', 'export-to']
+        .forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.addEventListener('change', updateExportModeVisibility);
+        });
     });
 
     function renderReportsTable() {
@@ -273,6 +317,120 @@
           </td>
         </tr>
       `).join('');
+    }
+
+    // ===== Bộ lọc phạm vi thời gian cho Trung tâm xuất dữ liệu (UC-67) =====
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function parseSimpleDate(s) {
+      if (!s) return null;
+      const str = String(s).trim();
+      const dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (dmy) return new Date(+dmy[3], +dmy[2] - 1, +dmy[1]);
+      const ymd = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (ymd) return new Date(+ymd[1], +ymd[2] - 1, +ymd[3]);
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function toISOInput(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+
+    function getReportYears() {
+      const state = getAppState();
+      const orders = Array.isArray(state.orders) ? state.orders : [];
+      const years = new Set();
+      orders.forEach(o => { const d = parseSimpleDate(o.date); if (d) years.add(d.getFullYear()); });
+      years.add(new Date().getFullYear());
+      return [...years].sort((a, b) => b - a);
+    }
+
+    function populateExportYears() {
+      const years = getReportYears();
+      ['export-quarter-year', 'export-year'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const prev = parseInt(sel.value, 10);
+        sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+        sel.value = String(years.includes(prev) ? prev : years[0]);
+      });
+    }
+
+    function updateExportModeVisibility() {
+      const modeEl = document.getElementById('export-mode');
+      const mode = modeEl ? modeEl.value : 'all';
+      const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? 'block' : 'none'; };
+      show('export-group-range', mode === 'range');
+      show('export-group-range-to', mode === 'range');
+      show('export-group-quarter', mode === 'quarter');
+      show('export-group-quarter-year', mode === 'quarter');
+      show('export-group-year', mode === 'year');
+      updateExportHint();
+    }
+
+    // Trả về {from, to} dạng 'YYYY-MM-DD' hoặc null khi không lọc theo thời gian
+    function computeExportRange() {
+      const modeEl = document.getElementById('export-mode');
+      const mode = modeEl ? modeEl.value : 'all';
+      if (mode === 'all') return null;
+
+      if (mode === 'range') {
+        const from = document.getElementById('export-from').value;
+        const to = document.getElementById('export-to').value;
+        if (!from || !to) return null;
+        return { from, to };
+      }
+      if (mode === 'quarter') {
+        const q = parseInt(document.getElementById('export-quarter').value, 10);
+        const y = parseInt(document.getElementById('export-quarter-year').value, 10);
+        const startMonth = (q - 1) * 3;
+        return {
+          from: toISOInput(new Date(y, startMonth, 1)),
+          to: toISOInput(new Date(y, startMonth + 3, 0))
+        };
+      }
+      if (mode === 'year') {
+        const y = parseInt(document.getElementById('export-year').value, 10);
+        return { from: toISOInput(new Date(y, 0, 1)), to: toISOInput(new Date(y, 11, 31)) };
+      }
+      return null;
+    }
+
+    function updateExportHint() {
+      const el = document.getElementById('export-range-hint');
+      if (!el) return;
+      const range = computeExportRange();
+      if (!range) {
+        el.innerHTML = 'Đang áp dụng: <strong>Toàn bộ thời gian</strong>';
+        return;
+      }
+      const fmt = (s) => s.split('-').reverse().join('/');
+      el.innerHTML = `Đang áp dụng: <strong>${fmt(range.from)}</strong> → <strong>${fmt(range.to)}</strong>`;
+    }
+
+    function getExportOptions() {
+      const range = computeExportRange();
+      const segmentEl = document.getElementById('export-users-segment');
+      const statusEl = document.getElementById('export-orders-status');
+      return {
+        from: range ? range.from : null,
+        to: range ? range.to : null,
+        segment: segmentEl ? segmentEl.value : 'all',
+        orderStatus: statusEl ? statusEl.value : 'all'
+      };
+    }
+
+    function exportReport(filename) {
+      exportDataSimulation(filename, getExportOptions());
+    }
+
+    function resetExportFilter() {
+      const modeEl = document.getElementById('export-mode');
+      if (modeEl) modeEl.value = 'all';
+      const segEl = document.getElementById('export-users-segment');
+      if (segEl) segEl.value = 'all';
+      const stEl = document.getElementById('export-orders-status');
+      if (stEl) stEl.value = 'all';
+      updateExportModeVisibility();
     }
   </script>
 </body>

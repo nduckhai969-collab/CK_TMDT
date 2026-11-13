@@ -445,9 +445,10 @@
 
       if (messages.length === lastRenderedCount && lastRenderedPartnerId === activePartnerId) return; // Không có tin nhắn mới
 
-      const myId = myProvider ? (myProvider.providerId || myProvider.id) : 'USR001';
+      // Messages are stored with the authenticated user ID by the API.
+      const myId = myProvider && (myProvider.userId || (myProvider.role === 'Provider' ? myProvider.id : null));
       container.innerHTML = messages.map(m => {
-        const isOutgoing = m.fromUserId === myId || m.fromUserId === 'USR001' || (myProvider && m.fromUserId === myProvider.userId);
+        const isOutgoing = Boolean(myId && m.fromUserId === myId);
         const autoBadge = m.isAutoReply ? '<div class="auto-reply-badge"><i class="fa-solid fa-robot"></i> Phản hồi tự động</div>' : '';
         return `
           <div class="msg-bubble ${isOutgoing ? 'msg-outgoing' : 'msg-incoming'}">
@@ -477,7 +478,11 @@
       if (!text) return;
 
       input.value = '';
-      const myId = myProvider ? (myProvider.providerId || myProvider.id) : 'USR001';
+      const myId = myProvider && (myProvider.userId || (myProvider.role === 'Provider' ? myProvider.id : null));
+      if (!myId) {
+        alert('Vui lòng đăng nhập lại tài khoản Provider để gửi tin nhắn.');
+        return;
+      }
 
       try {
         const res = await fetch(`${API_BASE}/api/chat`, {

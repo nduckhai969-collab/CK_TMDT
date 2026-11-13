@@ -13,7 +13,7 @@ const db = require('../data/db');
 const { formatDateTime } = require('../utils/dates');
 const { generateId } = require('../utils/id');
 const { slotsForDate } = require('../routes/providerAvailability');
-const { createNotification, notifyProvider } = require('./notificationService');
+const { createNotification, notifyProvider, notificationRecords } = require('./notificationService');
 const { httpError } = require('./orderService');
 const vnpay = require('./vnpayService');
 
@@ -172,7 +172,7 @@ function buildOrderDocument(spec, ctx) {
 
 // mode = 'wallet'  -> trừ ví + ký quỹ ngay
 // mode = 'gateway' -> đơn chờ thanh toán (chưa trừ ví, chưa báo cho Provider)
-function createOrders(customer, specs, { mode, paymentMethod, customerPhone, customerAddress, notes, paymentRef }) {
+async function createOrders(customer, specs, { mode, paymentMethod, customerPhone, customerAddress, notes, paymentRef }) {
   const users = db.getCollection('users');
   const orders = db.getCollection('orders');
   const customerRecord = users.find((u) => u.id === customer.id);
@@ -232,16 +232,27 @@ function createOrders(customer, specs, { mode, paymentMethod, customerPhone, cus
   }
 
   orders.unshift(...created.slice().reverse());
-  db.saveCollection('orders', orders);
-  db.saveCollection('order_items', orderItems);
-  if (servicesModified) db.saveCollection('services', services);
+  const collectionsToSave = { orders, order_items: orderItems };
+  if (servicesModified) collectionsToSave.services = services;
   if (mode === 'wallet') {
-    db.saveCollection('users', users);
-    db.saveCollection('walletTransactions', transactions);
-    created.forEach((order) => notifyProvider(order.providerId, 'Đơn đặt lịch mới',
-      `Bạn có lịch đặt mới từ ${customerRecord.name}. Tổng giá trị: ${money(order.price)}.`, 'info',
-      `/bookings.html?orderId=${encodeURIComponent(order.id)}`));
+    collectionsToSave.users = users;
+    collectionsToSave.walletTransactions = transactions;
   }
+
+  if (mode === 'wallet') {
+    const notifications = await db.getCollectionFresh('notifications');
+    collectionsToSave.notifications = [
+      ...notificationRecords(created.map(order => ({
+      providerId: order.providerId,
+      title: 'Đơn đặt lịch mới',
+      message: `Bạn có lịch đặt mới từ ${customerRecord.name}. Tổng giá trị: ${money(order.price)}.`,
+      type: 'info',
+      detailsUrl: `/bookings.html?orderId=${encodeURIComponent(order.id)}`
+      }))),
+      ...notifications
+    ];
+  }
+  await db.saveCollectionsAndWait(collectionsToSave);
   return created;
 }
 
@@ -284,7 +295,7 @@ function assertPayableAmount(amount) {
 }
 
 // Tạo đơn "chờ thanh toán" + giao dịch VNPay + URL thanh toán.
-function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, customerAddress, notes, ipAddr, bankCode, returnOrigin }) {
+async function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, customerAddress, notes, ipAddr, bankCode, returnOrigin }) {
   const total = specs.reduce((sum, s) => sum + s.escrowDeposit, 0);
   assertPayableAmount(total);
 
@@ -293,7 +304,7 @@ function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, c
     : vnpay.bankCodeForMethod(paymentMethod);
 
   const paymentRef = generateId('PAY');
-  const orders = createOrders(customer, specs, { mode: 'gateway', paymentMethod, customerPhone, customerAddress, notes, paymentRef });
+  const orders = await createOrders(customer, specs, { mode: 'gateway', paymentMethod, customerPhone, customerAddress, notes, paymentRef });
   const orderIds = orders.map((o) => o.id);
 
   const { txn, paymentUrl } = createGatewayTransaction({
@@ -315,12 +326,20 @@ function startGatewayCheckout({ customer, specs, paymentMethod, customerPhone, c
     const stored = all.find((o) => o.id === created.id);
     if (stored) stored.paymentRef = txn.id;
   });
-  db.saveCollection('orders', all);
+  const existingNotifications = await db.getCollectionFresh('notifications');
+  const newNotifications = notificationRecords([{
+    userId: customer.id,
+    title: 'Đơn đang chờ thanh toán',
+    message: `Đơn ${orderIds.join(', ')} đang chờ thanh toán ${money(total)} qua VNPay. Đơn sẽ tự hủy nếu không thanh toán trong ${Math.round(paymentWindowMs() / 60000)} phút.`,
+    type: 'info',
+    detailsUrl: '/customer_orders.html'
+  }]);
+  await db.saveCollectionsAndWait({
+    orders: all,
+    walletTransactions: db.getCollection('walletTransactions') || [],
+    notifications: [...newNotifications, ...existingNotifications]
+  });
   const storedOrders = orderIds.map((id) => all.find((o) => o.id === id)).filter(Boolean);
-
-  createNotification(customer.id, 'Đơn đang chờ thanh toán',
-    `Đơn ${orderIds.join(', ')} đang chờ thanh toán ${money(total)} qua VNPay. Đơn sẽ tự hủy nếu không thanh toán trong ${Math.round(paymentWindowMs() / 60000)} phút.`,
-    'info', '/customer_orders.html');
   return { orders: storedOrders, txn, paymentUrl };
 }
 

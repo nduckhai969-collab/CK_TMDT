@@ -1187,7 +1187,10 @@ router.get('/complaints', (req, res) => {
 });
 
 router.post('/complaints/:id/resolve', (req, res) => {
-  const { resolution, refundPercentage = 100, note } = req.body;
+  const { resolution, refundPercentage = 50, note } = req.body;
+  if (!['pay_provider', 'partial_refund'].includes(resolution)) {
+    return res.status(400).json({ success: false, message: 'Phương án xử lý khiếu nại không hợp lệ.' });
+  }
   const complaints = db.getCollection('complaints');
   const complaint = complaints.find(c => c.id === req.params.id);
 
@@ -1202,57 +1205,42 @@ router.post('/complaints/:id/resolve', (req, res) => {
   const order = orders.find(o => o.id === complaint.orderId);
   const users = db.getCollection('users');
 
-  if (order) {
-    const totalDeposit = Number(order.escrowDeposit) || Number(order.price) || 0;
-    const priceNum = Number(order.price) || 0;
-
-    if (resolution === 'refund_customer') {
-      order.escrowStatus = 'refunded';
-      order.orderStatus = 'cancelled';
-      // Refund customer
-      const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
-      if (cust) cust.balance = (cust.balance || 0) + totalDeposit;
-    } else if (resolution === 'pay_provider') {
-      order.escrowStatus = 'completed';
-      order.orderStatus = 'completed';
-      // Pay provider
-      const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
-      if (prov && !((db.getCollection('walletTransactions') || []).some(t => t.orderId === order.id && t.type === 'disbursement'))) {
-        prov.balance = (prov.balance || 0) + priceNum;
-        const provider = (db.getCollection('providers') || []).find(p => p.userId === prov.id || p.id === order.providerId);
-        const walletTransactions = db.getCollection('walletTransactions') || [];
-        walletTransactions.unshift({ id: `TXN_${Date.now()}_CP`, userId: prov.id, providerId: provider?.id || order.providerId, orderId: order.id, complaintId: complaint.id, type: 'disbursement', amount: priceNum, balanceAfter: prov.balance, status: 'completed', description: `Thu nhập theo khiếu nại ${complaint.id} cho đơn ${order.id}`, createdAt: new Date().toISOString() });
-        db.saveCollection('walletTransactions', walletTransactions);
-      }
-    } else if (resolution === 'partial_refund') {
-      const pct = Math.max(0, Math.min(100, Number(refundPercentage)));
-      const refundAmt = Math.round(priceNum * (pct / 100));
-      const payAmt = priceNum - refundAmt;
-
-      order.escrowStatus = 'partial_refunded';
-      order.orderStatus = 'completed';
-
-      const cust = users.find(u => u.id === order.customerId || u.name === order.customerName);
-      if (cust) {
-        cust.balance = (cust.balance || 0) + refundAmt;
-        const walletTransactions = db.getCollection('walletTransactions') || [];
-        walletTransactions.unshift({ id: `TXN_${Date.now()}_CR`, userId: cust.id, orderId: order.id, complaintId: complaint.id, type: 'refund', amount: refundAmt, balanceAfter: cust.balance, status: 'completed', description: `Hoàn tiền theo khiếu nại ${complaint.id} cho đơn ${order.id}`, createdAt: new Date().toISOString() });
-        db.saveCollection('walletTransactions', walletTransactions);
-      }
-
-      const prov = users.find(u => u.id === order.providerId || u.name === order.providerName);
-      if (prov && payAmt > 0) {
-        prov.balance = (prov.balance || 0) + payAmt;
-        const provider = (db.getCollection('providers') || []).find(p => p.userId === prov.id || p.id === order.providerId);
-        const walletTransactions = db.getCollection('walletTransactions') || [];
-        walletTransactions.unshift({ id: `TXN_${Date.now()}_CP`, userId: prov.id, providerId: provider?.id || order.providerId, orderId: order.id, complaintId: complaint.id, type: 'disbursement', amount: payAmt, balanceAfter: prov.balance, status: 'completed', description: `Thu nhập theo khiếu nại ${complaint.id} cho đơn ${order.id}`, createdAt: new Date().toISOString() });
-        db.saveCollection('walletTransactions', walletTransactions);
-      }
-    }
-
-    db.saveCollection('orders', orders);
-    db.saveCollection('users', users);
+  if (!order) return res.status(409).json({ success: false, message: 'Không tìm thấy đơn hàng liên quan; chưa ghi nhận phán quyết.' });
+  if (order.orderStatus !== 'disputed' || !['disputed', 'Tạm giữ tranh chấp'].includes(order.escrowStatus)) {
+    return res.status(409).json({ success: false, message: 'Đơn hàng không còn ở trạng thái tranh chấp.' });
   }
+  const pct = resolution === 'pay_provider' ? 0 : Number(refundPercentage);
+  if (!Number.isFinite(pct) || (resolution === 'partial_refund' && (pct <= 0 || pct > 70))) {
+    return res.status(400).json({ success: false, message: 'Khiếu nại chỉ hỗ trợ hoàn một phần tối đa 70%; không thể hoàn toàn bộ tiền ký quỹ.' });
+  }
+  const total = Math.max(0, Number(order.escrowDeposit) || Number(order.price) || 0);
+  const refund = Math.round(total * pct / 100);
+  const payout = total - refund;
+  const cust = users.find(u => u.id === order.customerId);
+  const providerProfile = (db.getCollection('providers') || []).find(p => p.id === order.providerId || p.userId === order.providerId);
+  const prov = users.find(u => u.id === providerProfile?.userId) || users.find(u => u.id === order.providerId);
+  if ((refund > 0 && !cust) || (payout > 0 && !prov)) return res.status(409).json({ success: false, message: 'Không tìm thấy tài khoản nhận tiền; chưa ghi nhận phán quyết.' });
+
+  const walletTransactions = db.getCollection('walletTransactions') || [];
+  const resolvedAt = new Date().toISOString();
+  if (refund > 0) {
+    cust.balance = (Number(cust.balance) || 0) + refund;
+    walletTransactions.unshift({ id: `TXN_${Date.now()}_CR`, userId: cust.id, orderId: order.id, complaintId: complaint.id, type: 'refund', amount: refund, balanceAfter: cust.balance, status: 'completed', description: `Hoàn tiền theo khiếu nại ${complaint.id}`, createdAt: resolvedAt });
+  }
+  if (payout > 0) {
+    prov.balance = (Number(prov.balance) || 0) + payout;
+    walletTransactions.unshift({ id: `TXN_${Date.now()}_CP`, userId: prov.id, providerId: providerProfile?.id || order.providerId, orderId: order.id, complaintId: complaint.id, type: 'disbursement', amount: payout, balanceAfter: prov.balance, status: 'completed', description: `Giải ngân theo khiếu nại ${complaint.id}`, createdAt: resolvedAt });
+  }
+  order.escrowStatus = pct === 100 ? 'refunded' : pct === 0 ? 'completed' : 'partial_refunded';
+  order.orderStatus = pct === 100 ? 'cancelled' : 'completed';
+  order.disputeResolution = { complaintId: complaint.id, refundPercent: pct, refundAmount: refund, providerAmount: payout, resolvedAt };
+  db.saveCollection('orders', orders);
+  db.saveCollection('users', users);
+  db.saveCollection('walletTransactions', walletTransactions);
+  complaint.refundPercentage = pct;
+  complaint.refundAmount = refund;
+  complaint.providerAmount = payout;
+  complaint.verdict = note || '';
 
   complaint.status = 'resolved';
   complaint.resolution = resolution;

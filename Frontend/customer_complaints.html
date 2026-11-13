@@ -54,7 +54,7 @@
   <div id="complaintDetailModal" style="display:none;position:fixed;inset:0;z-index:9999;background:#0f172a99;align-items:center;justify-content:center;padding:18px" onclick="if(event.target===this)closeComplaintDetail()">
     <section style="width:min(620px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 60px #0f172a40">
       <header style="padding:19px 22px;background:#fff7f7;border-bottom:1px solid #fee2e2;display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><div id="detailComplaintId" style="font-size:11px;font-weight:800;color:#b91c1c"></div><h2 id="detailComplaintTitle" style="font-size:18px;margin:5px 0 0"></h2></div><button type="button" onclick="closeComplaintDetail()" aria-label="Đóng" style="width:34px;height:34px;border:0;border-radius:9px;background:white;color:#64748b;cursor:pointer"><i class="fa-solid fa-xmark"></i></button></header>
-      <div style="padding:22px;display:grid;gap:14px"><div id="detailComplaintMeta" style="font-size:12px;line-height:1.7;color:#64748b"></div><div><strong style="font-size:12px">Nội dung bạn gửi</strong><p id="detailUserClaim" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#475569;background:#f8fafc;border-radius:10px;padding:13px;font-size:13px"></p></div><div><strong style="font-size:12px">Phản hồi từ Provider</strong><p id="detailProviderClaim" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#475569;background:#f8fafc;border-radius:10px;padding:13px;font-size:13px"></p></div><div id="detailResolutionWrap" style="display:none"><strong style="font-size:12px">Kết quả xử lý</strong><p id="detailResolution" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#166534;background:#f0fdf4;border-radius:10px;padding:13px;font-size:13px"></p></div></div>
+      <div style="padding:22px;display:grid;gap:14px"><div id="detailComplaintMeta" style="font-size:12px;line-height:1.7;color:#64748b"></div><div><strong style="font-size:12px">Nội dung bạn gửi</strong><p id="detailUserClaim" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#475569;background:#f8fafc;border-radius:10px;padding:13px;font-size:13px"></p></div><div><strong style="font-size:12px">Phản hồi từ Provider</strong><p id="detailProviderClaim" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#475569;background:#f8fafc;border-radius:10px;padding:13px;font-size:13px"></p><div id="detailProviderEvidence" style="font-size:12px"></div></div><div id="detailResolutionWrap" style="display:none"><strong style="font-size:12px">Kết quả xử lý</strong><p id="detailResolution" style="margin:6px 0 0;white-space:pre-wrap;line-height:1.65;color:#166534;background:#f0fdf4;border-radius:10px;padding:13px;font-size:13px"></p></div></div>
     </section>
   </div>
   <div id="footer-placeholder"></div>
@@ -109,6 +109,17 @@
       document.getElementById('detailComplaintMeta').textContent = `Trạng thái: ${item.status === 'resolved' ? 'Đã giải quyết' : 'Đang xử lý'} · Gửi lúc: ${item.createdAt || '—'} · Provider: ${item.defendant || '—'} · Số tiền: ${item.amount || 'Theo giá trị đơn'}`;
       document.getElementById('detailUserClaim').textContent = item.userClaim || 'Không có nội dung.';
       document.getElementById('detailProviderClaim').textContent = item.providerClaim || 'Chưa có phản hồi từ Provider.';
+      const providerEvidenceWrap = document.getElementById('detailProviderEvidence');
+      if (providerEvidenceWrap) {
+        const evidence = Array.isArray(item.providerEvidence) ? item.providerEvidence : [];
+        providerEvidenceWrap.innerHTML = evidence.length
+          ? evidence.map(file => {
+              const data = typeof file.data === 'string' && /^data:image\/(png|jpeg|webp);base64,/.test(file.data) ? file.data : '';
+              const name = escapeHTML(file.name || 'Ảnh bằng chứng');
+              return data ? `<a href="${data}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:6px 6px 0 0;padding:7px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8">${name}</a>` : '';
+            }).join('')
+          : '<span style="color:#94a3b8">Chưa có ảnh do Provider gửi.</span>';
+      }
       document.getElementById('detailResolutionWrap').style.display = item.resolution ? '' : 'none';
       const resolutionLabels = { refund_customer: 'Hoàn tiền cho khách hàng', pay_provider: 'Giải ngân cho Provider', partial_refund: 'Hoàn tiền một phần' };
       document.getElementById('detailResolution').textContent = resolutionLabels[item.resolution] || item.resolution || '';

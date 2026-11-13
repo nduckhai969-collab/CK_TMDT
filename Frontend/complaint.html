@@ -412,6 +412,8 @@
               <strong>Nội dung từ khách hàng:</strong><br>
               ${esc(c.userClaim || '—')}
             </div>
+            ${renderProviderEvidence(c.evidence)}
+            ${c.providerEvidence && c.providerEvidence.length ? `<div style="margin-top:10px"><strong style="font-size:12px">Ảnh bằng chứng bạn đã gửi</strong>${renderProviderEvidence(c.providerEvidence)}</div>` : ''}
 
             ${c.providerClaim && c.providerClaim !== 'Chờ Provider phản hồi giải trình' ? `
               <div style="margin-top:10px; padding:10px 13px; background:#F0FDF4; border-radius:8px; border-left:3px solid #22C55E; font-size:13px;">
@@ -431,6 +433,10 @@
                 id="defenseText-${esc(c.id)}"
                 placeholder="Trình bày chi tiết: Bạn đã thực hiện đúng cam kết gì? Bằng chứng nào bạn có? Phản bác cụ thể luận điểm của khách hàng..."
               >${esc(c.providerClaim && c.providerClaim !== 'Chờ Provider phản hồi giải trình' ? c.providerClaim : '')}</textarea>
+
+              <label for="defenseEvidence-${esc(c.id)}" style="display:block;margin-top:10px;padding:12px;border:1px dashed #94a3b8;border-radius:8px;cursor:pointer;font-size:12px;color:#475569"><i class="fa-solid fa-image"></i> Đính kèm ảnh bằng chứng (PNG/JPG/WEBP, tối đa 5 ảnh, tổng 14MB)</label>
+              <input id="defenseEvidence-${esc(c.id)}" type="file" accept="image/png,image/jpeg,image/webp" multiple style="display:none" onchange="showDefenseEvidence('${esc(c.id)}')">
+              <div id="defenseEvidenceList-${esc(c.id)}" style="margin-top:5px;font-size:12px;color:#64748b"></div>
 
               <div class="defense-btn-row">
                 <button class="btn btn-primary" onclick="submitDefense('${esc(c.id)}')">
@@ -528,13 +534,32 @@
         return;
       }
 
+      const evidenceInput = document.getElementById('defenseEvidence-' + complaintId);
+      const files = Array.from(evidenceInput?.files || []);
+      if (files.length > 5 || files.reduce((sum, file) => sum + file.size, 0) > 14 * 1024 * 1024 || files.some(file => file.size > 15 * 1024 * 1024 || !['image/png', 'image/jpeg', 'image/webp'].includes(file.type))) {
+        showToast('Chỉ nhận tối đa 5 ảnh PNG/JPG/WEBP, mỗi ảnh tối đa 15MB và tổng không quá 14MB.');
+        return;
+      }
+      let evidence = [];
+      try {
+        evidence = await Promise.all(files.map(file => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ name: file.name, data: reader.result });
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        })));
+      } catch (_) {
+        showToast('Không thể đọc ảnh bằng chứng. Vui lòng chọn lại ảnh.');
+        return;
+      }
+
       // Disable form
       const card = document.getElementById('complaint-card-' + complaintId);
       const btn  = card ? card.querySelector('button[onclick*="submitDefense"]') : null;
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang gửi...'; }
 
       try {
-        const res = await window.providerApi.submitDefense(complaintId, text);
+        const res = await window.providerApi.submitDefense(complaintId, text, evidence);
         if (res && res.success) {
           showToast('Đã gửi bằng chứng giải trình thành công! Admin sẽ xem xét trong vòng 5 ngày làm việc.');
           await loadComplaints();
@@ -548,18 +573,30 @@
       }
     }
 
+    function showDefenseEvidence(complaintId) {
+      const input = document.getElementById('defenseEvidence-' + complaintId);
+      const label = document.getElementById('defenseEvidenceList-' + complaintId);
+      const files = Array.from(input?.files || []);
+      const valid = files.length <= 5 && files.reduce((sum, file) => sum + file.size, 0) <= 14 * 1024 * 1024 && files.every(file => file.size <= 15 * 1024 * 1024 && ['image/png', 'image/jpeg', 'image/webp'].includes(file.type));
+      if (!valid) {
+        if (input) input.value = '';
+        label.textContent = 'Ảnh không hợp lệ hoặc vượt giới hạn kích thước.';
+        label.style.color = '#b91c1c';
+        return;
+      }
+      label.style.color = '#64748b';
+      label.textContent = files.map(file => file.name).join(' · ');
+    }
+
     function confirmAcceptRefund(complaintId) {
       const c = allComplaints.find(x => x.id === complaintId);
       const amount = c ? c.amount : 'toàn bộ';
       if (confirm(`Bạn có chắc chắn muốn chấp nhận hoàn lại ${amount} tiền Escrow cho khách hàng?\n\nHành động này không thể hoàn tác. Admin sẽ được thông báo để xác nhận phán quyết.`)) {
-        // Gửi defense rỗng với note chấp nhận
-        window.providerApi.submitDefense(complaintId, '[Provider chấp nhận hoàn tiền cho khách hàng]').then(res => {
-          showToast('Đã ghi nhận. Admin sẽ xác nhận hoàn tiền trong thời gian sớm nhất.');
+        window.providerApi.acceptComplaintRefund(complaintId).then(res => {
+          if (!res.success) return showToast(res.message || 'Không thể ghi nhận yêu cầu.');
+          showToast(res.message);
           loadComplaints();
-        }).catch(() => {
-          showToast('Đã ghi nhận yêu cầu hoàn tiền của bạn.');
-          loadComplaints();
-        });
+        }).catch(() => showToast('Lỗi kết nối. Vui lòng thử lại.'));
       }
     }
 
@@ -568,6 +605,13 @@
     // =========================================================
     function esc(val) {
       return String(val ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function renderProviderEvidence(files) {
+      if (!Array.isArray(files) || !files.length) return '<div style="margin-top:8px;color:var(--text-muted);font-size:12px">Khách hàng chưa đính kèm bằng chứng.</div>';
+      return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${files.map(file => {
+        const data = typeof file.data === 'string' && /^data:(image\/(png|jpeg|webp)|application\/pdf);base64,/.test(file.data) ? file.data : '';
+        return data ? `<a href="${data}" target="_blank" rel="noopener noreferrer" style="padding:7px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:12px">${esc(file.name || 'Bằng chứng')}</a>` : '';
+      }).join('')}</div>`;
     }
   </script>
 </body>

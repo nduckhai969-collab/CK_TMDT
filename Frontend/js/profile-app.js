@@ -637,7 +637,7 @@ function renderServicesList(services) {
   const container = document.getElementById('packagesContainer');
   if (!container) return;
   const serviceList = Array.isArray(services) ? services : [];
-  const publicCount = serviceList.filter(service => service.status !== 'inactive').length;
+  const publicCount = serviceList.filter(service => !service.status || service.status === 'active').length;
   const countLabel = document.getElementById('serviceCountSummary');
   if (countLabel) {
     countLabel.textContent = publicCount === serviceList.length
@@ -662,6 +662,13 @@ function renderServicesList(services) {
   container.innerHTML = serviceList.map(s => {
     const priceFormatted = Number(s.price || 0).toLocaleString('vi-VN') + 'đ';
     const duration = s.duration || s.deliveryTime || '3-5 ngày';
+    const statusBadge = s.status === 'inactive'
+      ? '<span class="badge badge-warning" style="font-size:11px;">Đang ẩn với khách hàng</span>'
+      : (s.status === 'pending'
+        ? '<span class="badge badge-warning" style="font-size:11px;"><i class="fa-solid fa-hourglass-half"></i> Chờ Admin duyệt</span>'
+        : (s.status === 'rejected'
+          ? '<span class="badge badge-danger" style="font-size:11px;">Bị từ chối</span>'
+          : ''));
     const lines = (s.description || '').split('\n').filter(l => l.trim().length > 0);
     const featuresHtml = lines.map(line => `<li><i class="fa-solid fa-check" style="color: var(--primary);"></i> ${escapeHtml(line)}</li>`).join('');
 
@@ -669,7 +676,7 @@ function renderServicesList(services) {
       <div class="package-card" data-service-id="${s.id}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <span class="badge badge-neutral" style="width: fit-content;">${escapeHtml(s.category || 'Dịch vụ')}</span>
-          ${s.status === 'inactive' ? '<span class="badge badge-warning" style="font-size:11px;">Đang ẩn với khách hàng</span>' : ''}
+          ${statusBadge}
           <span class="badge badge-success" style="font-size: 11px;"><i class="fa-solid fa-clock"></i> ${escapeHtml(duration)}</span>
         </div>
         <div style="font-weight: 700; font-size: 17px; margin-top: 10px; color: var(--secondary);">${escapeHtml(s.title || s.name || 'Gói dịch vụ')}</div>

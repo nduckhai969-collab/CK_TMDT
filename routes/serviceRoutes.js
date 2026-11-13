@@ -8,6 +8,9 @@ router.get('/', (req, res) => {
   const { category, search, minPrice, maxPrice, sort } = req.query;
   let services = db.getCollection('services');
 
+  // Chỉ hiển thị dịch vụ đã được duyệt (active) cho khách; ẩn bản chờ duyệt/chờ duyệt giá/bị khóa.
+  services = services.filter(s => (s.status || 'active') === 'active');
+
   // Filter category
   if (category && category !== 'all') {
     services = services.filter(s => s.category.toLowerCase() === category.toLowerCase());

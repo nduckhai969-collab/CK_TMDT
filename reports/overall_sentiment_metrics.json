@@ -1,0 +1,125 @@
+{
+  "dataset": "binh_luan_dich_vu_600_aspect.csv",
+  "sourceRows": 600,
+  "validRows": 600,
+  "categoryCount": 12,
+  "categoriesBySplit": {
+    "train": [
+      "cham_soc_tre_nguoi_gia",
+      "chup_anh_quay_phim",
+      "dich_thuat",
+      "gia_su",
+      "giup_viec",
+      "ke_toan_thue",
+      "ky_su",
+      "lap_trinh_web"
+    ],
+    "validation": [
+      "luat_su",
+      "marketing_seo"
+    ],
+    "test": [
+      "sua_chua_dien_nuoc",
+      "thiet_ke_do_hoa"
+    ]
+  },
+  "splitCounts": {
+    "training": 400,
+    "validation": 100,
+    "test": 100,
+    "testNewDataset": 100
+  },
+  "classCounts": {
+    "positive": 136,
+    "negative": 136,
+    "neutral": 128
+  },
+  "calibration": {
+    "temperature": 6,
+    "validationLogLoss": 0.12165880367222677
+  },
+  "validation": {
+    "count": 100,
+    "accuracy": 0.95,
+    "macroF1": 0.9508847959552185,
+    "f1": {
+      "positive": 0.9230769230769231,
+      "negative": 0.9295774647887324,
+      "neutral": 1
+    },
+    "confusionMatrix": {
+      "positive": {
+        "positive": 30,
+        "negative": 4,
+        "neutral": 0
+      },
+      "negative": {
+        "positive": 1,
+        "negative": 33,
+        "neutral": 0
+      },
+      "neutral": {
+        "positive": 0,
+        "negative": 0,
+        "neutral": 32
+      }
+    }
+  },
+  "test": {
+    "count": 100,
+    "accuracy": 0.88,
+    "macroF1": 0.8802385470317159,
+    "f1": {
+      "positive": 0.9411764705882353,
+      "negative": 0.8285714285714286,
+      "neutral": 0.8709677419354839
+    },
+    "confusionMatrix": {
+      "positive": {
+        "positive": 32,
+        "negative": 2,
+        "neutral": 0
+      },
+      "negative": {
+        "positive": 2,
+        "negative": 29,
+        "neutral": 3
+      },
+      "neutral": {
+        "positive": 0,
+        "negative": 5,
+        "neutral": 27
+      }
+    }
+  },
+  "testBySource": {
+    "binh_luan_dich_vu_600_aspect.csv": {
+      "count": 100,
+      "accuracy": 0.88,
+      "macroF1": 0.8802385470317159,
+      "f1": {
+        "positive": 0.9411764705882353,
+        "negative": 0.8285714285714286,
+        "neutral": 0.8709677419354839
+      },
+      "confusionMatrix": {
+        "positive": {
+          "positive": 32,
+          "negative": 2,
+          "neutral": 0
+        },
+        "negative": {
+          "positive": 2,
+          "negative": 29,
+          "neutral": 3
+        },
+        "neutral": {
+          "positive": 0,
+          "negative": 5,
+          "neutral": 27
+        }
+      }
+    }
+  },
+  "datasetSha256": "e0ee88851df984a6ced5478eb4f6377925943fd0ea9c63931dfe812cec266666"
+}

@@ -364,7 +364,7 @@
 
         if (res.success) {
           const sent = res.review?.aiAnalysis?.overallSentiment;
-          const sentText = sent === 'pos' ? 'Tích cực' : sent === 'neg' ? 'Tiêu cực' : 'Trung tính';
+          const sentText = sent === 'pos' ? 'Tích cực' : sent === 'neg' ? 'Tiêu cực' : 'Trung lập';
           showToast('Đánh Giá Thành Công!', `Mô hình AI: ${sentText}`, 'success');
           setTimeout(() => {
             window.location.href = 'customer_reviews.html';

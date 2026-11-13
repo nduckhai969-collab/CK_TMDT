@@ -776,3 +776,24 @@ function exportDataSimulation(filename) {
     showToast('Xuất dữ liệu thành công', `Đã xuất ${recordCount} bản ghi vào tệp ${filename}.csv`, 'success');
   }, 600);
 }
+
+
+// AI ASPECT-BASED SENTIMENT BADGE HELPER
+// ============================================================
+function renderAiBadge(aiAnalysis) {
+  if (!aiAnalysis) return '';
+  const sent = aiAnalysis.overallSentiment === 'pos' ? 'pos' : aiAnalysis.overallSentiment === 'neg' ? 'neg' : 'neutral';
+  let bg = '#F1F5F9', border = '#CBD5E1', color = '#475569', label = 'Trung lập';
+  let icon = '<i class="fa-solid fa-circle-info" style="color:#64748b;margin-right:5px;"></i>';
+  if (sent === 'pos') {
+    bg = '#F0FDF4'; border = '#BBF7D0'; color = '#15803D'; label = 'Tích cực';
+    icon = '<i class="fa-solid fa-circle-check" style="color:#16a34a;margin-right:5px;"></i>';
+  } else if (sent === 'neg') {
+    bg = '#FEF2F2'; border = '#FECACA'; color = '#B91C1C'; label = 'Tiêu cực';
+    icon = '<i class="fa-solid fa-circle-xmark" style="color:#dc2626;margin-right:5px;"></i>';
+  }
+
+  return '<div class="ai-sentiment-box" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;font-size:12px;font-weight:700;color:' + color + ';margin-top:6px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">' + icon + '<span>' + label + '</span></div>';
+}
+
+window.renderAiBadge = renderAiBadge;

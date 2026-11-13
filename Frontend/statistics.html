@@ -186,22 +186,48 @@
           <div class="card">
             <div class="panel-header" style="margin-bottom:12px;">
               <div>
-                <h2>Biểu đồ Doanh thu theo Khoảng ngày</h2>
-                <p id="revenue-summary-text">Chọn ngày bắt đầu và kết thúc để phân tích doanh thu từ dữ liệu đơn hàng</p>
+                <h2>Biểu đồ Doanh thu theo Thời gian</h2>
+                <p id="revenue-summary-text">Chọn khoảng ngày, quý hoặc năm để phân tích doanh thu từ dữ liệu đơn hàng</p>
               </div>
-              <span class="badge badge-success"><span class="badge-dot-indicator"></span>Dữ liệu LocalStorage (đồng bộ)</span>
+              <span class="badge badge-success"><span class="badge-dot-indicator"></span>Dữ liệu thật &amp; mô phỏng (đồng bộ)</span>
             </div>
 
-            <!-- Date Inputs Filter Toolbar -->
+            <!-- Time Range Filter Toolbar: Khoảng ngày / Quý / Năm -->
             <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
               <div style="display:flex; align-items:center; gap:8px;">
-                <label for="stats-date-from" style="font-size:12px; font-weight:600; color:var(--text-secondary);">Từ ngày:</label>
-                <input type="date" id="stats-date-from" class="filter-select" style="height:36px; padding:0 10px; font-size:12px; font-weight:500;">
+                <label for="stats-range-mode" style="font-size:12px; font-weight:600; color:var(--text-secondary);">Kiểu thời gian:</label>
+                <select id="stats-range-mode" class="filter-select" style="height:36px; padding:0 10px; font-size:12px; font-weight:500;">
+                  <option value="range">Khoảng ngày</option>
+                  <option value="quarter">Theo quý</option>
+                  <option value="year">Theo năm</option>
+                </select>
               </div>
 
-              <div style="display:flex; align-items:center; gap:8px;">
+              <!-- Nhóm: khoảng ngày -->
+              <div id="stats-group-range" style="display:flex; align-items:center; gap:8px;">
+                <label for="stats-date-from" style="font-size:12px; font-weight:600; color:var(--text-secondary);">Từ ngày:</label>
+                <input type="date" id="stats-date-from" class="filter-select" style="height:36px; padding:0 10px; font-size:12px; font-weight:500;">
                 <label for="stats-date-to" style="font-size:12px; font-weight:600; color:var(--text-secondary);">Đến ngày:</label>
                 <input type="date" id="stats-date-to" class="filter-select" style="height:36px; padding:0 10px; font-size:12px; font-weight:500;">
+              </div>
+
+              <!-- Nhóm: theo quý -->
+              <div id="stats-group-quarter" style="display:none; align-items:center; gap:8px;">
+                <label for="stats-quarter" style="font-size:12px; font-weight:600; color:var(--text-secondary);">Quý:</label>
+                <select id="stats-quarter" class="filter-select" style="height:36px; padding:0 10px; font-size:12px; font-weight:500;">
+                  <option value="1">Quý 1 (T1–T3)</option>
+                  <option value="2">Quý 2 (T4–T6)</option>
+                  <option value="3">Quý 3 (T7–T9)</option>
+                  <option value="4">Quý 4 (T10–T12)</option>
+                </select>
+                <label for="stats-quarter-year" style="font-size:12px; font-weight:600; color:var(--text-secondary);">Năm:</label>
+                <select id="stats-quarter-year" class="filter-select" style="height:36px; padding:0 10px; font-size:12px; font-weight:500;"></select>
+              </div>
+
+              <!-- Nhóm: theo năm -->
+              <div id="stats-group-year" style="display:none; align-items:center; gap:8px;">
+                <label for="stats-year" style="font-size:12px; font-weight:600; color:var(--text-secondary);">Năm:</label>
+                <select id="stats-year" class="filter-select" style="height:36px; padding:0 10px; font-size:12px; font-weight:500;"></select>
               </div>
 
               <button class="btn btn-primary btn-sm" id="btn-filter-revenue" style="height:36px;">

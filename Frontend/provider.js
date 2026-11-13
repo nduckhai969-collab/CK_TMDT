@@ -26,22 +26,26 @@ const PROVIDER_SESSION_KEY = 'SKILLRENTAL_PROVIDER_USER';
 function getCurrentProvider() {
   let provider = null;
 
-  const pRaw = sessionStorage.getItem(PROVIDER_SESSION_KEY);
+  // Thử sessionStorage trước, fallback localStorage nếu tab mới/reload
+  const pRaw = sessionStorage.getItem(PROVIDER_SESSION_KEY) || localStorage.getItem(PROVIDER_SESSION_KEY);
   if (pRaw) {
     try {
       const pUser = JSON.parse(pRaw);
       if (pUser && typeof pUser === 'object') {
         provider = { ...pUser, role: 'Provider' };
+        // Restore lại sessionStorage nếu trống
+        if (!sessionStorage.getItem(PROVIDER_SESSION_KEY)) sessionStorage.setItem(PROVIDER_SESSION_KEY, pRaw);
       }
     } catch (e) {}
   }
   if (!provider) {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
     if (raw) {
       try {
         const user = JSON.parse(raw);
         if (user && typeof user === 'object') {
           provider = { ...user, role: 'Provider' };
+          if (!sessionStorage.getItem(SESSION_KEY)) sessionStorage.setItem(SESSION_KEY, raw);
         }
       } catch (e) {
         console.error('Error parsing session:', e);

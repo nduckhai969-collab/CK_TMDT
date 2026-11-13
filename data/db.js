@@ -738,7 +738,7 @@ const INITIAL_DATABASE = {
 };
 
 // MySQL persistence adapter giữ nguyên API collection để các route hiện có dùng chung.
-const EXTRA_COLLECTIONS = ['favoriteProviders', 'comments', 'notifications', 'walletTransactions', 'bookingLists', 'posts', 'passwordResets', 'emailVerifications', 'emails', 'emailEvents', 'emailSuppressions'];
+const EXTRA_COLLECTIONS = ['favoriteProviders', 'comments', 'notifications', 'walletTransactions', 'platformFundTransactions', 'bookingLists', 'posts', 'passwordResets', 'emailVerifications', 'emails', 'emailEvents', 'emailSuppressions'];
 const COLLECTIONS = Array.from(new Set([...Object.keys(INITIAL_DATABASE), ...EXTRA_COLLECTIONS]));
 const SqlDatabase = require('./sqlDatabase');
 const db = new SqlDatabase(COLLECTIONS, INITIAL_DATABASE);

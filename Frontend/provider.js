@@ -544,6 +544,22 @@ window.providerApi = {
     return res.json();
   },
 
+  // Mua gói VIP Partner (duy trì phí sàn) — trừ trực tiếp số dư ví Provider.
+  purchasePlatformFee: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/packages/purchase-platform`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({})
+    });
+    return res.json();
+  },
+
+  // Lịch sử mua gói / gia hạn phí sàn của Provider đang đăng nhập.
+  getPackagePurchases: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/packages/purchases`, { headers: getAuthHeader() });
+    return res.json();
+  },
+
   // Posts & Portfolio (UC-47)
   getMyPosts: async () => {
     const res = await fetch(`${API_BASE}/api/providers/me/posts`, { headers: getAuthHeader() });

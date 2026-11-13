@@ -13,6 +13,7 @@ const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCa
 const { isVisibleToProvider, createGatewayTransaction, MIN_PAYMENT, MAX_PAYMENT } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 const walletService = require('../services/walletService');
+const platformFundService = require('../services/platformFundService');
 const { attachProviderReputation, addReviewSentimentPoints } = require('../services/providerReputation');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
@@ -87,6 +88,153 @@ async function getMyProviderFresh(req) {
   const providers = await db.getCollectionFresh('providers');
   return providers.find(p => p.userId === req.authUser.id || p.id === req.authUser.id) ||
     (req.authUser.email && providers.find(p => p.email && p.email.toLowerCase() === req.authUser.email.toLowerCase())) || null;
+}
+
+/* ============================================================
+   Gói dịch vụ & phí duy trì sàn (dùng chung cho package.html và payment.html)
+   Nguồn dữ liệu chung: `packages` (cấu hình), `packagePurchases` (lịch sử mua)
+   và `walletTransactions` + `users.balance` (biến động số dư ví Provider).
+============================================================ */
+
+// Huy hiệu mở khóa theo từng gói khi Provider kích hoạt thành công.
+const PACKAGE_BADGES = {
+  PKG_PRO: 'PRO PROVIDER',
+  PKG_VIP: 'VIP ELITE',
+  PKG_PLATFORM: 'VIP PARTNER'
+};
+
+// Gói VIP Partner thu phí duy trì sàn — hiển thị ở trang "Thanh toán & Phí sàn".
+const PLATFORM_FEE_PACKAGE = {
+  id: 'PKG_PLATFORM',
+  name: 'Gói VIP Partner (Duy trì phí sàn)',
+  price: 299000,
+  duration: 30,
+  postsCount: 20,
+  highlight: false,
+  features: [
+    'Huy hiệu Đối tác Xác thực',
+    'Ưu tiên hiển thị top kết quả tìm kiếm',
+    'Phí hoa hồng sàn giảm còn 5% (Gốc 10%)',
+    'Hỗ trợ ưu tiên 24/7'
+  ]
+};
+
+function addDays(date, days) {
+  return new Date(date.getTime() + (Number(days) || 0) * 24 * 60 * 60 * 1000);
+}
+
+// Kích hoạt gói: trừ tiền ví -> ghi biến động số dư -> mở quyền lợi trên hồ sơ
+// Provider -> lưu lịch sử mua gói -> gửi thông báo.
+// Trả về { status, body } để route phản hồi tương ứng.
+function activatePackagePurchase(req, pkg, options = {}) {
+  const users = db.getCollection('users') || [];
+  const uidx = users.findIndex(u => u.id === req.authUser.id);
+  if (uidx === -1) {
+    return { status: 404, body: { success: false, message: 'Không tìm thấy tài khoản người dùng.' } };
+  }
+
+  const provider = getMyProvider(req);
+  const price = Number(pkg.price) || 0;
+  const currentBal = Number(users[uidx].balance) || 0;
+  if (currentBal < price) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        code: 'INSUFFICIENT_BALANCE',
+        message: `Số dư ví không đủ (Cần ${price.toLocaleString('vi-VN')}đ, hiện có ${currentBal.toLocaleString('vi-VN')}đ). Vui lòng nạp thêm tiền vào ví để kích hoạt gói.`
+      }
+    };
+  }
+
+  const now = new Date();
+  const paidAt = formatDateTime(now);
+  const expireAt = formatDateTime(addDays(now, Number(pkg.duration) || 30));
+  const method = options.method || 'Số dư ví';
+
+  // 1. Trừ tiền ví và ghi lịch sử giao dịch (bỏ qua với gói miễn phí).
+  if (price > 0) {
+    users[uidx].balance = currentBal - price;
+    db.saveCollection('users', users);
+
+    const transactions = db.getCollection('walletTransactions') || [];
+    transactions.unshift({
+      id: generateId('TXN'),
+      userId: req.authUser.id,
+      userName: provider.name || req.authUser.name || 'Chuyên gia',
+      type: 'package_purchase',
+      amount: -price,
+      balanceAfter: users[uidx].balance,
+      method,
+      status: 'completed',
+      createdAt: paidAt,
+      description: `Mua gói dịch vụ sàn: ${pkg.name}`
+    });
+    db.saveCollection('walletTransactions', transactions);
+
+    // Khoản Provider trả cho gói được chuyển vào quỹ nền tảng của Admin.
+    platformFundService.credit({
+      source: pkg.id === PLATFORM_FEE_PACKAGE.id ? 'platform_maintenance' : 'package_purchase',
+      amount: price,
+      providerId: provider.id,
+      providerName: provider.name,
+      userId: req.authUser.id,
+      packageId: pkg.id,
+      method,
+      description: `Thu ${method} — ${pkg.name} từ ${provider.name}`
+    });
+  }
+
+  // 2. Mở quyền lợi trên hồ sơ Provider.
+  const providers = db.getCollection('providers') || [];
+  const provIdx = providers.findIndex(p => p.id === provider.id || p.userId === req.authUser.id);
+  if (provIdx !== -1) {
+    const badge = PACKAGE_BADGES[pkg.id];
+    providers[provIdx].activePackage = pkg.id;
+    providers[provIdx].activePackageName = pkg.name;
+    providers[provIdx].packageStartedAt = paidAt;
+    providers[provIdx].packageExpireAt = expireAt;
+    if (badge) {
+      providers[provIdx].badge = badge;
+      providers[provIdx].verified = true;
+    }
+    db.saveCollection('providers', providers);
+  }
+
+  // 3. Lưu lịch sử mua gói (dùng chung cho cả 2 trang Provider & Admin).
+  const purchases = db.getCollection('packagePurchases') || [];
+  const purchaseId = generateId('PKG-ORD');
+  purchases.unshift({
+    id: purchaseId,
+    providerId: provider.id,
+    provider: provider.name,
+    packageId: pkg.id,
+    packageName: pkg.name,
+    amount: price.toLocaleString('vi-VN') + 'đ',
+    amountNum: price,
+    method,
+    activeDate: paidAt.split(' ')[0],
+    expireDate: expireAt.split(' ')[0],
+    status: 'Đang hoạt động'
+  });
+  db.saveCollection('packagePurchases', purchases);
+
+  const { createNotification } = require('../services/notificationService');
+  createNotification(req.authUser.id, 'Kích hoạt gói dịch vụ thành công',
+    `Bạn đã kích hoạt thành công ${pkg.name}. Huy hiệu và đặc quyền ưu tiên của bạn đã hiển thị trên toàn sàn!`,
+    'success', options.notificationPath || '/package.html');
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      message: `Đã kích hoạt thành công ${pkg.name}!`,
+      newBalance: users[uidx].balance,
+      purchaseId,
+      expireDate: expireAt.split(' ')[0],
+      package: pkg
+    }
+  };
 }
 
 // Homepage summaries and provider detail endpoints used by the customer portal.
@@ -979,88 +1127,28 @@ router.post('/complaints/:id/accept-refund', requireProvider, (req, res) => {
   res.json({ success: true, message: 'Đã ghi nhận việc chấp nhận hoàn tiền. Admin sẽ xác nhận phán quyết.' });
 });
 
+// Mua gói dịch vụ Provider (Pro/VIP...) — trừ trực tiếp số dư ví, ghi sổ giao dịch và mở quyền lợi.
 router.post('/packages/purchase', requireProvider, (req, res) => {
   const { packageId } = req.body;
   const packages = db.getCollection('packages') || [];
   const pkg = packages.find(p => p.id === packageId);
   if (!pkg) return res.status(404).json({ success: false, message: 'Gói dịch vụ không tồn tại.' });
-  
-  const purchases = db.getCollection('packagePurchases') || [];
+  const result = activatePackagePurchase(req, pkg, { method: 'Số dư ví', notificationPath: '/package.html' });
+  res.status(result.status).json(result.body);
+});
+
+// Mua gói VIP Partner (duy trì phí sàn) ở trang "Thanh toán & Phí sàn" — dùng chung cơ chế trừ ví.
+router.post(['/packages/purchase-platform', '/packages/platform-fee'], requireProvider, (req, res) => {
+  const result = activatePackagePurchase(req, PLATFORM_FEE_PACKAGE, { method: 'Phí duy trì sàn', notificationPath: '/payment.html' });
+  res.status(result.status).json(result.body);
+});
+
+// Lịch sử mua gói của Provider đang đăng nhập (trang Gói dịch vụ / Thanh toán & Phí sàn).
+router.get('/packages/purchases', requireProvider, (req, res) => {
   const provider = getMyProvider(req);
-  const users = db.getCollection('users') || [];
-  const uidx = users.findIndex(u => u.id === req.authUser.id);
-  
-  if (uidx === -1) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng.' });
-  }
-
-  const currentBal = Number(users[uidx].balance) || 0;
-
-  if (pkg.price > 0) {
-    if (currentBal < pkg.price) {
-      return res.status(400).json({
-        success: false,
-        message: `Số dư ví không đủ (Cần ${pkg.price.toLocaleString('vi-VN')}đ, hiện có ${currentBal.toLocaleString('vi-VN')}đ). Vui lòng nạp thêm tiền vào ví để kích hoạt gói.`
-      });
-    }
-
-    users[uidx].balance = currentBal - pkg.price;
-    db.saveCollection('users', users);
-    
-    const transactions = db.getCollection('walletTransactions') || [];
-    transactions.unshift({
-      id: generateId('TXN'),
-      userId: req.authUser.id,
-      userName: provider.name || req.authUser.name || 'Chuyên gia',
-      type: 'package_purchase',
-      amount: -pkg.price,
-      balanceAfter: users[uidx].balance,
-      status: 'completed',
-      createdAt: formatDateTime(new Date()),
-      description: `Mua gói dịch vụ sàn: ${pkg.name}`
-    });
-    db.saveCollection('walletTransactions', transactions);
-  }
-
-  const providers = db.getCollection('providers') || [];
-  const provIdx = providers.findIndex(p => p.id === provider.id || p.userId === req.authUser.id);
-  if (provIdx !== -1) {
-    if (pkg.id === 'PKG_PRO') {
-      providers[provIdx].badge = 'PRO PROVIDER';
-      providers[provIdx].verified = true;
-      providers[provIdx].activePackage = 'PKG_PRO';
-    } else if (pkg.id === 'PKG_VIP') {
-      providers[provIdx].badge = 'VIP ELITE';
-      providers[provIdx].verified = true;
-      providers[provIdx].activePackage = 'PKG_VIP';
-    }
-    db.saveCollection('providers', providers);
-  }
-
-  purchases.unshift({
-    id: generateId('PKG-ORD'),
-    providerId: provider.id,
-    provider: provider.name,
-    packageName: pkg.name,
-    amount: (pkg.price || 0).toLocaleString('vi-VN') + 'đ',
-    amountNum: pkg.price || 0,
-    activeDate: formatDateTime(new Date()).split(' ')[0],
-    expireDate: 'Tự động gia hạn 30 ngày',
-    status: 'Đang hoạt động'
-  });
-  db.saveCollection('packagePurchases', purchases);
-
-  const { createNotification } = require('../services/notificationService');
-  createNotification(req.authUser.id, 'Kích hoạt gói dịch vụ thành công',
-    `Bạn đã kích hoạt thành công ${pkg.name}. Huy hiệu và đặc quyền ưu tiên của bạn đã hiển thị trên toàn sàn!`,
-    'success', '/package.html');
-
-  res.json({
-    success: true,
-    message: `Đã kích hoạt thành công ${pkg.name}!`,
-    newBalance: users[uidx].balance,
-    package: pkg
-  });
+  // `packagePurchases` luôn unshift bản ghi mới lên đầu nên giữ nguyên thứ tự = mới nhất trước.
+  const purchases = (db.getCollection('packagePurchases') || []).filter(item => item.providerId === provider.id);
+  res.json({ success: true, purchases });
 });
 
 router.get('/me/posts', requireProvider, async (req, res) => {

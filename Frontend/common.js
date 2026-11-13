@@ -499,6 +499,7 @@ window.adminApi = {
   getAllProviders: () => fetch(`${API_BASE}/api/admin/providers`).then(r => r.json()),
   getPendingSkills: () => fetch(`${API_BASE}/api/admin/skills/pending`).then(r => r.json()),
   getStatistics: (from, to) => fetch(`${API_BASE}/api/admin/statistics` + (from && to ? `?startDate=${encodeURIComponent(from)}&endDate=${encodeURIComponent(to)}` : '')).then(r => r.json()),
+  getPlatformFund: () => fetch(`${API_BASE}/api/admin/platform-fund`).then(r => r.json()),
   getUsers: () => fetch(`${API_BASE}/api/admin/users`).then(r => r.json()),
   updateUser: (id, payload) => fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(r => r.json()),
   lockUser: (id, reason, duration) => fetch(`${API_BASE}/api/admin/users/${id}/lock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason, duration }) }).then(r => r.json()),

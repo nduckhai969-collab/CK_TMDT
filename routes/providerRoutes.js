@@ -13,11 +13,8 @@ const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCa
 const { isVisibleToProvider, createGatewayTransaction, MIN_PAYMENT, MAX_PAYMENT } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 const walletService = require('../services/walletService');
-<<<<<<< Updated upstream
 const { attachProviderReputation, addReviewSentimentPoints } = require('../services/providerReputation');
-=======
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
->>>>>>> Stashed changes
 
 function getMyProvider(req) {
   const providers = db.getCollection('providers') || [];

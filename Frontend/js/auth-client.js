@@ -60,15 +60,53 @@
     await loadGoogleIdentitySdk();
     return new Promise((resolve, reject) => {
       let settled = false;
-      const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); fn(value); };
-      const timer = setTimeout(() => finish(reject, new Error('Đăng nhập Google hết thời gian chờ.')), 90000);
-      window.google.accounts.id.initialize({ client_id: config.clientId, callback: response => {
-        if (response?.credential) finish(resolve, response.credential);
-        else finish(reject, new Error('Google không trả về thông tin xác thực.'));
-      } });
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        const old = document.getElementById('_srGoogleBtnContainer');
+        if (old) old.remove();
+        fn(value);
+      };
+      const timer = setTimeout(() => finish(reject, new Error('Đăng nhập Google hết thời gian chờ.')), 120000);
+
+      window.google.accounts.id.initialize({
+        client_id: config.clientId,
+        callback: response => {
+          if (response?.credential) finish(resolve, response.credential);
+          else finish(reject, new Error('Google không trả về thông tin xác thực.'));
+        },
+        cancel_on_tap_outside: false,
+        ux_mode: 'popup',
+        use_fedcm_for_prompt: false
+      });
+
+      // Tạo container ẩn để render nút Google Sign-In, dùng khi One Tap bị chặn
+      let container = document.getElementById('_srGoogleBtnContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = '_srGoogleBtnContainer';
+        container.style.cssText = 'position:fixed;bottom:-200px;left:-200px;width:200px;height:60px;overflow:hidden;z-index:-1;opacity:0;pointer-events:none;';
+        document.body.appendChild(container);
+      }
+
+      window.google.accounts.id.renderButton(container, {
+        type: 'standard', shape: 'rectangular', theme: 'outline',
+        text: 'signin_with', size: 'large', width: 200
+      });
+
+      // Thử One Tap; nếu bị chặn thì click nút popup ẩn thay thế
       window.google.accounts.id.prompt(notification => {
-        if (notification.isNotDisplayed?.()) finish(reject, new Error('Google chưa thể mở cửa sổ đăng nhập. Hãy thử lại hoặc dùng email và mật khẩu.'));
-        else if (notification.isSkippedMoment?.()) finish(reject, new Error('Bạn đã đóng bước đăng nhập Google.'));
+        if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
+          const btn = container.querySelector('[role="button"], button, div[tabindex]');
+          if (btn) {
+            container.style.pointerEvents = 'auto';
+            btn.click();
+            container.style.pointerEvents = 'none';
+          } else {
+            finish(reject, new Error('Trình duyệt đang chặn cửa sổ đăng nhập Google. Vui lòng cho phép popup từ trang này và thử lại.'));
+          }
+        }
       });
     });
   }

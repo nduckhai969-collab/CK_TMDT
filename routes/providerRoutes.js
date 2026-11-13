@@ -107,7 +107,7 @@ router.get('/stats', async (req, res) => {
 
 router.get('/featured', async (req, res) => {
   const providers = [...(await db.getCollectionFresh('providers'))]
-    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
+    .filter(provider => provider.verified === true)
     .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
@@ -115,7 +115,7 @@ router.get('/featured', async (req, res) => {
 
 router.get('/newest', async (req, res) => {
   const providers = [...(await db.getCollectionFresh('providers'))]
-    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
+    .filter(provider => provider.verified === true)
     .sort((a, b) => new Date(b.createdAt || b.joinDate || 0) - new Date(a.createdAt || a.joinDate || 0));
   if (providers.every(p => !p.createdAt && !p.joinDate)) providers.reverse();
   res.json({ success: true, providers: providers.slice(0, 6) });
@@ -1135,7 +1135,8 @@ router.get('/', async (req, res) => {
     priceRange.max = Math.max(...providerPrices);
   }
 
-  let providers = allProviders.filter(provider => provider.profileCompleted !== false && provider.verified === true);
+  // Chỉ cần verified=true (admin đã duyệt) là hiển thị cho customer
+  let providers = allProviders.filter(provider => provider.verified === true);
 
   if (category && category !== 'all') {
     const categoryLower = category.toLowerCase().trim();

@@ -44,7 +44,7 @@ function buildVNPayQueryAndHash(params, secretKey) {
 }
 
 // 1. TẠO URL THANH TOÁN VNPAY ONLINE
-router.post('/vnpay/create_payment_url', (req, res) => {
+router.post('/vnpay/create_payment_url', requireSignedIn, (req, res) => {
   try {
     const tmnCode = process.env.VNPAY_TMN_CODE || 'CGXZLS0Z';
     const secretKey = process.env.VNPAY_HASH_SECRET || 'XNBCJFAKAZQSGGTARZGNOXBLHGKTTYRR';
@@ -67,10 +67,7 @@ router.post('/vnpay/create_payment_url', (req, res) => {
     const txnId = date.getTime().toString();
     const cleanOrderInfo = 'Nap tien vi SkillRental ' + txnId;
 
-    const targetUserId = req.body.userId || req.headers['x-user-id'] || (req.authUser ? req.authUser.id : null);
-    if (!targetUserId) {
-      return res.status(400).json({ success: false, message: 'Vui lòng đăng nhập hoặc cung cấp userId để nạp tiền.' });
-    }
+    const targetUserId = req.authUser.id;
     const users = db.getCollection('users') || [];
     const targetUser = users.find(u => u.id === targetUserId || u.uid === targetUserId);
 
@@ -118,10 +115,6 @@ router.post('/vnpay/create_payment_url', (req, res) => {
 });
 
 router.post('/vnpay/create', (req, res, next) => {
-  if (req.body && !req.headers.authorization && !req.cookies) {
-    req.url = '/vnpay/create_payment_url';
-    return router.handle(req, res, next);
-  }
   requireSignedIn(req, res, () => {
     const amount = Number(req.body.amount);
     if (!Number.isInteger(amount) || amount < MIN_DEPOSIT || amount > MAX_DEPOSIT) {
@@ -212,7 +205,7 @@ function processGatewayResult(query) {
   }
 
   if (txn.status !== 'pending' && txn.status !== 'expired') {
-    return { code: '02', message: 'Order already confirmed', txn, alreadyProcessed: true };
+    return { code: '02', message: 'Order already confirmed', txn, alreadyProcessed: true, success: txn.status === 'success' };
   }
 
   const responseCode = params.vnp_ResponseCode;
@@ -339,8 +332,8 @@ router.get('/vnpay/return', (req, res) => {
       console.warn('processGatewayResult error in return handler:', e);
     }
 
-    const isSuccess = (result && result.success) || responseCode === '00';
-    const activeTxn = (result && result.txn) || t;
+    const isSuccess = result?.success === true;
+    const activeTxn = result?.txn || t;
 
     if (isSuccess) {
       if (activeTxn && activeTxn.type === 'order_payment') {
@@ -354,68 +347,19 @@ router.get('/vnpay/return', (req, res) => {
         return res.redirect(`/customer_orders.html?payment=success&orderId=${encodeURIComponent(orderIds)}`);
       }
 
-      // Xử lý nạp ví (deposit)
       const users = db.getCollection('users') || [];
-      const targetUserId = (activeTxn && activeTxn.userId) ? activeTxn.userId : (req.query.userId || req.headers['x-user-id']);
-      let user = null;
-      if (targetUserId) {
-        user = users.find(u => u.id === targetUserId || u.uid === targetUserId);
-      }
-      if (!user && !targetUserId) {
-        return res.redirect('/customer_wallet.html?payment=error&message=' + encodeURIComponent('Không xác định được tài khoản người nhận tiền.'));
-      }
-      const assignedUserId = user ? user.id : targetUserId;
-
-      if (activeTxn) {
-        activeTxn.status = 'success';
-        activeTxn.paidAt = new Date().toISOString();
-        if (user && !activeTxn.userName) activeTxn.userName = user.name;
-      } else {
-        txns.unshift({
-          id: txnRef || ('WT_' + Date.now()),
-          userId: assignedUserId,
-          userName: user ? user.name : 'Khách hàng',
-          amount: amount || 50000,
-          type: 'deposit',
-          gateway: 'VNPay',
-          status: 'success',
-          description: 'Nạp tiền qua VNPay thành công',
-          paidAt: new Date().toISOString(),
-          createdAt: new Date().toISOString()
-        });
-      }
-
-      // Tính toán số dư chuẩn từ lịch sử giao dịch thực tế của user
-      const userTxns = txns.filter(x => 
-        (x.userId === assignedUserId) &&
-        (x.status === 'success' || x.status === 'completed')
-      );
-      const totalDeposits = userTxns
-        .filter(x => x.type === 'deposit' || x.type === 'refund')
-        .reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
-      const totalDeductions = userTxns
-        .filter(x => x.type === 'escrow' || x.type === 'order_payment' || x.type === 'withdraw' || x.type === 'refund_reversal')
-        .reduce((sum, x) => sum + Math.abs(Number(x.amount) || 0), 0);
-      const calculatedBalance = Math.max(0, totalDeposits - totalDeductions);
-
-      if (user) {
-        user.balance = calculatedBalance;
-        db.saveCollection('users', users);
-      }
-
-      const currentTxn = activeTxn || txns[0];
-      if (currentTxn) {
-        currentTxn.balanceAfter = calculatedBalance;
-      }
-      db.saveCollection('walletTransactions', txns);
-
-      return res.redirect(`/customer_wallet.html?payment=success&amount=${amount}&code=00`);
+      const creditedUser = activeTxn && users.find(user => user.id === activeTxn.userId);
+      const walletPage = creditedUser?.role === 'Provider' ? '/income.html' : '/customer_wallet.html';
+      return res.redirect(`${walletPage}?payment=success&amount=${amount}&code=00`);
     } else {
       if (activeTxn && activeTxn.type === 'order_payment') {
         const orderIds = (activeTxn.orderIds || []).join(',');
         return res.redirect(`/customer_orders.html?payment=failed&code=${responseCode || '97'}&orderId=${encodeURIComponent(orderIds)}`);
       }
-      return res.redirect(`/customer_wallet.html?payment=failed&code=${responseCode || '97'}`);
+      const users = db.getCollection('users') || [];
+      const failedUser = activeTxn && users.find(user => user.id === activeTxn.userId);
+      const walletPage = failedUser?.role === 'Provider' ? '/income.html' : '/customer_wallet.html';
+      return res.redirect(`${walletPage}?payment=failed&code=${responseCode || '97'}`);
     }
   } catch (err) {
     console.error('Lỗi VNPay return:', err);
@@ -426,11 +370,18 @@ router.get('/vnpay/return', (req, res) => {
 // API xác nhận giao dịch qua cổng giả lập VNPay Sandbox
 router.post('/vnpay/simulate-complete', (req, res) => {
   try {
+    const clientIp = String(req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+    if (process.env.NODE_ENV === 'production' || !['127.0.0.1', '::1'].includes(clientIp)) {
+      return res.status(403).json({ success: false, message: 'Mô phỏng thanh toán chỉ dùng trên máy local khi phát triển.' });
+    }
     const { txnRef, responseCode = '00', bankCode = 'VNPAYQR' } = req.body;
     const txns = db.getCollection('walletTransactions') || [];
     const txn = txns.find(t => String(t.id) === String(txnRef));
     if (!txn) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy giao dịch ' + txnRef });
+    }
+    if (txn.status !== 'pending') {
+      return res.status(409).json({ success: false, message: 'Giao dịch mô phỏng đã được xử lý hoặc không còn hiệu lực.', alreadyProcessed: true });
     }
 
     const isSuccess = responseCode === '00';
@@ -462,9 +413,10 @@ router.post('/vnpay/simulate-complete', (req, res) => {
     }
 
     const isOrder = txn.type === 'order_payment';
+    const depositUser = !isOrder && (db.getCollection('users') || []).find(user => user.id === txn.userId);
     const redirectUrl = isOrder
       ? `/customer_orders.html?payment=${isSuccess ? 'success' : 'failed'}&orderId=${encodeURIComponent((txn.orderIds || []).join(','))}`
-      : `/customer_wallet.html?payment=${isSuccess ? 'success' : 'failed'}&amount=${txn.amount}&code=${responseCode}`;
+      : `${depositUser?.role === 'Provider' ? '/income.html' : '/customer_wallet.html'}?payment=${isSuccess ? 'success' : 'failed'}&amount=${txn.amount}&code=${responseCode}`;
 
     return res.json({
       success: isSuccess,
@@ -480,6 +432,7 @@ router.post('/vnpay/simulate-complete', (req, res) => {
 
 // API xác nhận thanh toán trực tiếp cho đơn hàng (Dùng cho VietQR & Quét mã thanh toán tức thì)
 router.post('/confirm-order-payment', requireSignedIn, (req, res) => {
+  return res.status(410).json({ success: false, message: 'Không thể tự xác nhận đã chuyển khoản. Đơn chỉ được ký quỹ sau khi VNPay xác minh thanh toán hoặc thanh toán bằng số dư ví.' });
   try {
     const { orderId, txnRef } = req.body;
     const orders = db.getCollection('orders') || [];
@@ -668,6 +621,7 @@ router.get('/balance', (req, res) => {
 // API XÁC NHẬN THANH TOÁN QR VÀ TỰ ĐỘNG CỘNG TIỀN VÍ CHO ĐÚNG USER
 // ============================================================
 router.all('/qr-confirm', (req, res) => {
+  return res.status(410).json({ success: false, message: 'Không hỗ trợ tự xác nhận chuyển khoản. Ví chỉ được cộng sau khi cổng thanh toán xác minh giao dịch thật.' });
   try {
     const amount = Number(req.body.amount || req.query.amount) || 0;
     const targetName = (req.body.userName || req.body.name || req.body.senderName || req.query.userName || req.query.name || '').trim() || 'Khách hàng';

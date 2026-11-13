@@ -151,7 +151,7 @@ async function apiRequest(
 ) {
 
   const method = String(options.method || 'GET').toUpperCase();
-  const isMutation = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+  const isMutation = !['GET', 'HEAD', 'OPTIONS'].includes(method) && !endpoint.startsWith('/api/reviews/analyze');
   const isPrivateRead = method === 'GET' && (
     /^\/api\/(orders|chat|complaints|reviews)(\/|\?|$)/.test(endpoint) ||
     /^\/api\/auth\/me(\?|$)/.test(endpoint) ||

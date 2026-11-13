@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const { ensureMlTables, persistReviewAnalyses } = require('./mlResultsStore');
 
 const clone = value => JSON.parse(JSON.stringify(value));
 
@@ -32,6 +33,7 @@ class SqlDatabase {
       PRIMARY KEY (collection_name, record_id),
       INDEX idx_app_records_position (collection_name, position)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+    await ensureMlTables(this.pool);
 
     const [[{ total }]] = await this.pool.query('SELECT COUNT(*) AS total FROM app_records');
     if (Number(total) === 0) {
@@ -151,6 +153,7 @@ class SqlDatabase {
         const values = items.map((item, position) => [name, String(item.id), position, JSON.stringify(item)]);
         await connection.query('INSERT INTO app_records (collection_name, record_id, position, payload) VALUES ?', [values]);
       }
+      if (name === 'reviews') await persistReviewAnalyses(connection, items);
       if (name === 'users') await this.syncRelationalUsers(connection, items);
       await connection.commit();
     } catch (error) {

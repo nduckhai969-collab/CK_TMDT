@@ -113,6 +113,23 @@
           </div>
         </div>
 
+        <section class="card" style="margin-bottom:24px;border-left:4px solid #16A34A;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+            <div>
+              <div class="card-title" style="margin-bottom:6px;"><i class="fa-solid fa-shield-heart" style="color:#16A34A;margin-right:6px;"></i>Điểm uy tín từ đánh giá</div>
+              <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+                <strong id="statReputationScore" style="font-size:32px;color:#15803D;">50/100</strong>
+                <span id="statReputationPoints" style="font-size:14px;font-weight:700;color:#475569;">0 điểm</span>
+              </div>
+              <small style="color:var(--text-muted);">Tính từ bình luận tích cực hoặc tiêu cực có độ tin cậy từ 68%. Bình luận trung lập hoặc độ tin cậy thấp không cộng/trừ điểm.</small>
+            </div>
+            <div style="display:flex;gap:24px;flex-wrap:wrap;">
+              <div><div style="font-size:12px;color:var(--text-muted);">Tích cực đủ tin cậy</div><strong id="statPositiveReviewCount" style="font-size:20px;color:#15803D;">0</strong></div>
+              <div><div style="font-size:12px;color:var(--text-muted);">Tiêu cực đủ tin cậy</div><strong id="statNegativeReviewCount" style="font-size:20px;color:#B91C1C;">0</strong></div>
+            </div>
+          </div>
+        </section>
+
         <div class="card">
           <div class="tab-list">
             <div class="tab-item active" onclick="filterTab('all', this)">Tất Cả (<span id="tabCountAll">0</span>)</div>
@@ -177,10 +194,14 @@
 
     async function loadReviews() {
       try {
-        const res = await window.providerApi.getMyReviews();
+        const [res, profileRes] = await Promise.all([
+          window.providerApi.getMyReviews(),
+          window.providerApi.getProfile().catch(() => null)
+        ]);
         allReviews = (res && res.success && Array.isArray(res.reviews)) ? res.reviews : [];
 
         updateStats();
+        updateReputationStats(profileRes && profileRes.success ? profileRes.provider : null);
         renderReviews();
       } catch (err) {
         document.getElementById('reviewsListContainer').innerHTML = `
@@ -224,6 +245,26 @@
         document.getElementById('statAvgRating').textContent = '5.0';
         document.getElementById('statReviewCountText').textContent = 'Chưa có đánh giá nào';
       }
+    }
+
+    function updateReputationStats(provider) {
+      const eligible = allReviews.filter(review => review.reputationEligible === true);
+      const positive = eligible.filter(review => ['pos', 'positive'].includes(String(review.sentiment || review.aiAnalysis?.overallSentiment || '').toLowerCase())).length;
+      const negative = eligible.filter(review => ['neg', 'negative'].includes(String(review.sentiment || review.aiAnalysis?.overallSentiment || '').toLowerCase())).length;
+      const points = provider && Number.isFinite(Number(provider.reputationPoints))
+        ? Number(provider.reputationPoints)
+        : eligible.reduce((sum, review) => sum + (Number(review.reputationPoints) || 0), 0);
+      const eligibleCount = provider
+        ? Number(provider.positiveReviewCount || 0) + Number(provider.negativeReviewCount || 0)
+        : eligible.length;
+      const score = provider && Number.isFinite(Number(provider.reputationScore))
+        ? Number(provider.reputationScore)
+        : eligibleCount ? Math.round(Math.max(0, Math.min(100, 50 + (50 * points) / (eligibleCount + 10)))) : 50;
+
+      document.getElementById('statReputationScore').textContent = `${score}/100`;
+      document.getElementById('statReputationPoints').textContent = `${points > 0 ? '+' : ''}${points} điểm`;
+      document.getElementById('statPositiveReviewCount').textContent = provider?.positiveReviewCount ?? positive;
+      document.getElementById('statNegativeReviewCount').textContent = provider?.negativeReviewCount ?? negative;
     }
 
     function filterTab(status, el) {

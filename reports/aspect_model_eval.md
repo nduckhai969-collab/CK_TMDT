@@ -35,7 +35,7 @@ Bộ dữ liệu gồm 400 đánh giá được chia theo cụm `providerId` (Gr
 
 ### Bảng Thống kê Số lượng Mẫu (Khía cạnh x Cực tính) theo Split
 
-| Tập dữ liệu | Khía cạnh (`aspect`) | Tích cực (`pos`) | Tiêu cực (`neg`) | Trung tính (`neu`) | Vắng mặt (`absent`) | Tổng xuất hiện | Cảnh báo ô < 10 mẫu |
+| Tập dữ liệu | Khía cạnh (`aspect`) | Tích cực (`pos`) | Tiêu cực (`neg`) | Trung lập (`neu`) | Vắng mặt (`absent`) | Tổng xuất hiện | Cảnh báo ô < 10 mẫu |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | **TRAIN** (258 mẫu) | `quality` | 44 | 16 | 25 | 173 | 85 | Đủ mẫu (>= 10) |
 | | `price` | 53 | 24 | **6** | 175 | 83 | ⚠️ `neu` (6 mẫu < 10) |
@@ -174,14 +174,14 @@ Quy trình tiền xử lý được đóng gói trong hàm `preprocess_text()` d
 | `quality` | $n = 31$ | 30 pos / 1 neg / 0 neu | **0.8387** | **0.4561** | 0.3041 | Mất cân bằng nặng (chỉ 1 neg). F1 3 lớp bị chia 3 do neu có support = 0. |
 | `price` | $n = 33$ | 17 pos / 16 neg / 0 neu | **0.8182** | **0.8253** | 0.5502 | Cân bằng khen/chê; nhận diện đúng 16/17 pos và 11/16 neg. |
 | `speed` | $n = 20$ | 17 pos / 3 neg / 0 neu | **0.9000** | **0.8438** | 0.5625 | Xuất sắc: Nhận diện đúng 100% mẫu neg (3/3) và 88.2% mẫu pos (15/17). |
-| `attitude` | $n = 25$ | 9 pos / 10 neg / 6 neu | **0.6400** | **0.5992** | 0.5992 | Đủ cả 3 lớp cảm xúc; phân loại tốt các ca trung tính văn phòng. |
+| `attitude` | $n = 25$ | 9 pos / 10 neg / 6 neu | **0.6400** | **0.5992** | 0.5992 | Đủ cả 3 lớp cảm xúc; phân loại tốt các ca trung lập văn phòng. |
 | `warranty` | $n = 16$ | 16 pos / 0 neg / 0 neu | **0.6250** | **0.7692** | 0.2564 | 100% mẫu test là pos; F1 cố định 3 lớp bị chia 3 do 2 lớp còn lại có support = 0. |
 
 ---
 
 ## 8. Phân Tích Chuyên Sâu Lỗi Khía Cạnh `warranty` Trên TEST
 
-Trên tập TEST, khía cạnh `warranty` có 16 mẫu xuất hiện và **100% đều mang nhãn thật là tích cực (`pos`)**. Tuy nhiên, mô hình đoán đúng 10/16 mẫu, đoán nhầm sang tiêu cực (`neg`) 4 mẫu và trung tính (`neu`) 2 mẫu (tỷ lệ lỗi 6/16 mẫu = 37.5%).
+Trên tập TEST, khía cạnh `warranty` có 16 mẫu xuất hiện và **100% đều mang nhãn thật là tích cực (`pos`)**. Tuy nhiên, mô hình đoán đúng 10/16 mẫu, đoán nhầm sang tiêu cực (`neg`) 4 mẫu và trung lập (`neu`) 2 mẫu (tỷ lệ lỗi 6/16 mẫu = 37.5%).
 
 ### 8.1. Danh Sách Các Trường Hợp Dự Đoán Sai Khía Cạnh Warranty
 1. **`REV_RECO_0083`**: `"tay nghề đỉnh chóp, thêm nữa báo giá rất minh bạch và rẻ, nhưng chế độ bảo hành cực kỳ uy tín."`  

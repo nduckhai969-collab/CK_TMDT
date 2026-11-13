@@ -48,7 +48,7 @@ Với mỗi câu review, bạn sẽ điền vào 5 cột tương ứng 5 khía c
 Mỗi cột chỉ nhận **1 trong 4 giá trị**:
 - `pos` *(Positive)*: Khách hàng khen hoặc thể hiện sự hài lòng về khía cạnh này.
 - `neg` *(Negative)*: Khách hàng chê, phàn nàn, bất mãn về khía cạnh này.
-- `neu` *(Neutral)*: Khách hàng nhắc tới khía cạnh nhưng ở mức độ khách quan, trung tính, không rõ khen hay chê (*"giá tầm trung bình", "tốc độ như bình thường", "làm theo đúng hợp đồng"*).
+- `neu` *(Neutral)*: Khách hàng nhắc tới khía cạnh nhưng ở mức độ khách quan, trung lập, không rõ khen hay chê (*"giá tầm trung bình", "tốc độ như bình thường", "làm theo đúng hợp đồng"*).
 - `-` *(Dấu gạch ngang)*: Câu đánh giá **HOÀN TOÀN KHÔNG NHẮC TỚI** khía cạnh này.
 
 > [!IMPORTANT] Quy tắc bất di bất dịch: KHÔNG SUY DIỄN
@@ -68,3 +68,13 @@ Mỗi cột chỉ nhận **1 trong 4 giá trị**:
    - 5 cột nhãn: Điền `pos`, `neg`, `neu` hoặc `-`.
 3. Lưu file dưới định dạng CSV UTF-8.
 *(Lưu ý: 3 dòng ví dụ bắt đầu bằng `EXAMPLE_` chỉ để tham khảo, hệ thống sẽ tự động bỏ qua khi tính toán).*
+
+## 6. Dữ liệu huấn luyện bổ sung
+
+Sau khi gán nhãn, các dòng thật trong `annotator_A.csv` sẽ được thêm **chỉ vào tập train**. Dòng `EXAMPLE_` và `DEMO_` bị loại tự động. Không chép đánh giá tổng quát vào tập test; test hiện tại được giữ cố định để so sánh các phiên bản model.
+
+`review_seed.csv` là bộ câu seed được biên soạn để tăng độ đa dạng miền dịch vụ và ca khen/chê đan xen. Đây là dữ liệu bổ trợ, không đại diện cho review khách hàng thật. Khi có thêm dữ liệu thật đã được gán nhãn, ưu tiên bổ sung vào `annotator_A.csv`.
+
+`data/export/binh_luan_dich_vu_600_aspect.csv` là corpus 600 bình luận có nhãn sentiment tổng thể và đủ 5 khía cạnh (`chat_luong`, `gia`, `toc_do`, `thai_do`, `bao_hanh`; nhãn `positive`, `negative`, `neutral`, `none`). Nó được dùng cho cả model sentiment tổng thể và aspect. Trainer giữ các category cùng nhau và dành category riêng cho validation/test để đo khả năng tổng quát hóa sang loại dịch vụ chưa thấy.
+
+Sau khi thêm dữ liệu, chạy `npm run ml:train` để huấn luyện và đánh giá cả model cảm xúc tổng thể lẫn 5 model khía cạnh. Kết quả được ghi tại `reports/overall_sentiment_metrics.json` và `reports/review_aspects_metrics.json`.

@@ -5,12 +5,23 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const MODEL_FILES = [
   path.join(ROOT, 'models', 'aspect_detection.json'),
-  path.join(ROOT, 'models', 'aspect_sentiment.json')
+  path.join(ROOT, 'models', 'aspect_sentiment.json'),
+  path.join(ROOT, 'models', 'review_overall_nb.json'),
+  path.join(ROOT, 'models', 'review_aspects_nb.json')
 ];
-const DATASET_FILE = path.join(ROOT, 'data', 'export', 'reviews_labeled.json');
+const DATASET_FILES = [
+  path.join(ROOT, 'data', 'export', 'reviews_labeled.json'),
+  path.join(ROOT, 'data', 'export', 'binh_luan_dich_vu_600_aspect.csv'),
+  path.join(ROOT, 'data', 'handwritten', 'annotator_A.csv'),
+  path.join(ROOT, 'data', 'handwritten', 'review_seed.csv')
+];
 
-function fileHash(filePath) {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+function datasetHash() {
+  const hash = crypto.createHash('sha256');
+  for (const filePath of DATASET_FILES) {
+    if (fs.existsSync(filePath)) hash.update(fs.readFileSync(filePath));
+  }
+  return hash.digest('hex');
 }
 
 function getModelVersion() {
@@ -63,7 +74,7 @@ async function persistReviewAnalyses(connection, reviews) {
 
 async function persistTrainingRun(connection, results) {
   const runId = crypto.randomUUID();
-  const splits = results.dist || {};
+  const splits = results.overall_dist || results.dist || {};
   await ensureMlTables(connection);
   await connection.execute(
     `INSERT INTO review_ml_training_runs
@@ -72,7 +83,7 @@ async function persistTrainingRun(connection, results) {
     [
       runId,
       getModelVersion(),
-      fileHash(DATASET_FILE),
+      datasetHash(),
       Number(splits.train?.total) || 0,
       Number(splits.val?.total) || 0,
       Number(splits.test?.total) || 0,

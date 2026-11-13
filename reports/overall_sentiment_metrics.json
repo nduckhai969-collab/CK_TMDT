@@ -1,0 +1,152 @@
+{
+  "dataset": "binh_luan_dich_vu_600_aspect.csv",
+  "sourceRows": 600,
+  "validRows": 600,
+  "categoryCount": 12,
+  "categoriesBySplit": {
+    "train": [
+      "cham_soc_tre_nguoi_gia",
+      "chup_anh_quay_phim",
+      "dich_thuat",
+      "gia_su",
+      "giup_viec",
+      "ke_toan_thue",
+      "ky_su",
+      "lap_trinh_web"
+    ],
+    "validation": [
+      "luat_su",
+      "marketing_seo"
+    ],
+    "test": [
+      "sua_chua_dien_nuoc",
+      "thiet_ke_do_hoa"
+    ]
+  },
+  "splitCounts": {
+    "training": 658,
+    "validation": 100,
+    "test": 181,
+    "testNewDataset": 100
+  },
+  "classCounts": {
+    "positive": 283,
+    "negative": 206,
+    "neutral": 169
+  },
+  "calibration": {
+    "temperature": 6,
+    "validationLogLoss": 0.12463901369118599
+  },
+  "validation": {
+    "count": 100,
+    "accuracy": 0.96,
+    "macroF1": 0.9604395604395605,
+    "f1": {
+      "positive": 0.9538461538461539,
+      "negative": 0.9428571428571428,
+      "neutral": 0.9846153846153847
+    },
+    "confusionMatrix": {
+      "positive": {
+        "positive": 31,
+        "negative": 3,
+        "neutral": 0
+      },
+      "negative": {
+        "positive": 0,
+        "negative": 33,
+        "neutral": 1
+      },
+      "neutral": {
+        "positive": 0,
+        "negative": 0,
+        "neutral": 32
+      }
+    }
+  },
+  "test": {
+    "count": 181,
+    "accuracy": 0.850828729281768,
+    "macroF1": 0.8347079037800688,
+    "f1": {
+      "positive": 0.9,
+      "negative": 0.8041237113402062,
+      "neutral": 0.8
+    },
+    "confusionMatrix": {
+      "positive": {
+        "positive": 81,
+        "negative": 1,
+        "neutral": 2
+      },
+      "negative": {
+        "positive": 9,
+        "negative": 39,
+        "neutral": 5
+      },
+      "neutral": {
+        "positive": 6,
+        "negative": 4,
+        "neutral": 34
+      }
+    }
+  },
+  "testBySource": {
+    "reviews_labeled.json": {
+      "count": 81,
+      "accuracy": 0.7901234567901234,
+      "macroF1": 0.6535714285714286,
+      "f1": {
+        "positive": 0.875,
+        "negative": 0.6857142857142857,
+        "neutral": 0.4
+      },
+      "confusionMatrix": {
+        "positive": {
+          "positive": 49,
+          "negative": 1,
+          "neutral": 0
+        },
+        "negative": {
+          "positive": 7,
+          "negative": 12,
+          "neutral": 0
+        },
+        "neutral": {
+          "positive": 6,
+          "negative": 3,
+          "neutral": 3
+        }
+      }
+    },
+    "binh_luan_dich_vu_600_aspect.csv": {
+      "count": 100,
+      "accuracy": 0.9,
+      "macroF1": 0.8992861660793349,
+      "f1": {
+        "positive": 0.9411764705882353,
+        "negative": 0.8709677419354839,
+        "neutral": 0.8857142857142857
+      },
+      "confusionMatrix": {
+        "positive": {
+          "positive": 32,
+          "negative": 0,
+          "neutral": 2
+        },
+        "negative": {
+          "positive": 2,
+          "negative": 27,
+          "neutral": 5
+        },
+        "neutral": {
+          "positive": 0,
+          "negative": 1,
+          "neutral": 31
+        }
+      }
+    }
+  },
+  "datasetSha256": "e0ee88851df984a6ced5478eb4f6377925943fd0ea9c63931dfe812cec266666"
+}

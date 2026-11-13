@@ -12,6 +12,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import json
+import csv
 import re
 import math
 import unicodedata
@@ -42,6 +43,10 @@ ASPECTS = ['quality', 'price', 'speed', 'attitude', 'warranty']
 SENTIMENTS = ['pos', 'neg', 'neu']
 
 DATA_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'export', 'reviews_labeled.json')
+MANUAL_DATA_FILES = [
+    os.path.join(os.path.dirname(__file__), '..', 'data', 'handwritten', 'annotator_A.csv'),
+    os.path.join(os.path.dirname(__file__), '..', 'data', 'handwritten', 'review_seed.csv')
+]
 LEXICON_FILE = os.path.join(os.path.dirname(__file__), 'aspect_lexicon.json')
 MODELS_DIR = os.path.join(os.path.dirname(__file__), '..', 'models')
 REPORTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'reports')
@@ -53,6 +58,30 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 def load_dataset():
     with open(DATA_FILE, 'r', encoding='utf-8') as f:
         data = json.load(f)
+    # Bỏ các ví dụ/demo trong template. Bản ghi bổ sung chỉ được đưa vào train;
+    # validation/test cố định để có thể so sánh model giữa các lần huấn luyện.
+    for manual_file in MANUAL_DATA_FILES:
+        if not os.path.exists(manual_file):
+            continue
+        with open(manual_file, 'r', encoding='utf-8-sig', newline='') as f:
+            for row in csv.DictReader(f):
+                sample_id = (row.get('id') or '').strip()
+                text = (row.get('text') or '').strip()
+                if not sample_id or sample_id.upper().startswith(('DEMO_', 'EXAMPLE_')) or not text:
+                    continue
+                aspect_map = {}
+                for aspect in ASPECTS:
+                    label = (row.get(aspect) or '-').strip().lower()
+                    if label in ('pos', 'neg', 'neu'):
+                        aspect_map[aspect] = label
+                    elif label not in ('', '-'):
+                        raise ValueError(f"Nhãn không hợp lệ trong {manual_file}: {sample_id}/{aspect}={label}")
+                data.append({
+                    'id': f'MANUAL_{os.path.basename(manual_file)}_{sample_id}', 'content': text,
+                    'providerId': f'MANUAL_{os.path.basename(manual_file)}_{(row.get("writer") or sample_id).strip()}',
+                    'style': 'handwritten', 'split': 'train',
+                    'groundTruth': {'aspects': [{'aspect': a, 'sentiment': s} for a, s in aspect_map.items()]}
+                })
     return data
 
 
@@ -153,7 +182,8 @@ def tune_logistic_regression(X_train, y_aspects_train, y_sentiments_train, train
     """
     Tìm C tối ưu trong {0.1, 0.3, 1, 3, 10} bằng GroupKFold(providerId) trên train.
     """
-    C_values = [0.1, 0.3, 1.0, 3.0, 10.0]
+    # Smaller regularization search space discourages memorizing synthetic phrase patterns.
+    C_values = [0.01, 0.03, 0.1, 0.3, 1.0]
     gkf = GroupKFold(n_splits=5)
     
     print("\n--- [GridSearch + GroupKFold] Tác vụ A: Aspect Detection ---")
@@ -782,10 +812,12 @@ def main():
     # 3. Trích xuất đặc trưng TF-IDF (Fit CHỈ trên train)
     print("\n[Đặc trưng] Khởi tạo TF-IDF FeatureUnion (word 1-3 + char_wb 2-5, sublinear_tf=True)...")
     word_vec = TfidfVectorizer(
-        ngram_range=(1, 3), analyzer='word', sublinear_tf=True, token_pattern=r'(?u)\b\w+\b'
+        ngram_range=(1, 3), analyzer='word', sublinear_tf=True, min_df=2,
+        max_df=0.98, token_pattern=r'(?u)\b\w+\b'
     )
     char_vec = TfidfVectorizer(
-        ngram_range=(2, 5), analyzer='char_wb', sublinear_tf=True
+        ngram_range=(2, 5), analyzer='char_wb', sublinear_tf=True, min_df=2,
+        max_df=0.98
     )
     feature_union = FeatureUnion([
         ('word', word_vec),

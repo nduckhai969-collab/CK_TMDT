@@ -39,6 +39,7 @@
           </div>
           <div id="providerSpecialty" class="profile-subtitle" style="margin-top:6px;"></div>
           <div class="profile-meta"><span id="providerRating"></span><span id="providerLocation"></span></div>
+          <div id="providerReputation" style="margin-top:7px;font-size:12px;font-weight:700;color:#15803d;"></div>
         </div>
       </div>
 
@@ -196,6 +197,7 @@ async function loadProviderDetail(id){
   document.getElementById('providerBio').textContent=p.bio||'Provider chưa cập nhật phần giới thiệu.';
   document.getElementById('providerLocation').textContent=p.location||'Chưa cập nhật địa điểm';
   document.getElementById('providerRating').textContent=`${p.rating??'—'} · ${Number(p.reviewCount)||0} đánh giá`;
+  document.getElementById('providerReputation').textContent=`Uy tín ${Number(p.reputationScore ?? 50)}/100 · +${Number(p.positiveReviewCount)||0} tích cực · -${Number(p.negativeReviewCount)||0} tiêu cực · ${Number(p.reputationPoints)||0} điểm`;
   document.getElementById('bookingPriceDisplay').textContent=p.hourlyRate==null?'Chưa cập nhật giá':`${formatVND(p.hourlyRate)} / giờ`;
   document.getElementById('btnChatNow').href=`customer_chat.html?with=${encodeURIComponent(p.id)}`;
   document.getElementById('bookProvider').href=`customer_booking.html?id=${encodeURIComponent(p.id)}`;

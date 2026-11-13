@@ -12,6 +12,7 @@ const { formatDateTime } = require('../utils/dates');
 const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancellation, checkAutoReleaseOrders } = require('../services/orderService');
 const { isVisibleToProvider } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
+const { attachProviderReputation, addReviewSentimentPoints } = require('../services/providerReputation');
 
 function getMyProvider(req) {
   const providers = db.getCollection('providers') || [];
@@ -155,8 +156,13 @@ router.get('/me', requireProvider, async (req, res) => {
       db.saveCollection('providers', providers);
     }
   }
-  const services = ((await db.getCollectionFresh('services')) || []).filter(s => s.providerId === provider.id);
-  return res.json({ success: true, provider, services });
+  const [servicesCollection, freshReviews] = await Promise.all([
+    db.getCollectionFresh('services'),
+    require('./reviewRoutes').refreshStoredReviewAnalyses()
+  ]);
+  const services = (servicesCollection || []).filter(s => s.providerId === provider.id);
+  const reviews = freshReviews.filter(review => review.providerId === provider.id);
+  return res.json({ success: true, provider: attachProviderReputation(provider, reviews), services });
 });
 
 router.put('/profile', requireProvider, async (req, res) => {
@@ -643,9 +649,10 @@ router.post('/orders/:id/cancel', requireProvider, orderAction(req => processCan
 router.post('/orders/:id/cancellation-response', requireProvider, orderAction(req => processRespondCancellation(req.params.id, req.authUser.id, 'Provider', req.body.approve === true, req.body.reason)));
 
 // ---- Đánh giá của tôi + trả lời đánh giá ----
-router.get('/me/reviews', requireProvider, (req, res) => {
+router.get('/me/reviews', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
-  const reviews = (db.getCollection('reviews') || []).filter(r => r.providerId === provider.id);
+  const allReviews = await require('./reviewRoutes').refreshStoredReviewAnalyses();
+  const reviews = allReviews.filter(r => r.providerId === provider.id).map(addReviewSentimentPoints);
   res.json({ success: true, total: reviews.length, reviews });
 });
 
@@ -739,14 +746,15 @@ const _dummy_router = { get: () => {} }; _dummy_router.get('/_old', (req, res) =
 });
 
 router.get('/:id', async (req, res) => {
-  const [providers, allServices, allReviews] = await Promise.all([
-    db.getCollectionFresh('providers'), db.getCollectionFresh('services'), db.getCollectionFresh('reviews')
+  const [providers, allServices] = await Promise.all([
+    db.getCollectionFresh('providers'), db.getCollectionFresh('services')
   ]);
+  const allReviews = await require('./reviewRoutes').refreshStoredReviewAnalyses();
   const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (p.email && p.email.toLowerCase() === req.params.id.toLowerCase()));
   if (!provider || provider.verified !== true) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
   const services = allServices.filter(s => s.providerId === provider.id && s.status !== 'inactive');
-  const reviews = allReviews.filter(r => r.providerId === provider.id);
-  res.json({ success: true, provider, services, reviews });
+  const reviews = allReviews.filter(r => r.providerId === provider.id).map(addReviewSentimentPoints);
+  res.json({ success: true, provider: attachProviderReputation(provider, reviews), services, reviews });
 });
 
 // Thêm các endpoint còn thiếu cho provider
@@ -1151,7 +1159,10 @@ router.get('/', async (req, res) => {
     limit
   } = req.query;
 
-  const allProviders = await db.getCollectionFresh('providers');
+  const [allProviders, allReviews] = await Promise.all([
+    db.getCollectionFresh('providers'),
+    require('./reviewRoutes').refreshStoredReviewAnalyses()
+  ]);
 
   const providerPrices = allProviders
     .map(provider => Number(provider.hourlyRate))
@@ -1163,7 +1174,9 @@ router.get('/', async (req, res) => {
     priceRange.max = Math.max(...providerPrices);
   }
 
-  let providers = allProviders.filter(provider => provider.profileCompleted !== false && provider.verified === true);
+  let providers = allProviders
+    .filter(provider => provider.profileCompleted !== false && provider.verified === true)
+    .map(provider => attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)));
 
   if (category && category !== 'all') {
     const categoryLower = category.toLowerCase().trim();
@@ -1233,7 +1246,8 @@ router.get('/', async (req, res) => {
   }
 
   if (sort === 'rating') {
-    providers.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+    providers.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0)
+      || Number(b.reputationScore || 0) - Number(a.reputationScore || 0));
   } else if (sort === 'price-asc') {
     providers.sort((a, b) => Number(a.hourlyRate || 0) - Number(b.hourlyRate || 0));
   } else if (sort === 'price-desc') {

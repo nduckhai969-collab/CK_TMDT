@@ -6,26 +6,35 @@
 
 const fs = require('fs');
 const path = require('path');
-const { preprocessText } = require('./aspectPreprocess');
+const { preprocessText, normalizeTextBase, removeAccents } = require('./aspectPreprocess');
 
 const MODEL_DIR = path.join(__dirname, '..', 'models');
 const DET_MODEL_PATH = path.join(MODEL_DIR, 'aspect_detection.json');
 const SENT_MODEL_PATH = path.join(MODEL_DIR, 'aspect_sentiment.json');
+const OVERALL_MODEL_PATH = path.join(MODEL_DIR, 'review_overall_nb.json');
+const ASPECT_MODEL_PATH = path.join(MODEL_DIR, 'review_aspects_nb.json');
 
 let detModel = null;
 let sentModel = null;
+let overallModel = null;
+let aspectModel = null;
 let loadedModelSignature = '';
 
 function loadModels() {
   for (const modelPath of [DET_MODEL_PATH, SENT_MODEL_PATH]) {
     if (!fs.existsSync(modelPath)) throw new Error(`Không tìm thấy file mô hình tại ${modelPath}`);
   }
-  const signature = [DET_MODEL_PATH, SENT_MODEL_PATH]
+  const modelPaths = [DET_MODEL_PATH, SENT_MODEL_PATH, OVERALL_MODEL_PATH, ASPECT_MODEL_PATH].filter(fs.existsSync);
+  const signature = modelPaths
     .map(modelPath => `${fs.statSync(modelPath).mtimeMs}:${fs.statSync(modelPath).size}`)
     .join('|');
   if (signature !== loadedModelSignature) {
     detModel = JSON.parse(fs.readFileSync(DET_MODEL_PATH, 'utf8'));
     sentModel = JSON.parse(fs.readFileSync(SENT_MODEL_PATH, 'utf8'));
+    overallModel = fs.existsSync(OVERALL_MODEL_PATH)
+      ? JSON.parse(fs.readFileSync(OVERALL_MODEL_PATH, 'utf8')) : null;
+    aspectModel = fs.existsSync(ASPECT_MODEL_PATH)
+      ? JSON.parse(fs.readFileSync(ASPECT_MODEL_PATH, 'utf8')) : null;
     loadedModelSignature = signature;
   }
 }
@@ -139,6 +148,68 @@ function softmax(logits) {
   return exps.map(val => val / sumExps);
 }
 
+function predictMulticlass(model, wordSparse, charSparse) {
+  const probs = model.classes.map(cls => {
+    const weights = model.class_weights[cls];
+    const score = weights.intercept + dotProduct(wordSparse, weights.word_coef) + dotProduct(charSparse, weights.char_coef);
+    return [cls, score];
+  });
+  const normalized = softmax(probs.map(([, score]) => score));
+  let bestIndex = 0;
+  for (let i = 1; i < normalized.length; i++) if (normalized[i] > normalized[bestIndex]) bestIndex = i;
+  return { label: probs[bestIndex][0], confidence: normalized[bestIndex], probabilities: Object.fromEntries(probs.map(([cls], i) => [cls, normalized[i]])) };
+}
+
+function predictNaiveBayes(model, rawText) {
+  if (!model) return null;
+  const normalized = normalizeTextBase(String(rawText || ''));
+  const words = `${normalized} ${removeAccents(normalized)}`.match(/[\p{L}\p{N}_]+/gu) || [];
+  const features = [...words];
+  for (let i = 0; i + 1 < words.length; i++) features.push(`${words[i]} ${words[i + 1]}`);
+  const counts = new Map();
+  for (const feature of features) {
+    const index = model.vocabulary[feature];
+    if (index !== undefined) counts.set(index, (counts.get(index) || 0) + 1);
+  }
+  const scores = model.classes.map(label => {
+    let score = model.priors[label];
+    const likelihoods = model.likelihoods[label];
+    for (const [index, count] of counts) score += count * likelihoods[index];
+    return score;
+  });
+  const temperature = Number(model.temperature) || 1;
+  const probabilities = softmax(scores.map(score => score / temperature));
+  let best = 0;
+  for (let i = 1; i < probabilities.length; i++) if (probabilities[i] > probabilities[best]) best = i;
+  const confidence = probabilities[best];
+  return {
+    label: model.classes[best],
+    confidence,
+    probabilities: Object.fromEntries(model.classes.map((label, i) => [label, probabilities[i]]))
+  };
+}
+
+function predictNaiveBayesAspects(rawText) {
+  if (!aspectModel?.models) return null;
+  const aspects = [];
+  const details = {};
+  for (const aspect of Object.keys(aspectModel.models)) {
+    const prediction = predictNaiveBayes(aspectModel.models[aspect], rawText);
+    const present = prediction.label !== 'none';
+    details[aspect] = {
+      present,
+      prob: 1 - (prediction.probabilities.none || 0),
+      threshold: null
+    };
+    if (!present) continue;
+    details[aspect].sentiment = prediction.label;
+    details[aspect].sentimentConfidence = prediction.confidence;
+    details[aspect].sentimentProbs = prediction.probabilities;
+    aspects.push({ aspect, sentiment: prediction.label, confidence: prediction.confidence, prob: details[aspect].prob });
+  }
+  return { aspects, details };
+}
+
 /**
  * Suy luận trích xuất khía cạnh và cực tính từ chuỗi đánh giá tiếng Việt
  * @param {string} rawText Nội dung nhận xét
@@ -173,11 +244,18 @@ function predictAspects(rawText) {
     detModel.char_features.idf
   );
 
-  const detectedAspects = [];
-  const aspectDetails = {};
+  let detectedAspects = [];
+  let aspectDetails = {};
+  const overallSentiment = predictNaiveBayes(overallModel, rawText)
+    || (sentModel.overall ? predictMulticlass(sentModel.overall, wordSparse, charSparse) : null);
+  const aspectPrediction = predictNaiveBayesAspects(rawText);
+  if (aspectPrediction) {
+    detectedAspects = aspectPrediction.aspects;
+    aspectDetails = aspectPrediction.details;
+  }
 
   // 2. Tác vụ A: Nhận diện khía cạnh (Aspect Detection)
-  for (const aspect of detModel.aspects) {
+  for (const aspect of aspectPrediction ? [] : detModel.aspects) {
     const weights = detModel.weights[aspect];
     const threshold = detModel.thresholds[aspect] || 0.5;
 
@@ -198,35 +276,17 @@ function predictAspects(rawText) {
     if (isPresent) {
       const sentWeights = sentModel.weights[aspect];
       const classes = sentWeights.classes; // e.g. ['neg', 'neu', 'pos']
-
-      const logits = classes.map(cls => {
-        const clsWeight = sentWeights.class_weights[cls];
-        return clsWeight.intercept +
-          dotProduct(wordSparse, clsWeight.word_coef) +
-          dotProduct(charSparse, clsWeight.char_coef);
-      });
-
-      const probs = softmax(logits);
-      let bestIdx = 0;
-      let maxP = probs[0];
-      for (let i = 1; i < probs.length; i++) {
-        if (probs[i] > maxP) {
-          maxP = probs[i];
-          bestIdx = i;
-        }
-      }
-
-      const bestSentiment = classes[bestIdx];
+      const sentimentPrediction = predictMulticlass(sentWeights, wordSparse, charSparse);
+      const bestSentiment = sentimentPrediction.label;
+      const probsByClass = sentimentPrediction.probabilities;
       aspectDetails[aspect].sentiment = bestSentiment;
-      aspectDetails[aspect].sentimentConfidence = maxP;
-      aspectDetails[aspect].sentimentProbs = Object.fromEntries(
-        classes.map((cls, i) => [cls, probs[i]])
-      );
+      aspectDetails[aspect].sentimentConfidence = sentimentPrediction.confidence;
+      aspectDetails[aspect].sentimentProbs = probsByClass;
 
       detectedAspects.push({
         aspect: aspect,
         sentiment: bestSentiment,
-        confidence: maxP,
+        confidence: sentimentPrediction.confidence,
         prob: prob
       });
     }
@@ -236,7 +296,10 @@ function predictAspects(rawText) {
     rawText,
     preprocessed: cleanText,
     aspects: detectedAspects,
-    details: aspectDetails
+    details: aspectDetails,
+    overallSentiment: overallSentiment?.label || null,
+    overallConfidence: overallSentiment?.confidence || 0,
+    overallProbabilities: overallSentiment?.probabilities || null
   };
 }
 

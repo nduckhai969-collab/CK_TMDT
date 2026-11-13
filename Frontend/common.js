@@ -777,7 +777,7 @@ function exportDataSimulation(filename) {
 function renderAiBadge(aiAnalysis) {
   if (!aiAnalysis) return '';
   const sent = aiAnalysis.overallSentiment === 'pos' ? 'pos' : aiAnalysis.overallSentiment === 'neg' ? 'neg' : 'neutral';
-  let bg = '#F1F5F9', border = '#CBD5E1', color = '#475569', label = 'Trung tính';
+  let bg = '#F1F5F9', border = '#CBD5E1', color = '#475569', label = 'Trung lập';
   let icon = '<i class="fa-solid fa-circle-info" style="color:#64748b;margin-right:5px;"></i>';
   if (sent === 'pos') {
     bg = '#F0FDF4'; border = '#BBF7D0'; color = '#15803D'; label = 'Tích cực';

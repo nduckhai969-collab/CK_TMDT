@@ -4,6 +4,7 @@ const db = require('../data/db');
 const { requireCustomer, requireProvider } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { createNotification, notifyProvider } = require('../services/notificationService');
+const providerPackageService = require('../services/providerPackageService');
 
 async function persistJobs(jobs, res) {
   try {
@@ -301,6 +302,12 @@ router.post('/:id/apply', requireProvider, async (req, res) => {
   const existing = (job.applicants || []).find(a => a.providerId === provider.id || a.providerUserId === req.authUser.id);
   if (existing) {
     return res.status(400).json({ success: false, message: 'Bạn đã gửi đề xuất ứng tuyển cho yêu cầu này rồi!' });
+  }
+
+  const entitlement = providerPackageService.getPlan(provider);
+  const proposalsUsed = providerPackageService.countMonthlyProposals(provider);
+  if (entitlement.proposalLimit !== null && proposalsUsed >= entitlement.proposalLimit) {
+    return res.status(403).json({ success: false, code: 'PACKAGE_PROPOSAL_LIMIT', message: `Gói Cơ Bản đã dùng hết ${entitlement.proposalLimit} lượt chào giá trong tháng. Nâng cấp Pro hoặc VIP để tiếp tục.` });
   }
 
   const now = new Date();

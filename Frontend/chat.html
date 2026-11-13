@@ -331,11 +331,10 @@
 
       container.innerHTML = filtered.map(t => {
         const isActive = t.partnerId === activePartnerId;
-        const initials = (t.name || 'KH').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
         const unread = t.unread || 0;
         return `
           <div class="chat-item ${isActive ? 'active' : ''}" onclick="selectConversation('${t.partnerId}')" style="cursor:pointer;">
-            <div class="avatar" style="background-color: #DBEAFE; color: #1D4ED8; font-weight:700;">${initials}</div>
+            ${renderChatPartnerAvatar(t.name, t.avatar)}
             <div class="chat-item-info" style="flex:1; overflow:hidden;">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span class="chat-item-name" style="font-weight:${unread > 0 ? '800' : '700'}; font-size:13.5px; color:#0f172a;">${t.name}</span>
@@ -368,13 +367,22 @@
       if (partner) {
         document.getElementById('activePartnerName').textContent = partner.name;
         document.getElementById('activePartnerStatus').textContent = `● Khách hàng · ${partner.role || 'Đang kết nối'}`;
-        const initials = (partner.name || 'KH').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
-        document.getElementById('activePartnerAvatar').textContent = initials;
+        const avatar = document.getElementById('activePartnerAvatar');
+        avatar.outerHTML = renderChatPartnerAvatar(partner.name, partner.avatar, 'activePartnerAvatar');
       } else {
         document.getElementById('activePartnerName').textContent = `Khách hàng (${partnerId})`;
       }
 
       loadActiveMessages();
+    }
+
+    function renderChatPartnerAvatar(name, src, id = '') {
+      const initials = String(name || 'KH').trim().split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase() || 'KH';
+      const safeSrc = src ? escapeHtml(src) : '';
+      return `<div ${id ? `id="${id}"` : ''} class="avatar" style="position:relative;overflow:hidden;background-color:#DBEAFE;color:#1D4ED8;font-weight:700;">
+        ${safeSrc ? `<img src="${safeSrc}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;">
+        <span style="${safeSrc ? 'display:none;' : ''}position:absolute;inset:0;align-items:center;justify-content:center;">${escapeHtml(initials)}</span>` : `<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">${escapeHtml(initials)}</span>`}
+      </div>`;
     }
 
     async function markProviderRead(partnerId) {

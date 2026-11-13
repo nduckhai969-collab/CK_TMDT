@@ -196,20 +196,20 @@ async function loadProviderDetail(id){
 
   document.getElementById('providerBio').textContent=p.bio||'Provider chưa cập nhật phần giới thiệu.';
   document.getElementById('providerLocation').textContent=p.location||'Chưa cập nhật địa điểm';
-  document.getElementById('providerRating').textContent=`${p.rating??'—'} · ${Number(p.reviewCount)||0} đánh giá`;
+  document.getElementById('providerRating').textContent=Number(p.reviewCount)>0?`${Number(p.rating).toFixed(1)} · ${Number(p.reviewCount)} đánh giá`:'Chưa có đánh giá';
   document.getElementById('providerReputation').textContent=`Uy tín ${Number(p.reputationScore ?? 50)}/100 · +${Number(p.positiveReviewCount)||0} tích cực · -${Number(p.negativeReviewCount)||0} tiêu cực · ${Number(p.reputationPoints)||0} điểm`;
   document.getElementById('bookingPriceDisplay').textContent=p.hourlyRate==null?'Chưa cập nhật giá':`${formatVND(p.hourlyRate)} / giờ`;
   document.getElementById('btnChatNow').href=`customer_chat.html?with=${encodeURIComponent(p.id)}`;
   document.getElementById('bookProvider').href=`customer_booking.html?id=${encodeURIComponent(p.id)}`;
   document.getElementById('skillsContainer').innerHTML=(p.skills||[]).map(s=>`<span class="skill-tag">${escapeHtml(s)}</span>`).join('')||'<span class="muted-note">Chưa cập nhật kỹ năng.</span>';
-  document.getElementById('scoreValue').textContent=p.rating??'—';
+  document.getElementById('scoreValue').textContent=Number(p.reviewCount)>0?Number(p.rating).toFixed(1):'—';
 
   // Render Services List
   renderCustomerProviderServices(res.services || [], p);
 
   const reviews=res.reviews||[];
-  document.getElementById('scoreStars').textContent='★'.repeat(Math.max(0,Math.min(5,Math.round(Number(p.rating)||0))));
-  document.getElementById('reviewCount').textContent=`${Number(p.reviewCount)||0} đánh giá trên hồ sơ`;
+  document.getElementById('scoreStars').textContent=Number(p.reviewCount)>0?'★'.repeat(Math.max(0,Math.min(5,Math.round(Number(p.rating)||0)))):'';
+  document.getElementById('reviewCount').textContent=Number(p.reviewCount)>0?`${Number(p.reviewCount)} đánh giá trên hồ sơ`:'Chưa có đánh giá trên hồ sơ';
   document.getElementById('ratingBars').innerHTML=[5,4,3,2,1].map(n=>{const count=reviews.filter(r=>Number(r.rating)===n).length;const percent=reviews.length?Math.round(count/reviews.length*100):0;return `<div class="rating-row"><span>${n} ★</span><div class="rating-track"><div class="rating-fill" style="width:${percent}%"></div></div><span>${count}</span></div>`}).join('');
   document.getElementById('reviewsContainer').innerHTML=reviews.length?reviews.slice(0,3).map(r=>`<div style="border-top:1px solid #edf0f2;padding-top:10px;margin-top:10px"><strong style="font-size:12px">${escapeHtml(r.customerName||'Khách hàng')}</strong><span style="float:right;color:#e7ad37">${'★'.repeat(Math.max(0,Math.min(5,Number(r.rating)||0)))}</span><p style="margin-top:5px">${escapeHtml(r.content||'')}</p><div style="margin-top:5px;">${typeof renderAiBadge === 'function' ? renderAiBadge(r.aiAnalysis) : ''}</div></div>`).join(''):'<div class="empty-reviews">Chưa có đánh giá chi tiết từ khách hàng trong hệ thống.</div>';
   loadProviderPosts(id);

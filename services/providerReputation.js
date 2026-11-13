@@ -46,7 +46,16 @@ function addReviewSentimentPoints(review) {
 }
 
 function attachProviderReputation(provider, reviews = []) {
-  return { ...provider, ...calculateProviderReputation(reviews) };
+  const validRatings = reviews.map(review => Number(review?.rating)).filter(rating => Number.isFinite(rating) && rating >= 1 && rating <= 5);
+  const rating = validRatings.length
+    ? Math.round(validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length * 10) / 10
+    : null;
+  return {
+    ...provider,
+    rating,
+    reviewCount: validRatings.length,
+    ...calculateProviderReputation(reviews)
+  };
 }
 
 module.exports = { classifyReview, scoreReview, calculateProviderReputation, addReviewSentimentPoints, attachProviderReputation };

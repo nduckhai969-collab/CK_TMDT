@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { processReleaseEscrow } = require('../services/orderService');
 const walletService = require('../services/walletService');
+const providerPackageService = require('../services/providerPackageService');
 const { hashPassword } = require('../utils/authTokens');
 
 function safeAdminUser(u) {
@@ -677,16 +678,35 @@ router.get('/services', async (req, res) => {
   res.json({ success: true, total: list.length, services: list });
 });
 
-router.post('/services/:id/approve', (req, res) => {
-  const services = db.getCollection('services');
+router.post('/services/:id/approve', async (req, res) => {
+  const services = await db.getCollectionFresh('services');
   const service = services.find(s => s.id === req.params.id);
 
   if (!service) {
     return res.status(404).json({ success: false, message: 'Dịch vụ không tồn tại!' });
   }
 
+  const providers = await db.getCollectionFresh('providers');
+  const provider = providers.find(item => String(item.id) === String(service.providerId) || String(item.userId) === String(service.providerId));
+  if (provider) {
+    const entitlement = providerPackageService.getPlan(provider);
+    const providerIds = new Set([provider.id, provider.userId].filter(Boolean).map(String));
+    const listedOrPendingCount = services.filter(item =>
+      item.id !== service.id &&
+      providerIds.has(String(item.providerId)) &&
+      !['inactive', 'rejected'].includes(item.status)
+    ).length;
+    if (entitlement.serviceLimit !== null && listedOrPendingCount >= entitlement.serviceLimit) {
+      return res.status(409).json({
+        success: false,
+        code: 'PACKAGE_SERVICE_LIMIT',
+        message: `Không thể duyệt: Provider đang có ${listedOrPendingCount}/${entitlement.serviceLimit} dịch vụ theo ${entitlement.package.name}. Hãy yêu cầu Provider ẩn một dịch vụ hoặc nâng gói trước khi duyệt.`
+      });
+    }
+  }
+
   service.status = 'active';
-  db.saveCollection('services', services);
+  await db.saveCollectionAndWait('services', services);
 
   res.json({
     success: true,

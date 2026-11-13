@@ -2812,6 +2812,10 @@
 
               const hourlyRate = p.hourlyRate != null && p.hourlyRate !== '' && Number.isFinite(Number(p.hourlyRate)) ? Number(p.hourlyRate) : null;
 
+              const packageCount = Number(p.servicePackageCount) || 0;
+
+              const packageStartingPrice = Number.isFinite(Number(p.startingPackagePrice)) ? Number(p.startingPackagePrice) : null;
+
 
               const completedOrders = Number(p.completedOrders) || 0;
 
@@ -3027,15 +3031,15 @@
               <div>
 
               <div class="provider-price-label">
-              Đơn giá từ
+              ${packageCount > 0 ? `Gói dịch vụ từ · ${packageCount} gói` : 'Đơn giá từ'}
               </div>
 
 
               <div class="provider-price">
 
-              ${hourlyRate === null ? 'Chưa cập nhật giá' : formatProviderVND(hourlyRate)}
+              ${packageCount > 0 && packageStartingPrice !== null ? formatProviderVND(packageStartingPrice) : (hourlyRate === null ? 'Chưa cập nhật giá' : formatProviderVND(hourlyRate))}
 
-              ${hourlyRate === null ? '' : '<span>/ giờ</span>'}
+              ${packageCount > 0 && packageStartingPrice !== null ? '<span>/ gói</span>' : (hourlyRate === null ? '' : '<span>/ giờ</span>')}
 
               </div>
 

@@ -123,7 +123,7 @@ router.get('/threads', requireSignedIn, (req, res) => {
       // The user account is the source of truth for the person in the conversation.
       // Provider profiles can contain stale/demo names and must not override it.
       name: partnerUser.name || partnerProv.name || 'Người dùng',
-      avatar: partnerProv.avatar || partnerUser.avatar || '',
+      avatar: partnerUser.avatar || partnerProv.avatar || '',
       role: partnerProv.specialty || (partnerUser.role === 'Provider' ? 'Chuyên gia' : 'Khách hàng'),
       lastMessage: lastMsg ? lastMsg.text : '',
       lastTime: lastMsg ? lastMsg.time : '',

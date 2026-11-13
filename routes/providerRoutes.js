@@ -13,6 +13,7 @@ const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCa
 const { isVisibleToProvider, createGatewayTransaction, MIN_PAYMENT, MAX_PAYMENT } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 const walletService = require('../services/walletService');
+const providerPackageService = require('../services/providerPackageService');
 const { attachProviderReputation, addReviewSentimentPoints } = require('../services/providerReputation');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
@@ -89,12 +90,25 @@ async function getMyProviderFresh(req) {
     (req.authUser.email && providers.find(p => p.email && p.email.toLowerCase() === req.authUser.email.toLowerCase())) || null;
 }
 
+function attachPublicServiceSummary(provider, services = []) {
+  const providerServices = services.filter(service =>
+    String(service.providerId) === String(provider.id) &&
+    (service.status || 'active') === 'active'
+  );
+  const prices = providerServices.map(service => Number(service.price)).filter(price => Number.isFinite(price) && price > 0);
+  return {
+    ...provider,
+    servicePackageCount: providerServices.length,
+    startingPackagePrice: prices.length ? Math.min(...prices) : null
+  };
+}
+
 // Homepage summaries and provider detail endpoints used by the customer portal.
 router.get('/stats', async (req, res) => {
-  const [providers, jobs, services] = await Promise.all([
-    db.getCollectionFresh('providers'), db.getCollectionFresh('jobRequests'), db.getCollectionFresh('services')
+  const [providers, jobs, services, reviews] = await Promise.all([
+    db.getCollectionFresh('providers'), db.getCollectionFresh('jobRequests'), db.getCollectionFresh('services'), db.getCollectionFresh('reviews')
   ]);
-  const ratings = providers.map(p => Number(p.rating)).filter(Number.isFinite);
+  const ratings = providers.map(provider => attachProviderReputation(provider, reviews.filter(review => review.providerId === provider.id)).rating).filter(Number.isFinite);
   const skills = new Set(providers.flatMap(p => Array.isArray(p.skills) ? p.skills : []));
   res.json({
     success: true,
@@ -108,16 +122,20 @@ router.get('/stats', async (req, res) => {
 });
 
 router.get('/featured', async (req, res) => {
-  const providers = [...(await db.getCollectionFresh('providers'))]
+  const [allProviders, reviews, services] = await Promise.all([db.getCollectionFresh('providers'), db.getCollectionFresh('reviews'), db.getCollectionFresh('services')]);
+  const providers = allProviders
     .filter(provider => provider.verified === true)
+    .map(provider => attachPublicServiceSummary(attachProviderReputation(provider, reviews.filter(review => review.providerId === provider.id)), services))
     .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
 });
 
 router.get('/newest', async (req, res) => {
-  const providers = [...(await db.getCollectionFresh('providers'))]
+  const [allProviders, reviews, services] = await Promise.all([db.getCollectionFresh('providers'), db.getCollectionFresh('reviews'), db.getCollectionFresh('services')]);
+  const providers = allProviders
     .filter(provider => provider.verified === true)
+    .map(provider => attachPublicServiceSummary(attachProviderReputation(provider, reviews.filter(review => review.providerId === provider.id)), services))
     .sort((a, b) => new Date(b.createdAt || b.joinDate || 0) - new Date(a.createdAt || a.joinDate || 0));
   if (providers.every(p => !p.createdAt && !p.joinDate)) providers.reverse();
   res.json({ success: true, providers: providers.slice(0, 6) });
@@ -137,6 +155,7 @@ function detectImageType(buffer) {
 
 router.get('/me', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
+  providerPackageService.getPlan(provider);
   const providers = db.getCollection('providers') || [];
   const pIdx = providers.findIndex(p => p.id === provider.id);
   if (pIdx !== -1) {
@@ -666,6 +685,21 @@ router.get('/packages', (req, res) => {
   res.json({ success: true, packages });
 });
 
+router.get('/me/package', requireProvider, async (req, res) => {
+  const provider = await getMyProviderFresh(req) || getMyProvider(req);
+  const entitlement = providerPackageService.getPlan(provider);
+  entitlement.proposalsUsed = providerPackageService.countMonthlyProposals(provider);
+  const providerIds = new Set([provider.id, provider.userId, req.authUser.id].filter(Boolean).map(String));
+  const allServices = await db.getCollectionFresh('services');
+  const services = allServices.filter(item => providerIds.has(String(item.providerId)) && !['inactive', 'rejected'].includes(item.status));
+  const purchases = (db.getCollection('packagePurchases') || []).filter(item => item.providerId === provider.id);
+  res.json({
+    success: true,
+    entitlement: { ...entitlement, activeServiceCount: services.length },
+    purchases: purchases.slice(0, 10)
+  });
+});
+
 // Customer favorites are stored per signed-in customer in the database.
 router.get('/favorites', requireCustomer, (req, res) => {
   const favorites = (db.getCollection('favoriteProviders') || []).filter(item => item.customerId === req.authUser.id);
@@ -747,7 +781,7 @@ router.get('/:id', async (req, res) => {
   const allReviews = await require('./reviewRoutes').refreshStoredReviewAnalyses();
   const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (p.email && p.email.toLowerCase() === req.params.id.toLowerCase()));
   if (!provider || provider.verified !== true) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
-  const services = allServices.filter(s => s.providerId === provider.id && s.status !== 'inactive');
+  const services = allServices.filter(s => s.providerId === provider.id && (s.status || 'active') === 'active');
   const reviews = allReviews.filter(r => r.providerId === provider.id).map(addReviewSentimentPoints);
   res.json({ success: true, provider: attachProviderReputation(provider, reviews), services, reviews });
 });
@@ -854,10 +888,16 @@ router.post('/certifications/submit', requireProvider, (req, res) => {
   res.json({ success: true, message: 'Đã gửi chứng chỉ chờ duyệt' });
 });
 
-router.post('/services', requireProvider, (req, res) => {
+router.post('/services', requireProvider, async (req, res) => {
   const serviceData = req.body;
-  const services = db.getCollection('services') || [];
-  const p = getMyProvider(req);
+  const p = await getMyProviderFresh(req) || getMyProvider(req);
+  const entitlement = providerPackageService.getPlan(p);
+  const providerIds = new Set([p.id, p.userId, req.authUser.id].filter(Boolean).map(String));
+  const services = await db.getCollectionFresh('services');
+  const currentCount = services.filter(item => providerIds.has(String(item.providerId)) && !['inactive', 'rejected'].includes(item.status)).length;
+  if (entitlement.serviceLimit !== null && currentCount >= entitlement.serviceLimit) {
+    return res.status(403).json({ success: false, code: 'PACKAGE_SERVICE_LIMIT', message: `Gói ${entitlement.package.name} giới hạn ${entitlement.serviceLimit} dịch vụ. Hãy nâng cấp gói hoặc ẩn một dịch vụ hiện có.` });
+  }
   const newSvc = {
     ...serviceData,
     id: generateId('SVC'),
@@ -869,17 +909,39 @@ router.post('/services', requireProvider, (req, res) => {
     dateSubmitted: formatDateTime(new Date())
   };
   services.unshift(newSvc);
-  db.saveCollection('services', services);
+  try {
+    await db.saveCollectionAndWait('services', services);
+  } catch (error) {
+    console.error('[providers] Không lưu được dịch vụ:', error.message);
+    return res.status(503).json({ success: false, message: 'Chưa lưu được dịch vụ lên hệ thống. Vui lòng thử lại.' });
+  }
   res.json({ success: true, message: 'Đã gửi dịch vụ, vui lòng chờ Admin duyệt trước khi hiển thị công khai.', service: newSvc });
 });
 
-router.put('/services/:id', requireProvider, (req, res) => {
+router.put('/services/:id', requireProvider, async (req, res) => {
   const serviceData = req.body;
-  const services = db.getCollection('services') || [];
-  const idx = services.findIndex(s => s.id === req.params.id && s.providerId === getMyProvider(req).id);
+  const provider = await getMyProviderFresh(req) || getMyProvider(req);
+  const services = await db.getCollectionFresh('services');
+  const idx = services.findIndex(s => s.id === req.params.id && String(s.providerId) === String(provider.id));
   if (idx !== -1) {
+    if (serviceData.status === 'active' && services[idx].status === 'inactive') {
+      const entitlement = providerPackageService.getPlan(provider);
+      const providerIds = new Set([provider.id, provider.userId, req.authUser.id].filter(Boolean).map(String));
+      const currentCount = services.filter(item =>
+        item.id !== services[idx].id &&
+        providerIds.has(String(item.providerId)) &&
+        !['inactive', 'rejected'].includes(item.status)
+      ).length;
+      if (entitlement.serviceLimit !== null && currentCount >= entitlement.serviceLimit) {
+        return res.status(403).json({
+          success: false,
+          code: 'PACKAGE_SERVICE_LIMIT',
+          message: `Gói ${entitlement.package.name} giới hạn ${entitlement.serviceLimit} dịch vụ. Hãy ẩn một dịch vụ khác hoặc nâng cấp gói trước khi hiển thị lại dịch vụ này.`
+        });
+      }
+    }
     services[idx] = { ...services[idx], ...serviceData };
-    db.saveCollection('services', services);
+    await db.saveCollectionAndWait('services', services);
     res.json({ success: true, message: 'Cập nhật dịch vụ thành công', service: services[idx] });
   } else {
     res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ' });
@@ -896,6 +958,31 @@ router.delete('/services/:id', requireProvider, (req, res) => {
   } else {
     res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ' });
   }
+});
+
+router.post('/services/:id/boost', requireProvider, (req, res) => {
+  const provider = getMyProvider(req);
+  const entitlement = providerPackageService.getPlan(provider);
+  if (entitlement.boostLimit <= entitlement.boostsUsed) {
+    return res.status(403).json({ success: false, code: 'PACKAGE_BOOST_LIMIT', message: 'Gói hiện tại đã dùng hết lượt đẩy dịch vụ trong tháng. Nâng cấp gói hoặc chờ sang tháng mới.' });
+  }
+  const services = db.getCollection('services') || [];
+  const service = services.find(item => item.id === req.params.id && item.providerId === provider.id && item.status === 'active');
+  if (!service) return res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ đã được duyệt để đẩy lên Top.' });
+
+  const now = new Date();
+  service.boostedAt = now.toISOString();
+  service.boostedUntil = new Date(now.getTime() + 7 * 86400000).toISOString();
+  db.saveCollection('services', services);
+
+  const providers = db.getCollection('providers') || [];
+  const index = providers.findIndex(item => item.id === provider.id);
+  if (index >= 0) {
+    const current = providerPackageService.getPlan(providers[index]);
+    providers[index].packageUsage.boostsUsed = current.boostsUsed + 1;
+    db.saveCollection('providers', providers);
+  }
+  res.json({ success: true, message: 'Đã đẩy dịch vụ lên vị trí ưu tiên trong 7 ngày.', service, entitlement: providerPackageService.getPlan(provider) });
 });
 
 router.put('/services/:id/request-price', requireProvider, (req, res) => {
@@ -982,73 +1069,84 @@ router.post('/complaints/:id/accept-refund', requireProvider, (req, res) => {
 router.post('/packages/purchase', requireProvider, (req, res) => {
   const { packageId } = req.body;
   const packages = db.getCollection('packages') || [];
-  const pkg = packages.find(p => p.id === packageId);
+  const pkg = packages.find(p => p.id === packageId && ['PKG_PRO', 'PKG_VIP'].includes(p.id));
   if (!pkg) return res.status(404).json({ success: false, message: 'Gói dịch vụ không tồn tại.' });
-  
-  const purchases = db.getCollection('packagePurchases') || [];
+
   const provider = getMyProvider(req);
+  const currentEntitlement = providerPackageService.getPlan(provider);
   const users = db.getCollection('users') || [];
   const uidx = users.findIndex(u => u.id === req.authUser.id);
-  
   if (uidx === -1) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng.' });
   }
 
+  const price = Math.max(0, Number(pkg.price) || 0);
   const currentBal = Number(users[uidx].balance) || 0;
-
-  if (pkg.price > 0) {
-    if (currentBal < pkg.price) {
+  if (price > 0) {
+    if (currentBal < price) {
       return res.status(400).json({
         success: false,
-        message: `Số dư ví không đủ (Cần ${pkg.price.toLocaleString('vi-VN')}đ, hiện có ${currentBal.toLocaleString('vi-VN')}đ). Vui lòng nạp thêm tiền vào ví để kích hoạt gói.`
+        message: `Số dư ví không đủ (cần ${price.toLocaleString('vi-VN')}đ, hiện có ${currentBal.toLocaleString('vi-VN')}đ). Vui lòng nạp thêm tiền.`
       });
     }
-
-    users[uidx].balance = currentBal - pkg.price;
-    db.saveCollection('users', users);
-    
-    const transactions = db.getCollection('walletTransactions') || [];
-    transactions.unshift({
-      id: generateId('TXN'),
-      userId: req.authUser.id,
-      userName: provider.name || req.authUser.name || 'Chuyên gia',
-      type: 'package_purchase',
-      amount: -pkg.price,
-      balanceAfter: users[uidx].balance,
-      status: 'completed',
-      createdAt: formatDateTime(new Date()),
-      description: `Mua gói dịch vụ sàn: ${pkg.name}`
-    });
-    db.saveCollection('walletTransactions', transactions);
   }
+
+  const now = new Date();
+  const durationDays = Math.max(1, Number(pkg.duration) || 30);
+  const extendingSamePlan = currentEntitlement.packageId === packageId && currentEntitlement.expiresAt;
+  const startsAt = extendingSamePlan && Date.parse(currentEntitlement.expiresAt) > now.getTime()
+    ? new Date(currentEntitlement.expiresAt)
+    : now;
+  const expiresAt = new Date(startsAt.getTime() + durationDays * 86400000);
+  users[uidx].balance = currentBal - price;
 
   const providers = db.getCollection('providers') || [];
   const provIdx = providers.findIndex(p => p.id === provider.id || p.userId === req.authUser.id);
-  if (provIdx !== -1) {
-    if (pkg.id === 'PKG_PRO') {
-      providers[provIdx].badge = 'PRO PROVIDER';
-      providers[provIdx].verified = true;
-      providers[provIdx].activePackage = 'PKG_PRO';
-    } else if (pkg.id === 'PKG_VIP') {
-      providers[provIdx].badge = 'VIP ELITE';
-      providers[provIdx].verified = true;
-      providers[provIdx].activePackage = 'PKG_VIP';
-    }
-    db.saveCollection('providers', providers);
+  if (provIdx === -1) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
+  providers[provIdx].activePackage = packageId;
+  providers[provIdx].packageStartedAt = extendingSamePlan ? providers[provIdx].packageStartedAt || now.toISOString() : now.toISOString();
+  providers[provIdx].packageExpiresAt = expiresAt.toISOString();
+  providers[provIdx].badge = packageId === 'PKG_PRO' ? 'PRO PROVIDER' : 'VIP ELITE';
+  if (!extendingSamePlan || !providers[provIdx].packageUsage) {
+    providers[provIdx].packageUsage = { month: providerPackageService.monthKey(now), boostsUsed: 0, proposalsUsed: 0 };
   }
 
-  purchases.unshift({
+  const purchases = db.getCollection('packagePurchases') || [];
+  purchases.forEach(item => {
+    if (item.providerId === provider.id && item.status === 'Đang hoạt động') {
+      item.status = extendingSamePlan && item.packageId === packageId ? 'Đã gia hạn' : 'Đã thay thế';
+    }
+  });
+  const purchase = {
     id: generateId('PKG-ORD'),
     providerId: provider.id,
-    provider: provider.name,
+    provider: providers[provIdx].name || req.authUser.name,
+    packageId: pkg.id,
     packageName: pkg.name,
-    amount: (pkg.price || 0).toLocaleString('vi-VN') + 'đ',
-    amountNum: pkg.price || 0,
-    activeDate: formatDateTime(new Date()).split(' ')[0],
-    expireDate: 'Tự động gia hạn 30 ngày',
+    amount: price.toLocaleString('vi-VN') + 'đ',
+    amountNum: price,
+    activeDate: startsAt.toLocaleDateString('vi-VN'),
+    startedAt: startsAt.toISOString(),
+    expireDate: expiresAt.toLocaleDateString('vi-VN'),
+    expiresAt: expiresAt.toISOString(),
     status: 'Đang hoạt động'
-  });
+  };
+  purchases.unshift(purchase);
+
+  // Persist the balance, entitlement, ledger entry and receipt for every purchase,
+  // including zero-cost or extension purchases.
+  db.saveCollection('users', users);
+  db.saveCollection('providers', providers);
   db.saveCollection('packagePurchases', purchases);
+  const transactions = db.getCollection('walletTransactions') || [];
+  if (price > 0) {
+    transactions.unshift({
+      id: generateId('TXN'), userId: req.authUser.id, userName: providers[provIdx].name || req.authUser.name || 'Chuyên gia',
+      type: 'package_purchase', amount: -price, balanceAfter: users[uidx].balance, status: 'completed',
+      createdAt: formatDateTime(now), description: `Mua ${pkg.name} (${durationDays} ngày)`, packagePurchaseId: purchase.id
+    });
+    db.saveCollection('walletTransactions', transactions);
+  }
 
   const { createNotification } = require('../services/notificationService');
   createNotification(req.authUser.id, 'Kích hoạt gói dịch vụ thành công',
@@ -1059,7 +1157,9 @@ router.post('/packages/purchase', requireProvider, (req, res) => {
     success: true,
     message: `Đã kích hoạt thành công ${pkg.name}!`,
     newBalance: users[uidx].balance,
-    package: pkg
+    package: pkg,
+    entitlement: providerPackageService.getPlan(providers[provIdx]),
+    purchase
   });
 });
 
@@ -1200,13 +1300,18 @@ router.get('/', async (req, res) => {
     limit
   } = req.query;
 
-  const [allProviders, allReviews] = await Promise.all([
+  const [allProviders, allReviews, allServices] = await Promise.all([
     db.getCollectionFresh('providers'),
-    require('./reviewRoutes').refreshStoredReviewAnalyses()
+    require('./reviewRoutes').refreshStoredReviewAnalyses(),
+    db.getCollectionFresh('services')
   ]);
 
-  const providerPrices = allProviders
-    .map(provider => Number(provider.hourlyRate))
+  let providers = allProviders
+    .filter(provider => provider.verified === true)
+    .map(provider => attachPublicServiceSummary(attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)), allServices));
+
+  const providerPrices = providers
+    .map(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate))
     .filter(price => Number.isFinite(price) && price >= 0);
 
   let priceRange = { min: 0, max: 0 };
@@ -1216,10 +1321,6 @@ router.get('/', async (req, res) => {
   }
 
   // Chỉ cần verified=true (admin đã duyệt) là hiển thị cho customer
-  let providers = allProviders
-    .filter(provider => provider.verified === true)
-    .map(provider => attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)));
-
   if (category && category !== 'all') {
     const categoryLower = category.toLowerCase().trim();
     providers = providers.filter(provider => {
@@ -1272,14 +1373,14 @@ router.get('/', async (req, res) => {
   if (minPrice !== undefined && minPrice !== '') {
     const minPriceValue = Number(minPrice);
     if (Number.isFinite(minPriceValue)) {
-      providers = providers.filter(provider => Number(provider.hourlyRate || 0) >= minPriceValue);
+      providers = providers.filter(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate ?? 0) >= minPriceValue);
     }
   }
 
   if (maxPrice !== undefined && maxPrice !== '') {
     const maxPriceValue = Number(maxPrice);
     if (Number.isFinite(maxPriceValue)) {
-      providers = providers.filter(provider => Number(provider.hourlyRate || 0) <= maxPriceValue);
+      providers = providers.filter(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate ?? 0) <= maxPriceValue);
     }
   }
 
@@ -1291,9 +1392,9 @@ router.get('/', async (req, res) => {
     providers.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0)
       || Number(b.reputationScore || 0) - Number(a.reputationScore || 0));
   } else if (sort === 'price-asc') {
-    providers.sort((a, b) => Number(a.hourlyRate || 0) - Number(b.hourlyRate || 0));
+    providers.sort((a, b) => Number(a.startingPackagePrice ?? a.hourlyRate ?? 0) - Number(b.startingPackagePrice ?? b.hourlyRate ?? 0));
   } else if (sort === 'price-desc') {
-    providers.sort((a, b) => Number(b.hourlyRate || 0) - Number(a.hourlyRate || 0));
+    providers.sort((a, b) => Number(b.startingPackagePrice ?? b.hourlyRate ?? 0) - Number(a.startingPackagePrice ?? a.hourlyRate ?? 0));
   } else if (sort === 'orders') {
     providers.sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0));
   }

@@ -76,6 +76,17 @@
           </a>
         </div>
 
+        <div class="card" style="margin-bottom:24px;">
+          <div class="card-header"><div><div class="card-title"><i class="fa-solid fa-crown" style="color:#D97706"></i> Gói đang sử dụng</div><div class="card-subtitle">Quyền lợi và thời hạn lấy trực tiếp từ hồ sơ Provider</div></div><button class="btn btn-outline btn-sm" type="button" onclick="loadPackageState()"><i class="fa-solid fa-rotate-right"></i> Làm mới</button></div>
+          <div id="activePlanDetails" style="color:var(--text-muted);font-size:13px">Đang tải thông tin gói…</div>
+          <div id="boostControls" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-color);gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="serviceToBoost" class="form-control" style="max-width:360px"><option value="">Chọn dịch vụ đã duyệt</option></select>
+            <button id="boostServiceBtn" class="btn btn-outline btn-sm" type="button" onclick="boostSelectedService()"><i class="fa-solid fa-arrow-up"></i> Đẩy dịch vụ lên Top</button>
+            <span id="boostUsageText" style="font-size:12px;color:var(--text-muted)"></span>
+          </div>
+          <div id="packagePurchaseHistory" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
+        </div>
+
         <div class="grid-3">
           <div class="package-card">
             <span class="badge badge-neutral" style="width: fit-content;">GÓI TIÊU CHUẨN</span>
@@ -100,18 +111,18 @@
           <div class="package-card highlight">
             <span class="badge badge-success" style="width: fit-content;">NỔI BẬT - BÁN CHẠY</span>
             <div style="font-weight: 700; font-size: 18px; margin-top: 8px;">Gói Chuyên Nghiệp (Pro)</div>
-            <div class="package-price">199.000đ</div>
+            <div class="package-price" id="packagePrice-PKG_PRO">199.000đ</div>
             <div style="font-size: 12px; color: var(--text-muted);">Tăng độ uy tín, huy hiệu PRO và đẩy tin tìm kiếm</div>
 
             <ul class="package-feature-list">
               <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Đăng tối đa 15 dịch vụ kỹ năng</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> 3 lượt đẩy tin lên Top tìm kiếm mỗi tháng</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> 3 lượt đẩy dịch vụ lên Top mỗi tháng, 7 ngày/lượt</li>
               <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Gắn huy hiệu uy tín "PRO PROVIDER"</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Giảm 2% phí hoa hồng sàn</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Phí nền tảng giảm từ 5% còn 3%</li>
             </ul>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_PRO', 'Gói Chuyên Nghiệp (Pro Provider)', 199000)">
+              <button class="btn btn-primary btn-sm package-buy-button" data-package-id="PKG_PRO" style="flex:1;" onclick="buyPackageAction('PKG_PRO')">
                 <i class="fa-solid fa-cart-shopping"></i> Mua Gói (199k)
               </button>
             </div>
@@ -120,18 +131,18 @@
           <div class="package-card">
             <span class="badge badge-info" style="width: fit-content;">GÓI DOANH NGHIỆP</span>
             <div style="font-weight: 700; font-size: 18px; margin-top: 8px;">Gói VIP Elite</div>
-            <div class="package-price">499.000đ</div>
+            <div class="package-price" id="packagePrice-PKG_VIP">499.000đ</div>
             <div style="font-size: 12px; color: var(--text-muted);">Đặc quyền tối cao dành cho Agency và chuyên gia Top</div>
 
             <ul class="package-feature-list">
               <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Không giới hạn bài đăng dịch vụ</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> 10 lượt đẩy tin Hot mỗi tháng</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> 10 lượt đẩy dịch vụ Hot mỗi tháng, 7 ngày/lượt</li>
               <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Huy hiệu vàng "VIP ELITE"</li>
-              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Giảm 4% phí hoa hồng sàn</li>
+              <li><i class="fa-solid fa-check" style="color: var(--primary-accent);"></i> Phí nền tảng giảm từ 5% còn 1%</li>
             </ul>
 
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-primary btn-sm" style="flex:1;" onclick="buyPackageAction('PKG_VIP', 'Gói Doanh Nghiệp (VIP Elite)', 499000)">
+              <button class="btn btn-primary btn-sm package-buy-button" data-package-id="PKG_VIP" style="flex:1;" onclick="buyPackageAction('PKG_VIP')">
                 <i class="fa-solid fa-cart-shopping"></i> Mua Gói (499k)
               </button>
             </div>
@@ -143,10 +154,13 @@
 
   <script src="provider.js"></script>
   <script>
-    let currentProviderBal = 0;
+    let currentProviderBal = null;
+    let packageCatalog = [];
+    let currentEntitlement = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       loadProviderBalance();
+      loadPackageState();
     });
 
     async function loadProviderBalance() {
@@ -156,14 +170,80 @@
           currentProviderBal = Number(res.wallet.balance) || 0;
           document.getElementById('providerWalletBalance').textContent = res.wallet.balanceFormatted;
         } else {
-          document.getElementById('providerWalletBalance').textContent = '25.000.000đ';
+          currentProviderBal = null;
+          document.getElementById('providerWalletBalance').textContent = 'Không tải được';
         }
       } catch (e) {
-        document.getElementById('providerWalletBalance').textContent = '25.000.000đ';
+        currentProviderBal = null;
+        document.getElementById('providerWalletBalance').textContent = 'Không tải được';
       }
     }
 
-    async function buyPackageAction(pkgId, pkgName, price) {
+    async function loadPackageState() {
+      const details = document.getElementById('activePlanDetails');
+      try {
+        const [packageResult, state] = await Promise.all([window.providerApi.getPackages(), window.providerApi.getMyPackage()]);
+        if (!packageResult.success || !state.success) throw new Error(state.message || packageResult.message || 'Không tải được thông tin gói.');
+        packageCatalog = packageResult.packages || [];
+        currentEntitlement = state.entitlement;
+        packageCatalog.forEach(pkg => {
+          const price = document.getElementById(`packagePrice-${pkg.id}`);
+          if (price) price.textContent = `${Number(pkg.price || 0).toLocaleString('vi-VN')}đ`;
+          const button = document.querySelector(`[data-package-id="${pkg.id}"]`);
+          if (button) button.textContent = currentEntitlement.packageId === pkg.id ? 'Gia hạn gói' : `Mua gói (${Number(pkg.price || 0).toLocaleString('vi-VN')}đ)`;
+        });
+        const expiry = currentEntitlement.expiresAt ? new Date(currentEntitlement.expiresAt).toLocaleDateString('vi-VN') : 'Không hết hạn';
+        const feeText = currentEntitlement.feeDiscountPercent ? `Giảm ${currentEntitlement.feeDiscountPercent}% phí nền tảng` : 'Mức phí nền tảng tiêu chuẩn';
+        const serviceText = currentEntitlement.serviceLimit === null ? 'Không giới hạn dịch vụ' : `${currentEntitlement.activeServiceCount}/${currentEntitlement.serviceLimit} dịch vụ`;
+        const proposalText = currentEntitlement.proposalLimit === null ? 'Chào giá không giới hạn' : `${currentEntitlement.proposalsUsed}/${currentEntitlement.proposalLimit} lượt chào giá tháng này`;
+        const overServiceLimit = currentEntitlement.serviceLimit !== null && currentEntitlement.activeServiceCount > currentEntitlement.serviceLimit;
+        details.innerHTML = `<strong style="color:var(--text-main)">${escapePackageHtml(currentEntitlement.package.name)}</strong> · ${currentEntitlement.expiresAt ? `Hết hạn ${expiry} (${currentEntitlement.daysRemaining} ngày còn lại)` : 'Gói miễn phí'}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px"><span class="badge badge-neutral">${serviceText}</span><span class="badge badge-neutral">${proposalText}</span><span class="badge badge-neutral">${feeText}</span></div>${overServiceLimit ? `<div style="margin-top:12px;padding:10px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;color:#9a3412;font-size:12px">Bạn đang có ${currentEntitlement.activeServiceCount} dịch vụ, vượt giới hạn gói ${currentEntitlement.serviceLimit} dịch vụ. Dịch vụ cũ vẫn được giữ nguyên; bạn cần ẩn hoặc xóa ít nhất ${currentEntitlement.activeServiceCount - currentEntitlement.serviceLimit} dịch vụ trước khi đăng thêm. <a href="profile.html#services" style="font-weight:700;color:#1d4ed8">Quản lý dịch vụ</a></div>` : ''}`;
+        const boostControls = document.getElementById('boostControls');
+        boostControls.style.display = currentEntitlement.boostLimit > 0 ? 'flex' : 'none';
+        document.getElementById('boostUsageText').textContent = `Còn ${Math.max(0, currentEntitlement.boostLimit - currentEntitlement.boostsUsed)} / ${currentEntitlement.boostLimit} lượt đẩy tháng này`;
+        if (currentEntitlement.boostLimit > currentEntitlement.boostsUsed) await loadBoostableServices();
+        document.getElementById('packagePurchaseHistory').innerHTML = (state.purchases || []).length
+          ? `<strong>Lịch sử gói:</strong> ${(state.purchases || []).slice(0, 4).map(item => `${escapePackageHtml(item.packageName)} · ${escapePackageHtml(item.amount)} · ${escapePackageHtml(item.status)}`).join(' &nbsp; | &nbsp; ')}`
+          : 'Chưa có giao dịch mua gói.';
+      } catch (error) {
+        details.textContent = error.message || 'Không tải được thông tin gói.';
+      }
+    }
+
+    async function loadBoostableServices() {
+      const result = await window.providerApi.getMyServices();
+      const select = document.getElementById('serviceToBoost');
+      const services = (result.services || []).filter(service => service.status === 'active');
+      select.innerHTML = '<option value="">Chọn dịch vụ đã duyệt</option>' + services.map(service => `<option value="${escapePackageHtml(service.id)}">${escapePackageHtml(service.title || service.name || service.id)}</option>`).join('');
+      document.getElementById('boostServiceBtn').disabled = !services.length;
+    }
+
+    async function boostSelectedService() {
+      const serviceId = document.getElementById('serviceToBoost').value;
+      if (!serviceId) return showToast('Hãy chọn dịch vụ đã duyệt để đẩy lên Top.', 'warning');
+      const button = document.getElementById('boostServiceBtn');
+      button.disabled = true;
+      try {
+        const result = await window.providerApi.boostService(serviceId);
+        showToast(result.message, result.success ? 'success' : 'error');
+        if (result.success) await loadPackageState();
+      } catch (error) { showToast(error.message || 'Không thể đẩy dịch vụ.', 'error'); }
+      finally { button.disabled = false; }
+    }
+
+    function escapePackageHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+    }
+
+    async function buyPackageAction(pkgId) {
+      const pkg = packageCatalog.find(item => item.id === pkgId);
+      if (!pkg) return showToast('Chưa tải được giá gói. Vui lòng thử tải lại trang.', 'error');
+      const price = Number(pkg.price) || 0;
+      const pkgName = pkg.name;
+      if (currentProviderBal === null) {
+        await loadProviderBalance();
+        if (currentProviderBal === null) return showToast('Không tải được số dư ví. Vui lòng thử lại.', 'error');
+      }
       if (price > 0 && currentProviderBal < price) {
         if (confirm(`Số dư ví của bạn hiện có ${currentProviderBal.toLocaleString('vi-VN')}đ, không đủ ${price.toLocaleString('vi-VN')}đ để mua ${pkgName}.\n\nBạn có muốn chuyển sang trang Ví để nạp thêm tiền không?`)) {
           window.location.href = 'income.html';
@@ -171,13 +251,15 @@
         return;
       }
 
-      if (confirm(`Bạn có chắc chắn muốn đăng ký ${pkgName} với giá ${price.toLocaleString('vi-VN')}đ? Tiền sẽ được trừ trực tiếp từ số dư ví của bạn.`)) {
+      const samePlan = currentEntitlement?.packageId === pkgId;
+      const action = samePlan ? 'gia hạn thêm' : 'chuyển sang';
+      if (confirm(`Bạn muốn ${action} ${pkgName} trong ${Number(pkg.duration) || 30} ngày với giá ${price.toLocaleString('vi-VN')}đ? Số tiền sẽ trừ từ ví. Khi đổi gói, thời hạn còn lại của gói khác sẽ không được hoàn.`)) {
         showToast(`Đang xử lý kích hoạt ${pkgName}...`, 'info');
         try {
           const res = await window.providerApi.purchasePackage(pkgId);
           if (res && res.success) {
             showToast(res.message, 'success');
-            await loadProviderBalance();
+            await Promise.all([loadProviderBalance(), loadPackageState()]);
           } else {
             showToast(res.message || 'Không thể đăng ký gói', 'error');
           }

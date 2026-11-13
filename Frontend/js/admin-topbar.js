@@ -172,4 +172,24 @@
     const extra = document.getElementById('topbar-extra');
     right.innerHTML = (extra ? extra.outerHTML : '') + RIGHT;
   });
+
+  // Giữ nguyên vị trí cuộn của sidebar khi chuyển trang: menu có thể dài hơn màn hình,
+  // nếu không lưu lại thì sau khi reload menu nhảy về đầu và mục vừa bấm bị khuất.
+  const MENU_SCROLL_KEY = 'adminSidebarMenuScrollTop';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const menu = document.querySelector('.sidebar .menu');
+    if (!menu) return;
+    const saved = parseInt(sessionStorage.getItem(MENU_SCROLL_KEY), 10);
+    if (!isNaN(saved) && saved > 0) {
+      requestAnimationFrame(() => { menu.scrollTop = saved; });
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest ? e.target.closest('.sidebar .menu a.menu-item') : null;
+    if (!link) return;
+    const menu = link.closest('.menu');
+    if (menu) sessionStorage.setItem(MENU_SCROLL_KEY, String(menu.scrollTop));
+  });
 })();

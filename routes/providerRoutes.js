@@ -860,11 +860,13 @@ router.post('/services', requireProvider, (req, res) => {
     providerId: p.id,
     providerName: p.name,
     providerAvatar: p.avatar,
-    status: 'active'
+    // Dịch vụ mới của Provider phải chờ Admin duyệt mới hiển thị công khai.
+    status: 'pending',
+    dateSubmitted: formatDateTime(new Date())
   };
   services.unshift(newSvc);
   db.saveCollection('services', services);
-  res.json({ success: true, message: 'Thêm dịch vụ thành công', service: newSvc });
+  res.json({ success: true, message: 'Đã gửi dịch vụ, vui lòng chờ Admin duyệt trước khi hiển thị công khai.', service: newSvc });
 });
 
 router.put('/services/:id', requireProvider, (req, res) => {

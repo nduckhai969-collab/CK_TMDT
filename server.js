@@ -164,10 +164,29 @@ app.get('/', (req, res) => {
 });
 
 // Khởi động server (kết nối MySQL trước khi nhận request)
-db.init().then(() => {
+db.init().then(async () => {
   if (!String(process.env.GOOGLE_CLIENT_ID || '').trim()) {
     console.warn('[Google] GOOGLE_CLIENT_ID chưa được cấu hình; đăng nhập Google hiện tạm tắt.');
   }
+
+  // Migration: provider đã được admin duyệt (verified=true) nhưng profileCompleted=false sẽ được tự động fix
+  try {
+    const providers = db.getCollection('providers') || [];
+    const toFix = providers.filter(p => p.verified === true && p.profileCompleted !== true);
+    if (toFix.length > 0) {
+      toFix.forEach(p => {
+        p.profileCompleted = true;
+        if (!p.availabilityStatus || p.availabilityStatus === 'inactive') {
+          p.availabilityStatus = 'ready';
+        }
+      });
+      await db.saveCollectionAndWait('providers', providers);
+      console.log('[Migration] Đã fix ' + toFix.length + ' provider đã duyệt nhưng bị ẩn (profileCompleted=false).');
+    }
+  } catch (migErr) {
+    console.error('[Migration] Lỗi fix provider data:', migErr.message);
+  }
+
   stopRecommendationScheduler = require('./services/recommendationCampaign').startRecommendationScheduler();
   // Gán trực tiếp vào biến server toàn cục đã khai báo ở trên
   server = app.listen(PORT, () => {

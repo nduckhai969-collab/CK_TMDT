@@ -5,7 +5,8 @@ const { requireCustomer, requireProvider } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { replyToReview } = require('../services/reviewService');
 const { predictAspects } = require('../services/aspectInference');
-const REVIEW_ANALYSIS_VERSION = 4;
+const { scoreReview } = require('../services/providerReputation');
+const REVIEW_ANALYSIS_VERSION = 10;
 
 const ASPECT_VN = {
   quality: 'Chất lượng',
@@ -71,6 +72,24 @@ function analyzeReviewContent(content, rating) {
       aspectMap.warranty = { aspect: 'warranty', sentiment: 'pos', confidence: 92 };
     }
 
+    // A nearby negator reverses the negative adjective. Keep these as neutral
+    // aspect evidence instead of confidently calling them positive.
+    const markNegatedNegativeAsNeutral = (aspect, pattern) => {
+      if (!pattern.test(lower)) return;
+      aspectMap[aspect] = {
+        aspect,
+        sentiment: 'neu',
+        confidence: 75,
+        detectionConfidence: aspectMap[aspect]?.detectionConfidence,
+        source: 'negation_rule'
+      };
+    };
+    markNegatedNegativeAsNeutral('quality', /(?:chất lượng|dịch vụ|web|giao diện|sản phẩm|thiết kế|code)(?:\s+[\p{L}\p{N}_]+){0,3}\s+(?:không|chẳng|chưa)\s+(?:quá\s+)?(?:tệ|kém|xấu|dở|hỏng)/iu);
+    markNegatedNegativeAsNeutral('price', /(?:giá|chi phí|tiền|mức giá|mức phí)(?:\s+[\p{L}\p{N}_]+){0,2}\s+(?:không|chẳng|chưa)\s+(?:quá\s+)?(?:đắt|chát|cao|cắt cổ|tốn kém)/iu);
+    markNegatedNegativeAsNeutral('speed', /(?:giao hàng|giao|hoàn thành|bàn giao|tiến độ|làm việc|phản hồi|thực hiện)(?:\s+[\p{L}\p{N}_]+){0,2}\s+(?:không|chẳng|chưa)\s+(?:quá\s+)?(?:chậm|trễ|muộn|lề mề|delay)/iu);
+    markNegatedNegativeAsNeutral('attitude', /(?:thái độ|phục vụ|hỗ trợ|thợ|chuyên gia|anh|chị|bạn)(?:\s+[\p{L}\p{N}_]+){0,2}\s+(?:không|chẳng|chưa)\s+(?:quá\s+)?(?:tệ|kém|khó chịu|bất lịch sự|xúc phạm)/iu);
+    markNegatedNegativeAsNeutral('warranty', /(?:bảo hành|hỗ trợ sau|sửa lỗi)(?:\s+[\p{L}\p{N}_]+){0,2}\s+(?:không|chẳng|chưa)\s+(?:quá\s+)?(?:tệ|kém|thiếu|chậm)/iu);
+
     const aspectList = Object.values(aspectMap);
     const numPos = aspectList.filter(a => a.sentiment === 'pos').length;
     const numNeg = aspectList.filter(a => a.sentiment === 'neg').length;
@@ -84,8 +103,9 @@ function analyzeReviewContent(content, rating) {
     const globalNegative = /(không hài lòng|thất vọng|tệ|kém|dở|xấu|đắt|chậm|như hạch|bịp|lừa đảo|không đáng|cẩu thả|thô lỗ)/iu.test(lower);
     const negatedPositive = /(?:không|chẳng|chưa)\s+(?:rất\s+)?(?:tốt|hài lòng|đẹp|ưng ý|nhiệt tình|chuyên nghiệp)/iu.test(lower);
     const negatedNegative = /(?:không|chẳng|chưa)\s+(?:rất\s+)?(?:tệ|xấu|kém|dở|chậm|đắt)/iu.test(lower);
-    const hasPositiveEvidence = numPos > 0 || (globalPositive && !negatedPositive) || negatedNegative;
+    const hasPositiveEvidence = numPos > 0 || (globalPositive && !negatedPositive);
     const hasNegativeEvidence = numNeg > 0 || (globalNegative && !negatedNegative) || negatedPositive;
+    const hasConflictingEvidence = hasPositiveEvidence && hasNegativeEvidence;
 
     let overallSentiment = 'neutral';
     if (hasStrongNegVeto) {
@@ -98,9 +118,34 @@ function analyzeReviewContent(content, rating) {
       overallSentiment = 'neg';
     }
 
+    // Prefer the separately trained overall classifier when it is confident.
+    // Aspect-level rules remain a compatibility fallback for older exported models.
+    const modelOverall = pred.overallSentiment;
+    const modelConfidence = Number(pred.overallConfidence) || 0;
+    if (!hasStrongNegVeto && !negatedNegative && !hasConflictingEvidence && overallSentiment === 'neutral'
+      && modelOverall && modelConfidence >= 0.68) {
+      overallSentiment = modelOverall === 'positive' ? 'pos'
+        : modelOverall === 'negative' ? 'neg' : 'neutral';
+    }
+
+    const expectedModelClass = overallSentiment === 'pos' ? 'positive'
+      : overallSentiment === 'neg' ? 'negative' : 'neutral';
+    const alignedConfidence = Number(pred.overallProbabilities?.[expectedModelClass]) || 0;
+    const decisiveRuleEvidence = aspectList.filter(a => (!a.source || a.source === 'rule') && (a.sentiment === 'pos' || a.sentiment === 'neg'));
+    const ruleSentiments = new Set(decisiveRuleEvidence.map(a => a.sentiment));
+    const ruleConsensus = ruleSentiments.size === 1 && ruleSentiments.has(overallSentiment);
+    const ruleConfidence = ruleConsensus
+      ? decisiveRuleEvidence.reduce((sum, a) => sum + Number(a.confidence || 0), 0) / decisiveRuleEvidence.length / 100
+      : 0;
+    const overallConfidence = hasConflictingEvidence ? alignedConfidence
+      : hasStrongNegVeto ? 0.95
+        : ruleConsensus ? ruleConfidence : alignedConfidence;
     return {
       analysisVersion: REVIEW_ANALYSIS_VERSION,
       overallSentiment,
+      overallConfidence: Math.round(overallConfidence * 100),
+      overallConfidenceSource: hasConflictingEvidence ? 'conflicting_evidence'
+        : hasStrongNegVeto || ruleConsensus ? 'domain_rule' : 'calibrated_model',
       aspects: aspectList.map(a => ({
         aspect: a.aspect,
         aspectName: ASPECT_VN[a.aspect] || a.aspect,
@@ -121,6 +166,7 @@ function enrichReviewWithAI(r) {
   if (r.aiAnalysis?.analysisVersion === REVIEW_ANALYSIS_VERSION) return r;
   const analysis = analyzeReviewContent(r.content, Number(r.rating) || 5);
   r.aiAnalysis = analysis;
+  Object.assign(r, scoreReview(r));
   return r;
 }
 
@@ -131,6 +177,28 @@ async function refreshStoredReviewAnalyses() {
   reviews.forEach(enrichReviewWithAI);
   await db.saveCollectionAndWait('reviews', reviews);
   return reviews;
+}
+
+async function recalculateProviderAndServiceRatings(review, reviews) {
+  // Star ratings remain the customer's explicit rating; sentiment points are separate.
+  const providers = db.getCollection('providers') || [];
+  const provider = providers.find(item => item.id === review.providerId);
+  if (provider) {
+    const providerReviews = reviews.filter(item => item.providerId === provider.id);
+    provider.rating = Math.round(providerReviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / providerReviews.length * 10) / 10;
+    provider.reviewCount = providerReviews.length;
+    await db.saveCollectionAndWait('providers', providers);
+  }
+  if (review.serviceId) {
+    const services = db.getCollection('services') || [];
+    const service = services.find(item => item.id === review.serviceId);
+    if (service) {
+      const serviceReviews = reviews.filter(item => item.serviceId === service.id);
+      service.rating = Math.round(serviceReviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / serviceReviews.length * 10) / 10;
+      service.reviewCount = serviceReviews.length;
+      await db.saveCollectionAndWait('services', services);
+    }
+  }
 }
 
 // Real-time AI analysis preview endpoint
@@ -157,7 +225,7 @@ router.get('/public', async (req, res) => {
   res.json({
     success: true,
     total: reviews.length,
-    reviews: reviews.map(enrichReviewWithAI)
+    reviews: reviews.map(review => ({ ...enrichReviewWithAI(review), ...scoreReview(review) }))
   });
 });
 
@@ -175,7 +243,7 @@ router.get('/', requireCustomer, async (req, res) => {
   res.json({
     success: true,
     total: reviews.length,
-    reviews: reviews.map(enrichReviewWithAI)
+    reviews: reviews.map(review => ({ ...enrichReviewWithAI(review), ...scoreReview(review) }))
   });
 });
 
@@ -212,7 +280,9 @@ router.post('/', requireCustomer, async (req, res) => {
     reviews[existingIndex].date = dateStr;
     if (Array.isArray(criteria)) reviews[existingIndex].criteria = criteria;
     reviews[existingIndex].aiAnalysis = analyzeReviewContent(reviewContent, numericRating);
+    Object.assign(reviews[existingIndex], scoreReview(reviews[existingIndex]));
     await db.saveCollectionAndWait('reviews', reviews);
+    await recalculateProviderAndServiceRatings(reviews[existingIndex], reviews);
     return res.status(200).json({
       success: true,
       message: 'Cập nhật đánh giá thành công!',
@@ -237,30 +307,12 @@ router.post('/', requireCustomer, async (req, res) => {
     criteria: Array.isArray(criteria) ? criteria : ['Chuyên nghiệp', 'Đúng hẹn'],
     aiAnalysis: analyzeReviewContent(reviewContent, numericRating)
   };
+  Object.assign(newReview, scoreReview(newReview));
 
   reviews.unshift(newReview);
   await db.saveCollectionAndWait('reviews', reviews);
 
-  // Recalculate provider rating
-  const providers = db.getCollection('providers');
-  const provider = providers.find(p => p.id === newReview.providerId);
-  if (provider) {
-    const provReviews = reviews.filter(r => r.providerId === provider.id);
-    const avg = provReviews.reduce((sum, r) => sum + r.rating, 0) / provReviews.length;
-    provider.rating = Math.round(avg * 10) / 10;
-    provider.reviewCount = provReviews.length;
-    db.saveCollection('providers', providers);
-  }
-  if (newReview.serviceId) {
-    const services = db.getCollection('services') || [];
-    const service = services.find(item => item.id === newReview.serviceId);
-    if (service) {
-      const serviceReviews = reviews.filter(item => item.serviceId === service.id);
-      service.rating = Math.round(serviceReviews.reduce((sum, item) => sum + item.rating, 0) / serviceReviews.length * 10) / 10;
-      service.reviewCount = serviceReviews.length;
-      db.saveCollection('services', services);
-    }
-  }
+  await recalculateProviderAndServiceRatings(newReview, reviews);
 
   const { notifyProvider } = require('../services/notificationService');
   notifyProvider(order.providerId, 'Khách hàng đã đánh giá dịch vụ', `Bạn nhận được đánh giá ${numericRating}/5 cho đơn ${order.id}.`, 'success');
@@ -283,6 +335,7 @@ router.post('/:id/reply', requireProvider, (req, res) => {
 });
 
 router.enrichReviewWithAI = enrichReviewWithAI;
+router.refreshStoredReviewAnalyses = refreshStoredReviewAnalyses;
 router.analyzeReviewContent = analyzeReviewContent;
 
 module.exports = router;

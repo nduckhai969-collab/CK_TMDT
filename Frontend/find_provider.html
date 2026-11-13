@@ -2908,6 +2908,12 @@
 
               </div>
 
+              <div class="provider-reputation-score" title="Điểm uy tín được tổng hợp từ phân loại tích cực và tiêu cực của đánh giá" style="font-size:12px;font-weight:700;color:#15803D;margin-top:3px;">
+                <i class="fa-solid fa-shield-heart"></i>
+                Uy tín ${Number(p.reputationScore ?? 50)}/100
+                <span style="font-weight:500;color:#64748B;">(${Number(p.reputationPoints) > 0 ? '+' : ''}${Number(p.reputationPoints) || 0} điểm · ${Number(p.positiveReviewCount) || 0} tích cực · ${Number(p.negativeReviewCount) || 0} tiêu cực)</span>
+              </div>
+
               </div>
 
               </div>

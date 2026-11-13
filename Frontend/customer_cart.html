@@ -19,6 +19,8 @@
     .cart-layout{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:20px;align-items:start}
     .cart-panel,.summary-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;box-shadow:0 4px 12px #0f172a08}
     .cart-item{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 0;border-bottom:1px solid #edf1f5}
+    .cart-select-all{display:flex;align-items:center;gap:9px;padding:0 0 14px;border-bottom:1px solid #edf1f5;font-size:13px;color:#475569}.cart-provider-title{font-size:14px;padding:16px 0 4px;color:#0f172a}.cart-provider-title:first-child{padding-top:0}
+    .cart-item-check{width:18px;height:18px;accent-color:#16a34a}.cart-item{grid-template-columns:24px 90px minmax(0,1fr) auto}
     .cart-item:first-child{padding-top:0}.cart-item:last-child{border:0;padding-bottom:0}
     .cart-item img{width:90px;height:72px;object-fit:cover;border-radius:9px;background:#f1f5f9}
     .cart-item .item-placeholder{width:90px;height:72px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:#f1f5f9;color:#94a3b8;font-size:21px}
@@ -39,7 +41,7 @@
     .provider-schedule{padding:12px;margin:12px 0;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc}.provider-schedule strong{display:block;font-size:12px;margin-bottom:8px}.provider-schedule select{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:7px;margin:4px 0;font:13px Inter,Arial,sans-serif}
     .secure-note{font-size:11px;line-height:1.5;color:#64748b;margin-top:12px}
     @media(max-width:760px){.cart-layout{grid-template-columns:1fr}.summary-panel{position:static}.cart-heading{align-items:flex-start;flex-direction:column}}
-    @media(max-width:480px){.cart-container{padding:0 12px 32px}.cart-panel,.summary-panel{padding:16px}.cart-item{grid-template-columns:64px minmax(0,1fr);gap:12px}.cart-item img{width:64px;height:64px}.item-side{grid-column:2;display:flex;align-items:center;justify-content:space-between}.item-price{text-align:left}}
+    @media(max-width:480px){.cart-container{padding:0 12px 32px}.cart-panel,.summary-panel{padding:16px}.cart-item{grid-template-columns:20px 64px minmax(0,1fr);gap:9px}.cart-item img,.cart-item .item-placeholder{width:64px;height:64px}.item-side{grid-column:3;display:flex;align-items:center;justify-content:space-between}.item-price{text-align:left}}
   </style>
 </head>
 <body>
@@ -81,6 +83,11 @@
         const button = event.target.closest('[data-remove-service]');
         if (button) deleteCartItem(button.dataset.removeService, button);
       });
+      document.getElementById('cartItems').addEventListener('change', event => {
+        const checkbox = event.target.closest('[data-select-service]');
+        if (checkbox) updateSelection(checkbox.dataset.selectService, checkbox.checked);
+        if (event.target.matches('[data-select-all]')) updateAllSelections(event.target.checked);
+      });
       document.getElementById('customerPhone').value = customer.phone || '';
       await loadCart();
     });
@@ -96,20 +103,24 @@
       const message=document.getElementById('cartMessage'),layout=document.getElementById('cartLayout');
       if(!cartItems.length){document.getElementById('cartItems').innerHTML='';layout.hidden=true;message.hidden=false;message.innerHTML='<div class="empty-cart"><i class="fa-solid fa-basket-shopping"></i><h2>Giỏ dịch vụ đang trống</h2><p>Khám phá Provider và thêm dịch vụ bạn muốn đặt.</p><a href="find_provider.html">Tìm dịch vụ</a></div>';message.style.padding='0';return}
       message.hidden=true;layout.hidden=false;
-      document.getElementById('cartItems').innerHTML=cartItems.map(item=>{
+      const providerGroups=new Map();
+      cartItems.forEach(item=>{const key=item.providerId||'unknown';if(!providerGroups.has(key))providerGroups.set(key,[]);providerGroups.get(key).push(item)});
+      const allSelected=cartItems.every(item=>item.selected!==false);
+      document.getElementById('cartItems').innerHTML=`<label class="cart-select-all"><input class="cart-item-check" type="checkbox" data-select-all ${allSelected?'checked':''}> Chọn tất cả dịch vụ</label>`+[...providerGroups.entries()].map(([providerId,items])=>
+        `<h3 class="cart-provider-title">Provider: ${escapeHtml(items[0].providerName||'Provider')}</h3>`+items.map(item=>{
         const qty=Math.max(1,Number(item.hours)||1),price=Number(item.price)||0;
         const image=item.thumbnail||item.providerAvatar;
-        return `<article class="cart-item">${image?`<img src="${escapeHtml(image)}" alt="">`:'<div class="item-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></div>'}<div><a class="item-title" href="customer_booking.html?id=${encodeURIComponent(item.providerId||'')}">${escapeHtml(item.serviceTitle||'Dịch vụ')}</a><div class="item-meta"><span><i class="fa-solid fa-user"></i> ${escapeHtml(item.providerName||'Provider')}</span><span>${money(price)} / đơn vị</span></div></div><div class="item-side"><div class="item-price">${money(price*qty)}</div><div class="item-actions"><label for="qty-${escapeHtml(item.serviceId)}" style="font-size:11px;color:#64748b">SL</label><input class="qty-input" id="qty-${escapeHtml(item.serviceId)}" type="number" min="1" max="99" value="${qty}" onchange="updateQuantity('${escapeHtml(item.serviceId)}',this.value)" aria-label="Số lượng"><button class="remove-btn" type="button" data-remove-service="${escapeHtml(item.serviceId)}" aria-label="Xóa ${escapeHtml(item.serviceTitle||'dịch vụ')} khỏi giỏ"><i class="fa-solid fa-trash"></i></button></div></div></article>`;
-      }).join('');
+        return `<article class="cart-item"><input class="cart-item-check" type="checkbox" data-select-service="${escapeHtml(item.serviceId)}" ${item.selected!==false?'checked':''} aria-label="Chọn ${escapeHtml(item.serviceTitle||'dịch vụ')}">${image?`<img src="${escapeHtml(image)}" alt="">`:'<div class="item-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></div>'}<div><a class="item-title" href="customer_booking.html?id=${encodeURIComponent(item.providerId||'')}">${escapeHtml(item.serviceTitle||'Dịch vụ')}</a><div class="item-meta"><span><i class="fa-solid fa-user"></i> ${escapeHtml(item.providerName||'Provider')}</span><span>${money(price)} / đơn vị</span></div></div><div class="item-side"><div class="item-price">${money(price*qty)}</div><div class="item-actions"><label for="qty-${escapeHtml(item.serviceId)}" style="font-size:11px;color:#64748b">SL</label><input class="qty-input" id="qty-${escapeHtml(item.serviceId)}" type="number" min="1" max="99" value="${qty}" onchange="updateQuantity('${escapeHtml(item.serviceId)}',this.value)" aria-label="Số lượng"><button class="remove-btn" type="button" data-remove-service="${escapeHtml(item.serviceId)}" aria-label="Xóa ${escapeHtml(item.serviceTitle||'dịch vụ')} khỏi giỏ"><i class="fa-solid fa-trash"></i></button></div></div></article>`;
+      }).join('')).join('');
       renderProviderSchedules();
       const totals=calculateCheckoutTotals();
-      document.getElementById('itemCount').textContent=`${cartItems.length} dịch vụ`;
+      document.getElementById('itemCount').textContent=`${cartItems.filter(item=>item.selected!==false).length} dịch vụ đã chọn`;
       document.getElementById('subtotal').textContent=money(totals.subtotal);document.getElementById('platformFee').textContent=money(totals.fee);document.getElementById('grandTotal').textContent=money(totals.total);
       updateCheckoutAvailability();
     }
     function renderProviderSchedules(){
       const host=document.getElementById('providerSchedules');
-      const providers=[...new Map(cartItems.map(item=>[item.providerId,{id:item.providerId,name:item.providerName||'Provider'}])).values()];
+      const providers=[...new Map(cartItems.filter(item=>item.selected!==false).map(item=>[item.providerId,{id:item.providerId,name:item.providerName||'Provider'}])).values()];
       host.innerHTML='<label>Lịch hẹn (bắt buộc)</label>'+providers.map(p=>`<div class="provider-schedule" data-provider-schedule="${escapeHtml(p.id)}"><strong>${escapeHtml(p.name)}</strong><select class="schedule-date" aria-label="Ngày hẹn với ${escapeHtml(p.name)}"><option value="">Đang tải lịch trống...</option></select><select class="schedule-time" aria-label="Giờ hẹn với ${escapeHtml(p.name)}" disabled><option value="">Chọn ngày trước</option></select></div>`).join('');
       providers.forEach(loadProviderSchedule);
     }
@@ -148,19 +159,23 @@
     }
     function calculateCheckoutTotals(){
       const providerTotals=new Map();let subtotal=0;
-      for(const item of cartItems){const line=Number(item.price)*Number(item.hours);subtotal+=line;providerTotals.set(item.providerId,(providerTotals.get(item.providerId)||0)+line)}
+      for(const item of cartItems){if(item.selected===false)continue;const line=Number(item.price)*Number(item.hours);subtotal+=line;providerTotals.set(item.providerId,(providerTotals.get(item.providerId)||0)+line)}
       const fee=[...providerTotals.values()].reduce((sum,amount)=>sum+Math.round(amount*.05),0);
       return{subtotal,fee,total:subtotal+fee};
     }
     function updateCheckoutAvailability(){
       const status=document.getElementById('checkoutStatus'),button=document.getElementById('checkoutButton');
+      const selectedItems=cartItems.filter(item=>item.selected!==false);
       const scheduleSelection=selectedProviderSchedules();
       if(!cartItems.length)status.textContent='Giỏ hàng đang trống.';
+      else if(!selectedItems.length)status.textContent='Hãy chọn ít nhất một dịch vụ để thanh toán.';
       else if([...document.querySelectorAll('[data-provider-schedule]')].some(box=>box.dataset.loadError==='true'))status.textContent='Không tải được lịch Provider. Kiểm tra kết nối rồi tải lại trang.';
       else if(!scheduleSelection.valid)status.textContent='Vui lòng chọn ngày và khung giờ còn trống cho từng Provider.';
       else status.textContent='Lịch đã hợp lệ. Tiếp tục để chọn phương thức thanh toán.';
-      button.disabled=cartItems.length===0;
+      button.disabled=selectedItems.length===0;
     }
+    async function updateSelection(serviceId,selected){const result=await apiRequest(`/api/booking-list/items/${encodeURIComponent(serviceId)}`,{method:'PUT',body:JSON.stringify({selected})});if(!result.success){showToast('Không thể cập nhật lựa chọn',result.message||'','error');await loadCart();return}const item=cartItems.find(x=>x.serviceId===serviceId);if(item)item.selected=selected;renderCart()}
+    async function updateAllSelections(selected){const changes=cartItems.filter(item=>(item.selected!==false)!==selected);for(const item of changes){const result=await apiRequest(`/api/booking-list/items/${encodeURIComponent(item.serviceId)}`,{method:'PUT',body:JSON.stringify({selected})});if(!result.success){showToast('Không thể cập nhật giỏ',result.message||'','error');break}}await loadCart()}
     async function updateQuantity(serviceId,value){const qty=Number(value);if(!Number.isInteger(qty)||qty<1||qty>99){showToast('Số lượng không hợp lệ','Chọn số lượng từ 1 đến 99.','error');return loadCart()}const result=await apiRequest(`/api/booking-list/items/${encodeURIComponent(serviceId)}`,{method:'PUT',body:JSON.stringify({hours:qty})});if(!result.success)showToast('Không thể cập nhật',result.message||'','error');await loadCart()}
     async function deleteCartItem(serviceId,button){
       if(!serviceId||!button||button.disabled)return;
@@ -201,9 +216,10 @@
         return;
       }
       const {schedules}=selection;
+      const selectedItems=cartItems.filter(item=>item.selected!==false);
       const totals=calculateCheckoutTotals();
       localStorage.setItem('SKILLRENTAL_CHECKOUT_DRAFT',JSON.stringify({
-        kind:'cart',items:cartItems,schedulesByProvider:schedules,subtotal:totals.subtotal,fee:totals.fee,total:totals.total,
+        kind:'cart',items:selectedItems,selectedServiceIds:selectedItems.map(item=>item.serviceId),schedulesByProvider:schedules,subtotal:totals.subtotal,fee:totals.fee,total:totals.total,
         customerPhone:document.getElementById('customerPhone').value.trim(),notes:document.getElementById('checkoutNotes').value.trim()
       }));
       location.href='customer_checkout.html?cart=1';

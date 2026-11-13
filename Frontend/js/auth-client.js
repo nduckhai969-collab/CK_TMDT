@@ -4,7 +4,7 @@
   ['SKILLRENTAL_CURRENT_USER', 'SKILLRENTAL_CUSTOMER_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => localStorage.removeItem(key));
   const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
   const API_BASE = isLocalHost && window.location.port && window.location.port !== '3000' ? 'http://localhost:3000' : '';
-  let currentToken = sessionStorage.getItem(TOKEN_KEY) || '';
+  let currentToken = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY) || '';
   const nativeFetch = window.fetch.bind(window);
   window.fetch = function(input, init) {
     const url = typeof input === 'string' ? input : (input && input.url) || '';
@@ -12,7 +12,7 @@
     const targetUrl = API_BASE && url.startsWith('/') ? API_BASE + url : url;
     const options = { ...(init || {}) };
     const headers = new Headers(options.headers || {});
-    const token = currentToken || sessionStorage.getItem(TOKEN_KEY);
+    const token = currentToken || sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
     if (token && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + token);
     options.headers = headers;
     return nativeFetch(targetUrl, options);
@@ -21,7 +21,7 @@
   async function callApi(path, method, _token, body) {
     try {
       const headers = { 'Content-Type': 'application/json' };
-      const token = _token || currentToken || sessionStorage.getItem(TOKEN_KEY);
+      const token = _token || currentToken || sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
       if (token) headers.Authorization = 'Bearer ' + token;
       const res = await nativeFetch(`${API_BASE}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
       return await res.json();
@@ -29,12 +29,16 @@
   }
   const saveSession = (user, token) => {
     currentToken = token || currentToken;
-    if (currentToken) sessionStorage.setItem(TOKEN_KEY, currentToken);
+    if (currentToken) { sessionStorage.setItem(TOKEN_KEY, currentToken); localStorage.setItem(TOKEN_KEY, currentToken); }
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    // Persist session to localStorage so token survives tab reload/new tab
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
     sessionStorage.removeItem('SKILLRENTAL_CUSTOMER_USER');
     sessionStorage.removeItem('SKILLRENTAL_PROVIDER_USER');
-    if (user.role === 'Provider') sessionStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(user));
-    else if (user.role === 'Customer') sessionStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(user));
+    localStorage.removeItem('SKILLRENTAL_CUSTOMER_USER');
+    localStorage.removeItem('SKILLRENTAL_PROVIDER_USER');
+    if (user.role === 'Provider') { sessionStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(user)); localStorage.setItem('SKILLRENTAL_PROVIDER_USER', JSON.stringify(user)); }
+    else if (user.role === 'Customer') { sessionStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(user)); localStorage.setItem('SKILLRENTAL_CUSTOMER_USER', JSON.stringify(user)); }
     window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user } }));
   };
 
@@ -271,7 +275,7 @@
     },
     clearLocalSession() {
       currentToken = '';
-      [TOKEN_KEY, SESSION_KEY, 'SKILLRENTAL_CUSTOMER_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => sessionStorage.removeItem(key));
+      [TOKEN_KEY, SESSION_KEY, 'SKILLRENTAL_CUSTOMER_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => { sessionStorage.removeItem(key); localStorage.removeItem(key); });
       window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: null } }));
       window.dispatchEvent(new CustomEvent('skillrental:logout'));
     },

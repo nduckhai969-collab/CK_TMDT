@@ -36,11 +36,15 @@ const CUSTOMER_SESSION_KEY = 'SKILLRENTAL_CUSTOMER_USER';
 // ============================================================
 
 function getCurrentCustomer() {
-  const raw = sessionStorage.getItem(SESSION_KEY);
+  // Thử sessionStorage trước, fallback localStorage nếu tab mới/reload
+  const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
   if (!raw) {
-    // A role-specific cache is only a mirror; it must not resurrect a signed-out user.
     sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
     return null;
+  }
+  // Nếu lấy từ localStorage, restore vào sessionStorage
+  if (!sessionStorage.getItem(SESSION_KEY)) {
+    sessionStorage.setItem(SESSION_KEY, raw);
   }
 
   try {

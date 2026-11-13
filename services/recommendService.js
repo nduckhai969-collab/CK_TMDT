@@ -182,4 +182,77 @@ function recommendForUser(userId, options = {}) {
   };
 }
 
-module.exports = { CFG, tokenize, buildIndex, buildProfile, recommendForUser };
+// Phân luồng marketing: >= 2 đơn hoàn tất dùng TF-IDF cá nhân hóa; < 2 đơn gửi toàn bộ dịch vụ active (không cần chọn lĩnh vực).
+function recommendForMarketing(userId, options = {}) {
+  const cfg = { ...CFG, ...options };
+  const allServices = (db.getCollection('services') || []).filter(s => s && s.status !== 'inactive' && s.status !== 'locked' && s.status !== 'pending');
+  const activeServices = allServices.some(s => s.status === 'active')
+    ? allServices.filter(s => s.status === 'active')
+    : allServices;
+
+  const orders = (db.getCollection('orders') || [])
+    .filter(o => o.customerId === userId && o.orderStatus === 'completed');
+
+  const mapServiceItem = (s, extra = {}) => ({
+    id: s.id,
+    title: s.title,
+    category: s.category,
+    price: s.price,
+    priceUnit: s.priceUnit,
+    providerName: s.providerName,
+    desc: s.desc || s.description || '',
+    score: 1,
+    matched: [],
+    ...extra
+  });
+
+  if (orders.length >= cfg.MIN_ORDERS) {
+    const personalized = recommendForUser(userId, options);
+    if (personalized.eligible && personalized.items.length > 0) {
+      return {
+        ...personalized,
+        campaignType: 'personalized',
+        template: 'M3_PERSONALIZED'
+      };
+    }
+
+    // Fallback nếu khách >= 2 đơn nhưng đã thuê hết dịch vụ khớp điểm TF-IDF
+    const hiredIds = new Set(orders.map(o => o.serviceId));
+    const remaining = activeServices.filter(s => !hiredIds.has(s.id));
+    const fallbackItems = (remaining.length ? remaining : activeServices).map(s => mapServiceItem(s));
+    return {
+      eligible: fallbackItems.length > 0,
+      campaignType: 'discovery',
+      template: 'M3_DISCOVERY',
+      reason: fallbackItems.length ? 'Gửi danh sách dịch vụ mở rộng phù hợp nhu cầu' : 'Chưa có dịch vụ khả dụng',
+      items: fallbackItems,
+      lastOrderAt: personalized.lastOrderAt,
+      profileOrders: orders.length
+    };
+  }
+
+  let lastOrderAt = null;
+  for (const order of orders) {
+    const at = parseDateTime(order.date);
+    if (at && (!lastOrderAt || at > lastOrderAt)) lastOrderAt = at;
+  }
+
+  const discoveryItems = activeServices
+    .slice()
+    .sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0) || (Number(b.reviewCount) || 0) - (Number(a.reviewCount) || 0))
+    .map(s => mapServiceItem(s));
+
+  return {
+    eligible: discoveryItems.length > 0,
+    campaignType: 'discovery',
+    template: 'M3_DISCOVERY',
+    reason: discoveryItems.length
+      ? `Khách hàng mới (${orders.length} đơn) — gửi toàn bộ ${discoveryItems.length} dịch vụ marketing không lọc lĩnh vực`
+      : 'Chưa có dịch vụ đang hoạt động',
+    items: discoveryItems,
+    lastOrderAt,
+    profileOrders: orders.length
+  };
+}
+
+module.exports = { CFG, tokenize, buildIndex, buildProfile, recommendForUser, recommendForMarketing };

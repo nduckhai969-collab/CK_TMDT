@@ -32,7 +32,6 @@ const STATE = {
       email: 'tri.vo@example.com',
       phone: '0908 112 233',
       specialty: 'Lập trình viên Fullstack React / Node.js',
-      cccd: '079095012345',
       experience: '5 năm kinh nghiệm tại TechCorp',
       date: '28/04/2025',
       status: 'pending',
@@ -45,7 +44,6 @@ const STATE = {
       email: 'bich.nguyen@example.com',
       phone: '0919 445 566',
       specialty: 'Thiết kế Đồ họa & UI/UX Figma',
-      cccd: '080198004567',
       experience: '3 năm Freelance',
       date: '27/04/2025',
       status: 'pending',
@@ -58,7 +56,6 @@ const STATE = {
       email: 'trong.tran@example.com',
       phone: '0937 889 911',
       specialty: 'Sửa chữa điện lạnh & điện gia dụng',
-      cccd: '001092003322',
       experience: '7 năm kỹ thuật viên',
       date: '27/04/2025',
       status: 'pending',
@@ -71,7 +68,6 @@ const STATE = {
       email: 'dung.le@example.com',
       phone: '0981 223 344',
       specialty: 'Gia sư Tiếng Anh & Luyện thi IELTS',
-      cccd: '038197009876',
       experience: '4 năm giảng dạy',
       date: '26/04/2025',
       status: 'pending',
@@ -412,7 +408,7 @@ function renderDashboard() {
           <div class="notice-content" style="flex:1;">
             <strong>${p.name}</strong>
             <p>${p.specialty}</p>
-            <small>CCCD: ${p.cccd} • ${p.date}</small>
+            <small>${p.date}</small>
           </div>
           <button class="btn btn-primary btn-xs" onclick="openProviderDetailModal('${p.id}')">Xét duyệt</button>
         </div>
@@ -482,7 +478,7 @@ function renderProviderApprovals() {
   if (tabBadge) tabBadge.textContent = pending.length;
 
   if (pending.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-secondary);">Tất cả hồ sơ đã được xử lý xong!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-secondary);">Tất cả hồ sơ đã được xử lý xong!</td></tr>`;
     return;
   }
 
@@ -498,7 +494,6 @@ function renderProviderApprovals() {
         </div>
       </td>
       <td>${p.specialty}</td>
-      <td><strong>${p.cccd}</strong></td>
       <td>${p.experience}</td>
       <td>${p.date}</td>
       <td><span class="badge badge-warning">Chờ thẩm định (UC-54)</span></td>
@@ -933,19 +928,8 @@ function openProviderDetailModal(appId) {
     </div>
 
     <div class="form-group">
-      <span class="form-label">Giấy tờ tùy thân CCCD / Hộ chiếu (Thẩm định pháp lý)</span>
-      <div class="id-card-preview">
-        <div class="id-card-side">
-          <strong>[MẶT TRƯỚC CCCD]</strong>
-          <span>Số: ${prov.cccd}</span>
-          <p style="color:var(--primary); margin-top:6px;">✓ Đã xác thực OCR hợp lệ</p>
-        </div>
-        <div class="id-card-side">
-          <strong>[MẶT SAU CCCD]</strong>
-          <span>Đặc điểm nhận dạng</span>
-          <p style="color:var(--primary); margin-top:6px;">✓ Dấu vân tay & chip bảo mật</p>
-        </div>
-      </div>
+      <span class="form-label">Xác minh danh tính</span>
+      <p>CCCD/hộ chiếu không bắt buộc trong quy trình duyệt Provider này. Admin xem xét hồ sơ chuyên môn và thông tin tài khoản.</p>
     </div>
 
     <div class="form-group">

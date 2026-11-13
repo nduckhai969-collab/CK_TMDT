@@ -525,6 +525,56 @@ router.put('/change-password', requireSignedIn, async (req,res) => {
  const users=db.getCollection('users')||[];const index=users.findIndex(user=>user.id===req.authUser.id);const user=users[index];const validCurrentPassword=user&&(await verifyPassword(currentPassword,user.passwordHash)||(typeof user.password==='string'&&user.password===currentPassword));if(index<0||!validCurrentPassword)return res.status(401).json({success:false,message:'Mật khẩu hiện tại không chính xác.'});
  users[index].passwordHash=await hashPassword(newPassword);delete users[index].password;users[index].tokenVersion=(Number(users[index].tokenVersion)||0)+1;await db.saveCollectionAndWait('users',users);res.json({success:true,message:'Đổi mật khẩu thành công. Các phiên khác đã bị đăng xuất.',accessToken:signToken(users[index].id,users[index].tokenVersion)});
 });
+// Đổi email trực tiếp (chỉ cần nhập đúng mật khẩu hiện tại, giữ nguyên ID & toàn bộ đơn hàng).
+router.put('/change-email', requireSignedIn, async (req, res) => {
+  const { currentPassword, newEmail } = req.body || {};
+  const cleanEmail = String(newEmail || '').trim().toLowerCase();
+  if (!cleanEmail || cleanEmail.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return res.status(400).json({ success: false, message: 'Địa chỉ email mới không hợp lệ.' });
+  }
+
+  const users = db.getCollection('users') || [];
+  const index = users.findIndex(user => user.id === req.authUser.id);
+  const user = users[index];
+  if (index < 0 || !user) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+  }
+
+  const hasPassword = Boolean(user.passwordHash || (typeof user.password === 'string' && user.password));
+  if (hasPassword) {
+    if (!currentPassword) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập mật khẩu hiện tại để xác nhận đổi email.' });
+    }
+    const validPassword = (await verifyPassword(currentPassword, user.passwordHash)) || (typeof user.password === 'string' && user.password === currentPassword);
+    if (!validPassword) {
+      return res.status(401).json({ success: false, message: 'Mật khẩu hiện tại không chính xác.' });
+    }
+  }
+
+  if (String(user.email || '').trim().toLowerCase() === cleanEmail) {
+    return res.json({ success: true, message: 'Email mới trùng với email hiện tại.', user: publicUser(user) });
+  }
+
+  const duplicate = users.some(item => item.id !== user.id && String(item.email || '').trim().toLowerCase() === cleanEmail);
+  if (duplicate) {
+    return res.status(409).json({ success: false, message: 'Email này đã được sử dụng bởi tài khoản khác.' });
+  }
+
+  users[index].email = cleanEmail;
+  users[index].emailVerified = true;
+  users[index].updatedAt = new Date().toISOString();
+  await db.saveCollectionAndWait('users', users);
+
+  const providers = db.getCollection('providers') || [];
+  const pIndex = providers.findIndex(p => p.userId === user.id || p.id === user.id);
+  if (pIndex !== -1) {
+    providers[pIndex].email = cleanEmail;
+    await db.saveCollectionAndWait('providers', providers);
+  }
+
+  return res.json({ success: true, message: `Đã đổi email thành ${cleanEmail} (giữ nguyên toàn bộ lịch sử đơn hàng).`, user: publicUser(users[index]) });
+});
+
 router.post('/forgot-password', authLimits.forgotIp, authLimits.forgotEmail, async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ email không hợp lệ.' });

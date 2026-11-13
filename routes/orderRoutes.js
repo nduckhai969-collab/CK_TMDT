@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireRole, requireSignedIn } = require('./customerAuth');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancelRequest, processArbitrateCancel, processUndoCancelOrder, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, getCancellationDeadlineAt, processReleaseEscrow, checkAutoReleaseOrders } = require('../services/orderService');
 const { createNotification, notifyProvider } = require('../services/notificationService');
 const vnpay = require('../services/vnpayService');
 const { startGatewayCheckout, startGatewayRetry, expireUnpaidOrders, payOrderWithBalance } = require('../services/checkoutService');
@@ -80,6 +80,7 @@ function syncPendingJobOrders(customerId, customerUid = null) {
       orderStatus: 'pending',
       paymentMethod: 'Chưa thanh toán (Chờ ký quỹ)',
       paymentExpiresAt: new Date(now.getTime() + (24 * 60 * 60 * 1000)).toISOString(),
+      createdAt: now.toISOString(),
       date: dateStr,
       deadline: job.deadline || 'Thỏa thuận theo tiến độ',
       notes: `Tuyển từ yêu cầu: ${job.id}`,
@@ -137,7 +138,7 @@ router.get('/', requireCustomer, (req, res) => {
   res.json({
     success: true,
     total: orders.length,
-    orders
+    orders: orders.map(order => ({ ...order, cancellationDeadlineAt: getCancellationDeadlineAt(order) }))
   });
 });
 
@@ -487,6 +488,7 @@ router.post('/', requireCustomer, (req, res) => {
     escrowStatus: 'escrow_held', // Funds securely locked in Escrow vault
     paymentStatus: 'paid',        // Paid via wallet balance
     paidAt: now.toISOString(),
+    createdAt: now.toISOString(),
     paymentRef: txnId,
     orderStatus: jobRequest ? 'processing' : 'pending', // Provider already confirmed job requests before escrow.
     paymentMethod: paymentMethod || 'Số dư ví SkillRental (Escrow)',
@@ -601,6 +603,9 @@ router.put('/:id/progress', requireRole('Provider'), (req, res) => {
 // For Admin to force status change (legacy support if needed)
 router.put('/:id/status', requireRole('Admin'), (req, res) => {
   const { status } = req.body;
+  if (String(status || '').toLowerCase() === 'cancelled') {
+    return res.status(403).json({ success: false, message: 'Admin không được hủy hoặc mở lại đơn. Quyền hủy chỉ có trong 24 giờ đầu.' });
+  }
   const orders = db.getCollection('orders');
   const order = orders.find(o => o.id === req.params.id);
 
@@ -635,17 +640,15 @@ router.put('/:id/release-escrow', requireCustomer, (req, res) => {
   }
 });
 
-// Customer gửi yêu cầu hủy đơn (hoặc hủy thẳng nếu chưa thanh toán / chưa tiếp nhận)
+// Hủy trực tiếp trong 24 giờ đầu kể từ lúc tạo đơn.
 router.put('/:id/cancel', requireSignedIn, (req, res) => {
   try {
     const order = processCancelOrder(req.params.id, req.authUser.id, req.authUser.role, req.body.reason);
     let message;
-    if (order.orderStatus === 'cancel_requested') {
-      message = 'Đã gửi yêu cầu hủy đến Provider. Đơn tạm dừng trong khi chờ phản hồi. Tiền ký quỹ vẫn được giữ an toàn.';
-    } else if (order.paymentStatus === 'cancelled') {
+    if (order.paymentStatus === 'cancelled') {
       message = 'Đơn hàng chờ thanh toán đã được hủy. Không có khoản tiền nào bị trừ.';
     } else {
-      message = 'Đơn hàng đã được hủy. Tiền ký quỹ đã hoàn vào ví khách hàng.';
+      message = `Đơn hàng đã được hủy trong thời hạn 24 giờ. ${Number(order.refundAmount || 0).toLocaleString('vi-VN')}đ đã được hoàn theo chính sách hiện hành.`;
     }
     res.json({ success: true, message, order });
   } catch (err) {
@@ -653,46 +656,9 @@ router.put('/:id/cancel', requireSignedIn, (req, res) => {
   }
 });
 
-// Provider phản hồi yêu cầu hủy: chấp thuận (hoàn 100%) hoặc từ chối (→ Admin phân xử)
-// Body: { decision: 'approve' | 'reject', note: string }
-router.put('/:id/cancel-respond', requireRole('Provider'), (req, res) => {
-  const { decision, note } = req.body;
-  if (!decision) {
-    return res.status(400).json({ success: false, message: 'Thiếu trường "decision" (approve | reject).' });
-  }
-  try {
-    const order = processRespondCancelRequest(req.params.id, req.authUser.id, decision, note);
-    const message = decision === 'approve'
-      ? 'Đã chấp thuận yêu cầu hủy. Đơn hàng kết thúc và tiền ký quỹ hoàn 100% cho khách.'
-      : 'Đã từ chối yêu cầu hủy. Đơn hàng chuyển Admin phân xử — tiền ký quỹ vẫn được giữ nguyên.';
-    res.json({ success: true, message, order });
-  } catch (err) {
-    res.status(err.status || 400).json({ success: false, message: err.message });
-  }
-});
-
-router.put('/:id/cancellation-response', requireSignedIn, (req, res) => {
-  const decision = req.body.approve === true ? 'approve' : 'reject';
-  const note = req.body.reason || req.body.note || '';
-  try {
-    const order = processRespondCancelRequest(req.params.id, req.authUser.id, decision, note);
-    const message = decision === 'approve'
-      ? 'Đã chấp thuận yêu cầu hủy. Đơn hàng kết thúc và tiền ký quỹ hoàn 100% cho khách.'
-      : 'Đã từ chối yêu cầu hủy. Đơn hàng chuyển Admin phân xử — tiền ký quỹ vẫn được giữ nguyên.';
-    res.json({ success: true, message, order });
-  } catch (err) {
-    res.status(err.status || 400).json({ success: false, message: err.message });
-  }
-});
-
-router.put('/:id/undo-cancel', requireCustomer, (req, res) => {
-  try {
-    const order = processUndoCancelOrder(req.params.id, req.authUser.id);
-    res.json({ success: true, message: 'Đã hoàn tác hủy đơn và khôi phục đơn hàng.', order });
-  } catch (err) {
-    res.status(err.status || 400).json({ success: false, message: err.message });
-  }
-});
+router.put('/:id/cancel-respond', requireSignedIn, (req, res) => res.status(410).json({ success: false, message: 'Yêu cầu hủy không còn chờ Provider duyệt. Khách có thể hủy trực tiếp trong 24 giờ đầu.' }));
+router.put('/:id/cancellation-response', requireSignedIn, (req, res) => res.status(410).json({ success: false, message: 'Luồng phản hồi hủy cũ đã đóng. Đơn chỉ được hủy trực tiếp trong 24 giờ đầu.' }));
+router.put('/:id/undo-cancel', requireCustomer, (req, res) => res.status(410).json({ success: false, message: 'Đơn đã hủy không thể khôi phục hoặc hoàn tác.' }));
 
 // Pay pending order using customer wallet balance
 router.post('/:id/pay-with-balance', requireCustomer, (req, res) => {

@@ -49,7 +49,7 @@
     <div class="dashboard-layout">
         <!-- Biểu đồ cột (Doanh thu) -->
         <div class="chart-card">
-            <h3>Doanh Thu Theo Khoảng Thời Gian (Biểu đồ cột)</h3>
+            <h3>Phí Nền Tảng Theo Khoảng Thời Gian (Biểu đồ cột)</h3>
             <canvas id="revenueBarChart" height="240"></canvas>
         </div>
 
@@ -111,7 +111,7 @@
                     data: {
                         labels: labelsBar.length > 0 ? labelsBar : ['Chưa có dữ liệu'],
                         datasets: [{
-                            label: 'Doanh thu thực tế (VND)',
+                            label: 'Phí sàn trên đơn đã thanh toán (VND)',
                             data: valuesBar.length > 0 ? valuesBar : [0],
                             backgroundColor: '#0d6efd',
                             borderRadius: 4

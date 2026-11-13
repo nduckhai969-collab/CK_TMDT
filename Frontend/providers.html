@@ -126,7 +126,7 @@
           <span class="breadcrumb-tag">QUẢN LÝ / PHÊ DUYỆT PROVIDER</span>
           <div class="top-search">
             <span>⌕</span>
-            <input type="text" placeholder="Tìm kiếm Provider, CCCD, chứng chỉ... (Nhấn Enter)" onkeyup="handleQuickSearch(event)">
+            <input type="text" placeholder="Tìm Provider theo tên, lĩnh vực hoặc chứng chỉ... (Nhấn Enter)" onkeyup="handleQuickSearch(event)">
           </div>
         </div>
 
@@ -137,7 +137,7 @@
         <div class="page-header">
           <div class="page-title-group">
             <h1><span class="green-pill"></span> Quản lý Provider & Xét duyệt hồ sơ</h1>
-            <p>Quy trình thẩm định pháp lý CCCD, duyệt kinh nghiệm chuyên môn và kỹ năng hành nghề</p>
+            <p>Thẩm định hồ sơ chuyên môn, kinh nghiệm và kỹ năng hành nghề. CCCD/hộ chiếu không bắt buộc.</p>
           </div>
         </div>
 
@@ -162,7 +162,7 @@
             <div class="panel-header">
               <div>
                 <h2>Yêu cầu đăng ký Provider mới</h2>
-                <p>Kiểm tra giấy tờ tùy thân CCCD 2 mặt, thông tin liên lạc và trình độ chuyên môn</p>
+                <p>Kiểm tra thông tin liên lạc, lĩnh vực chuyên môn, kinh nghiệm và kỹ năng.</p>
               </div>
             </div>
 
@@ -173,7 +173,6 @@
                     <tr>
                       <th>Ứng viên Provider</th>
                       <th>Lĩnh vực chuyên môn</th>
-                      <th>Số CCCD / Hộ chiếu</th>
                       <th>Kinh nghiệm</th>
                       <th>Ngày nộp đơn</th>
                       <th>Trạng thái hồ sơ</th>
@@ -285,7 +284,7 @@
     async function renderPendingProviders() {
       const tbody = document.getElementById('pending-prov-tbody');
       if (!tbody) return;
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-secondary)">Đang tải hồ sơ chờ duyệt...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-secondary)">Đang tải hồ sơ chờ duyệt...</td></tr>`;
       let pending = [];
       try {
         const response = await window.adminApi.getPendingProviders();
@@ -293,7 +292,7 @@
         pending = Array.isArray(response.pendingProviders) ? response.pendingProviders : [];
         pendingProviderApplications = pending;
       } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#b91c1c">${error.message || 'Không tải được hồ sơ chờ duyệt.'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:#b91c1c">${error.message || 'Không tải được hồ sơ chờ duyệt.'}</td></tr>`;
         return;
       }
       const badge = document.getElementById('tab-badge-pending-prov');
@@ -302,7 +301,7 @@
       if (sidebarBadge) sidebarBadge.textContent = pending.length;
 
       if (pending.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-secondary);">Tất cả hồ sơ đăng ký đã được duyệt!</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-secondary);">Tất cả hồ sơ đăng ký đã được duyệt!</td></tr>`;
         return;
       }
 
@@ -318,13 +317,12 @@
             </div>
           </td>
           <td>${p.specialty || p.category || 'Chưa khai báo'}</td>
-          <td><strong>${p.cccd || '—'}</strong></td>
           <td>${p.experience || (Array.isArray(p.skills) ? p.skills.join(', ') : '—')}</td>
           <td>${p.date}</td>
-          <td><span class="badge ${p.status === 'incomplete' ? 'badge-danger' : 'badge-warning'}">${p.status === 'incomplete' ? 'Chờ Provider hoàn tất hồ sơ' : 'Chờ thẩm định'}</span></td>
+          <td><span class="badge badge-warning">${p.status === 'incomplete' ? 'Hồ sơ chuyên môn chưa hoàn tất' : 'Chờ Admin duyệt'}</span></td>
           <td style="text-align:right">
-            <button class="btn btn-primary btn-sm" ${p.status === 'incomplete' ? 'disabled title="Provider cần hoàn tất hồ sơ trước khi duyệt"' : ''} onclick="openApprovalModal('${p.id}')">
-              <span>✓</span> ${p.status === 'incomplete' ? 'Chưa đủ hồ sơ' : 'Thẩm định hồ sơ'}
+            <button class="btn btn-primary btn-sm" onclick="openApprovalModal('${p.id}')">
+              <span>✓</span> ${p.status === 'incomplete' ? 'Duyệt tài khoản' : 'Thẩm định hồ sơ'}
             </button>
           </td>
         </tr>
@@ -417,6 +415,7 @@
           <div><span class="form-label">Khu vực hoạt động</span><p>${prov.location || 'Chưa cập nhật'}</p></div>
           <div><span class="form-label">Giới thiệu</span><p>${prov.bio || 'Chưa cập nhật'}</p></div>
         </div>
+        ${prov.status === 'incomplete' ? '<div class="dispute-box" style="margin-top:16px;"><p>Tài khoản có thể được Admin duyệt mà không cần CCCD/hộ chiếu. Provider vẫn phải hoàn tất hồ sơ chuyên môn trước khi dịch vụ được hiển thị và nhận đơn.</p></div>' : ''}
       `;
       openModal('modal-provider-detail');
     }

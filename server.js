@@ -26,6 +26,7 @@ const PORT = process.env.PORT || 3000;
 
 // Khai báo biến server ở đây để hàm shutdown có thể truy cập được (Sửa lỗi Scope)
 let server; 
+let stopRecommendationScheduler;
 
 // 1. CORS Middleware - BẮT BUỘC ĐẶT TRƯỚC TẤT CẢ ROUTES để hỗ trợ WebStorm (port 63342), Live Server (port 5500)
 const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
@@ -164,6 +165,10 @@ app.get('/', (req, res) => {
 
 // Khởi động server (kết nối MySQL trước khi nhận request)
 db.init().then(() => {
+  if (!String(process.env.GOOGLE_CLIENT_ID || '').trim()) {
+    console.warn('[Google] GOOGLE_CLIENT_ID chưa được cấu hình; đăng nhập Google hiện tạm tắt.');
+  }
+  stopRecommendationScheduler = require('./services/recommendationCampaign').startRecommendationScheduler();
   // Gán trực tiếp vào biến server toàn cục đã khai báo ở trên
   server = app.listen(PORT, () => {
     console.log(`====================================================`);
@@ -191,6 +196,7 @@ db.init().then(() => {
   expiryTimer.unref();
 
   const shutdown = async () => {
+    if (stopRecommendationScheduler) stopRecommendationScheduler();
     await db.close();
     if (server) {
       server.close(() => process.exit(0));

@@ -1203,9 +1203,6 @@ router.post('/complaints/:id/resolve', (req, res) => {
   const users = db.getCollection('users');
 
   if (order) {
-    if (resolution === 'refund_customer' || (resolution === 'partial_refund' && Number(refundPercentage) >= 100)) {
-      return res.status(403).json({ success: false, message: 'Admin không thể hủy đơn hoặc hoàn tiền toàn bộ theo luồng hủy. Quy tắc hủy 24 giờ được áp dụng trực tiếp cho Khách hàng/Provider.' });
-    }
     const totalDeposit = Number(order.escrowDeposit) || Number(order.price) || 0;
     const priceNum = Number(order.price) || 0;
 
@@ -1260,6 +1257,7 @@ router.post('/complaints/:id/resolve', (req, res) => {
   complaint.status = 'resolved';
   complaint.resolution = resolution;
   complaint.resolutionNote = note || '';
+  complaint.resolvedAt = new Date().toLocaleString('vi-VN');
 
   db.saveCollection('complaints', complaints);
 

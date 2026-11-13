@@ -1,0 +1,701 @@
+{
+  "dist": {
+    "train": {
+      "total": 258,
+      "counts": {
+        "quality": {
+          "absent": 173,
+          "neu": 25,
+          "pos": 44,
+          "neg": 16
+        },
+        "price": {
+          "absent": 175,
+          "pos": 53,
+          "neg": 24,
+          "neu": 6
+        },
+        "speed": {
+          "absent": 175,
+          "neg": 35,
+          "pos": 44,
+          "neu": 4
+        },
+        "attitude": {
+          "absent": 180,
+          "pos": 58,
+          "neg": 4,
+          "neu": 16
+        },
+        "warranty": {
+          "absent": 202,
+          "neg": 28,
+          "pos": 18,
+          "neu": 10
+        }
+      }
+    },
+    "val": {
+      "total": 61,
+      "counts": {
+        "quality": {
+          "absent": 41,
+          "pos": 19,
+          "neg": 1
+        },
+        "price": {
+          "neg": 28,
+          "absent": 32,
+          "pos": 1
+        },
+        "speed": {
+          "pos": 15,
+          "absent": 43,
+          "neg": 3
+        },
+        "attitude": {
+          "absent": 50,
+          "pos": 11
+        },
+        "warranty": {
+          "absent": 48,
+          "neu": 4,
+          "pos": 8,
+          "neg": 1
+        }
+      }
+    },
+    "test": {
+      "total": 81,
+      "counts": {
+        "quality": {
+          "pos": 30,
+          "absent": 50,
+          "neg": 1
+        },
+        "price": {
+          "absent": 48,
+          "neg": 16,
+          "pos": 17
+        },
+        "speed": {
+          "absent": 61,
+          "pos": 17,
+          "neg": 3
+        },
+        "attitude": {
+          "neu": 6,
+          "absent": 56,
+          "neg": 10,
+          "pos": 9
+        },
+        "warranty": {
+          "absent": 65,
+          "pos": 16
+        }
+      }
+    }
+  },
+  "val_comparison": [
+    {
+      "model": "Majority Class",
+      "macro_f1_A": 0.0,
+      "micro_f1_A": 0.0,
+      "f1_aspects": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "acc_B": 0.5789478337754199,
+      "macro_f1_B": 0.4045354645354645
+    },
+    {
+      "model": "Rule-based Từ khóa",
+      "macro_f1_A": 1.0,
+      "micro_f1_A": 1.0,
+      "f1_aspects": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "acc_B": 1.0,
+      "macro_f1_B": 1.0
+    },
+    {
+      "model": "Multinomial Naive Bayes",
+      "macro_f1_A": 0.26052836052836054,
+      "micro_f1_A": 0.2962962962962963,
+      "f1_aspects": [
+        0.3333333333333333,
+        0.3888888888888889,
+        0.2727272727272727,
+        0.3076923076923077,
+        0.0
+      ],
+      "acc_B": 0.6134512231063955,
+      "macro_f1_B": 0.48366145248177916
+    },
+    {
+      "model": "Linear SVM",
+      "macro_f1_A": 0.9042889833278849,
+      "micro_f1_A": 0.9195402298850575,
+      "f1_aspects": [
+        0.8947368421052632,
+        1.0,
+        0.8571428571428571,
+        0.9,
+        0.8695652173913043
+      ],
+      "acc_B": 0.8128850842643945,
+      "macro_f1_B": 0.4703617903617904
+    },
+    {
+      "model": "Logistic Regression (Đề xuất)",
+      "macro_f1_A": 0.8970695970695971,
+      "micro_f1_A": 0.9111111111111111,
+      "f1_aspects": [
+        0.8717948717948718,
+        1.0,
+        0.8333333333333334,
+        0.8571428571428571,
+        0.9230769230769231
+      ],
+      "acc_B": 0.819301235163304,
+      "macro_f1_B": 0.5213385277482641
+    }
+  ],
+  "best_C_A": {
+    "quality": 10.0,
+    "price": 10.0,
+    "speed": 10.0,
+    "attitude": 10.0,
+    "warranty": 10.0
+  },
+  "best_C_B": {
+    "quality": 0.1,
+    "price": 0.1,
+    "speed": 10.0,
+    "attitude": 3.0,
+    "warranty": 3.0
+  },
+  "lr_thresholds_A": {
+    "quality": 0.45,
+    "price": 0.45,
+    "speed": 0.45,
+    "attitude": 0.4,
+    "warranty": 0.45
+  },
+  "ablation": [
+    {
+      "variant": "Full Model (Word 1-3 + Char_wb 2-5 + Tiền xử lý chuẩn)",
+      "macro_f1_A": 0.8787800269905534,
+      "macro_f1_B": 0.5213385277482641
+    },
+    {
+      "variant": "Ablation: Bỏ char n-gram (Word 1-3 TF-IDF only)",
+      "macro_f1_A": 0.787238458136291,
+      "macro_f1_B": 0.5233405297502661
+    },
+    {
+      "variant": "Ablation: Bỏ bản không dấu",
+      "macro_f1_A": 0.8063393114476705,
+      "macro_f1_B": 0.4461375661375661
+    },
+    {
+      "variant": "Ablation: Bỏ map teencode",
+      "macro_f1_A": 0.8694466936572199,
+      "macro_f1_B": 0.5166998722860792
+    },
+    {
+      "variant": "Ablation: Bỏ giữ phủ định (loại bỏ từ phủ định)",
+      "macro_f1_A": 0.8669762641898865,
+      "macro_f1_B": 0.511461777047984
+    }
+  ],
+  "learning_curve": [
+    {
+      "fraction": 20,
+      "samples": 52,
+      "train_macro_f1": 1.0,
+      "val_macro_f1": 0.4418262411347517
+    },
+    {
+      "fraction": 40,
+      "samples": 104,
+      "train_macro_f1": 1.0,
+      "val_macro_f1": 0.5627627627627627
+    },
+    {
+      "fraction": 60,
+      "samples": 155,
+      "train_macro_f1": 1.0,
+      "val_macro_f1": 0.6512533288004987
+    },
+    {
+      "fraction": 80,
+      "samples": 207,
+      "train_macro_f1": 1.0,
+      "val_macro_f1": 0.7554013815746117
+    },
+    {
+      "fraction": 100,
+      "samples": 258,
+      "train_macro_f1": 1.0,
+      "val_macro_f1": 0.8970695970695971
+    }
+  ],
+  "test_results": {
+    "macro_f1_A": 0.7955406114700522,
+    "micro_f1_A": 0.8,
+    "f1_A_aspects": {
+      "quality": 0.7931034482758621,
+      "price": 0.8923076923076924,
+      "speed": 0.7346938775510204,
+      "attitude": 0.7450980392156863,
+      "warranty": 0.8125
+    },
+    "p_A_aspects": {
+      "quality": 0.8518518518518519,
+      "price": 0.90625,
+      "speed": 0.6206896551724138,
+      "attitude": 0.7307692307692307,
+      "warranty": 0.8125
+    },
+    "r_A_aspects": {
+      "quality": 0.7419354838709677,
+      "price": 0.8787878787878788,
+      "speed": 0.9,
+      "attitude": 0.76,
+      "warranty": 0.8125
+    },
+    "cm_A": {
+      "quality": [
+        [
+          46,
+          4
+        ],
+        [
+          8,
+          23
+        ]
+      ],
+      "price": [
+        [
+          45,
+          3
+        ],
+        [
+          4,
+          29
+        ]
+      ],
+      "speed": [
+        [
+          50,
+          11
+        ],
+        [
+          2,
+          18
+        ]
+      ],
+      "attitude": [
+        [
+          49,
+          7
+        ],
+        [
+          6,
+          19
+        ]
+      ],
+      "warranty": [
+        [
+          62,
+          3
+        ],
+        [
+          3,
+          13
+        ]
+      ]
+    },
+    "mean_acc_B": 0.7643782991202347,
+    "mean_macro_f1_B": 0.5107306446122235,
+    "acc_B": {
+      "quality": 0.8387096774193549,
+      "price": 0.8181818181818182,
+      "speed": 0.9,
+      "attitude": 0.64,
+      "warranty": 0.625
+    },
+    "macro_f1_B": {
+      "quality": 0.30409356725146197,
+      "price": 0.5501930501930502,
+      "speed": 0.84375,
+      "attitude": 0.5992063492063492,
+      "warranty": 0.25641025641025644
+    },
+    "cm_B": {
+      "quality": [
+        [
+          26,
+          1,
+          3
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "price": [
+        [
+          16,
+          1,
+          0
+        ],
+        [
+          4,
+          11,
+          1
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "speed": [
+        [
+          15,
+          2,
+          0
+        ],
+        [
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "attitude": [
+        [
+          9,
+          0,
+          0
+        ],
+        [
+          5,
+          2,
+          3
+        ],
+        [
+          1,
+          0,
+          5
+        ]
+      ],
+      "warranty": [
+        [
+          10,
+          4,
+          2
+        ],
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "style_metrics": {
+      "casual": {
+        "name": "Đời thường (casual)",
+        "count": 24,
+        "macro_f1_A": 0.7487362637362638,
+        "micro_f1_A": 0.7640449438202247,
+        "acc_B": 0.7451881451881452,
+        "macro_f1_B": 0.5568542568542568
+      },
+      "formal": {
+        "name": "Trang trọng (formal)",
+        "count": 17,
+        "macro_f1_A": 0.846984126984127,
+        "micro_f1_A": 0.8571428571428571,
+        "acc_B": 0.7095238095238096,
+        "macro_f1_B": 0.5537037037037036
+      },
+      "northern": {
+        "name": "Giọng Bắc (northern)",
+        "count": 7,
+        "macro_f1_A": 0.8433333333333334,
+        "micro_f1_A": 0.8666666666666667,
+        "acc_B": 0.82,
+        "macro_f1_B": 0.8
+      },
+      "southern": {
+        "name": "Giọng Nam (southern)",
+        "count": 7,
+        "macro_f1_A": 0.4825396825396825,
+        "micro_f1_A": 0.6153846153846154,
+        "acc_B": 0.45,
+        "macro_f1_B": 0.3571428571428571
+      },
+      "teencode": {
+        "name": "Teencode (teencode)",
+        "count": 4,
+        "macro_f1_A": 0.5599999999999999,
+        "micro_f1_A": 0.9333333333333333,
+        "acc_B": 1.0,
+        "macro_f1_B": 1.0
+      },
+      "no_accent": {
+        "name": "Không dấu (no_accent)",
+        "count": 5,
+        "macro_f1_A": 0.76,
+        "micro_f1_A": 0.8888888888888888,
+        "acc_B": 0.9333333333333332,
+        "macro_f1_B": 0.9333333333333332
+      },
+      "generic": {
+        "name": "Chung chung (generic - 0 khía cạnh)",
+        "count": 10,
+        "macro_f1_A": 0.0,
+        "micro_f1_A": 0.0,
+        "acc_B": 0.0,
+        "macro_f1_B": 0.0
+      },
+      "tricky": {
+        "name": "Ca khó (tricky - phủ định kép / mỉa mai)",
+        "count": 3,
+        "macro_f1_A": 0.6,
+        "micro_f1_A": 1.0,
+        "acc_B": 1.0,
+        "macro_f1_B": 1.0
+      },
+      "short": {
+        "name": "Ngắn gọn (short)",
+        "count": 4,
+        "macro_f1_A": 0.5,
+        "micro_f1_A": 0.6666666666666666,
+        "acc_B": 0.8,
+        "macro_f1_B": 0.8
+      }
+    },
+    "errors_A": [
+      {
+        "id": "REV_RECO_0001",
+        "style": "formal",
+        "content": "Kính gửi sàn SkillRental, sửa chữa dứt điểm không bị lại, được cái giao tiếp đúng mực không quá nhiệt tình.",
+        "aspect": "quality",
+        "true_status": "CÓ",
+        "pred_status": "KHÔNG",
+        "prob": 0.4194,
+        "threshold": 0.45,
+        "error_type": "False Negative (bỏ sót)"
+      },
+      {
+        "id": "REV_RECO_0002",
+        "style": "southern",
+        "content": "Thiệt tình là ưng cái bụng ghê luôn á, thiết kế sáng tạo độc đáo, tuy nhiên quá chát ví xót cả ruột. Dễ thương dữ thần nè!",
+        "aspect": "warranty",
+        "true_status": "KHÔNG",
+        "pred_status": "CÓ",
+        "prob": 0.4537,
+        "threshold": 0.45,
+        "error_type": "False Positive (nhận diện thừa)"
+      },
+      {
+        "id": "REV_RECO_0005",
+        "style": "casual",
+        "content": "Cảm nhận của mình là, báo giá chát chúa, nhưng sản phẩm bàn giao rất ưng ý. 🤔",
+        "aspect": "quality",
+        "true_status": "CÓ",
+        "pred_status": "KHÔNG",
+        "prob": 0.0728,
+        "threshold": 0.45,
+        "error_type": "False Negative (bỏ sót)"
+      },
+      {
+        "id": "REV_RECO_0006",
+        "style": "teencode",
+        "content": "giá quá đắt đỏ. Khá là thất vọng vs cách làm việc này. 🙄",
+        "aspect": "speed",
+        "true_status": "KHÔNG",
+        "pred_status": "CÓ",
+        "prob": 0.5307,
+        "threshold": 0.45,
+        "error_type": "False Positive (nhận diện thừa)"
+      },
+      {
+        "id": "REV_RECO_0008",
+        "style": "formal",
+        "content": "Kính gửi sàn SkillRental, cảm nhận của mình là, chỉ trao đổi đúng chuyên môn, nhưng đắt xắt ra miếng nhưng hơi buốt ví.",
+        "aspect": "price",
+        "true_status": "CÓ",
+        "pred_status": "KHÔNG",
+        "prob": 0.3501,
+        "threshold": 0.45,
+        "error_type": "False Negative (bỏ sót)"
+      },
+      {
+        "id": "REV_RECO_0008",
+        "style": "formal",
+        "content": "Kính gửi sàn SkillRental, cảm nhận của mình là, chỉ trao đổi đúng chuyên môn, nhưng đắt xắt ra miếng nhưng hơi buốt ví.",
+        "aspect": "speed",
+        "true_status": "KHÔNG",
+        "pred_status": "CÓ",
+        "prob": 0.6461,
+        "threshold": 0.45,
+        "error_type": "False Positive (nhận diện thừa)"
+      },
+      {
+        "id": "REV_RECO_0008",
+        "style": "formal",
+        "content": "Kính gửi sàn SkillRental, cảm nhận của mình là, chỉ trao đổi đúng chuyên môn, nhưng đắt xắt ra miếng nhưng hơi buốt ví.",
+        "aspect": "attitude",
+        "true_status": "CÓ",
+        "pred_status": "KHÔNG",
+        "prob": 0.2083,
+        "threshold": 0.4,
+        "error_type": "False Negative (bỏ sót)"
+      },
+      {
+        "id": "REV_RECO_0009",
+        "style": "no_accent",
+        "content": "qua chat vi xot ca ruot, duoc cai giao tiep dung muc khong qua nhiet tinh.",
+        "aspect": "attitude",
+        "true_status": "CÓ",
+        "pred_status": "KHÔNG",
+        "prob": 0.3805,
+        "threshold": 0.4,
+        "error_type": "False Negative (bỏ sót)"
+      },
+      {
+        "id": "REV_RECO_0010",
+        "style": "casual",
+        "content": "không niềm nở nhưng cũng không thô lỗ. Đúng với mức giá sàn đưa ra.",
+        "aspect": "price",
+        "true_status": "KHÔNG",
+        "pred_status": "CÓ",
+        "prob": 0.5036,
+        "threshold": 0.45,
+        "error_type": "False Positive (nhận diện thừa)"
+      },
+      {
+        "id": "REV_RECO_0011",
+        "style": "formal",
+        "content": "Kính gửi sàn SkillRental, quá đắt đỏ so với mặt bằng chung. Không biết có nên quay lại nữa không.",
+        "aspect": "speed",
+        "true_status": "KHÔNG",
+        "pred_status": "CÓ",
+        "prob": 0.5245,
+        "threshold": 0.45,
+        "error_type": "False Positive (nhận diện thừa)"
+      }
+    ],
+    "errors_B": [
+      {
+        "id": "REV_RECO_0001",
+        "style": "formal",
+        "content": "Kính gửi sàn SkillRental, sửa chữa dứt điểm không bị lại, được cái giao tiếp đúng mực không quá nhiệt tình.",
+        "aspect": "quality",
+        "true_sentiment": "pos",
+        "pred_sentiment": "neg"
+      },
+      {
+        "id": "REV_RECO_0012",
+        "style": "casual",
+        "content": "giá không tương xứng chất lượng, mặc dù vậy chất lượng tuyệt vời ngoài mong đợi.",
+        "aspect": "quality",
+        "true_sentiment": "pos",
+        "pred_sentiment": "neu"
+      },
+      {
+        "id": "REV_RECO_0209",
+        "style": "formal",
+        "content": "Kính gửi sàn SkillRental, hôm nay mới có thời gian viết đánh giá, chất lượng không như quảng cáo, thêm nữa cực kỳ khó tính và gắt gỏng, nhưng cam kết bảo hành dài hạn.",
+        "aspect": "quality",
+        "true_sentiment": "neg",
+        "pred_sentiment": "pos"
+      },
+      {
+        "id": "REV_RECO_0302",
+        "style": "southern",
+        "content": "Thiệt tình là ưng cái bụng ghê luôn á, sản phẩm bàn giao rất ưng ý, và rẻ mà chất lượng. Dễ thương dữ thần nè!",
+        "aspect": "quality",
+        "true_sentiment": "pos",
+        "pred_sentiment": "neu"
+      },
+      {
+        "id": "REV_RECO_0303",
+        "style": "southern",
+        "content": "Thiệt tình là ưng cái bụng ghê luôn á, mức chi phí quá là tiết kiệm, đồng thời chất lượng dịch vụ hoàn hảo. Dễ thương dữ thần nè!",
+        "aspect": "quality",
+        "true_sentiment": "pos",
+        "pred_sentiment": "neu"
+      },
+      {
+        "id": "REV_RECO_0007",
+        "style": "casual",
+        "content": "Cảm nhận của mình là, giá đắt gấp đôi nơi khác.",
+        "aspect": "price",
+        "true_sentiment": "neg",
+        "pred_sentiment": "pos"
+      },
+      {
+        "id": "REV_RECO_0009",
+        "style": "no_accent",
+        "content": "qua chat vi xot ca ruot, duoc cai giao tiep dung muc khong qua nhiet tinh.",
+        "aspect": "price",
+        "true_sentiment": "neg",
+        "pred_sentiment": "pos"
+      },
+      {
+        "id": "REV_RECO_0011",
+        "style": "formal",
+        "content": "Kính gửi sàn SkillRental, quá đắt đỏ so với mặt bằng chung. Không biết có nên quay lại nữa không.",
+        "aspect": "price",
+        "true_sentiment": "neg",
+        "pred_sentiment": "neu"
+      },
+      {
+        "id": "REV_RECO_0211",
+        "style": "casual",
+        "content": "Sau khi được bạn hỗ trợ, quá tốn kém không đáng, thêm nữa chuyên môn xuất sắc, nhưng mặt mày cau có gắt gỏng. Khá là thất vọng với cách làm việc này. 👎",
+        "aspect": "price",
+        "true_sentiment": "neg",
+        "pred_sentiment": "pos"
+      },
+      {
+        "id": "REV_RECO_0212",
+        "style": "casual",
+        "content": "bực bội vì thái độ phục vụ, với lại chi phí quá chát. Không biết có nên quay lại nữa không.",
+        "aspect": "price",
+        "true_sentiment": "neg",
+        "pred_sentiment": "pos"
+      }
+    ],
+    "total_errors_A": 51,
+    "total_errors_B": 28
+  }
+}

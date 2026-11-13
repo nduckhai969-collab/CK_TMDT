@@ -20,15 +20,6 @@ const API_BASE = (() => {
 const SESSION_KEY = 'SKILLRENTAL_CURRENT_USER';
 const PROVIDER_SESSION_KEY = 'SKILLRENTAL_PROVIDER_USER';
 
-async function parseProviderApiJson(response) {
-  const contentType = response.headers.get('content-type') || '';
-  if (!contentType.toLowerCase().includes('application/json')) {
-    await response.text();
-    throw new Error('Máy chủ đang trả trang HTML thay vì API gói. Hãy khởi động lại backend bằng `npm run dev` rồi tải lại trang.');
-  }
-  return response.json();
-}
-
 // ============================================================
 // 1. SESSION & AUTH
 // ============================================================
@@ -516,9 +507,18 @@ window.providerApi = {
     return res.json();
   },
 
+  deleteReviewReply: async (reviewId) => {
+    const res = await fetch(`${API_BASE}/api/providers/reviews/${reviewId}/reply`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+    return res.json();
+  },
+
   // Complaints & Disputes (UC-45)
-  getMyComplaints: async () => {
-    const res = await fetch(`${API_BASE}/api/providers/me/complaints`, { headers: getAuthHeader() });
+  getMyComplaints: async (status) => {
+    const url = status ? `${API_BASE}/api/providers/me/complaints?status=${encodeURIComponent(status)}` : `${API_BASE}/api/providers/me/complaints`;
+    const res = await fetch(url, { headers: getAuthHeader() });
     return res.json();
   },
 
@@ -526,22 +526,26 @@ window.providerApi = {
     const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/defense`, {
       method: 'POST',
       headers: getAuthHeader(),
-      body: JSON.stringify({ providerClaim, evidence })
+      body: JSON.stringify({ providerClaim, defenseText: providerClaim, evidence, attachments: evidence })
     });
     return res.json();
   },
 
-  acceptComplaintRefund: async (complaintId) => {
+  acceptRefund: async (complaintId, note) => {
     const res = await fetch(`${API_BASE}/api/providers/complaints/${complaintId}/accept-refund`, {
-      method: 'POST', headers: getAuthHeader()
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ note })
     });
     return res.json();
   },
+
+  acceptComplaintRefund: async (complaintId, note) => window.providerApi.acceptRefund(complaintId, note),
 
   // Packages (UC-46)
   getPackages: async () => {
     const res = await fetch(`${API_BASE}/api/providers/packages`);
-    return parseProviderApiJson(res);
+    return res.json();
   },
 
   purchasePackage: async (packageId) => {
@@ -553,15 +557,19 @@ window.providerApi = {
     return res.json();
   },
 
-  getMyPackage: async () => {
-    const res = await fetch(`${API_BASE}/api/providers/me/package`, { headers: getAuthHeader() });
-    return parseProviderApiJson(res);
+  // Mua gói VIP Partner (duy trì phí sàn) — trừ trực tiếp số dư ví Provider.
+  purchasePlatformFee: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/packages/purchase-platform`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({})
+    });
+    return res.json();
   },
 
-  boostService: async (serviceId) => {
-    const res = await fetch(`${API_BASE}/api/providers/services/${encodeURIComponent(serviceId)}/boost`, {
-      method: 'POST', headers: getAuthHeader()
-    });
+  // Lịch sử mua gói / gia hạn phí sàn của Provider đang đăng nhập.
+  getPackagePurchases: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/packages/purchases`, { headers: getAuthHeader() });
     return res.json();
   },
 
@@ -684,64 +692,17 @@ function updateProviderNavBadges(stats = {}) {
 }
 
 async function updateProviderHeader() {
-  const sessionProvider = getCurrentProvider();
-  if (!sessionProvider) return;
-  let provider = sessionProvider;
-
-  // The signed-in session may only contain account fields. Fetch the provider
-  // profile so every provider page shows the same name and specialty.
-  try {
-    const profileResult = await window.providerApi.getProfile();
-    if (profileResult?.success && profileResult.provider) {
-      provider = { ...sessionProvider, ...profileResult.provider };
-    }
-  } catch (_) {
-    // Fall back to the signed-in session when the profile API is unavailable.
-  }
+  const provider = getCurrentProvider();
+  if (!provider) return;
 
   // Update profile in sidebar
   const sidebarName = document.querySelector('.sidebar-profile .profile-name');
   const sidebarRole = document.querySelector('.sidebar-profile .profile-role');
   const sidebarAvatar = document.querySelector('.sidebar-profile .avatar');
 
-  const displayName = String(provider.name || sessionProvider.name || 'Chuyên gia').trim();
-  const specialty = String(provider.specialty || provider.headline || 'Provider').trim();
-  if (sidebarName) sidebarName.textContent = displayName;
-  if (sidebarRole) sidebarRole.textContent = specialty;
-  if (sidebarAvatar) {
-    if (provider.avatar) {
-      let image = sidebarAvatar.querySelector('img');
-      if (!image) {
-        image = document.createElement('img');
-        image.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
-        sidebarAvatar.replaceChildren(image);
-      }
-      image.src = provider.avatar;
-      image.alt = displayName;
-    } else {
-      sidebarAvatar.textContent = displayName.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase();
-    }
-  }
-  const sidebar = document.querySelector('.sidebar-profile');
-  if (sidebar) {
-    const profileInfo = sidebar.querySelector('.profile-info');
-    if (profileInfo) profileInfo.style.cssText = 'flex:1;min-width:0;overflow:hidden;';
-    let logoutButton = sidebar.querySelector('[data-provider-logout], button[onclick*="handleLogout"]');
-    if (!logoutButton) {
-      logoutButton = document.createElement('button');
-      sidebar.appendChild(logoutButton);
-    }
-    logoutButton.type = 'button';
-    logoutButton.dataset.providerLogout = 'true';
-    logoutButton.removeAttribute('onclick');
-    logoutButton.title = 'Đăng xuất khỏi hệ thống';
-    logoutButton.setAttribute('aria-label', 'Đăng xuất');
-    logoutButton.className = 'provider-sidebar-logout';
-    logoutButton.style.cssText = '';
-    logoutButton.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>';
-    logoutButton.onclick = () => {
-      if (typeof window.handleLogout === 'function') window.handleLogout();
-    };
+  if (sidebarName && provider.name) sidebarName.textContent = provider.name;
+  if (sidebarAvatar && provider.avatar) {
+    sidebarAvatar.innerHTML = `<img src="${provider.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
   }
 
   // Tức thời gán avatar lớn & cover trên trang profile nếu có

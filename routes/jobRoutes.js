@@ -3,8 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { requireCustomer, requireProvider } = require('./customerAuth');
 const { generateId } = require('../utils/id');
-const { createNotification, notifyProvider } = require('../services/notificationService');
-const providerPackageService = require('../services/providerPackageService');
+const { createNotification, notifyProvider, notificationRecords } = require('../services/notificationService');
 
 async function persistJobs(jobs, res) {
   try {
@@ -304,12 +303,6 @@ router.post('/:id/apply', requireProvider, async (req, res) => {
     return res.status(400).json({ success: false, message: 'Bạn đã gửi đề xuất ứng tuyển cho yêu cầu này rồi!' });
   }
 
-  const entitlement = providerPackageService.getPlan(provider);
-  const proposalsUsed = providerPackageService.countMonthlyProposals(provider);
-  if (entitlement.proposalLimit !== null && proposalsUsed >= entitlement.proposalLimit) {
-    return res.status(403).json({ success: false, code: 'PACKAGE_PROPOSAL_LIMIT', message: `Gói Cơ Bản đã dùng hết ${entitlement.proposalLimit} lượt chào giá trong tháng. Nâng cấp Pro hoặc VIP để tiếp tục.` });
-  }
-
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
@@ -449,24 +442,40 @@ router.post('/:id/accept-applicant', requireCustomer, async (req, res) => {
       ]
     };
     orders.unshift(order);
-    db.saveCollection('orders', orders);
   } else if (order.paymentStatus === 'pending') {
     // Làm mới thời hạn thanh toán 24h nếu đơn đang chờ thanh toán
     if (!order.paymentExpiresAt || Date.parse(order.paymentExpiresAt) <= now.getTime()) {
       order.paymentExpiresAt = expiresAt24h;
-      db.saveCollection('orders', orders);
     }
   }
   job.paymentOrderId = order.id;
-  if (!await persistJobs(jobs, res)) return;
-
-  createNotification(job.customerId, 'Đã chọn chuyên gia',
-    `Bạn đã chọn ${applicant.providerName} cho yêu cầu “${job.title}”. Vui lòng ký quỹ Escrow để bắt đầu thực hiện.`,
-    'success', `/customer_requests.html?jobId=${encodeURIComponent(job.id)}&action=pay`);
-
-  notifyProvider(applicant.providerId, 'Khách hàng đã chọn báo giá của bạn',
-    `Khách hàng ${req.authUser.name} đã chọn báo giá của bạn cho yêu cầu “${job.title}”. Dự án đang chờ khách hàng hoàn tất ký quỹ Escrow để bắt đầu tiến độ.`,
-    'success', '/jobs.html?tab=tab-uc36');
+  const notificationsToAdd = notificationRecords([
+    {
+      userId: job.customerId,
+      title: 'Đã chọn chuyên gia',
+      message: `Bạn đã chọn ${applicant.providerName} cho yêu cầu “${job.title}”. Vui lòng ký quỹ Escrow để bắt đầu thực hiện.`,
+      type: 'success',
+      detailsUrl: `/customer_requests.html?jobId=${encodeURIComponent(job.id)}&action=pay`
+    },
+    {
+      providerId: applicant.providerId,
+      title: 'Khách hàng đã chọn báo giá của bạn',
+      message: `Khách hàng ${req.authUser.name} đã chọn báo giá của bạn cho yêu cầu “${job.title}”. Dự án đang chờ khách hàng hoàn tất ký quỹ Escrow để bắt đầu tiến độ.`,
+      type: 'success',
+      detailsUrl: '/jobs.html?tab=tab-uc36'
+    }
+  ]);
+  try {
+    const notifications = await db.getCollectionFresh('notifications');
+    await db.saveCollectionsAndWait({
+      orders,
+      jobRequests: jobs,
+      notifications: [...notificationsToAdd, ...notifications]
+    });
+  } catch (err) {
+    console.error('[jobs] Không thể lưu đơn/yêu cầu/thông báo vào MySQL:', err.message);
+    return res.status(503).json({ success: false, message: 'Chưa lưu được đơn và thông báo vào MySQL. Vui lòng thử lại.' });
+  }
 
   res.json({
     success: true,

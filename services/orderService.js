@@ -1,6 +1,7 @@
 ﻿const db = require('../data/db');
 const { createNotification, notifyProvider } = require('./notificationService');
 const { formatDateTime, parseDateTime } = require('../utils/dates');
+const platformFundService = require('./platformFundService');
 
 const CANCELLATION_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -247,6 +248,19 @@ function settleCancellation(order, cancelledBy) {
       providerUser.warningCount = (Number(providerUser.warningCount) || 0) + 1;
       providerUser.lastWarningAt = new Date().toISOString();
       db.saveCollection('users', users);
+
+      // Tiền phạt thực thu từ ví Provider -> quỹ nền tảng của Admin.
+      if (deducted > 0) {
+        platformFundService.credit({
+          source: 'cancellation_penalty',
+          amount: deducted,
+          orderId: order.id,
+          providerId: provider.id,
+          providerName: provider.name,
+          userId: providerUser.id,
+          description: `Tiền phạt hủy đơn trong vòng 12 giờ: ${order.id}`
+        });
+      }
     } else {
       order.providerPenalty = { amount: penalty, deducted: 0, outstanding: penalty, appliedAt: new Date().toISOString() };
     }
@@ -511,6 +525,20 @@ function processArbitrateCancel(orderId, action, adminNote, refundPercentage = 1
     if (refundAmt > 0) refundCustomer(order, refundAmt);
     if (providerAmt > 0) payProvider(order, providerAmt);
 
+    // Phần ký quỹ còn lại sau khi hoàn khách & trả Provider -> quỹ nền tảng của Admin.
+    const retainedAmt = Math.max(0, totalDeposit - refundAmt - providerAmt);
+    if (retainedAmt > 0) {
+      platformFundService.credit({
+        source: 'order_commission',
+        amount: retainedAmt,
+        orderId: order.id,
+        providerId: order.providerId,
+        providerName: order.providerName,
+        userId: order.customerId,
+        description: `Phần sàn giữ lại khi phân xử hủy đơn ${order.id} (hoàn ${pct}% cho khách)`
+      });
+    }
+
     db.saveCollection('orders', orders);
 
     createNotification(order.customerId, 'Admin phán quyết: Đơn đã hủy',
@@ -656,6 +684,17 @@ function processReleaseEscrow(orderId, { customerId = null, force = false } = {}
       db.saveCollection('walletTransactions', transactions);
     }
   }
+
+  // Hoa hồng sàn giữ lại khi đơn hoàn tất -> quỹ nền tảng của Admin.
+  platformFundService.credit({
+    source: 'order_commission',
+    amount: Math.max(0, Number(order.platformFee) || 0),
+    orderId: order.id,
+    providerId: order.providerId,
+    providerName: order.providerName,
+    userId: order.customerId,
+    description: `Hoa hồng sàn từ đơn hoàn tất ${order.id}`
+  });
 
   if (provider) {
     provider.completedOrders = Number(provider.completedOrders || 0) + 1;

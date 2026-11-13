@@ -13,7 +13,7 @@ const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCa
 const { isVisibleToProvider, createGatewayTransaction, MIN_PAYMENT, MAX_PAYMENT } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
 const walletService = require('../services/walletService');
-const providerPackageService = require('../services/providerPackageService');
+const platformFundService = require('../services/platformFundService');
 const { attachProviderReputation, addReviewSentimentPoints } = require('../services/providerReputation');
 const { allowedFrontendOrigin } = require('../utils/webOrigin');
 
@@ -90,25 +90,159 @@ async function getMyProviderFresh(req) {
     (req.authUser.email && providers.find(p => p.email && p.email.toLowerCase() === req.authUser.email.toLowerCase())) || null;
 }
 
-function attachPublicServiceSummary(provider, services = []) {
-  const providerServices = services.filter(service =>
-    String(service.providerId) === String(provider.id) &&
-    (service.status || 'active') === 'active'
-  );
-  const prices = providerServices.map(service => Number(service.price)).filter(price => Number.isFinite(price) && price > 0);
+/* ============================================================
+   Gói dịch vụ & phí duy trì sàn (dùng chung cho package.html và payment.html)
+   Nguồn dữ liệu chung: `packages` (cấu hình), `packagePurchases` (lịch sử mua)
+   và `walletTransactions` + `users.balance` (biến động số dư ví Provider).
+============================================================ */
+
+// Huy hiệu mở khóa theo từng gói khi Provider kích hoạt thành công.
+const PACKAGE_BADGES = {
+  PKG_PRO: 'PRO PROVIDER',
+  PKG_VIP: 'VIP ELITE',
+  PKG_PLATFORM: 'VIP PARTNER'
+};
+
+// Gói VIP Partner thu phí duy trì sàn — hiển thị ở trang "Thanh toán & Phí sàn".
+const PLATFORM_FEE_PACKAGE = {
+  id: 'PKG_PLATFORM',
+  name: 'Gói VIP Partner (Duy trì phí sàn)',
+  price: 299000,
+  duration: 30,
+  postsCount: 20,
+  highlight: false,
+  features: [
+    'Huy hiệu Đối tác Xác thực',
+    'Ưu tiên hiển thị top kết quả tìm kiếm',
+    'Phí hoa hồng sàn giảm còn 5% (Gốc 10%)',
+    'Hỗ trợ ưu tiên 24/7'
+  ]
+};
+
+function addDays(date, days) {
+  return new Date(date.getTime() + (Number(days) || 0) * 24 * 60 * 60 * 1000);
+}
+
+// Kích hoạt gói: trừ tiền ví -> ghi biến động số dư -> mở quyền lợi trên hồ sơ
+// Provider -> lưu lịch sử mua gói -> gửi thông báo.
+// Trả về { status, body } để route phản hồi tương ứng.
+function activatePackagePurchase(req, pkg, options = {}) {
+  const users = db.getCollection('users') || [];
+  const uidx = users.findIndex(u => u.id === req.authUser.id);
+  if (uidx === -1) {
+    return { status: 404, body: { success: false, message: 'Không tìm thấy tài khoản người dùng.' } };
+  }
+
+  const provider = getMyProvider(req);
+  const price = Number(pkg.price) || 0;
+  const currentBal = Number(users[uidx].balance) || 0;
+  if (currentBal < price) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        code: 'INSUFFICIENT_BALANCE',
+        message: `Số dư ví không đủ (Cần ${price.toLocaleString('vi-VN')}đ, hiện có ${currentBal.toLocaleString('vi-VN')}đ). Vui lòng nạp thêm tiền vào ví để kích hoạt gói.`
+      }
+    };
+  }
+
+  const now = new Date();
+  const paidAt = formatDateTime(now);
+  const expireAt = formatDateTime(addDays(now, Number(pkg.duration) || 30));
+  const method = options.method || 'Số dư ví';
+
+  // 1. Trừ tiền ví và ghi lịch sử giao dịch (bỏ qua với gói miễn phí).
+  if (price > 0) {
+    users[uidx].balance = currentBal - price;
+    db.saveCollection('users', users);
+
+    const transactions = db.getCollection('walletTransactions') || [];
+    transactions.unshift({
+      id: generateId('TXN'),
+      userId: req.authUser.id,
+      userName: provider.name || req.authUser.name || 'Chuyên gia',
+      type: 'package_purchase',
+      amount: -price,
+      balanceAfter: users[uidx].balance,
+      method,
+      status: 'completed',
+      createdAt: paidAt,
+      description: `Mua gói dịch vụ sàn: ${pkg.name}`
+    });
+    db.saveCollection('walletTransactions', transactions);
+
+    // Khoản Provider trả cho gói được chuyển vào quỹ nền tảng của Admin.
+    platformFundService.credit({
+      source: pkg.id === PLATFORM_FEE_PACKAGE.id ? 'platform_maintenance' : 'package_purchase',
+      amount: price,
+      providerId: provider.id,
+      providerName: provider.name,
+      userId: req.authUser.id,
+      packageId: pkg.id,
+      method,
+      description: `Thu ${method} — ${pkg.name} từ ${provider.name}`
+    });
+  }
+
+  // 2. Mở quyền lợi trên hồ sơ Provider.
+  const providers = db.getCollection('providers') || [];
+  const provIdx = providers.findIndex(p => p.id === provider.id || p.userId === req.authUser.id);
+  if (provIdx !== -1) {
+    const badge = PACKAGE_BADGES[pkg.id];
+    providers[provIdx].activePackage = pkg.id;
+    providers[provIdx].activePackageName = pkg.name;
+    providers[provIdx].packageStartedAt = paidAt;
+    providers[provIdx].packageExpireAt = expireAt;
+    if (badge) {
+      providers[provIdx].badge = badge;
+      providers[provIdx].verified = true;
+    }
+    db.saveCollection('providers', providers);
+  }
+
+  // 3. Lưu lịch sử mua gói (dùng chung cho cả 2 trang Provider & Admin).
+  const purchases = db.getCollection('packagePurchases') || [];
+  const purchaseId = generateId('PKG-ORD');
+  purchases.unshift({
+    id: purchaseId,
+    providerId: provider.id,
+    provider: provider.name,
+    packageId: pkg.id,
+    packageName: pkg.name,
+    amount: price.toLocaleString('vi-VN') + 'đ',
+    amountNum: price,
+    method,
+    activeDate: paidAt.split(' ')[0],
+    expireDate: expireAt.split(' ')[0],
+    status: 'Đang hoạt động'
+  });
+  db.saveCollection('packagePurchases', purchases);
+
+  const { createNotification } = require('../services/notificationService');
+  createNotification(req.authUser.id, 'Kích hoạt gói dịch vụ thành công',
+    `Bạn đã kích hoạt thành công ${pkg.name}. Huy hiệu và đặc quyền ưu tiên của bạn đã hiển thị trên toàn sàn!`,
+    'success', options.notificationPath || '/package.html');
+
   return {
-    ...provider,
-    servicePackageCount: providerServices.length,
-    startingPackagePrice: prices.length ? Math.min(...prices) : null
+    status: 200,
+    body: {
+      success: true,
+      message: `Đã kích hoạt thành công ${pkg.name}!`,
+      newBalance: users[uidx].balance,
+      purchaseId,
+      expireDate: expireAt.split(' ')[0],
+      package: pkg
+    }
   };
 }
 
 // Homepage summaries and provider detail endpoints used by the customer portal.
 router.get('/stats', async (req, res) => {
-  const [providers, jobs, services, reviews] = await Promise.all([
-    db.getCollectionFresh('providers'), db.getCollectionFresh('jobRequests'), db.getCollectionFresh('services'), db.getCollectionFresh('reviews')
+  const [providers, jobs, services] = await Promise.all([
+    db.getCollectionFresh('providers'), db.getCollectionFresh('jobRequests'), db.getCollectionFresh('services')
   ]);
-  const ratings = providers.map(provider => attachProviderReputation(provider, reviews.filter(review => review.providerId === provider.id)).rating).filter(Number.isFinite);
+  const ratings = providers.map(p => Number(p.rating)).filter(Number.isFinite);
   const skills = new Set(providers.flatMap(p => Array.isArray(p.skills) ? p.skills : []));
   res.json({
     success: true,
@@ -122,20 +256,16 @@ router.get('/stats', async (req, res) => {
 });
 
 router.get('/featured', async (req, res) => {
-  const [allProviders, reviews, services] = await Promise.all([db.getCollectionFresh('providers'), db.getCollectionFresh('reviews'), db.getCollectionFresh('services')]);
-  const providers = allProviders
+  const providers = [...(await db.getCollectionFresh('providers'))]
     .filter(provider => provider.verified === true)
-    .map(provider => attachPublicServiceSummary(attachProviderReputation(provider, reviews.filter(review => review.providerId === provider.id)), services))
     .sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 6);
   res.json({ success: true, providers });
 });
 
 router.get('/newest', async (req, res) => {
-  const [allProviders, reviews, services] = await Promise.all([db.getCollectionFresh('providers'), db.getCollectionFresh('reviews'), db.getCollectionFresh('services')]);
-  const providers = allProviders
+  const providers = [...(await db.getCollectionFresh('providers'))]
     .filter(provider => provider.verified === true)
-    .map(provider => attachPublicServiceSummary(attachProviderReputation(provider, reviews.filter(review => review.providerId === provider.id)), services))
     .sort((a, b) => new Date(b.createdAt || b.joinDate || 0) - new Date(a.createdAt || a.joinDate || 0));
   if (providers.every(p => !p.createdAt && !p.joinDate)) providers.reverse();
   res.json({ success: true, providers: providers.slice(0, 6) });
@@ -155,7 +285,6 @@ function detectImageType(buffer) {
 
 router.get('/me', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
-  providerPackageService.getPlan(provider);
   const providers = db.getCollection('providers') || [];
   const pIdx = providers.findIndex(p => p.id === provider.id);
   if (pIdx !== -1) {
@@ -685,21 +814,6 @@ router.get('/packages', (req, res) => {
   res.json({ success: true, packages });
 });
 
-router.get('/me/package', requireProvider, async (req, res) => {
-  const provider = await getMyProviderFresh(req) || getMyProvider(req);
-  const entitlement = providerPackageService.getPlan(provider);
-  entitlement.proposalsUsed = providerPackageService.countMonthlyProposals(provider);
-  const providerIds = new Set([provider.id, provider.userId, req.authUser.id].filter(Boolean).map(String));
-  const allServices = await db.getCollectionFresh('services');
-  const services = allServices.filter(item => providerIds.has(String(item.providerId)) && !['inactive', 'rejected'].includes(item.status));
-  const purchases = (db.getCollection('packagePurchases') || []).filter(item => item.providerId === provider.id);
-  res.json({
-    success: true,
-    entitlement: { ...entitlement, activeServiceCount: services.length },
-    purchases: purchases.slice(0, 10)
-  });
-});
-
 // Customer favorites are stored per signed-in customer in the database.
 router.get('/favorites', requireCustomer, (req, res) => {
   const favorites = (db.getCollection('favoriteProviders') || []).filter(item => item.customerId === req.authUser.id);
@@ -781,7 +895,7 @@ router.get('/:id', async (req, res) => {
   const allReviews = await require('./reviewRoutes').refreshStoredReviewAnalyses();
   const provider = providers.find(p => p.id === req.params.id || p.userId === req.params.id || (p.email && p.email.toLowerCase() === req.params.id.toLowerCase()));
   if (!provider || provider.verified !== true) return res.status(404).json({ success: false, message: 'Không tìm thấy Provider.' });
-  const services = allServices.filter(s => s.providerId === provider.id && (s.status || 'active') === 'active');
+  const services = allServices.filter(s => s.providerId === provider.id && s.status !== 'inactive');
   const reviews = allReviews.filter(r => r.providerId === provider.id).map(addReviewSentimentPoints);
   res.json({ success: true, provider: attachProviderReputation(provider, reviews), services, reviews });
 });
@@ -888,16 +1002,10 @@ router.post('/certifications/submit', requireProvider, (req, res) => {
   res.json({ success: true, message: 'Đã gửi chứng chỉ chờ duyệt' });
 });
 
-router.post('/services', requireProvider, async (req, res) => {
+router.post('/services', requireProvider, (req, res) => {
   const serviceData = req.body;
-  const p = await getMyProviderFresh(req) || getMyProvider(req);
-  const entitlement = providerPackageService.getPlan(p);
-  const providerIds = new Set([p.id, p.userId, req.authUser.id].filter(Boolean).map(String));
-  const services = await db.getCollectionFresh('services');
-  const currentCount = services.filter(item => providerIds.has(String(item.providerId)) && !['inactive', 'rejected'].includes(item.status)).length;
-  if (entitlement.serviceLimit !== null && currentCount >= entitlement.serviceLimit) {
-    return res.status(403).json({ success: false, code: 'PACKAGE_SERVICE_LIMIT', message: `Gói ${entitlement.package.name} giới hạn ${entitlement.serviceLimit} dịch vụ. Hãy nâng cấp gói hoặc ẩn một dịch vụ hiện có.` });
-  }
+  const services = db.getCollection('services') || [];
+  const p = getMyProvider(req);
   const newSvc = {
     ...serviceData,
     id: generateId('SVC'),
@@ -909,39 +1017,17 @@ router.post('/services', requireProvider, async (req, res) => {
     dateSubmitted: formatDateTime(new Date())
   };
   services.unshift(newSvc);
-  try {
-    await db.saveCollectionAndWait('services', services);
-  } catch (error) {
-    console.error('[providers] Không lưu được dịch vụ:', error.message);
-    return res.status(503).json({ success: false, message: 'Chưa lưu được dịch vụ lên hệ thống. Vui lòng thử lại.' });
-  }
+  db.saveCollection('services', services);
   res.json({ success: true, message: 'Đã gửi dịch vụ, vui lòng chờ Admin duyệt trước khi hiển thị công khai.', service: newSvc });
 });
 
-router.put('/services/:id', requireProvider, async (req, res) => {
+router.put('/services/:id', requireProvider, (req, res) => {
   const serviceData = req.body;
-  const provider = await getMyProviderFresh(req) || getMyProvider(req);
-  const services = await db.getCollectionFresh('services');
-  const idx = services.findIndex(s => s.id === req.params.id && String(s.providerId) === String(provider.id));
+  const services = db.getCollection('services') || [];
+  const idx = services.findIndex(s => s.id === req.params.id && s.providerId === getMyProvider(req).id);
   if (idx !== -1) {
-    if (serviceData.status === 'active' && services[idx].status === 'inactive') {
-      const entitlement = providerPackageService.getPlan(provider);
-      const providerIds = new Set([provider.id, provider.userId, req.authUser.id].filter(Boolean).map(String));
-      const currentCount = services.filter(item =>
-        item.id !== services[idx].id &&
-        providerIds.has(String(item.providerId)) &&
-        !['inactive', 'rejected'].includes(item.status)
-      ).length;
-      if (entitlement.serviceLimit !== null && currentCount >= entitlement.serviceLimit) {
-        return res.status(403).json({
-          success: false,
-          code: 'PACKAGE_SERVICE_LIMIT',
-          message: `Gói ${entitlement.package.name} giới hạn ${entitlement.serviceLimit} dịch vụ. Hãy ẩn một dịch vụ khác hoặc nâng cấp gói trước khi hiển thị lại dịch vụ này.`
-        });
-      }
-    }
     services[idx] = { ...services[idx], ...serviceData };
-    await db.saveCollectionAndWait('services', services);
+    db.saveCollection('services', services);
     res.json({ success: true, message: 'Cập nhật dịch vụ thành công', service: services[idx] });
   } else {
     res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ' });
@@ -958,31 +1044,6 @@ router.delete('/services/:id', requireProvider, (req, res) => {
   } else {
     res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ' });
   }
-});
-
-router.post('/services/:id/boost', requireProvider, (req, res) => {
-  const provider = getMyProvider(req);
-  const entitlement = providerPackageService.getPlan(provider);
-  if (entitlement.boostLimit <= entitlement.boostsUsed) {
-    return res.status(403).json({ success: false, code: 'PACKAGE_BOOST_LIMIT', message: 'Gói hiện tại đã dùng hết lượt đẩy dịch vụ trong tháng. Nâng cấp gói hoặc chờ sang tháng mới.' });
-  }
-  const services = db.getCollection('services') || [];
-  const service = services.find(item => item.id === req.params.id && item.providerId === provider.id && item.status === 'active');
-  if (!service) return res.status(404).json({ success: false, message: 'Không tìm thấy dịch vụ đã được duyệt để đẩy lên Top.' });
-
-  const now = new Date();
-  service.boostedAt = now.toISOString();
-  service.boostedUntil = new Date(now.getTime() + 7 * 86400000).toISOString();
-  db.saveCollection('services', services);
-
-  const providers = db.getCollection('providers') || [];
-  const index = providers.findIndex(item => item.id === provider.id);
-  if (index >= 0) {
-    const current = providerPackageService.getPlan(providers[index]);
-    providers[index].packageUsage.boostsUsed = current.boostsUsed + 1;
-    db.saveCollection('providers', providers);
-  }
-  res.json({ success: true, message: 'Đã đẩy dịch vụ lên vị trí ưu tiên trong 7 ngày.', service, entitlement: providerPackageService.getPlan(provider) });
 });
 
 router.put('/services/:id/request-price', requireProvider, (req, res) => {
@@ -1066,101 +1127,28 @@ router.post('/complaints/:id/accept-refund', requireProvider, (req, res) => {
   res.json({ success: true, message: 'Đã ghi nhận việc chấp nhận hoàn tiền. Admin sẽ xác nhận phán quyết.' });
 });
 
+// Mua gói dịch vụ Provider (Pro/VIP...) — trừ trực tiếp số dư ví, ghi sổ giao dịch và mở quyền lợi.
 router.post('/packages/purchase', requireProvider, (req, res) => {
   const { packageId } = req.body;
   const packages = db.getCollection('packages') || [];
-  const pkg = packages.find(p => p.id === packageId && ['PKG_PRO', 'PKG_VIP'].includes(p.id));
+  const pkg = packages.find(p => p.id === packageId);
   if (!pkg) return res.status(404).json({ success: false, message: 'Gói dịch vụ không tồn tại.' });
+  const result = activatePackagePurchase(req, pkg, { method: 'Số dư ví', notificationPath: '/package.html' });
+  res.status(result.status).json(result.body);
+});
 
+// Mua gói VIP Partner (duy trì phí sàn) ở trang "Thanh toán & Phí sàn" — dùng chung cơ chế trừ ví.
+router.post(['/packages/purchase-platform', '/packages/platform-fee'], requireProvider, (req, res) => {
+  const result = activatePackagePurchase(req, PLATFORM_FEE_PACKAGE, { method: 'Phí duy trì sàn', notificationPath: '/payment.html' });
+  res.status(result.status).json(result.body);
+});
+
+// Lịch sử mua gói của Provider đang đăng nhập (trang Gói dịch vụ / Thanh toán & Phí sàn).
+router.get('/packages/purchases', requireProvider, (req, res) => {
   const provider = getMyProvider(req);
-  const currentEntitlement = providerPackageService.getPlan(provider);
-  const users = db.getCollection('users') || [];
-  const uidx = users.findIndex(u => u.id === req.authUser.id);
-  if (uidx === -1) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng.' });
-  }
-
-  const price = Math.max(0, Number(pkg.price) || 0);
-  const currentBal = Number(users[uidx].balance) || 0;
-  if (price > 0) {
-    if (currentBal < price) {
-      return res.status(400).json({
-        success: false,
-        message: `Số dư ví không đủ (cần ${price.toLocaleString('vi-VN')}đ, hiện có ${currentBal.toLocaleString('vi-VN')}đ). Vui lòng nạp thêm tiền.`
-      });
-    }
-  }
-
-  const now = new Date();
-  const durationDays = Math.max(1, Number(pkg.duration) || 30);
-  const extendingSamePlan = currentEntitlement.packageId === packageId && currentEntitlement.expiresAt;
-  const startsAt = extendingSamePlan && Date.parse(currentEntitlement.expiresAt) > now.getTime()
-    ? new Date(currentEntitlement.expiresAt)
-    : now;
-  const expiresAt = new Date(startsAt.getTime() + durationDays * 86400000);
-  users[uidx].balance = currentBal - price;
-
-  const providers = db.getCollection('providers') || [];
-  const provIdx = providers.findIndex(p => p.id === provider.id || p.userId === req.authUser.id);
-  if (provIdx === -1) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ Provider.' });
-  providers[provIdx].activePackage = packageId;
-  providers[provIdx].packageStartedAt = extendingSamePlan ? providers[provIdx].packageStartedAt || now.toISOString() : now.toISOString();
-  providers[provIdx].packageExpiresAt = expiresAt.toISOString();
-  providers[provIdx].badge = packageId === 'PKG_PRO' ? 'PRO PROVIDER' : 'VIP ELITE';
-  if (!extendingSamePlan || !providers[provIdx].packageUsage) {
-    providers[provIdx].packageUsage = { month: providerPackageService.monthKey(now), boostsUsed: 0, proposalsUsed: 0 };
-  }
-
-  const purchases = db.getCollection('packagePurchases') || [];
-  purchases.forEach(item => {
-    if (item.providerId === provider.id && item.status === 'Đang hoạt động') {
-      item.status = extendingSamePlan && item.packageId === packageId ? 'Đã gia hạn' : 'Đã thay thế';
-    }
-  });
-  const purchase = {
-    id: generateId('PKG-ORD'),
-    providerId: provider.id,
-    provider: providers[provIdx].name || req.authUser.name,
-    packageId: pkg.id,
-    packageName: pkg.name,
-    amount: price.toLocaleString('vi-VN') + 'đ',
-    amountNum: price,
-    activeDate: startsAt.toLocaleDateString('vi-VN'),
-    startedAt: startsAt.toISOString(),
-    expireDate: expiresAt.toLocaleDateString('vi-VN'),
-    expiresAt: expiresAt.toISOString(),
-    status: 'Đang hoạt động'
-  };
-  purchases.unshift(purchase);
-
-  // Persist the balance, entitlement, ledger entry and receipt for every purchase,
-  // including zero-cost or extension purchases.
-  db.saveCollection('users', users);
-  db.saveCollection('providers', providers);
-  db.saveCollection('packagePurchases', purchases);
-  const transactions = db.getCollection('walletTransactions') || [];
-  if (price > 0) {
-    transactions.unshift({
-      id: generateId('TXN'), userId: req.authUser.id, userName: providers[provIdx].name || req.authUser.name || 'Chuyên gia',
-      type: 'package_purchase', amount: -price, balanceAfter: users[uidx].balance, status: 'completed',
-      createdAt: formatDateTime(now), description: `Mua ${pkg.name} (${durationDays} ngày)`, packagePurchaseId: purchase.id
-    });
-    db.saveCollection('walletTransactions', transactions);
-  }
-
-  const { createNotification } = require('../services/notificationService');
-  createNotification(req.authUser.id, 'Kích hoạt gói dịch vụ thành công',
-    `Bạn đã kích hoạt thành công ${pkg.name}. Huy hiệu và đặc quyền ưu tiên của bạn đã hiển thị trên toàn sàn!`,
-    'success', '/package.html');
-
-  res.json({
-    success: true,
-    message: `Đã kích hoạt thành công ${pkg.name}!`,
-    newBalance: users[uidx].balance,
-    package: pkg,
-    entitlement: providerPackageService.getPlan(providers[provIdx]),
-    purchase
-  });
+  // `packagePurchases` luôn unshift bản ghi mới lên đầu nên giữ nguyên thứ tự = mới nhất trước.
+  const purchases = (db.getCollection('packagePurchases') || []).filter(item => item.providerId === provider.id);
+  res.json({ success: true, purchases });
 });
 
 router.get('/me/posts', requireProvider, async (req, res) => {
@@ -1300,18 +1288,13 @@ router.get('/', async (req, res) => {
     limit
   } = req.query;
 
-  const [allProviders, allReviews, allServices] = await Promise.all([
+  const [allProviders, allReviews] = await Promise.all([
     db.getCollectionFresh('providers'),
-    require('./reviewRoutes').refreshStoredReviewAnalyses(),
-    db.getCollectionFresh('services')
+    require('./reviewRoutes').refreshStoredReviewAnalyses()
   ]);
 
-  let providers = allProviders
-    .filter(provider => provider.verified === true)
-    .map(provider => attachPublicServiceSummary(attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)), allServices));
-
-  const providerPrices = providers
-    .map(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate))
+  const providerPrices = allProviders
+    .map(provider => Number(provider.hourlyRate))
     .filter(price => Number.isFinite(price) && price >= 0);
 
   let priceRange = { min: 0, max: 0 };
@@ -1321,6 +1304,10 @@ router.get('/', async (req, res) => {
   }
 
   // Chỉ cần verified=true (admin đã duyệt) là hiển thị cho customer
+  let providers = allProviders
+    .filter(provider => provider.verified === true)
+    .map(provider => attachProviderReputation(provider, allReviews.filter(review => review.providerId === provider.id)));
+
   if (category && category !== 'all') {
     const categoryLower = category.toLowerCase().trim();
     providers = providers.filter(provider => {
@@ -1373,14 +1360,14 @@ router.get('/', async (req, res) => {
   if (minPrice !== undefined && minPrice !== '') {
     const minPriceValue = Number(minPrice);
     if (Number.isFinite(minPriceValue)) {
-      providers = providers.filter(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate ?? 0) >= minPriceValue);
+      providers = providers.filter(provider => Number(provider.hourlyRate || 0) >= minPriceValue);
     }
   }
 
   if (maxPrice !== undefined && maxPrice !== '') {
     const maxPriceValue = Number(maxPrice);
     if (Number.isFinite(maxPriceValue)) {
-      providers = providers.filter(provider => Number(provider.startingPackagePrice ?? provider.hourlyRate ?? 0) <= maxPriceValue);
+      providers = providers.filter(provider => Number(provider.hourlyRate || 0) <= maxPriceValue);
     }
   }
 
@@ -1392,9 +1379,9 @@ router.get('/', async (req, res) => {
     providers.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0)
       || Number(b.reputationScore || 0) - Number(a.reputationScore || 0));
   } else if (sort === 'price-asc') {
-    providers.sort((a, b) => Number(a.startingPackagePrice ?? a.hourlyRate ?? 0) - Number(b.startingPackagePrice ?? b.hourlyRate ?? 0));
+    providers.sort((a, b) => Number(a.hourlyRate || 0) - Number(b.hourlyRate || 0));
   } else if (sort === 'price-desc') {
-    providers.sort((a, b) => Number(b.startingPackagePrice ?? b.hourlyRate ?? 0) - Number(a.startingPackagePrice ?? a.hourlyRate ?? 0));
+    providers.sort((a, b) => Number(b.hourlyRate || 0) - Number(a.hourlyRate || 0));
   } else if (sort === 'orders') {
     providers.sort((a, b) => Number(b.completedOrders || 0) - Number(a.completedOrders || 0));
   }

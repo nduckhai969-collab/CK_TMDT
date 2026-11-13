@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../data/db');
 const { processReleaseEscrow } = require('../services/orderService');
 const walletService = require('../services/walletService');
-const providerPackageService = require('../services/providerPackageService');
+const platformFundService = require('../services/platformFundService');
 const { hashPassword } = require('../utils/authTokens');
 
 function safeAdminUser(u) {
@@ -678,35 +678,16 @@ router.get('/services', async (req, res) => {
   res.json({ success: true, total: list.length, services: list });
 });
 
-router.post('/services/:id/approve', async (req, res) => {
-  const services = await db.getCollectionFresh('services');
+router.post('/services/:id/approve', (req, res) => {
+  const services = db.getCollection('services');
   const service = services.find(s => s.id === req.params.id);
 
   if (!service) {
     return res.status(404).json({ success: false, message: 'Dịch vụ không tồn tại!' });
   }
 
-  const providers = await db.getCollectionFresh('providers');
-  const provider = providers.find(item => String(item.id) === String(service.providerId) || String(item.userId) === String(service.providerId));
-  if (provider) {
-    const entitlement = providerPackageService.getPlan(provider);
-    const providerIds = new Set([provider.id, provider.userId].filter(Boolean).map(String));
-    const listedOrPendingCount = services.filter(item =>
-      item.id !== service.id &&
-      providerIds.has(String(item.providerId)) &&
-      !['inactive', 'rejected'].includes(item.status)
-    ).length;
-    if (entitlement.serviceLimit !== null && listedOrPendingCount >= entitlement.serviceLimit) {
-      return res.status(409).json({
-        success: false,
-        code: 'PACKAGE_SERVICE_LIMIT',
-        message: `Không thể duyệt: Provider đang có ${listedOrPendingCount}/${entitlement.serviceLimit} dịch vụ theo ${entitlement.package.name}. Hãy yêu cầu Provider ẩn một dịch vụ hoặc nâng gói trước khi duyệt.`
-      });
-    }
-  }
-
   service.status = 'active';
-  await db.saveCollectionAndWait('services', services);
+  db.saveCollection('services', services);
 
   res.json({
     success: true,
@@ -1331,6 +1312,12 @@ router.post('/payouts/:id/reject', async (req, res) => {
     res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể cập nhật yêu cầu rút tiền.' });
   }
 });
+// Quỹ nền tảng: nơi giữ toàn bộ lợi nhuận của sàn (phí gói, phí duy trì sàn,
+// hoa hồng đơn hoàn tất, tiền phạt hủy đơn) để Admin theo dõi tập trung.
+router.get('/platform-fund', (req, res) => {
+  res.json({ success: true, ...platformFundService.getFund() });
+});
+
 // ============================================================================
 // 11. PACKAGES CONFIGURATION (UC-70)
 // ============================================================================

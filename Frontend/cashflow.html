@@ -159,14 +159,59 @@
             <small>Đã chi trả cho Provider</small>
           </div>
           <div class="cf-metric-item">
-            <span>Hoa hồng sàn giữ lại (10%)</span>
-            <strong>142.000.000đ</strong>
-            <small>Lợi nhuận ròng của sàn</small>
+            <span>Quỹ nền tảng (lợi nhuận sàn)</span>
+            <strong id="fund-banner-balance">--</strong>
+            <small id="fund-banner-note">Chỗ chứa tiền của Admin</small>
           </div>
           <div class="cf-metric-item">
             <span>Ký quỹ Escrow đang giữ</span>
             <strong>387.500.000đ</strong>
             <small>Đang bảo lãnh cho các đơn active</small>
+          </div>
+        </div>
+
+        <!-- Platform Fund (Admin money vault) -->
+        <div class="card">
+          <div class="panel-header">
+            <div>
+              <h2>Quỹ nền tảng — Chỗ chứa tiền của Admin</h2>
+              <p>Toàn bộ lợi nhuận của sàn: hoa hồng đơn hoàn tất, tiền phạt hủy đơn, phí mua gói &amp; phí duy trì sàn</p>
+            </div>
+          </div>
+
+          <div class="table-responsive" style="padding:0 20px 8px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nguồn thu</th>
+                  <th style="text-align:right">Số tiền</th>
+                  <th style="text-align:right">Tỷ trọng</th>
+                </tr>
+              </thead>
+              <tbody id="fund-sources-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="panel-header" style="padding-top:0;">
+            <div>
+              <h3 style="margin:0; font-size:14px;">Lịch sử ghi nhận vào quỹ</h3>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã bút toán</th>
+                    <th>Nguồn</th>
+                    <th>Nội dung</th>
+                    <th style="text-align:right">Số tiền</th>
+                    <th>Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody id="fund-ledger-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -209,7 +254,63 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       renderPayoutsTable();
+      loadPlatformFund();
     });
+
+    function formatVND(value) {
+      return (Number(value) || 0).toLocaleString('vi-VN') + 'đ';
+    }
+
+    async function loadPlatformFund() {
+      const balanceEl = document.getElementById('fund-banner-balance');
+      const noteEl = document.getElementById('fund-banner-note');
+      if (!window.adminApi || !window.adminApi.getPlatformFund) return;
+
+      try {
+        const data = await window.adminApi.getPlatformFund();
+        if (!data || !data.success) throw new Error((data && data.error) || 'Không tải được quỹ nền tảng');
+
+        if (balanceEl) balanceEl.textContent = data.balanceFormatted || formatVND(data.balance);
+        if (noteEl) noteEl.textContent = `${data.transactionCount || 0} bút toán đã ghi nhận`;
+
+        const total = Number(data.balance) || 0;
+
+        const sourcesBody = document.getElementById('fund-sources-tbody');
+        if (sourcesBody) {
+          const sources = data.totalsBySource || [];
+          sourcesBody.innerHTML = sources.length
+            ? sources.map(s => {
+                const pct = total > 0 ? ((Number(s.amount) || 0) / total * 100) : 0;
+                return `
+                  <tr>
+                    <td>${s.label}</td>
+                    <td style="text-align:right"><strong style="color:var(--primary);">${s.amountFormatted || formatVND(s.amount)}</strong></td>
+                    <td style="text-align:right">${pct.toFixed(1)}%</td>
+                  </tr>`;
+              }).join('')
+            : '<tr><td colspan="3" style="text-align:center;color:var(--text-secondary);">Chưa có khoản thu nào</td></tr>';
+        }
+
+        const ledgerBody = document.getElementById('fund-ledger-tbody');
+        if (ledgerBody) {
+          const rows = data.transactions || [];
+          ledgerBody.innerHTML = rows.length
+            ? rows.map(t => `
+                <tr>
+                  <td><strong>${t.id}</strong></td>
+                  <td>${t.sourceLabel || t.source}</td>
+                  <td>${t.description || '—'}</td>
+                  <td style="text-align:right"><strong style="color:var(--success,#16a34a);">+${formatVND(t.amount)}</strong></td>
+                  <td>${t.createdAt || '—'}</td>
+                </tr>`).join('')
+            : '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);">Chưa có giao dịch</td></tr>';
+        }
+      } catch (err) {
+        if (balanceEl) balanceEl.textContent = '—';
+        if (noteEl) noteEl.textContent = 'Không tải được dữ liệu quỹ';
+        console.warn('loadPlatformFund failed:', err);
+      }
+    }
 
     function renderPayoutsTable() {
       const state = getAppState();

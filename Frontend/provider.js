@@ -483,6 +483,15 @@ window.providerApi = {
     return res.json();
   },
 
+  createWalletDeposit: async (amount, bankCode) => {
+    const res = await fetch(`${API_BASE}/api/providers/wallet/deposit`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ amount, bankCode })
+    });
+    return res.json();
+  },
+
   // Reviews (UC-44)
   getMyReviews: async () => {
     const res = await fetch(`${API_BASE}/api/providers/me/reviews`, { headers: getAuthHeader() });

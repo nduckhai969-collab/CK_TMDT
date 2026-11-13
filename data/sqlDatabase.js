@@ -266,6 +266,37 @@ class SqlDatabase {
     }
   }
 
+  async saveCollectionsAtomic(changes) {
+    const prepared = changes.map(([name, items]) => [name, this.prepare(items)]);
+    const write = this.queue.then(async () => {
+      const connection = await this.pool.getConnection();
+      try {
+        await connection.beginTransaction();
+        for (const [name, items] of prepared) {
+          await connection.execute('DELETE FROM app_records WHERE collection_name = ?', [name]);
+          if (items.length) {
+            const values = items.map((item, position) => [name, String(item.id), position, JSON.stringify(item)]);
+            await connection.query('INSERT INTO app_records (collection_name, record_id, position, payload) VALUES ?', [values]);
+          }
+          if (name === 'users') await this.syncRelationalUsers(connection, items);
+        }
+        await connection.commit();
+        for (const [name, items] of prepared) this.cache[name] = items;
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    });
+    this.queue = write.catch(err => {
+      this.writeErrors += 1;
+      console.error('[db] Atomic MySQL write failed:', err.message);
+    });
+    await write;
+    return true;
+  }
+
   prepare(items) {
     const next = clone(items);
     next.forEach((item, index) => {

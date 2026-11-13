@@ -315,7 +315,7 @@ function getAppState() {
       if (!Array.isArray(state[key])) {
         state[key] = Array.isArray(DEFAULT_STATE[key]) ? JSON.parse(JSON.stringify(DEFAULT_STATE[key])) : [];
         stateChanged = true;
-      } else if (Array.isArray(DEFAULT_STATE[key])) {
+      } else if (Array.isArray(DEFAULT_STATE[key]) && key !== 'packages') {
         // Tự động bổ sung các bản ghi mặc định mới nếu trong localStorage chưa có mã ID đó
         const existingIds = new Set(state[key].map(item => item && item.id).filter(Boolean));
         DEFAULT_STATE[key].forEach(defaultItem => {

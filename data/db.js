@@ -12,7 +12,9 @@ const INITIAL_DATABASE = {
     { id: 'USR008', name: 'Trần Đình Trọng', email: 'trong.tran@example.com', phone: '0937 889 911', role: 'Provider', password: '123', joinDate: '10/01/2025', spentOrEarned: '0đ', balance: 500000, status: 'active', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150' },
     { id: 'USR009', name: 'Lê Thị Duyên', email: 'duyen.le@example.com', phone: '0981 223 344', role: 'Provider', password: '123', joinDate: '15/01/2025', spentOrEarned: '0đ', balance: 1000000, status: 'active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150' },
     { id: 'ADM001', name: 'Quản Trị Viên Sàn', email: 'skillrentaladmin@gmail.com', phone: '0999 888 777', role: 'Admin', password: 'admin123@', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
-    { id: 'ADM002', name: 'Admin Dự Phòng', email: 'admin@skillrental.com', phone: '0999 888 666', role: 'Admin', password: 'admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }
+    { id: 'ADM002', name: 'Admin Dự Phòng', email: 'admin@skillrental.com', phone: '0999 888 666', role: 'Admin', password: 'admin', joinDate: '01/01/2024', spentOrEarned: '0đ', balance: 0, status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' },
+    { id: 'USR507', name: 'Hân Nguyễn Gia', email: '23130089@st.hcmuaf.edu.vn', phone: '0900 000 000', role: 'Customer', password: '123456', joinDate: '28/10/2026', spentOrEarned: '265.500đ', balance: 0, status: 'active', emailVerified: true },
+    { id: 'USR509', name: 'Nguyễn Thị Lệ Nam Em', email: 'ngochannnn130@gmail.com', phone: '0900 000 000', role: 'Provider', password: 'phucan1005', joinDate: '28/10/2026', spentOrEarned: '0đ', balance: 0, status: 'active', emailVerified: true }
   ],
 
   providers: [
@@ -665,7 +667,7 @@ const INITIAL_DATABASE = {
 };
 
 // MySQL persistence adapter giữ nguyên API collection để các route hiện có dùng chung.
-const EXTRA_COLLECTIONS = ['favoriteProviders', 'comments', 'notifications', 'walletTransactions', 'bookingLists', 'posts', 'passwordResets', 'emailVerifications'];
+const EXTRA_COLLECTIONS = ['favoriteProviders', 'comments', 'notifications', 'walletTransactions', 'bookingLists', 'posts', 'passwordResets', 'emailVerifications', 'emails', 'emailEvents', 'emailSuppressions'];
 const COLLECTIONS = Array.from(new Set([...Object.keys(INITIAL_DATABASE), ...EXTRA_COLLECTIONS]));
 const SqlDatabase = require('./sqlDatabase');
 const db = new SqlDatabase(COLLECTIONS, INITIAL_DATABASE);

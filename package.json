@@ -7,7 +7,11 @@
     "start": "node server.js",
     "dev": "node server.js",
     "seed": "node scripts/seedMysql.js",
-    "check": "node scripts/checkFrontend.js"
+    "seed:mysql": "node scripts/seedMysql.js",
+    "email:worker": "node scripts/emailWorker.js",
+    "email:dry": "node scripts/emailWorker.js --dry",
+    "check": "node scripts/checkFrontend.js",
+    "check:mysql": "node scripts/testMysqlConnection.js"
   },
   "repository": {
     "type": "git",

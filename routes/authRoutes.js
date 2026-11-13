@@ -8,6 +8,24 @@ const nodemailer = require('nodemailer');
 const db = require('../data/db');
 const { signToken, hashPassword, verifyPassword } = require('../utils/authTokens');
 const { requireSignedIn, requireAdmin } = require('./customerAuth');
+const rateLimit = require('../utils/authRateLimit');
+
+const emailRateKey = req => crypto.createHash('sha256')
+  .update(String(req.body?.email || '').trim().toLowerCase())
+  .digest('hex');
+const clientIp = req => req.ip || req.socket?.remoteAddress || 'unknown';
+const authLimits = {
+  registerIp: rateLimit({ keyPrefix: 'register-ip', keyFn: clientIp, windowMs: 60 * 60 * 1000, max: 5 }),
+  registerEmail: rateLimit({ keyPrefix: 'register-email', keyFn: emailRateKey, windowMs: 60 * 60 * 1000, max: 3 }),
+  verifyIp: rateLimit({ keyPrefix: 'verify-ip', keyFn: clientIp, windowMs: 15 * 60 * 1000, max: 15 }),
+  resendIp: rateLimit({ keyPrefix: 'resend-ip', keyFn: clientIp, windowMs: 15 * 60 * 1000, max: 8 }),
+  googleIp: rateLimit({ keyPrefix: 'google-ip', keyFn: clientIp, windowMs: 15 * 60 * 1000, max: 12 }),
+  loginIp: rateLimit({ keyPrefix: 'login-ip', keyFn: clientIp, windowMs: 15 * 60 * 1000, max: 12 }),
+  loginEmail: rateLimit({ keyPrefix: 'login-email', keyFn: emailRateKey, windowMs: 15 * 60 * 1000, max: 8 }),
+  forgotIp: rateLimit({ keyPrefix: 'forgot-ip', keyFn: clientIp, windowMs: 15 * 60 * 1000, max: 5 }),
+  forgotEmail: rateLimit({ keyPrefix: 'forgot-email', keyFn: emailRateKey, windowMs: 60 * 60 * 1000, max: 3 }),
+  resetIp: rateLimit({ keyPrefix: 'reset-ip', keyFn: clientIp, windowMs: 15 * 60 * 1000, max: 10 })
+};
 
 // Đăng ký và đăng nhập bằng tài khoản lưu trong MySQL.
 
@@ -189,13 +207,13 @@ async function verifyGoogleCredential(token, clientId) {
 }
 
 // Đăng ký tài khoản trong MySQL.
-router.post('/register', async (req, res) => {
+router.post('/register', authLimits.registerIp, authLimits.registerEmail, async (req, res) => {
   const { name, email, phone, password, role } = req.body || {};
   const cleanEmail = String(email || '').trim().toLowerCase();
   if (!name || !String(name).trim() || !cleanEmail || !password) return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ họ tên, email và mật khẩu!' });
   if (String(name).trim().length > 100 || cleanEmail.length > 100) return res.status(400).json({ success: false, message: 'Họ tên tối đa 100 ký tự và email tối đa 100 ký tự.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ success: false, message: 'Địa chỉ email không hợp lệ.' });
-  if (String(password).length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+  if (String(password).length < 8) return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 8 ký tự.' });
   if (phone && !/^[0-9+\s().-]{8,16}$/.test(String(phone).trim())) return res.status(400).json({ success: false, message: 'Số điện thoại không hợp lệ!' });
   const users = db.getCollection('users') || [];
   if (users.some(user => String(user.email || '').trim().toLowerCase() === cleanEmail)) return res.status(409).json({ success: false, message: 'Email này đã được sử dụng trên hệ thống!' });
@@ -213,7 +231,7 @@ router.post('/register', async (req, res) => {
   return res.status(201).json({ success: true, verifyEmail: true, verificationSent: true, email: cleanEmail, role: safeRole, message: `Đã gửi email xác nhận tới ${cleanEmail}. Hãy mở email để kích hoạt tài khoản.` });
 });
 
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', authLimits.verifyIp, async (req, res) => {
   const token = String(req.body?.token || '');
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const records = db.getCollection('emailVerifications') || [];
@@ -230,7 +248,7 @@ router.post('/verify-email', async (req, res) => {
   return res.json({ success: true, message: 'Email đã được xác nhận. Bạn có thể đăng nhập.' });
 });
 
-router.post('/resend-verification', async (req, res) => {
+router.post('/resend-verification', authLimits.resendIp, async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
   if (!email) return res.status(400).json({ success: false, message: 'Vui lòng nhập email cần xác nhận.' });
   const user = (db.getCollection('users') || []).find(item => String(item.email || '').trim().toLowerCase() === email);
@@ -249,7 +267,7 @@ router.get('/google/config', (_req, res) => {
   res.json({ success: true, clientId: process.env.GOOGLE_CLIENT_ID || '' });
 });
 
-router.post('/google', async (req, res) => {
+router.post('/google', authLimits.googleIp, async (req, res) => {
   const credential = String(req.body?.credential || '');
   const clientId = String(process.env.GOOGLE_CLIENT_ID || '');
   if (!clientId) return res.status(503).json({ success: false, message: 'Chưa cấu hình GOOGLE_CLIENT_ID trong .env.' });
@@ -291,19 +309,28 @@ router.post('/google', async (req, res) => {
     if (role === 'Provider') await createProviderProfile(user, dateStr);
   }
 
-  return res.json({ success: true, message: 'Đăng nhập Google thành công.', user: publicUser(user), accessToken: signToken(user.id) });
+  return res.json({ success: true, message: 'Đăng nhập Google thành công.', user: publicUser(user), accessToken: signToken(user.id, user.tokenVersion) });
 });
 
-router.post('/login', async (req,res) => {
+router.post('/login', authLimits.loginIp, authLimits.loginEmail, async (req,res) => {
   const email=String(req.body?.email||'').trim().toLowerCase();const password=String(req.body?.password||'');
   const user=(db.getCollection('users')||[]).find(item=>String(item.email||'').trim().toLowerCase()===email);
   let valid=user && await verifyPassword(password,user.passwordHash);
   // Hỗ trợ mật khẩu mẫu cũ được lưu trực tiếp để đăng nhập lần đầu, sau đó chuyển sang hash.
   if(user&&!valid&&typeof user.password==='string'&&user.password===password){user.passwordHash=await hashPassword(password);delete user.password;await db.saveCollectionAndWait('users',(db.getCollection('users')||[]).map(item=>item.id===user.id?user:item));valid=true;}
   if(!valid)return res.status(401).json({success:false,message:'Email hoặc mật khẩu không chính xác.'});
-  if(user.status==='pending_verification'||user.emailVerified===false)return res.status(403).json({success:false,code:'EMAIL_NOT_VERIFIED',email:user.email,message:'Tài khoản chưa được xác nhận. Hãy mở email xác nhận hoặc yêu cầu gửi lại.'});
+  if(user.status==='pending_verification'||(user.emailVerified===false && user.role !== 'Admin'))return res.status(403).json({success:false,code:'EMAIL_NOT_VERIFIED',email:user.email,message:'Tài khoản chưa được xác nhận. Hãy mở email xác nhận hoặc yêu cầu gửi lại.'});
   if(user.status==='locked')return res.status(403).json({success:false,code:'ACCOUNT_LOCKED',message:'Tài khoản đã bị tạm khóa: '+(user.lockReason||'Liên hệ Admin')});
-  return res.json({success:true,message:'Đăng nhập thành công!',user:publicUser(user),accessToken:signToken(user.id)});
+  return res.json({success:true,message:'Đăng nhập thành công!',user:publicUser(user),accessToken:signToken(user.id,user.tokenVersion)});
+});
+
+router.post('/logout', requireSignedIn, async (req, res) => {
+  const users = db.getCollection('users') || [];
+  const index = users.findIndex(user => user.id === req.authUser.id);
+  if (index < 0) return res.status(401).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+  users[index].tokenVersion = (Number(users[index].tokenVersion) || 0) + 1;
+  await db.saveCollectionAndWait('users', users);
+  return res.json({ success: true, message: 'Đã đăng xuất khỏi các phiên đăng nhập.' });
 });
 
 // Hồ sơ hiện tại
@@ -495,10 +522,60 @@ router.put('/profile', requireSignedIn, async (req, res) => {
 // Đổi mật khẩu trong MySQL.
 router.put('/change-password', requireSignedIn, async (req,res) => {
  const {currentPassword,newPassword}=req.body||{};if(!currentPassword||!newPassword||String(newPassword).length<8)return res.status(400).json({success:false,message:'Nhập mật khẩu hiện tại và mật khẩu mới (ít nhất 8 ký tự).'});
- const users=db.getCollection('users')||[];const index=users.findIndex(user=>user.id===req.authUser.id);if(index<0||!await verifyPassword(currentPassword,users[index].passwordHash))return res.status(401).json({success:false,message:'Mật khẩu hiện tại không chính xác.'});
- users[index].passwordHash=await hashPassword(newPassword);delete users[index].password;await db.saveCollectionAndWait('users',users);res.json({success:true,message:'Đổi mật khẩu thành công.'});
+ const users=db.getCollection('users')||[];const index=users.findIndex(user=>user.id===req.authUser.id);const user=users[index];const validCurrentPassword=user&&(await verifyPassword(currentPassword,user.passwordHash)||(typeof user.password==='string'&&user.password===currentPassword));if(index<0||!validCurrentPassword)return res.status(401).json({success:false,message:'Mật khẩu hiện tại không chính xác.'});
+ users[index].passwordHash=await hashPassword(newPassword);delete users[index].password;users[index].tokenVersion=(Number(users[index].tokenVersion)||0)+1;await db.saveCollectionAndWait('users',users);res.json({success:true,message:'Đổi mật khẩu thành công. Các phiên khác đã bị đăng xuất.',accessToken:signToken(users[index].id,users[index].tokenVersion)});
 });
-router.post('/forgot-password', async (req, res) => {
+// Đổi email trực tiếp (chỉ cần nhập đúng mật khẩu hiện tại, giữ nguyên ID & toàn bộ đơn hàng).
+router.put('/change-email', requireSignedIn, async (req, res) => {
+  const { currentPassword, newEmail } = req.body || {};
+  const cleanEmail = String(newEmail || '').trim().toLowerCase();
+  if (!cleanEmail || cleanEmail.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return res.status(400).json({ success: false, message: 'Địa chỉ email mới không hợp lệ.' });
+  }
+
+  const users = db.getCollection('users') || [];
+  const index = users.findIndex(user => user.id === req.authUser.id);
+  const user = users[index];
+  if (index < 0 || !user) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+  }
+
+  const hasPassword = Boolean(user.passwordHash || (typeof user.password === 'string' && user.password));
+  if (hasPassword) {
+    if (!currentPassword) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập mật khẩu hiện tại để xác nhận đổi email.' });
+    }
+    const validPassword = (await verifyPassword(currentPassword, user.passwordHash)) || (typeof user.password === 'string' && user.password === currentPassword);
+    if (!validPassword) {
+      return res.status(401).json({ success: false, message: 'Mật khẩu hiện tại không chính xác.' });
+    }
+  }
+
+  if (String(user.email || '').trim().toLowerCase() === cleanEmail) {
+    return res.json({ success: true, message: 'Email mới trùng với email hiện tại.', user: publicUser(user) });
+  }
+
+  const duplicate = users.some(item => item.id !== user.id && String(item.email || '').trim().toLowerCase() === cleanEmail);
+  if (duplicate) {
+    return res.status(409).json({ success: false, message: 'Email này đã được sử dụng bởi tài khoản khác.' });
+  }
+
+  users[index].email = cleanEmail;
+  users[index].emailVerified = true;
+  users[index].updatedAt = new Date().toISOString();
+  await db.saveCollectionAndWait('users', users);
+
+  const providers = db.getCollection('providers') || [];
+  const pIndex = providers.findIndex(p => p.userId === user.id || p.id === user.id);
+  if (pIndex !== -1) {
+    providers[pIndex].email = cleanEmail;
+    await db.saveCollectionAndWait('providers', providers);
+  }
+
+  return res.json({ success: true, message: `Đã đổi email thành ${cleanEmail} (giữ nguyên toàn bộ lịch sử đơn hàng).`, user: publicUser(users[index]) });
+});
+
+router.post('/forgot-password', authLimits.forgotIp, authLimits.forgotEmail, async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, message: 'Địa chỉ email không hợp lệ.' });
   const smtpUser = String(process.env.SMTP_USER || '').trim();
@@ -542,10 +619,21 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-router.post('/reset-password', async (req, res) => {
+// Kiểm tra liên kết đặt lại mật khẩu (dùng cho trang reset_password.html)
+router.get('/verify-reset-token', authLimits.resetIp, (req, res) => {
+  const token = String(req.query?.token || '');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const reset = (db.getCollection('passwordResets') || []).find(item => item.tokenHash === tokenHash && Date.parse(item.expiresAt) > Date.now());
+  if (!reset) return res.status(404).json({ success: false, message: 'Liên kết đặt lại mật khẩu không tồn tại hoặc đã hết hạn.' });
+  const user = (db.getCollection('users') || []).find(item => item.id === reset.userId);
+  if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản cần đặt lại mật khẩu.' });
+  return res.json({ success: true, email: user.email, name: user.name });
+});
+
+router.post('/reset-password', authLimits.resetIp, async (req, res) => {
   const token = String(req.body?.token || '');
   const newPassword = String(req.body?.newPassword || '');
-  if (newPassword.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+  if (newPassword.length < 8) return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 8 ký tự.' });
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const resets = db.getCollection('passwordResets') || [];
   const reset = resets.find(item => item.tokenHash === tokenHash && Date.parse(item.expiresAt) > Date.now());
@@ -555,10 +643,10 @@ router.post('/reset-password', async (req, res) => {
   if (index < 0) return res.status(400).json({ success: false, message: 'Không tìm thấy tài khoản cần đặt lại mật khẩu.' });
   users[index].passwordHash = await hashPassword(newPassword);
   delete users[index].password;
+  users[index].tokenVersion = (Number(users[index].tokenVersion) || 0) + 1;
   await db.saveCollectionAndWait('users', users);
   await db.saveCollectionAndWait('passwordResets', resets.filter(item => item.tokenHash !== tokenHash));
-  return res.json({ success: true, message: 'Đổi mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.' });
+  return res.json({ success: true, message: 'Đổi mật khẩu thành công. Các phiên đăng nhập cũ đã bị thu hồi.' });
 });
-router.post('/resend-verification',(_req,res)=>res.status(410).json({success:false,message:'Tài khoản MySQL không yêu cầu xác nhận email.'}));
 
 module.exports = router;

@@ -53,9 +53,11 @@ MYSQL_PASSWORD=mật_khẩu_mysql_của_bạn
 MYSQL_DATABASE=skillrental
 ```
 
-Đổi `AUTH_SECRET` thành một chuỗi bí mật riêng, dài và khó đoán. Không gửi file `.env` cho người khác và không commit file này lên Git.
+Tạo một `AUTH_SECRET` ngẫu nhiên tối thiểu 32 ký tự, lưu cố định trong `.env` và dùng cùng một giá trị trên các máy chạy chung môi trường. Có thể tạo một lần bằng `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Không để trống hoặc dùng lại giá trị mẫu; server sẽ từ chối khởi động nếu khóa thiếu hoặc quá ngắn. Không gửi file `.env` cho người khác và không commit file này lên Git.
 
-Để đăng ký/xác nhận email và quên mật khẩu gửi thư được, điền `SMTP_USER`, `SMTP_APP_PASSWORD` và `SMTP_FROM`. Đăng nhập Google cần `GOOGLE_CLIENT_ID`. Thanh toán VNPay cần các cấu hình `VNPAY_*`. Các cấu hình tích hợp này chỉ cần điền khi muốn sử dụng tính năng tương ứng.
+Để đăng ký/xác nhận email và quên mật khẩu gửi thư được, điền `SMTP_USER`, `SMTP_APP_PASSWORD` và `SMTP_FROM`. Đăng nhập Google cần `GOOGLE_CLIENT_ID` lấy từ OAuth Web Client trong Google Cloud Console; thêm địa chỉ website đang chạy vào Authorized JavaScript origins. Thanh toán VNPay cần các cấu hình `VNPAY_*`. Các cấu hình tích hợp này chỉ cần điền khi muốn sử dụng tính năng tương ứng.
+
+Worker gợi ý dịch vụ tự chạy mỗi ngày lúc `MARKETING_EMAIL_HOUR` (mặc định 9 giờ, múi giờ `Asia/Ho_Chi_Minh`) khi server hoạt động. Worker vẫn áp dụng điều kiện số đơn, thời gian, chống gửi lặp và danh sách hủy nhận. Có thể chạy thủ công bằng `npm run email:worker` hoặc xem trước bằng `npm run email:dry`.
 
 ### 4. Khởi tạo dữ liệu (nếu cần)
 

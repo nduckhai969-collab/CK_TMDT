@@ -83,8 +83,15 @@
             <option value="Bỏ dở công việc giữa chừng">Bỏ dở dự án giữa chừng, không tiếp tục thực hiện</option>
             <option value="Có dấu hiệu gian lận hoặc yêu cầu giao dịch ngoài sàn">Có dấu hiệu gian lận hoặc yêu cầu chuyển tiền ngoài sàn</option>
             <option value="Thái độ bất lịch sự, xúc phạm khách hàng">Thái độ làm việc bất lịch sự, thiếu chuyên nghiệp</option>
+            <option value="Sự cố kỹ thuật">Sự cố kỹ thuật</option>
             <option value="Khác">Lý do khác</option>
           </select>
+        </div>
+
+        <div id="technicalIncidentTimeWrap" style="display:none; margin-bottom:18px;">
+          <label for="technicalIncidentTime" style="display:block; font-size:13px; font-weight:700; color:#0F172A; margin-bottom:6px;">Thời điểm xảy ra sự cố kỹ thuật <span style="color:#EF4444;">*</span></label>
+          <input type="datetime-local" id="technicalIncidentTime" style="width:100%; padding:10px 14px; border:1px solid #CBD5E1; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none;">
+          <small style="display:block; margin-top:5px; color:#64748B;">Khiếu nại kỹ thuật chỉ được gửi trong vòng 60 phút kể từ thời điểm này.</small>
         </div>
 
         <div style="margin-bottom:20px;">
@@ -133,6 +140,18 @@
       }
     });
 
+    const complaintReasonSelect = document.getElementById('complaintReason');
+    const technicalIncidentWrap = document.getElementById('technicalIncidentTimeWrap');
+    const technicalIncidentInput = document.getElementById('technicalIncidentTime');
+    function updateTechnicalIncidentField() {
+      const technical = /kỹ thuật|ky thuat|technical/i.test(complaintReasonSelect.value);
+      technicalIncidentWrap.style.display = technical ? 'block' : 'none';
+      technicalIncidentInput.required = technical;
+      if (!technical) technicalIncidentInput.value = '';
+    }
+    complaintReasonSelect.addEventListener('change', updateTechnicalIncidentField);
+    updateTechnicalIncidentField();
+
     async function submitComplaint(e) {
       e.preventDefault();
       if (!requireCustomerLogin()) return;
@@ -146,6 +165,7 @@
         complainantId: user.id,
         complainant: `${user.name} (Khách hàng)`,
         reason: document.getElementById('complaintReason').value,
+        incidentAt: technicalIncidentInput.value ? new Date(technicalIncidentInput.value).toISOString() : undefined,
         amount: document.getElementById('refundAmountInput').value,
         userClaim: document.getElementById('complaintDetail').value,
         priority: 'high'

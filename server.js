@@ -14,8 +14,10 @@ const serviceRoutes = require('./routes/serviceRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const bookingListRoutes = require('./routes/bookingListRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 const { requireAdmin } = require('./routes/customerAuth');
 const db = require('./data/db');
 
@@ -24,6 +26,7 @@ const PORT = process.env.PORT || 3000;
 
 // Khai báo biến server ở đây để hàm shutdown có thể truy cập được (Sửa lỗi Scope)
 let server; 
+let stopRecommendationScheduler;
 
 // 1. CORS Middleware - BẮT BUỘC ĐẶT TRƯỚC TẤT CẢ ROUTES để hỗ trợ WebStorm (port 63342), Live Server (port 5500)
 const allowedOrigins = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
@@ -53,6 +56,11 @@ app.use('/uploads', express.static(avatarStorageDir, {
 // 4. Phục vụ tĩnh toàn bộ thư mục Frontend (HTML, CSS, JS, Images)
 app.use(express.static(path.join(__dirname, 'Frontend')));
 
+// Điều hướng xem chi tiết dịch vụ: /products/:id
+app.get('/products/:id', (req, res) => {
+  res.redirect(`/customer_service_detail.html?id=${encodeURIComponent(req.params.id)}`);
+});
+
 // 5. API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', requireAdmin, adminRoutes);
@@ -62,11 +70,14 @@ app.use('/api/complaints', complaintRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/booking-list', bookingListRoutes);
+app.use('/api/cart', bookingListRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/email', emailRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // ============================================================================
 // PUBLIC SEED ENDPOINT — No auth required
@@ -154,6 +165,10 @@ app.get('/', (req, res) => {
 
 // Khởi động server (kết nối MySQL trước khi nhận request)
 db.init().then(() => {
+  if (!String(process.env.GOOGLE_CLIENT_ID || '').trim()) {
+    console.warn('[Google] GOOGLE_CLIENT_ID chưa được cấu hình; đăng nhập Google hiện tạm tắt.');
+  }
+  stopRecommendationScheduler = require('./services/recommendationCampaign').startRecommendationScheduler();
   // Gán trực tiếp vào biến server toàn cục đã khai báo ở trên
   server = app.listen(PORT, () => {
     console.log(`====================================================`);
@@ -181,6 +196,7 @@ db.init().then(() => {
   expiryTimer.unref();
 
   const shutdown = async () => {
+    if (stopRecommendationScheduler) stopRecommendationScheduler();
     await db.close();
     if (server) {
       server.close(() => process.exit(0));

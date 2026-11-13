@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
 <script src="js/auth-client.js"></script>
+<script src="js/admin-topbar.js"></script>
 </head>
 <body>
   <div class="app">
@@ -85,6 +86,12 @@
           <span class="badge-count" id="badge-complaint-count">2</span>
         </a>
 
+        <div class="menu-label">MARKETING</div>
+        <a class="menu-item" href="admin_emails.html">
+          <span class="menu-icon">✉</span>
+          <span>Email Marketing</span>
+        </a>
+
         <div class="menu-label">THỐNG KÊ &amp; BÁO CÁO</div>
         <a class="menu-item" href="reports.html">
           <span class="menu-icon">▥</span>
@@ -119,23 +126,11 @@
           <span class="breadcrumb-tag">QUẢN LÝ / DỊCH VỤ &amp; BÀI ĐĂNG</span>
           <div class="top-search">
             <span>⌕</span>
-            <input type="text" placeholder="Tìm kiếm dịch vụ, kỹ năng...">
+            <input type="text" placeholder="Tìm kiếm dịch vụ, kỹ năng... (Nhấn Enter)" onkeyup="handleQuickSearch(event)">
           </div>
         </div>
 
-        <div class="topbar-right">
-          <button class="icon-badge-btn" onclick="showToast('Thông báo', 'Có bài đăng dịch vụ mới cần duyệt', 'info')">
-            <span>♢</span>
-            <span class="badge-dot">3</span>
-          </button>
-          <div class="admin-profile">
-            <div class="admin-avatar">A</div>
-            <div class="admin-info">
-              <strong>Nguyễn Văn Admin</strong>
-              <span>Quản trị viên hệ thống</span>
-            </div>
-          </div>
-        </div>
+        <div class="topbar-right"></div>
       </header>
 
       <div class="content-area">

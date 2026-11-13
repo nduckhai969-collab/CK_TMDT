@@ -470,7 +470,7 @@ window.providerApi = {
     return res.json();
   },
 
-  withdraw: async (amount, password) => {
+  withdraw: async (amount) => {
     const res = await fetch(`${API_BASE}/api/providers/wallet/withdraw`, {
       method: 'POST',
       headers: getAuthHeader(),

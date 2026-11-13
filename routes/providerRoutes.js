@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
@@ -9,9 +9,10 @@ const { slotsForDate } = require('./providerAvailability');
 const { requireCustomer, requireProvider, requireSignedIn } = require('./customerAuth');
 const { generateId } = require('../utils/id');
 const { formatDateTime } = require('../utils/dates');
-const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, processRespondCancellation, checkAutoReleaseOrders } = require('../services/orderService');
+const { processAcceptOrder, processDeliverOrder, processProgressOrder, processCancelOrder, checkAutoReleaseOrders } = require('../services/orderService');
 const { isVisibleToProvider } = require('../services/checkoutService');
 const { replyToReview } = require('../services/reviewService');
+const walletService = require('../services/walletService');
 
 function getMyProvider(req) {
   const providers = db.getCollection('providers') || [];
@@ -410,6 +411,124 @@ const handleProviderCoverUpload = async (req, res) => {
 router.put(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
 router.post(['/profile/cover', '/cover'], requireProvider, express.raw({ type: ['image/*', 'application/octet-stream'], limit: '15mb' }), handleProviderCoverUpload);
 
+// ============================================================================
+// 14. CẬP NHẬT THÔNG TIN HỒ SƠ NGƯỜI BÁN (PROVIDER PROFILE)
+// GET & PUT /api/providers/profile
+// Đối với Người bán (Provider), ngoài họ tên/số điện thoại, họ sẽ cần cập nhật thêm
+// các trường đặc thù vào bảng providers như: Tên thương hiệu/Kỹ năng, Mô tả dịch vụ,
+// Giá thuê theo giờ/ngày, và Ảnh đại diện/Ảnh bìa.
+// ============================================================================
+router.get(['/profile', '/me/profile'], requireSignedIn, (req, res) => {
+  const provider = getMyProvider(req);
+  res.json({
+    success: true,
+    provider,
+    user: req.authUser
+  });
+});
+
+router.put(['/me/profile'], requireSignedIn, (req, res) => {
+  try {
+    const {
+      name,
+      phone,
+      specialty,
+      brandName,
+      headline,
+      category,
+      skills,
+      bio,
+      description,
+      hourlyRate,
+      dailyRate,
+      location,
+      address,
+      avatar,
+      cover,
+      availabilityStatus,
+      workingHours
+    } = req.body || {};
+
+    const provider = getMyProvider(req);
+    const providers = db.getCollection('providers') || [];
+    let pIndex = providers.findIndex(p => p.id === provider.id);
+    if (pIndex === -1) {
+      providers.unshift(provider);
+      pIndex = 0;
+    }
+    const prov = providers[pIndex];
+
+    // Cập nhật các trường đặc thù của Provider vào bảng providers
+    const effectiveSpecialty = specialty !== undefined ? specialty : (brandName !== undefined ? brandName : headline);
+    if (effectiveSpecialty !== undefined) prov.specialty = String(effectiveSpecialty).trim();
+
+    if (category !== undefined) prov.category = String(category).trim();
+
+    const effectiveBio = bio !== undefined ? bio : description;
+    if (effectiveBio !== undefined) prov.bio = String(effectiveBio).trim();
+
+    if (hourlyRate !== undefined && hourlyRate !== null && hourlyRate !== '') {
+      prov.hourlyRate = Number(String(hourlyRate).replace(/[^0-9]/g, '')) || 0;
+    }
+
+    if (dailyRate !== undefined && dailyRate !== null && dailyRate !== '') {
+      prov.dailyRate = Number(String(dailyRate).replace(/[^0-9]/g, '')) || 0;
+    } else if (prov.hourlyRate > 0 && !prov.dailyRate) {
+      prov.dailyRate = prov.hourlyRate * 8; // Ước tính 8h/ngày
+    }
+
+    if (skills !== undefined) {
+      if (Array.isArray(skills)) {
+        prov.skills = skills.map(s => String(s).trim()).filter(Boolean);
+      } else if (typeof skills === 'string') {
+        prov.skills = skills.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+
+    const effectiveLocation = location !== undefined ? location : address;
+    if (effectiveLocation !== undefined) prov.location = String(effectiveLocation).trim();
+
+    if (name !== undefined && String(name).trim()) prov.name = String(name).trim();
+    if (phone !== undefined) prov.phone = String(phone).trim();
+    if (avatar) prov.avatar = String(avatar).trim();
+    if (cover) prov.cover = String(cover).trim();
+    if (availabilityStatus) prov.availabilityStatus = availabilityStatus;
+    if (workingHours !== undefined) prov.workingHours = String(workingHours).trim();
+
+    prov.profileCompleted = true;
+    prov.updatedAt = new Date().toISOString();
+    db.saveCollection('providers', providers);
+
+    // Đồng bộ các trường thông tin cơ bản sang bảng users
+    const users = db.getCollection('users') || [];
+    const uIndex = users.findIndex(u => u.id === req.authUser.id || u.id === prov.userId);
+    let updatedUser = null;
+    if (uIndex !== -1) {
+      const u = users[uIndex];
+      if (prov.name) u.name = prov.name;
+      if (prov.phone) u.phone = prov.phone;
+      if (prov.avatar) u.avatar = prov.avatar;
+      if (prov.cover) u.cover = prov.cover;
+      if (prov.location) u.address = prov.location;
+      if (prov.bio) u.bio = prov.bio;
+      u.updatedAt = new Date().toISOString();
+      db.saveCollection('users', users);
+      updatedUser = u;
+    }
+
+    console.log(`[provider] ✅ Đã cập nhật hồ sơ Người bán: ${prov.name} (${prov.id})`);
+    return res.json({
+      success: true,
+      message: 'Cập nhật thông tin hồ sơ Người bán thành công!',
+      provider: prov,
+      user: updatedUser
+    });
+  } catch (err) {
+    console.error('[provider] Lỗi cập nhật profile:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi cập nhật hồ sơ người bán: ' + err.message });
+  }
+});
+
 router.get('/dashboard/stats', requireProvider, async (req, res) => {
   const provider = getMyProvider(req);
   const orders = db.getCollection('orders') || [];
@@ -459,53 +578,19 @@ router.get('/me/orders', requireProvider, (req, res) => {
 });
 
 router.get('/me/wallet', requireProvider, (req, res) => {
-  const provider = getMyProvider(req);
-  const transactions = (db.getCollection('walletTransactions') || []).filter(t => t.userId === req.authUser.id);
-  res.json({ 
-    success: true, 
-    balance: req.authUser.balance || 0,
-    transactions 
-  });
+  const user = (db.getCollection('users') || []).find(row => row.id === req.authUser.id) || req.authUser;
+  getMyProvider(req);
+  res.json({ success: true, wallet: walletService.getWallet(user) });
 });
 
-router.post('/wallet/withdraw', requireProvider, (req, res) => {
-  const { amount, bankCode, bankAccount } = req.body;
-  const numAmount = Number(amount);
-  
-  if (!numAmount || numAmount <= 0) {
-    return res.status(400).json({ success: false, message: 'Số tiền rút không hợp lệ.' });
+router.post('/wallet/withdraw', requireProvider, async (req, res) => {
+  try {
+    const payout = await walletService.requestWithdrawal(req.authUser.id, req.body?.amount);
+    res.json({ success: true, message: 'Đã gửi yêu cầu rút tiền. Số tiền được giữ trong lúc chờ Admin xử lý.', payout });
+  } catch (error) {
+    res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Không thể lưu yêu cầu rút tiền lúc này.' });
   }
-  
-  if (req.authUser.balance < numAmount) {
-    return res.status(400).json({ success: false, message: 'Số dư không đủ để rút.' });
-  }
-  
-  // Trừ tiền user
-  const users = db.getCollection('users');
-  const userIndex = users.findIndex(u => u.id === req.authUser.id);
-  if (userIndex !== -1) {
-    users[userIndex].balance -= numAmount;
-    db.saveCollection('users', users);
-  }
-  
-  // Ghi log giao dịch
-  const transactions = db.getCollection('walletTransactions') || [];
-  transactions.unshift({
-    id: generateId('TXN'),
-    userId: req.authUser.id,
-    type: 'withdraw',
-    amount: numAmount,
-    status: 'pending',
-    bankCode,
-    bankAccount,
-    createdAt: formatDateTime(new Date()),
-    description: `Yêu cầu rút ${numAmount.toLocaleString('vi-VN')}đ về ngân hàng`
-  });
-  db.saveCollection('walletTransactions', transactions);
-  
-  res.json({ success: true, message: 'Đã gửi yêu cầu rút tiền thành công!' });
 });
-
 // ---- Thao tác đơn hàng của người bán (đường dẫn mà provider.js đang gọi) ----
 function orderAction(handler) {
   return (req, res) => {
@@ -522,7 +607,7 @@ router.post('/orders/:id/deliver', requireProvider, orderAction(req => processDe
 router.post('/orders/:id/progress', requireProvider, orderAction(req => processProgressOrder(req.params.id, req.authUser.id, req.body)));
 router.post('/orders/:id/reject', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason)));
 router.post('/orders/:id/cancel', requireProvider, orderAction(req => processCancelOrder(req.params.id, req.authUser.id, 'Provider', req.body.reason)));
-router.post('/orders/:id/cancellation-response', requireProvider, orderAction(req => processRespondCancellation(req.params.id, req.authUser.id, 'Provider', req.body.approve === true, req.body.reason)));
+router.post('/orders/:id/cancellation-response', requireProvider, (req, res) => res.status(410).json({ success: false, message: 'Luồng duyệt yêu cầu hủy đã đóng. Provider có thể tự hủy đơn trong 24 giờ đầu kể từ lúc tạo đơn.' }));
 
 // ---- Đánh giá của tôi + trả lời đánh giá ----
 router.get('/me/reviews', requireProvider, (req, res) => {
@@ -780,7 +865,12 @@ router.put('/services/:id/request-price', requireProvider, (req, res) => {
 });
 
 router.put('/me/bank-account', requireProvider, (req, res) => {
-  const { bank, account, holder } = req.body;
+  const bank = String(req.body?.bank || '').trim();
+  const account = String(req.body?.account || '').trim();
+  const holder = String(req.body?.holder || '').trim();
+  if (!bank || !account || !holder || bank.length > 100 || account.length > 40 || holder.length > 120) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập hợp lệ tên ngân hàng, số tài khoản và chủ tài khoản.' });
+  }
   const providers = db.getCollection('providers');
   const provider = getMyProvider(req);
   const index = providers.findIndex(p => p.id === provider.id);
@@ -1142,3 +1232,4 @@ router.get('/', async (req, res) => {
 });
 
 module.exports = router;
+

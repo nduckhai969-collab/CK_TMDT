@@ -131,7 +131,7 @@
     const existingIndex = state.users.findIndex(u => {
       const uEmail = String(u.email || '').trim().toLowerCase();
       const uUid = u.uid ? String(u.uid) : null;
-      return (cleanEmail && uEmail === cleanEmail) || (uid && uUid === uid);
+      return (userData.id && String(u.id) === String(userData.id)) || (cleanEmail && uEmail === cleanEmail) || (uid && uUid === uid);
     });
 
     let targetUser;
@@ -147,6 +147,7 @@
         existing.role = userData.role;
       }
       if (userData.id) existing.id = userData.id;
+      if (cleanEmail) existing.email = cleanEmail;
       if (uid && (!existing.uid || existing.uid !== uid)) {
         existing.uid = uid;
       }
@@ -224,6 +225,18 @@
   window.syncUserToAdminState = syncUserToAdminState;
   window.SkillAuth = {
     syncUserToAdminState,
+    replaceAccessToken(token) {
+      if (!token) return false;
+      currentToken = token;
+      sessionStorage.setItem(TOKEN_KEY, token);
+      return true;
+    },
+    clearLocalSession() {
+      currentToken = '';
+      [TOKEN_KEY, SESSION_KEY, 'SKILLRENTAL_CUSTOMER_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => sessionStorage.removeItem(key));
+      window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: null } }));
+      window.dispatchEvent(new CustomEvent('skillrental:logout'));
+    },
     getEmailActionCodeSettings() { return { url: window.location.origin + '/verify.html', handleCodeInApp: false }; },
     async register({ name, email, phone, password, role }) {
       const data = await callApi('/api/auth/register', 'POST', null, { name, email, phone, password, role });
@@ -241,11 +254,9 @@
     async confirmPasswordReset(token, newPassword) { return callApi('/api/auth/reset-password', 'POST', null, { token, newPassword }); },
     async applyActionCode() { return { success: false, message: 'Xác nhận email không được sử dụng cho tài khoản MySQL.' }; },
     async logout() {
-      currentToken = '';
-      [TOKEN_KEY, SESSION_KEY, 'SKILLRENTAL_CUSTOMER_USER', 'SKILLRENTAL_PROVIDER_USER'].forEach(key => sessionStorage.removeItem(key));
-      window.dispatchEvent(new CustomEvent('skillrental:auth-changed', { detail: { user: null } }));
-      window.dispatchEvent(new CustomEvent('skillrental:logout'));
-      return { success: true };
+      const serverResult = currentToken ? await callApi('/api/auth/logout', 'POST') : { success: false };
+      window.SkillAuth.clearLocalSession();
+      return { success: true, serverRevoked: Boolean(serverResult.success) };
     },
     async loginWithGoogle(preferredRole) {
       try {
@@ -264,6 +275,14 @@
       if (!name || !String(name).trim()) return { success: false, message: 'Vui lòng nhập họ và tên!' };
       const res = await callApi('/api/auth/profile', 'PUT', null, { name, phone, address, avatar, cover, bio });
       if (res.success && res.user) saveSession(res.user, currentToken);
+      return res;
+    },
+    async changeEmail({ currentPassword, newEmail }) {
+      const res = await callApi('/api/auth/change-email', 'PUT', null, { currentPassword, newEmail });
+      if (res.success && res.user) {
+        const synced = syncUserToAdminState(res.user);
+        saveSession(synced || res.user, currentToken);
+      }
       return res;
     },
     getCurrentUser() { try { const raw = sessionStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : null; } catch (_) { return null; } }
@@ -944,8 +963,12 @@
   // Đăng xuất toàn cầu
   window.handleLogout = async function () {
     if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?')) {
-      await SkillAuth.logout();
-      showToastMsg('Đã Đăng Xuất', 'Bạn đã đăng xuất thành công khỏi hệ thống.', 'success');
+      const result = await SkillAuth.logout();
+      if (result.serverRevoked) {
+        showToastMsg('Đã Đăng Xuất', 'Phiên đăng nhập đã bị thu hồi trên các thiết bị.', 'success');
+      } else {
+        showToastMsg('Đã đăng xuất trên thiết bị này', 'Không liên hệ được máy chủ để thu hồi các phiên khác.', 'warning');
+      }
       setTimeout(() => {
         window.location.href = 'index.html?auth=login';
       }, 350);
@@ -1064,7 +1087,7 @@
           <div class="sr-form-group">
             <label for="regPassword">Mật khẩu khởi tạo</label>
             <div class="sr-input-wrap">
-              <input type="password" id="regPassword" class="sr-form-control" placeholder="Tối thiểu 6 ký tự" minlength="6" required autocomplete="new-password">
+              <input type="password" id="regPassword" class="sr-form-control" placeholder="Tối thiểu 8 ký tự" minlength="8" required autocomplete="new-password">
               <button type="button" class="sr-pwd-toggle" onclick="togglePasswordVisibility('regPassword', this)">
                 <i class="fa-solid fa-eye"></i>
               </button>
@@ -1399,6 +1422,10 @@
       showToastMsg('Thiếu thông tin', 'Vui lòng điền đầy đủ họ tên, email và mật khẩu!', 'error');
       return;
     }
+    if (password.length < 8) {
+      showToastMsg('Mật khẩu chưa đủ dài', 'Mật khẩu phải có ít nhất 8 ký tự.', 'error');
+      return;
+    }
 
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -1702,12 +1729,12 @@
         forgotForm.innerHTML = `
           <div class="sr-alert-box sr-alert-info">
             <i class="fa-solid fa-key" style="font-size:18px;"></i>
-            <div>Nhập mật khẩu mới cho tài khoản của bạn (tối thiểu 6 ký tự).</div>
+            <div>Nhập mật khẩu mới cho tài khoản của bạn (tối thiểu 8 ký tự).</div>
           </div>
           <div class="sr-form-group">
             <label for="newResetPassword">Mật khẩu mới</label>
             <div class="sr-input-wrap">
-              <input type="password" id="newResetPassword" class="sr-form-control" placeholder="Tối thiểu 6 ký tự" minlength="6" required>
+              <input type="password" id="newResetPassword" class="sr-form-control" placeholder="Tối thiểu 8 ký tự" minlength="8" required>
               <button type="button" class="sr-pwd-toggle" onclick="togglePasswordVisibility('newResetPassword', this)">
                 <i class="fa-solid fa-eye"></i>
               </button>
@@ -1719,12 +1746,13 @@
         `;
         document.getElementById('btnConfirmNewPwd').onclick = async () => {
           const newPwd = document.getElementById('newResetPassword')?.value;
-          if (!newPwd || newPwd.length < 6) {
-            showToastMsg('Mật khẩu yếu', 'Vui lòng nhập mật khẩu có ít nhất 6 ký tự.', 'error');
+          if (!newPwd || newPwd.length < 8) {
+            showToastMsg('Mật khẩu yếu', 'Vui lòng nhập mật khẩu có ít nhất 8 ký tự.', 'error');
             return;
           }
           const resetRes = await SkillAuth.confirmPasswordReset(oobCode, newPwd);
           if (resetRes.success) {
+            window.SkillAuth.clearLocalSession();
             showToastMsg('Đổi Mật Khẩu Thành Công!', resetRes.message, 'success');
             setTimeout(() => switchAuthTab('login'), 1200);
           } else {

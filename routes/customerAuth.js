@@ -11,6 +11,9 @@ function authenticate() {
     const users = db.getCollection('users') || [];
     const user = users.find(item => String(item.id) === decoded.sub);
     if (!user) return res.status(401).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+    if (Number(decoded.ver || 0) !== Number(user.tokenVersion || 0)) {
+      return res.status(401).json({ success: false, code: 'SESSION_REVOKED', message: 'Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.' });
+    }
     if (user.status === 'locked') return res.status(403).json({ success: false, code: 'ACCOUNT_LOCKED', message: `Tài khoản đã bị tạm khóa: ${user.lockReason || 'Liên hệ Admin'}` });
     req.authUser = user;
     req.authToken = token;

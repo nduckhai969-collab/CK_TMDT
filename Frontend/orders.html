@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
 <script src="js/auth-client.js"></script>
+<script src="js/admin-topbar.js"></script>
 </head>
 <body>
   <div class="app">
@@ -85,6 +86,12 @@
           <span class="badge-count" id="badge-complaint-count">2</span>
         </a>
 
+        <div class="menu-label">MARKETING</div>
+        <a class="menu-item" href="admin_emails.html">
+          <span class="menu-icon">✉</span>
+          <span>Email Marketing</span>
+        </a>
+
         <div class="menu-label">THỐNG KÊ &amp; BÁO CÁO</div>
         <a class="menu-item" href="reports.html">
           <span class="menu-icon">▥</span>
@@ -119,23 +126,11 @@
           <span class="breadcrumb-tag">GIAO DỊCH / ĐƠN HÀNG &amp; ESCROW</span>
           <div class="top-search">
             <span>⌕</span>
-            <input type="text" placeholder="Tìm kiếm mã đơn, khách hàng, provider...">
+            <input type="text" placeholder="Tìm kiếm mã đơn, khách hàng, provider... (Nhấn Enter)" onkeyup="handleQuickSearch(event)">
           </div>
         </div>
 
-        <div class="topbar-right">
-          <button class="icon-badge-btn" onclick="showToast('Thông báo', 'Hệ thống Escrow hoạt động an toàn 100%', 'info')">
-            <span>♢</span>
-            <span class="badge-dot">3</span>
-          </button>
-          <div class="admin-profile">
-            <div class="admin-avatar">A</div>
-            <div class="admin-info">
-              <strong>Nguyễn Văn Admin</strong>
-              <span>Quản trị viên hệ thống</span>
-            </div>
-          </div>
-        </div>
+        <div class="topbar-right"></div>
       </header>
 
       <div class="content-area">
@@ -221,7 +216,7 @@
       <div class="modal-body" id="modal-order-detail-body"></div>
       <div class="modal-footer">
         <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-order-detail')">Đóng</button>
-        <button class="btn btn-danger-outline btn-sm" id="btn-cancel-order-intervene">Can thiệp hủy đơn & hoàn tiền</button>
+        <button class="btn btn-secondary btn-sm" id="btn-cancel-order-intervene" disabled title="Admin không tham gia xử lý hủy">Admin không can thiệp hủy</button>
       </div>
     </div>
   </div>
@@ -243,25 +238,23 @@
       cancel_rejected: { text: 'Provider từ chối hủy — Chờ Admin phân xử', badge: 'badge-danger' },
       cancelled:  { text: 'Đã hủy',               badge: 'badge-danger' }
     };
+    STATUS_MAP.cancel_requested = { text: 'Yêu cầu hủy cũ đã đóng', badge: 'badge-neutral' };
+    STATUS_MAP.cancel_rejected = { text: 'Yêu cầu hủy cũ đã đóng', badge: 'badge-neutral' };
 
     // Quy trình chuyển đổi trạng thái đơn hàng hợp lệ
     const VALID_TRANSITIONS = {
       pending: [
         { value: 'confirmed', label: 'Xác nhận đơn hàng (Chuyển sang Đã xác nhận)' },
-        { value: 'cancelled', label: 'Hủy đơn hàng (Hoàn tiền Escrow)' }
       ],
       confirmed: [
         { value: 'processing', label: 'Bắt đầu triển khai (Chuyển sang Đang thực hiện)' },
-        { value: 'cancelled', label: 'Hủy đơn hàng (Hoàn tiền Escrow)' }
       ],
       processing: [
         { value: 'completed', label: 'Nghiệm thu & Hoàn thành (Giải ngân cho Provider)' },
         { value: 'disputed', label: 'Tiếp nhận khiếu nại (Chuyển sang Tranh chấp)' },
-        { value: 'cancelled', label: 'Hủy đơn hàng (Hoàn tiền Escrow)' }
       ],
       disputed: [
         { value: 'completed', label: 'Phán quyết hoàn tất đơn (Giải ngân cho Provider)' },
-        { value: 'cancelled', label: 'Phán quyết chấp thuận hủy & hoàn tiền cho khách' }
       ],
       completed: [], // Trạng thái kết thúc thành công
       cancelled: []  // Trạng thái kết thúc đã hủy
@@ -417,8 +410,9 @@
       activeOrderId = id;
       const stInfo = STATUS_MAP[order.orderStatus] || { text: order.orderStatus, badge: 'badge-neutral' };
       const transitions = VALID_TRANSITIONS[order.orderStatus] || [];
-      const isTerminal = order.orderStatus === 'completed' || order.orderStatus === 'cancelled';
-      const needsCancelArbitration = ['cancel_requested', 'cancel_rejected'].includes(order.orderStatus);
+      const isLegacyCancellation = ['cancel_requested', 'cancel_rejected'].includes(order.orderStatus);
+      const isTerminal = order.orderStatus === 'completed' || order.orderStatus === 'cancelled' || isLegacyCancellation;
+      const needsCancelArbitration = false;
       const interveneButton = document.getElementById('btn-cancel-order-intervene');
       if (interveneButton) interveneButton.style.display = needsCancelArbitration ? 'none' : '';
 
@@ -489,7 +483,7 @@
 
           ${isTerminal || needsCancelArbitration ? `
             <div style="background:#F1F5F9; border-radius:6px; padding:10px 12px; font-size:12.5px; color:#475569;">
-              ${needsCancelArbitration ? 'ⓘ Chỉ được cập nhật sau khi Admin ghi phán quyết ở khu vực phân xử phía trên.' : `ⓘ Đơn hàng này đã kết thúc ở trạng thái <strong>${stInfo.text}</strong>. Theo quy chế sàn, đơn đã hoàn thành hoặc đã hủy không thể chuyển sang trạng thái khác.`}
+              ${isLegacyCancellation ? 'ⓘ Yêu cầu hủy thuộc luồng cũ đã đóng. Admin không phân xử hoặc can thiệp hủy đơn.' : `ⓘ Đơn hàng này đã kết thúc ở trạng thái <strong>${stInfo.text}</strong>. Theo quy chế sàn, đơn đã hoàn thành hoặc đã hủy không thể chuyển sang trạng thái khác.`}
             </div>
           ` : `
             <div style="display:flex; gap:10px; align-items:center;">

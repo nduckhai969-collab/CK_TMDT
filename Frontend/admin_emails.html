@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Rental - Email Marketing (M3)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+  <script src="js/auth-client.js"></script>
+  <script src="js/admin-topbar.js"></script>
+  <style>
+    .pill-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:9999px; font-size:11px; font-weight:600; white-space:nowrap; }
+    .pill-green { background:#DCFCE7; color:#15803D; }
+    .pill-blue { background:#DBEAFE; color:#1D4ED8; }
+    .pill-amber { background:#FEF3C7; color:#B45309; }
+    .pill-red { background:#FEE2E2; color:#B91C1C; }
+    .pill-gray { background:#F1F5F9; color:#475569; }
+    .card-box { background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:20px; border:1px solid #E2E8F0; }
+    .btn-sm-action { border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; transition:opacity .15s; }
+    .btn-sm-action:hover { opacity:0.9; }
+    .btn-sm-action:disabled { opacity:0.55; cursor:not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">S</div>
+        <div class="brand-text">
+          <strong>SKILL RENTAL</strong>
+          <span>Admin Portal (B4)</span>
+        </div>
+      </div>
+      <nav class="menu">
+        <div class="menu-label">TỔNG QUAN</div>
+        <a class="menu-item" href="admin.html">
+          <span class="menu-icon">⌂</span>
+          <span>Dashboard</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ NGƯỜI DÙNG</div>
+        <a class="menu-item" href="users.html">
+          <span class="menu-icon">♙</span>
+          <span>Người dùng</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=locked">
+          <span class="menu-icon">▣</span>
+          <span>Khóa tài khoản</span>
+        </a>
+        <a class="menu-item" href="users.html?filter=unlock-requests">
+          <span class="menu-icon">🔓</span>
+          <span>Mở khóa tài khoản</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ PROVIDER</div>
+        <a class="menu-item" href="providers.html">
+          <span class="menu-icon">♙</span>
+          <span>Tất cả Provider</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt Provider &amp; Hồ sơ</span>
+          <span class="badge-count" id="badge-provider-pending">4</span>
+        </a>
+        <a class="menu-item" href="providers.html?tab=skills">
+          <span class="menu-icon">✦</span>
+          <span>Duyệt kỹ năng &amp; CC</span>
+          <span class="badge-count" id="badge-skill-pending">3</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ DỊCH VỤ</div>
+        <a class="menu-item" href="services.html">
+          <span class="menu-icon">▤</span>
+          <span>Dịch vụ</span>
+        </a>
+        <a class="menu-item" href="services.html?tab=pending">
+          <span class="menu-icon">✓</span>
+          <span>Duyệt dịch vụ &amp; giá</span>
+          <span class="badge-count" id="badge-service-pending">5</span>
+        </a>
+
+        <div class="menu-label">QUẢN LÝ GIAO DỊCH &amp; ĐÁNH GIÁ</div>
+        <a class="menu-item" href="orders.html">
+          <span class="menu-icon">▤</span>
+          <span>Đơn hàng</span>
+        </a>
+        <a class="menu-item" href="reviews.html">
+          <span class="menu-icon">★</span>
+          <span>Đánh giá</span>
+        </a>
+        <a class="menu-item" href="complaints.html">
+          <span class="menu-icon">⚑</span>
+          <span>Khiếu nại</span>
+          <span class="badge-count" id="badge-complaint-count">2</span>
+        </a>
+
+        <div class="menu-label">MARKETING</div>
+        <a class="menu-item active" href="admin_emails.html">
+          <span class="menu-icon">✉</span>
+          <span>Email Marketing</span>
+        </a>
+
+        <div class="menu-label">THỐNG KÊ &amp; BÁO CÁO</div>
+        <a class="menu-item" href="reports.html">
+          <span class="menu-icon">▥</span>
+          <span>Báo cáo &amp; Xuất file</span>
+        </a>
+        <a class="menu-item" href="statistics.html">
+          <span class="menu-icon">◫</span>
+          <span>Thống kê hệ thống</span>
+        </a>
+        <a class="menu-item" href="cashflow.html">
+          <span class="menu-icon">◷</span>
+          <span>Thống kê dòng tiền</span>
+        </a>
+
+        <div class="menu-label">CẤU HÌNH &amp; GÓI</div>
+        <a class="menu-item" href="packages.html">
+          <span class="menu-icon">▢</span>
+          <span>Gói đăng tin</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="online-dot"></div>
+        <span>Hệ thống B4 đang hoạt động</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="breadcrumb-tag">B4 ADMIN / EMAIL MARKETING / M3 - PHÂN LUỒNG &amp; CHU KỲ 14 NGÀY</span>
+        </div>
+        <div class="topbar-right">
+          <span id="topbar-extra" style="display:inline-flex;align-items:center;gap:8px">
+            <button class="btn-sm-action" style="background:#2563EB;color:#fff" onclick="previewEmailContent()">Xem mẫu email</button>
+            <button class="btn-sm-action" style="background:#0F172A;color:#fff" onclick="checkSmtpStatus()">Kiểm tra SMTP</button>
+            <button class="icon-badge-btn" type="button" onclick="refreshAll()" title="Tải lại toàn bộ">↻</button>
+          </span>
+        </div>
+      </header>
+
+      <section style="padding:20px">
+        <!-- Trạng thái SMTP & Quy tắc đối tượng -->
+        <div id="smtp-status-banner" class="card-box" style="background:#F8FAFC">
+          <div style="font-size:13px;color:#64748B">Đang kiểm tra kết nối Gmail SMTP và thống kê tài khoản khách hàng...</div>
+        </div>
+
+        <!-- 6 Thẻ Thống Kê -->
+        <div id="stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-bottom:20px"></div>
+
+        <!-- Khu vực Gửi Email Test Nhanh -->
+        <div class="card-box">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+            <div>
+              <h3 style="margin:0 0 4px;font-size:14px;color:#0F172A">Gửi Email Test nhanh (Kiểm tra hộp thư nhận thật)</h3>
+              <div style="font-size:12px;color:#64748B">Dùng để xác minh Gmail SMTP giao thư tới hộp thư thật (không bị chặn bởi chu kỳ 14 ngày).</div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+              <input type="email" id="test-email-input" placeholder="nhap-email@gmail.com" style="padding:7px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;min-width:230px">
+              <select id="test-email-mode" style="padding:7px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:13px;background:#fff">
+                <option value="discovery">Mẫu Khách mới (Toàn bộ dịch vụ)</option>
+                <option value="personalized">Mẫu Khách &ge; 2 đơn (Cá nhân hóa)</option>
+              </select>
+              <button class="btn-sm-action" id="btn-send-test" style="background:#2563EB;color:#fff;padding:8px 14px" onclick="sendTestEmail()">Gửi Test ngay</button>
+            </div>
+          </div>
+          <div id="test-email-result" style="margin-top:10px;font-size:12.5px;display:none"></div>
+        </div>
+
+        <!-- Section Chấp Thuận & Gửi Chiến Dịch (Luôn hiển thị rõ luồng) -->
+        <div id="preview-section" class="card-box">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div>
+              <h3 style="margin:0 0 4px;font-size:15px;color:#0F172A">Đối tượng khách hàng Active &amp; Quyền chấp thuận gửi Marketing</h3>
+              <div style="font-size:12px;color:#64748B">
+                Chỉ liệt kê khách đang <strong>active</strong> (tự động loại tài khoản <code>locked</code>, <code>pending_verification</code> và người đã hủy nhận).
+                <strong>&ge; 2 đơn</strong>: Gợi ý theo sở thích | <strong>0–1 đơn</strong>: Gửi toàn bộ dịch vụ active.
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+              <select id="segment-filter" onchange="previewCampaign()" style="padding:6px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:12.5px;background:#fff">
+                <option value="all">Tất cả khách active</option>
+                <option value="personalized">Đã có &ge; 2 đơn (Cá nhân hóa)</option>
+                <option value="discovery">Chưa có / &lt; 2 đơn (Tổng hợp toàn sàn)</option>
+              </select>
+              <button class="btn-sm-action" style="background:#E0F2FE;color:#0369A1" onclick="approveAllRealEmails()">Chấp thuận tất cả email thật</button>
+              <button class="btn-sm-action" id="btn-run-campaign" style="background:#16A34A;color:#fff;padding:8px 14px" onclick="runCampaign()">Gửi chiến dịch tới khách đã chọn</button>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-bottom:12px;padding:8px 12px;background:#F8FAFC;border-radius:8px;font-size:12.5px;color:#334155">
+            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="chk-auto-approve">
+              Tự động chấp thuận các dòng đang tick khi bấm Gửi
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="chk-force-resend">
+              Bỏ qua chu kỳ chờ 14 ngày (dùng khi Admin muốn test gửi lại ngay)
+            </label>
+          </div>
+
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="text-align:left;color:#64748B;border-bottom:1px solid #E2E8F0">
+                  <th style="padding:8px;width:32px"><input type="checkbox" id="chk-select-all" onchange="toggleSelectAll(this.checked)"></th>
+                  <th style="padding:8px">Khách hàng / Email</th>
+                  <th style="padding:8px">Phân loại chiến dịch</th>
+                  <th style="padding:8px">Đơn hoàn tất</th>
+                  <th style="padding:8px">Admin Chấp thuận</th>
+                  <th style="padding:8px">Chu kỳ 14 ngày</th>
+                  <th style="padding:8px">Nội dung gửi</th>
+                </tr>
+              </thead>
+              <tbody id="preview-rows">
+                <tr><td colspan="7" style="padding:16px;color:#94A3B8">Đang tải danh sách khách hàng...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div id="campaign-result-box" style="display:none;margin-top:14px;padding:12px;border-radius:8px;border:1px solid #E2E8F0;background:#F8FAFC;font-size:12.5px"></div>
+        </div>
+
+        <!-- Section Xem nội dung email thực tế sẽ gửi -->
+        <div id="content-section" class="card-box" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="margin:0;font-size:15px;color:#0F172A">Nội dung email thực tế sẽ gửi cho từng khách</h3>
+            <button class="btn-sm-action" style="background:#F1F5F9;color:#475569" onclick="hideContent()">Đóng</button>
+          </div>
+          <div id="content-list" style="display:grid;gap:16px"></div>
+        </div>
+
+        <!-- Bảng Log Email -->
+        <div class="card-box">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <h3 style="margin:0;font-size:15px;color:#0F172A">Log email đã gửi &amp; lịch sử giao thư</h3>
+            <select id="log-status-filter" onchange="renderFilteredLogs()" style="padding:6px 10px;border:1px solid #CBD5E1;border-radius:6px;font-size:12.5px;background:#fff">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="sent">Đã gửi thật (SMTP)</option>
+              <option value="logged">Chạy thử (Dry-run)</option>
+              <option value="failed">Lỗi (Failed)</option>
+            </select>
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="text-align:left;color:#64748B;border-bottom:1px solid #E2E8F0">
+                  <th style="padding:8px">Thời gian</th>
+                  <th style="padding:8px">Người nhận</th>
+                  <th style="padding:8px">Luồng</th>
+                  <th style="padding:8px">Tiêu đề</th>
+                  <th style="padding:8px">Dịch vụ</th>
+                  <th style="padding:8px">Trạng thái</th>
+                  <th style="padding:8px">Chi tiết / Lỗi SMTP</th>
+                  <th style="padding:8px">Mở</th>
+                  <th style="padding:8px">Click</th>
+                </tr>
+              </thead>
+              <tbody id="rows">
+                <tr><td colspan="9" style="padding:16px;color:#94A3B8">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STATUS_LABEL = { queued: 'Chờ gửi', sent: 'Đã gửi thật', logged: 'Dry-run (Chưa gửi thật)', failed: 'Lỗi SMTP' };
+    const STATUS_PILL = { queued: 'pill-gray', sent: 'pill-green', logged: 'pill-blue', failed: 'pill-red' };
+    let cachedPreview = [];
+    let cachedLogs = [];
+
+    function esc(text) {
+      return String(text == null ? '' : text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function statCard(label, value, color) {
+      return `<div style="background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);border:1px solid #E2E8F0">
+        <div style="color:#64748B;font-size:12px">${label}</div>
+        <div style="font-size:22px;font-weight:700;color:${color || '#0F172A'}">${value}</div>
+      </div>`;
+    }
+
+    function renderStats(s) {
+      document.getElementById('stats').innerHTML =
+        statCard('Tổng log email', s.total || 0) +
+        statCard('Đã gửi thật (SMTP)', s.sent || 0, '#16A34A') +
+        statCard('Chạy thử (Dry-run)', s.logged || 0, '#2563EB') +
+        statCard('Lỗi SMTP', s.failed || 0, '#DC2626') +
+        statCard('CTR', (s.ctr || 0) + '%', '#0F766E') +
+        statCard('Đã hủy nhận', s.unsubscribed || 0, '#64748B');
+    }
+
+    async function checkSmtpStatus() {
+      const box = document.getElementById('smtp-status-banner');
+      box.innerHTML = '<div style="font-size:13px;color:#64748B">Đang xác thực kết nối Gmail SMTP...</div>';
+      try {
+        const res = await fetch('/api/email/status');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Không kiểm tra được trạng thái');
+
+        const s = data.smtp;
+        const aud = data.audience;
+        const ex = aud.excludedStats || {};
+
+        let badgeHtml = '';
+        if (s.verified) {
+          badgeHtml = `<span class="pill-badge pill-green">✓ SMTP Sẵn sàng: ${esc(s.user)} (${esc(s.host)}:${s.port})</span>`;
+        } else if (s.mode === 'dry-run') {
+          badgeHtml = `<span class="pill-badge pill-amber">⚠ Chế độ Dry-run (Chưa cấu hình SMTP_USER / SMTP_APP_PASSWORD)</span>`;
+        } else {
+          badgeHtml = `<span class="pill-badge pill-red">✕ Lỗi kết nối SMTP (${esc(s.user)}): ${esc(s.error || 'Không xác thực được')}</span>`;
+        }
+
+        const warningHtml = s.warning
+          ? `<div style="margin-top:8px;padding:8px 10px;border-radius:6px;background:${s.verified ? '#FEF3C7' : '#FEE2E2'};color:${s.verified ? '#92400E' : '#991B1B'};font-size:12px">
+              <strong>Lưu ý:</strong> ${esc(s.warning)}
+             </div>`
+          : '';
+
+        box.innerHTML = `
+          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+              ${badgeHtml}
+              <span class="pill-badge pill-blue">Chu kỳ tự động: Mỗi ${data.cycleDays || 14} ngày</span>
+            </div>
+            <div style="font-size:12px;color:#475569">
+              Active: <strong>${aud.activeCustomers}</strong> (Đã duyệt: <strong>${aud.approvedCustomers}</strong>) •
+              Loại trừ: <strong>${ex.locked || 0}</strong> khóa, <strong>${ex.pendingVerification || 0}</strong> chờ xác thực, <strong>${ex.suppressed || 0}</strong> hủy nhận
+            </div>
+          </div>
+          ${warningHtml}
+        `;
+      } catch (error) {
+        box.innerHTML = `<div style="color:#DC2626;font-size:13px">Không kiểm tra được SMTP: ${esc(error.message)}</div>`;
+      }
+    }
+
+    function renderFilteredLogs() {
+      const filter = document.getElementById('log-status-filter')?.value || 'all';
+      const list = filter === 'all' ? cachedLogs : cachedLogs.filter(e => e.status === filter);
+      const tbody = document.getElementById('rows');
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:16px;color:#94A3B8">Chưa có email nào trong bộ lọc này.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(e => {
+        const titles = (e.items || []).map(i => i.title).join(' • ');
+        const typeBadge = e.type === 'test'
+          ? '<span class="pill-badge pill-gray">Test</span>'
+          : (e.campaignType === 'discovery'
+            ? '<span class="pill-badge pill-blue">Tổng hợp (&lt;2 đơn)</span>'
+            : '<span class="pill-badge pill-green">Cá nhân hóa (&ge;2 đơn)</span>');
+
+        let detailCell = '<span style="color:#94A3B8">-</span>';
+        if (e.status === 'failed' && e.error) {
+          detailCell = `<span style="color:#DC2626;font-size:12px">${esc(e.error)}</span>`;
+        } else if (e.status === 'sent' && e.providerMessageId) {
+          detailCell = `<span style="color:#15803D;font-size:11px" title="${esc(e.providerMessageId)}">ID: ${esc(String(e.providerMessageId).slice(0, 26))}</span>`;
+        } else if (e.status === 'logged') {
+          detailCell = '<span style="color:#2563EB;font-size:11.5px">Chỉ ghi log local (chưa qua SMTP)</span>';
+        }
+
+        return `<tr style="border-bottom:1px solid #F1F5F9">
+          <td style="padding:8px;white-space:nowrap">${esc(e.sentAt || e.createdAt || '')}</td>
+          <td style="padding:8px">${esc(e.to || '')}</td>
+          <td style="padding:8px">${typeBadge}</td>
+          <td style="padding:8px;max-width:240px">${esc(e.subject || '')}</td>
+          <td style="padding:8px;color:#475569" title="${esc(titles)}">${(e.items || []).length} dịch vụ</td>
+          <td style="padding:8px"><span class="pill-badge ${STATUS_PILL[e.status] || 'pill-gray'}">${esc(STATUS_LABEL[e.status] || e.status)}</span></td>
+          <td style="padding:8px;max-width:240px">${detailCell}</td>
+          <td style="padding:8px">${e.openedAt ? '✓' : '-'}</td>
+          <td style="padding:8px">${e.clickedAt ? '✓' : '-'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function loadEmails() {
+      try {
+        const res = await fetch('/api/email/logs');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Không tải được log');
+        renderStats(data.stats || {});
+        cachedLogs = data.emails || [];
+        renderFilteredLogs();
+      } catch (error) {
+        document.getElementById('rows').innerHTML =
+          `<tr><td colspan="9" style="padding:16px;color:#DC2626">${esc(error.message)}</td></tr>`;
+      }
+    }
+
+    async function previewCampaign() {
+      const tbody = document.getElementById('preview-rows');
+      const segment = document.getElementById('segment-filter')?.value || 'all';
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:16px;color:#94A3B8">Đang phân tích danh sách khách hàng active...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/email/preview?segment=${encodeURIComponent(segment)}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Lỗi khi tải danh sách đối tượng');
+
+        cachedPreview = data.preview || [];
+        if (!cachedPreview.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="padding:16px;color:#94A3B8">Không có khách hàng active nào phù hợp với bộ lọc hiện tại.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cachedPreview.map(p => {
+          const itemsPreview = (p.items || []).slice(0, 3).map(i => `• ${esc(i.title)}`).join('<br>') +
+            ((p.items || []).length > 3 ? `<br><span style="color:#64748B;font-size:11px">+ ${(p.items || []).length - 3} dịch vụ khác</span>` : '');
+
+          const branchBadge = p.campaignType === 'personalized'
+            ? '<span class="pill-badge pill-green">Cá nhân hóa (Sở thích)</span>'
+            : '<span class="pill-badge pill-blue">Tổng hợp (Tất cả DV)</span>';
+
+          const approveBtn = p.marketingApproved
+            ? `<button class="btn-sm-action" style="background:#DCFCE7;color:#15803D" onclick="toggleApproval('${esc(p.userId)}', false)">✓ Đã chấp thuận</button>`
+            : `<button class="btn-sm-action" style="background:#FEF3C7;color:#B45309" onclick="toggleApproval('${esc(p.userId)}', true)">Chưa duyệt (Bấm duyệt)</button>`;
+
+          let cycleText = '<span class="pill-badge pill-green">Sẵn sàng gửi</span>';
+          if (p.inCooldown) {
+            cycleText = `<span class="pill-badge pill-amber">Đã gửi (${p.daysSinceLastEmail || 0} ngày trước • chờ ${p.nextEligibleInDays} ngày)</span>`;
+          } else if (p.isSampleDomain) {
+            cycleText = `<span class="pill-badge pill-gray">Email mẫu @example.com</span>`;
+          }
+
+          const orderInfo = p.profileOrders > 0
+            ? `${p.profileOrders} đơn (${p.daysSinceLastOrder != null ? p.daysSinceLastOrder + ' ngày trước' : 'N/A'})`
+            : '0 đơn (Khách mới)';
+
+          const shouldCheck = p.marketingApproved && !p.isSampleDomain && !p.inCooldown;
+
+          return `<tr style="border-bottom:1px solid #F1F5F9">
+            <td style="padding:8px"><input type="checkbox" class="preview-chk" value="${esc(p.userId)}" ${shouldCheck ? 'checked' : ''}></td>
+            <td style="padding:8px">
+              <strong>${esc(p.name)}</strong><br>
+              <span style="font-size:12px;color:${p.isSampleDomain ? '#B45309' : '#475569'}">${esc(p.email)}</span>
+            </td>
+            <td style="padding:8px">${branchBadge}</td>
+            <td style="padding:8px;white-space:nowrap">${esc(orderInfo)}</td>
+            <td style="padding:8px">${approveBtn}</td>
+            <td style="padding:8px">${cycleText}</td>
+            <td style="padding:8px;line-height:1.4;font-size:12px">${itemsPreview}</td>
+          </tr>`;
+        }).join('');
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="7" style="padding:16px;color:#DC2626">${esc(error.message)}</td></tr>`;
+      }
+    }
+
+    function toggleSelectAll(checked) {
+      document.querySelectorAll('.preview-chk').forEach(chk => { chk.checked = checked; });
+    }
+
+    async function toggleApproval(userId, approved) {
+      try {
+        const res = await fetch('/api/email/approvals', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, approved })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Không cập nhật được trạng thái duyệt');
+        await Promise.all([previewCampaign(), checkSmtpStatus()]);
+      } catch (error) {
+        alert('Lỗi: ' + error.message);
+      }
+    }
+
+    async function approveAllRealEmails() {
+      const realIds = cachedPreview.filter(p => !p.isSampleDomain).map(p => p.userId);
+      if (!realIds.length) {
+        alert('Không tìm thấy khách hàng active có email thật (khác @example.com) để duyệt.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/email/approvals', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userIds: realIds, approved: true })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Không thể chấp thuận hàng loạt');
+        alert(data.message);
+        await Promise.all([previewCampaign(), checkSmtpStatus()]);
+      } catch (error) {
+        alert('Lỗi: ' + error.message);
+      }
+    }
+
+    function hideContent() {
+      document.getElementById('content-section').style.display = 'none';
+    }
+
+    async function previewEmailContent() {
+      const list = document.getElementById('content-list');
+      const section = document.getElementById('content-section');
+      const segment = document.getElementById('segment-filter')?.value || 'all';
+      section.style.display = 'block';
+      list.innerHTML = '<div style="color:#94A3B8;font-size:13px">Đang dựng nội dung email...</div>';
+
+      try {
+        const res = await fetch(`/api/email/preview-content?segment=${encodeURIComponent(segment)}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Lỗi khi tải nội dung email');
+
+        if (!data.preview.length) {
+          list.innerHTML = '<div style="color:#94A3B8;font-size:13px">Hiện không có khách hàng nào để dựng mẫu.</div>';
+          return;
+        }
+
+        list.innerHTML = '';
+        data.preview.forEach(p => {
+          const box = document.createElement('div');
+          box.style.cssText = 'border:1px solid #E2E8F0;border-radius:8px;overflow:hidden';
+
+          const head = document.createElement('div');
+          head.style.cssText = 'padding:8px 12px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:12px;color:#475569;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px';
+          const tag = p.campaignType === 'discovery' ? '[Khách mới - Toàn bộ DV]' : '[Cá nhân hóa M3]';
+          head.textContent = `${tag} Tới: ${p.name} <${p.email}> — Tiêu đề: ${p.subject}`;
+
+          const frame = document.createElement('iframe');
+          frame.style.cssText = 'width:100%;height:420px;border:none;background:#fff';
+          frame.setAttribute('sandbox', '');
+          frame.srcdoc = p.html;
+
+          box.appendChild(head);
+          box.appendChild(frame);
+          list.appendChild(box);
+        });
+      } catch (error) {
+        list.innerHTML = `<div style="color:#DC2626;font-size:13px">${esc(error.message)}</div>`;
+      }
+    }
+
+    async function sendTestEmail() {
+      const email = (document.getElementById('test-email-input')?.value || '').trim();
+      const mode = document.getElementById('test-email-mode')?.value || 'discovery';
+      const resultEl = document.getElementById('test-email-result');
+      const btn = document.getElementById('btn-send-test');
+
+      if (!email) {
+        alert('Vui lòng nhập địa chỉ email nhận test.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Đang gửi...';
+      resultEl.style.display = 'block';
+      resultEl.style.color = '#64748B';
+      resultEl.textContent = 'Đang kết nối Gmail SMTP và gửi thử...';
+
+      try {
+        const res = await fetch('/api/email/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, mode })
+        });
+        const data = await res.json();
+        resultEl.style.color = data.sent ? '#15803D' : (data.dryRun ? '#2563EB' : '#DC2626');
+        resultEl.textContent = data.message || (data.success ? 'Hoàn tất gửi test.' : 'Gửi test thất bại.');
+        await loadEmails();
+      } catch (error) {
+        resultEl.style.color = '#DC2626';
+        resultEl.textContent = 'Lỗi gửi test: ' + error.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Gửi Test ngay';
+      }
+    }
+
+    async function runCampaign() {
+      const checkedIds = Array.from(document.querySelectorAll('.preview-chk:checked')).map(el => el.value);
+      const autoApproveSelected = document.getElementById('chk-auto-approve')?.checked || false;
+      const forceResend = document.getElementById('chk-force-resend')?.checked || false;
+      const segment = document.getElementById('segment-filter')?.value || 'all';
+
+      if (!checkedIds.length) {
+        alert('Vui lòng tích chọn ít nhất 1 khách hàng cần gửi (hoặc bấm "Chấp thuận tất cả email thật").');
+        return;
+      }
+
+      if (!confirm(`Gửi chiến dịch tới ${checkedIds.length} khách hàng đã chọn? (Chỉ gửi tài khoản đã được Admin chấp thuận${autoApproveSelected ? ' — có tự động chấp thuận các dòng đang chọn' : ''}).`)) return;
+
+      const btn = document.getElementById('btn-run-campaign');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Đang gửi...';
+
+      const resultBox = document.getElementById('campaign-result-box');
+
+      try {
+        const res = await fetch('/api/email/send-campaign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userIds: checkedIds,
+            segment,
+            forceResend,
+            autoApproveSelected
+          })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Gửi chiến dịch thất bại');
+
+        const detailsHtml = (data.details || []).map(d => {
+          if (d.status === 'sent') return `<li><strong style="color:#15803D">[Đã gửi thật]</strong> ${esc(d.email)} (${d.campaignType === 'discovery' ? 'Tổng hợp' : 'Cá nhân hóa'})</li>`;
+          if (d.status === 'logged') return `<li><strong style="color:#2563EB">[Dry-run]</strong> ${esc(d.email)} — ${esc(d.reason || '')}</li>`;
+          if (d.status === 'failed') return `<li><strong style="color:#DC2626">[Lỗi SMTP]</strong> ${esc(d.email)} — ${esc(d.error || '')}</li>`;
+          return `<li><strong style="color:#B45309">[Bỏ qua]</strong> ${esc(d.email)} — ${esc(d.reason || '')}</li>`;
+        }).join('');
+
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = `
+          <div style="font-weight:700;color:#0F172A;margin-bottom:6px">${esc(data.message)}</div>
+          <ul style="margin:0;padding-left:18px;line-height:1.6">${detailsHtml}</ul>
+        `;
+
+        await refreshAll();
+      } catch (error) {
+        alert('Lỗi: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([checkSmtpStatus(), loadEmails(), previewCampaign()]);
+    }
+
+    refreshAll();
+  </script>
+</body>
+</html>

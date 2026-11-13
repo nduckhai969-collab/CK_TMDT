@@ -1,10 +1,13 @@
 const crypto = require('crypto');
 
-const secret = process.env.AUTH_SECRET || require('crypto').randomBytes(32).toString('hex');
+const secret = String(process.env.AUTH_SECRET || '').trim();
+if (secret.length < 32 || /^(replace-with|your-)/i.test(secret)) {
+  throw new Error('AUTH_SECRET must be configured in .env with a stable value of at least 32 characters.');
+}
 const ttlSeconds = 12 * 60 * 60;
 
-function signToken(userId) {
-  const payload = Buffer.from(JSON.stringify({ sub: String(userId), exp: Math.floor(Date.now() / 1000) + ttlSeconds })).toString('base64url');
+function signToken(userId, tokenVersion = 0) {
+  const payload = Buffer.from(JSON.stringify({ sub: String(userId), ver: Number(tokenVersion) || 0, exp: Math.floor(Date.now() / 1000) + ttlSeconds })).toString('base64url');
   const signature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
   return `${payload}.${signature}`;
 }

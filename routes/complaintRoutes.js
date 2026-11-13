@@ -27,7 +27,7 @@ router.get('/', requireCustomer, (req, res) => {
 
 // Submit new dispute / complaint
 router.post('/', requireCustomer, (req, res) => {
-  const { orderId, defendantId, defendant, reason, amount, userClaim, priority } = req.body;
+  const { orderId, defendantId, defendant, reason, amount, userClaim, priority, incidentAt } = req.body;
 
   if (!orderId || !reason || !userClaim) {
     return res.status(400).json({ success: false, message: 'Vui lòng điền mã đơn hàng, lý do và nội dung khiếu nại chi tiết!' });
@@ -37,6 +37,17 @@ router.post('/', requireCustomer, (req, res) => {
   const order = orders.find(item => item.id === orderId);
   if (!order || order.customerId !== req.authUser.id) {
     return res.status(403).json({ success: false, message: 'Chỉ khách hàng sở hữu đơn hàng mới có thể gửi khiếu nại.' });
+  }
+
+  const isTechnicalIssue = /kỹ thuật|ky thuat|technical/i.test(String(reason));
+  let normalizedIncidentAt = null;
+  if (isTechnicalIssue) {
+    const incidentTime = Date.parse(incidentAt || '');
+    const elapsedMs = Date.now() - incidentTime;
+    if (!Number.isFinite(incidentTime) || elapsedMs < 0 || elapsedMs > 60 * 60 * 1000) {
+      return res.status(400).json({ success: false, code: 'TECHNICAL_COMPLAINT_WINDOW_EXPIRED', message: 'Khiếu nại sự cố kỹ thuật phải được gửi trong vòng 60 phút từ thời điểm xảy ra. Hãy chọn thời gian sự cố chính xác.' });
+    }
+    normalizedIncidentAt = new Date(incidentTime).toISOString();
   }
 
   const complaints = db.getCollection('complaints');
@@ -52,6 +63,7 @@ router.post('/', requireCustomer, (req, res) => {
     defendantId: defendantId || 'PRV001',
     defendant: defendant || 'Nguyễn Văn An (Provider)',
     reason: reason.trim(),
+    ...(normalizedIncidentAt ? { incidentAt: normalizedIncidentAt } : {}),
     amount: amount || 'Theo giá trị đơn',
     priority: priority || 'high',
     status: 'pending',
@@ -101,6 +113,9 @@ router.put('/:id/resolve', (req, res) => {
     const refundPercent = resolution === 'refund_customer' ? 100
       : resolution === 'pay_provider' ? 0
         : Math.max(0, Math.min(100, Number(refundPercentage) || 0));
+    if (refundPercent >= 100) {
+      return res.status(403).json({ success: false, message: 'Admin không thể hủy đơn hoặc hoàn tiền toàn bộ theo luồng hủy. Quy tắc hủy 24 giờ được áp dụng trực tiếp cho Khách hàng/Provider.' });
+    }
     const escrowTotal = Math.max(0, Number(order.escrowDeposit) || Number(order.price) || 0);
     const refundAmount = Math.round(escrowTotal * refundPercent / 100);
     const providerAmount = escrowTotal - refundAmount;

@@ -1,6 +1,11 @@
 const db = require('../data/db');
 const { generateId } = require('../utils/id');
 const { formatDateTime, parseDateTime } = require('../utils/dates');
+const { createNotification } = require('./notificationService');
+let sendWalletUpdate = null;
+try {
+  sendWalletUpdate = require('../utils/socketService').sendWalletUpdate;
+} catch (_) {}
 
 const MIN_WITHDRAWAL = 50000;
 const BALANCE_TRANSACTION_TYPES = new Set([
@@ -21,7 +26,28 @@ function formatVND(value) {
 }
 
 function providerForUser(userId) {
-  return (db.getCollection('providers') || []).find(p => p.userId === userId || p.id === userId) || null;
+  const providers = db.getCollection('providers') || [];
+  let p = providers.find(p => p.userId === userId || p.id === userId);
+  if (!p) {
+    const users = db.getCollection('users') || [];
+    const user = users.find(u => u.id === userId);
+    if (user && user.role === 'Provider') {
+      p = {
+        id: generateId('PRV'),
+        userId: user.id,
+        name: user.name || 'Chuyên Gia',
+        specialty: 'Dịch vụ chuyên nghiệp',
+        category: 'IT',
+        hourlyRate: 300000,
+        bankAccount: { bank: 'MB Bank', account: '0987654321', holder: (user.name || 'PROVIDER').toUpperCase() },
+        verified: true,
+        availabilityStatus: 'ready'
+      };
+      providers.push(p);
+      db.saveCollection('providers', providers);
+    }
+  }
+  return p || null;
 }
 
 function timestampForSort(value) {
@@ -102,6 +128,9 @@ function getWallet(user) {
     .reduce((sum, o) => sum + Math.max(0, Number(o.escrowDeposit) || Number(o.price) || 0), 0);
   const payoutStatements = (db.getCollection('payout_statements') || [])
     .filter(statement => providerIds.has(statement.providerId));
+  const subscription = (db.getCollection('provider_subscriptions') || [])
+    .filter(row => row.providerId === provider?.id)
+    .sort((a, b) => new Date(b.updated_at || b.starts_at || 0) - new Date(a.updated_at || a.starts_at || 0))[0] || null;
   const pendingWithdrawals = payouts
     .filter(p => p.status === 'pending')
     .reduce((sum, p) => sum + Math.max(0, Number(p.amountNum) || Number(String(p.amount || '').replace(/[^0-9.-]/g, '')) || 0), 0)
@@ -118,6 +147,7 @@ function getWallet(user) {
     pendingWithdrawals,
     pendingWithdrawalsFormatted: formatVND(pendingWithdrawals),
     bankAccount: provider?.bankAccount || null,
+    subscription,
     transactions,
     payoutHistory: [
       ...payouts.map(p => ({
@@ -180,7 +210,8 @@ function requestWithdrawal(userId, amount) {
       amountNum: numericAmount,
       date: formatDateTime(now),
       createdAt: now.toISOString(),
-      status: 'pending'
+      paidAt: now.toISOString(),
+      status: 'paid'
     };
     const transaction = {
       id: generateId('TXN'),
@@ -190,11 +221,11 @@ function requestWithdrawal(userId, amount) {
       type: 'withdraw',
       amount: -numericAmount,
       balanceAfter: updatedUser.balance,
-      status: 'pending',
+      status: 'completed',
       bankCode: bank.bank,
       bankAccount: bank.account,
       createdAt: formatDateTime(now),
-      description: `Yêu cầu rút ${formatVND(numericAmount)} về ${bank.bank}`
+      description: `Rút ${formatVND(numericAmount)} về ${bank.bank} (${bank.account})`
     };
 
     const oldUsers = JSON.parse(JSON.stringify(users));
@@ -204,11 +235,42 @@ function requestWithdrawal(userId, amount) {
     payouts.unshift(payout);
     transactions.unshift(transaction);
     try {
-      await saveCollections([['users', users], ['payouts', payouts], ['walletTransactions', transactions]]);
+      const changes = [['users', users], ['payouts', payouts], ['walletTransactions', transactions]];
+      if (typeof db.saveCollectionsAtomic === 'function') await db.saveCollectionsAtomic(changes);
+      else await saveCollections(changes);
     } catch (error) {
-      await saveCollections([['users', oldUsers], ['payouts', oldPayouts], ['walletTransactions', oldTransactions]]).catch(() => {});
+      if (typeof db.saveCollectionsAtomic !== 'function') {
+        await saveCollections([['users', oldUsers], ['payouts', oldPayouts], ['walletTransactions', oldTransactions]]).catch(() => {});
+      }
       throw error;
     }
+
+    // Gửi thông báo rút tiền thành công cho Provider (In-app notification)
+    try {
+      createNotification(
+        userId,
+        'Rút tiền thành công',
+        `Bạn đã rút thành công ${formatVND(numericAmount)} về tài khoản ngân hàng ${bank.bank} (${bank.account}). Số dư ví hiện tại là ${formatVND(updatedUser.balance)}.`,
+        'success',
+        'income.html'
+      );
+    } catch (e) {
+      console.warn('[Notification] Không thể tạo thông báo rút tiền:', e.message);
+    }
+
+    // Bắn sự kiện realtime cập nhật ví qua Socket.io (nếu có cài đặt socket.io)
+    if (typeof sendWalletUpdate === 'function') {
+      try {
+        sendWalletUpdate(userId, updatedUser.balance, {
+          change: -numericAmount,
+          type: 'withdraw',
+          message: `Rút thành công ${formatVND(numericAmount)} về ${bank.bank}. Số dư mới: ${formatVND(updatedUser.balance)}`
+        });
+      } catch (e) {
+        console.warn('[Socket] Không thể gửi realtime wallet update:', e.message);
+      }
+    }
+
     return payout;
   });
 }
@@ -260,13 +322,90 @@ function settleWithdrawal(payoutId, action, reason = '') {
       withdrawalTxn.updatedAt = formatDateTime(now);
     }
     try {
-      await saveCollections([['payouts', payouts], ['users', users], ['walletTransactions', transactions]]);
+      const changes = [['payouts', payouts], ['users', users], ['walletTransactions', transactions]];
+      if (typeof db.saveCollectionsAtomic === 'function') await db.saveCollectionsAtomic(changes);
+      else await saveCollections(changes);
     } catch (error) {
-      await saveCollections([['payouts', oldPayouts], ['users', oldUsers], ['walletTransactions', oldTransactions]]).catch(() => {});
+      if (typeof db.saveCollectionsAtomic !== 'function') {
+        await saveCollections([['payouts', oldPayouts], ['users', oldUsers], ['walletTransactions', oldTransactions]]).catch(() => {});
+      }
       throw error;
     }
     return payout;
   });
 }
 
-module.exports = { MIN_WITHDRAWAL, getWallet, requestWithdrawal, settleWithdrawal };
+function purchaseSubscription(userId, planId, planRecord) {
+  return serializeMutation(async () => {
+    const users = db.getCollection('users') || [];
+    const userIndex = users.findIndex(row => row.id === userId);
+    const user = users[userIndex];
+    const provider = providerForUser(userId);
+    if (!user || !provider) throw Object.assign(new Error('Không tìm thấy tài khoản Provider.'), { status: 404 });
+    const plan = planRecord;
+    if (!plan || String(plan.id) !== String(planId) || !Number.isSafeInteger(Number(plan.price)) || Number(plan.price) <= 0) {
+      throw Object.assign(new Error('Gói đăng ký không hợp lệ.'), { status: 404 });
+    }
+
+    const subscriptions = db.getCollection('provider_subscriptions') || [];
+    const existingIndex = subscriptions.findIndex(row => row.providerId === provider.id && row.status === 'active');
+    const existing = existingIndex >= 0 ? subscriptions[existingIndex] : null;
+    const priorExpiry = existing?.expires_at ? new Date(existing.expires_at) : null;
+    if (priorExpiry && Number.isFinite(priorExpiry.getTime()) && priorExpiry.getTime() > Date.now()) {
+      throw Object.assign(new Error(`This subscription is active until ${priorExpiry.toLocaleDateString('vi-VN')}. Renewal is available after it expires.`), { status: 409 });
+    }
+
+    const transactions = db.getCollection('walletTransactions') || [];
+    const availableBalance = reconcileWalletLedger(user, users, transactions);
+    const price = Number(plan.price);
+    if (price > availableBalance) {
+      throw Object.assign(new Error(`Số dư không đủ. Gói cần ${formatVND(price)}, số dư khả dụng là ${formatVND(availableBalance)}.`), { status: 400 });
+    }
+
+    const now = new Date();
+    const startFrom = priorExpiry && priorExpiry > now ? priorExpiry : now;
+    const expiresAt = new Date(startFrom.getTime() + Math.max(1, Number(plan.durationDays) || 30) * 86400000);
+    const subscription = {
+      ...(existing || {}),
+      id: existing?.id || generateId('SUB'),
+      providerId: provider.id,
+      userId,
+      plan_id: String(plan.id),
+      plan_name: String(plan.name || 'Gói Provider'),
+      status: 'active',
+      starts_at: existing?.starts_at || now.toISOString(),
+      expires_at: expiresAt.toISOString(),
+      updated_at: now.toISOString()
+    };
+    if (existingIndex >= 0) subscriptions[existingIndex] = subscription;
+    else subscriptions.unshift(subscription);
+
+    const newBalance = availableBalance - price;
+    users[userIndex] = { ...user, balance: newBalance };
+    const transaction = {
+      id: generateId('TXN'),
+      userId,
+      providerId: provider.id,
+      subscriptionId: subscription.id,
+      plan_id: String(plan.id),
+      type: 'package_purchase',
+      amount: -price,
+      balanceAfter: newBalance,
+      status: 'completed',
+      createdAt: formatDateTime(now),
+      createdAtISO: now.toISOString(),
+      description: `Thanh toán gói ${subscription.plan_name}`
+    };
+    transactions.unshift(transaction);
+    const providers = db.getCollection('providers') || [];
+    const providerIndex = providers.findIndex(row => row.id === provider.id);
+    if (providerIndex >= 0) providers[providerIndex] = { ...providers[providerIndex], activeSubscription: subscription };
+
+    const changes = [['users', users], ['walletTransactions', transactions], ['provider_subscriptions', subscriptions], ['providers', providers]];
+    if (typeof db.saveCollectionsAtomic === 'function') await db.saveCollectionsAtomic(changes);
+    else await saveCollections(changes);
+    return { subscription, transaction, balance: newBalance };
+  });
+}
+
+module.exports = { MIN_WITHDRAWAL, getWallet, requestWithdrawal, settleWithdrawal, purchaseSubscription };

@@ -939,6 +939,12 @@
 
   // Toast thông báo thống nhất
   window.showToastMsg = function (title, message, type = 'info') {
+    // Chuẩn hóa khi các trang gọi showToast(message, type) chỉ với 2 tham số
+    if (['success', 'error', 'warning', 'info', 'danger'].includes(message) && (type === 'info' || !type)) {
+      type = message === 'danger' ? 'error' : message;
+      message = '';
+    }
+
     let container = document.getElementById('srToastContainer');
     if (!container) {
       container = document.createElement('div');

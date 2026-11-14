@@ -474,11 +474,13 @@ window.providerApi = {
     return res.json();
   },
 
-  withdraw: async (amount) => {
+  withdraw: async (amount, password) => {
+    const payload = { amount };
+    if (password) payload.password = password;
     const res = await fetch(`${API_BASE}/api/providers/wallet/withdraw`, {
       method: 'POST',
       headers: getAuthHeader(),
-      body: JSON.stringify({ amount, password })
+      body: JSON.stringify(payload)
     });
     return res.json();
   },
@@ -572,12 +574,34 @@ window.providerApi = {
     return res.json();
   },
 
+  boostService: async (serviceId) => {
+    const res = await fetch(`${API_BASE}/api/providers/services/${encodeURIComponent(serviceId)}/boost`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({})
+    });
+    return res.json();
+  },
+
+  getSubscriptionPlans: async () => {
+    const res = await fetch(`${API_BASE}/api/providers/subscription-plans`, { headers: getAuthHeader() });
+    return res.json();
+  },
+
+  purchaseSubscription: async (planId) => {
+    const res = await fetch(`${API_BASE}/api/providers/me/subscription/purchase`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ plan_id: planId })
+    });
+    return res.json();
+  },
+
   // Lịch sử mua gói / gia hạn phí sàn của Provider đang đăng nhập.
   getPackagePurchases: async () => {
     const res = await fetch(`${API_BASE}/api/providers/packages/purchases`, { headers: getAuthHeader() });
     return res.json();
   },
-
   // Posts & Portfolio (UC-47)
   getMyPosts: async () => {
     const res = await fetch(`${API_BASE}/api/providers/me/posts`, { headers: getAuthHeader() });
@@ -642,18 +666,18 @@ window.formatVND = formatVND;
 
 function showProviderToast(msg, type = 'success') {
   let toast = document.getElementById('toastBox');
-  let msgEl = document.getElementById('toastMessage') || document.getElementById('toastMsg');
 
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'toastBox';
     toast.className = 'toast-box';
-    toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color:var(--primary); font-size:18px;"></i> <span id="toastMessage">${msg}</span>`;
     document.body.appendChild(toast);
-    msgEl = document.getElementById('toastMessage');
   }
 
-  if (msgEl) msgEl.textContent = msg;
+  const iconHtml = type === 'error'
+    ? '<i class="fa-solid fa-circle-exclamation" style="color:#DC2626; font-size:18px;"></i>'
+    : '<i class="fa-solid fa-circle-check" style="color:var(--primary); font-size:18px;"></i>';
+  toast.innerHTML = `${iconHtml} <span id="toastMessage">${msg}</span>`;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 3500);
 }

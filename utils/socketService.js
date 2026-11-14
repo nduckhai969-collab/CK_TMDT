@@ -1,5 +1,15 @@
-const { Server } = require('socket.io');
-const sessionStore = require('../data/sessionStore');
+let Server = null;
+try {
+  const socketIo = require('socket.io');
+  Server = socketIo.Server || socketIo;
+} catch (_) {}
+
+let sessionStore = null;
+try {
+  sessionStore = require('../data/sessionStore');
+} catch (_) {
+  sessionStore = { getSession: () => null };
+}
 
 let io = null;
 // Map: userId -> Set of socketId
@@ -50,6 +60,7 @@ function unregisterUserSocket(socketId) {
 }
 
 function initSocket(httpServer) {
+  if (!Server) return null;
   if (io) return io;
 
   io = new Server(httpServer, {
